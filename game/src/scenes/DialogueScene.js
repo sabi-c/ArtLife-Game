@@ -1,0 +1,935 @@
+import Phaser from 'phaser';
+import { GameState } from '../managers/GameState.js';
+import { QualityGate } from '../managers/QualityGate.js';
+import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
+import { DecisionLog } from '../managers/DecisionLog.js';
+
+/**
+ * Dialogue / Event scene — Multi-step engine
+ *
+ * Supports two event formats:
+ * 1. Legacy single-step: { description, choices }
+ * 2. Multi-step:         { steps: [{ type, text, choices, ... }] }
+ *
+ * Step types: 'narrative', 'dialogue', 'choice', 'stat_change', 'reveal'
+ */
+export class DialogueScene extends Phaser.Scene {
+    constructor() {
+        super('DialogueScene');
+    }
+
+    init(data) {
+        this.eventData = data.event;
+        this.currentStep = 0;
+        this.stepObjects = [];  // Track objects per step for cleanup
+        this.isTransitioning = false;
+
+        this.ui = data.ui;
+        this.returnScene = data.returnScene || null;
+        this.returnArgs = data.returnArgs || {};
+        this.onExitCallback = data.onExit || null;
+
+        // Hide the terminal DOM
+        if (this.ui && this.ui._container) {
+            this.ui._container.style.display = 'none';
+        }
+    }
+
+    create() {
+        const { width, height } = this.scale;
+
+        // ── Persistent background layer ──
+        const bgKey = this.getCategoryBackground(this.eventData.category);
+        if (this.textures.exists(bgKey)) {
+            const bg = this.add.image(width / 2, height / 2, bgKey);
+            bg.setDisplaySize(width, height);
+            bg.setAlpha(0.4);
+        }
+        this.overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a0f, 0.6);
+
+        // ── Persistent header ──
+        const categoryLabel = this.eventData.category?.toUpperCase() || 'EVENT';
+        this.add.text(width / 2, 35, categoryLabel, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#7a7a8a',
+            letterSpacing: 4,
+        }).setOrigin(0.5);
+
+        this.add.text(width / 2, 70, this.eventData.title, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            color: '#c9a84c',
+        }).setOrigin(0.5);
+
+        const line = this.add.graphics();
+        line.lineStyle(1, 0xc9a84c, 0.5);
+        line.lineBetween(width * 0.15, 95, width * 0.85, 95);
+
+        // ── Step progress indicator (multi-step only) ──
+        if (this.eventData.steps && this.eventData.steps.length > 1) {
+            this.stepIndicator = this.add.text(width - 30, 35, '', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '7px',
+                color: '#3a3a4a',
+            }).setOrigin(1, 0.5);
+        }
+
+        // ── Route: multi-step or legacy ──
+        if (this.eventData.steps && this.eventData.steps.length > 0) {
+            this.renderStep(0);
+        } else {
+            this.renderLegacyEvent();
+        }
+
+        this.cameras.main.fadeIn(600, 0, 0, 0);
+    }
+
+    // ═══════════════════════════════════════════
+    //  MULTI-STEP ENGINE
+    // ═══════════════════════════════════════════
+
+    renderStep(index) {
+        if (index >= this.eventData.steps.length || index === 'end') {
+            this.exitToHub();
+            return;
+        }
+
+        this.currentStep = index;
+        this.clearStepObjects();
+        this.isTransitioning = false;
+
+        // Update step indicator
+        if (this.stepIndicator) {
+            this.stepIndicator.setText(`${index + 1}/${this.eventData.steps.length}`);
+        }
+
+        const step = this.eventData.steps[index];
+
+        switch (step.type) {
+            case 'narrative':
+                this.renderNarrativeStep(step);
+                break;
+            case 'dialogue':
+                this.renderDialogueStep(step);
+                break;
+            case 'choice':
+                this.renderChoiceStep(step);
+                break;
+            case 'stat_change':
+                this.renderStatChangeStep(step);
+                break;
+            case 'reveal':
+                this.renderRevealStep(step);
+                break;
+            default:
+                this.renderNarrativeStep(step);
+        }
+    }
+
+    advanceStep(nextStep) {
+        if (this.isTransitioning) return;
+        this.isTransitioning = true;
+
+        // Fade out current step objects
+        const targets = this.stepObjects.filter(o => o && o.alpha !== undefined);
+        if (targets.length > 0) {
+            this.tweens.add({
+                targets,
+                alpha: 0,
+                duration: 300,
+                onComplete: () => {
+                    const next = nextStep !== undefined ? nextStep : this.currentStep + 1;
+                    this.renderStep(next);
+                },
+            });
+        } else {
+            const next = nextStep !== undefined ? nextStep : this.currentStep + 1;
+            this.renderStep(next);
+        }
+    }
+
+    clearStepObjects() {
+        this.stepObjects.forEach(obj => {
+            if (obj && obj.destroy) obj.destroy();
+        });
+        this.stepObjects = [];
+    }
+
+    // ─── NARRATIVE STEP ───────────────────────
+    renderNarrativeStep(step) {
+        const { width, height } = this.scale;
+
+        const textObj = this.addStepObj(
+            this.add.text(width * 0.15, 120, '', {
+                fontFamily: '"Playfair Display"',
+                fontSize: '14px',
+                fontStyle: 'italic',
+                color: '#e8e4df',
+                wordWrap: { width: width * 0.7 },
+                lineSpacing: 6,
+            })
+        );
+
+        // Typewriter
+        const fullText = step.text;
+        let charIndex = 0;
+        this.time.addEvent({
+            delay: 18,
+            repeat: fullText.length - 1,
+            callback: () => {
+                charIndex++;
+                textObj.setText(fullText.substring(0, charIndex));
+            },
+        });
+
+        // "Click to continue" prompt
+        const totalTime = fullText.length * 18;
+        this.time.delayedCall(totalTime + 400, () => {
+            const prompt = this.addStepObj(
+                this.add.text(width / 2, height - 50, '▸ click to continue', {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '7px',
+                    color: '#4a4a5a',
+                }).setOrigin(0.5)
+            );
+            this.tweens.add({
+                targets: prompt,
+                alpha: 0.3,
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+            });
+
+            // Click anywhere to advance
+            const clickZone = this.addStepObj(
+                this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
+                    .setInteractive({ useHandCursor: true })
+            );
+            clickZone.on('pointerdown', () => this.advanceStep());
+        });
+    }
+
+    // ─── DIALOGUE STEP ────────────────────────
+    renderDialogueStep(step) {
+        const { width, height } = this.scale;
+
+        // Speaker name bar
+        const speakerName = step.speakerName || step.speaker || 'Unknown';
+        const speakerBar = this.addStepObj(
+            this.add.rectangle(width * 0.15, 118, 200, 22, 0x1a1a2e, 0.9)
+        );
+        speakerBar.setOrigin(0, 0.5);
+        speakerBar.setStrokeStyle(1, 0xc9a84c, 0.4);
+
+        const speakerLabel = this.addStepObj(
+            this.add.text(width * 0.15 + 10, 118, speakerName.toUpperCase(), {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '7px',
+                color: '#c9a84c',
+            }).setOrigin(0, 0.5)
+        );
+
+        // Dialogue text in quote style
+        const textObj = this.addStepObj(
+            this.add.text(width * 0.15, 142, '', {
+                fontFamily: '"Playfair Display"',
+                fontSize: '14px',
+                color: '#d4d0cc',
+                wordWrap: { width: width * 0.7 },
+                lineSpacing: 6,
+            })
+        );
+
+        // Left accent bar (dialogue visual cue)
+        const accentBar = this.addStepObj(
+            this.add.rectangle(width * 0.13, 170, 3, 60, 0xc9a84c, 0.6)
+        );
+
+        // Typewriter
+        const fullText = `"${step.text}"`;
+        let charIndex = 0;
+        this.time.addEvent({
+            delay: 22,
+            repeat: fullText.length - 1,
+            callback: () => {
+                charIndex++;
+                textObj.setText(fullText.substring(0, charIndex));
+            },
+        });
+
+        // Click to continue
+        const totalTime = fullText.length * 22;
+        this.time.delayedCall(totalTime + 400, () => {
+            const prompt = this.addStepObj(
+                this.add.text(width / 2, height - 50, '▸ click to continue', {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '7px',
+                    color: '#4a4a5a',
+                }).setOrigin(0.5)
+            );
+            this.tweens.add({
+                targets: prompt,
+                alpha: 0.3,
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+            });
+
+            const clickZone = this.addStepObj(
+                this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
+                    .setInteractive({ useHandCursor: true })
+            );
+            clickZone.on('pointerdown', () => this.advanceStep());
+        });
+    }
+
+    // ─── CHOICE STEP ──────────────────────────
+    renderChoiceStep(step) {
+        const { width, height } = this.scale;
+
+        // Prompt text (if any)
+        if (step.text) {
+            const promptText = this.addStepObj(
+                this.add.text(width * 0.15, 120, '', {
+                    fontFamily: '"Playfair Display"',
+                    fontSize: '14px',
+                    color: '#e8e4df',
+                    wordWrap: { width: width * 0.7 },
+                    lineSpacing: 6,
+                })
+            );
+
+            // If there's a speaker, show as dialogue
+            if (step.speaker) {
+                const speakerName = step.speakerName || step.speaker;
+                this.addStepObj(
+                    this.add.text(width * 0.15, 108, speakerName.toUpperCase(), {
+                        fontFamily: '"Press Start 2P"',
+                        fontSize: '7px',
+                        color: '#c9a84c',
+                    })
+                );
+                promptText.setY(130);
+            }
+
+            const fullText = step.text;
+            let charIndex = 0;
+            this.time.addEvent({
+                delay: 18,
+                repeat: fullText.length - 1,
+                callback: () => {
+                    charIndex++;
+                    promptText.setText(fullText.substring(0, charIndex));
+                },
+            });
+
+            const totalTypeTime = fullText.length * 18;
+            this.time.delayedCall(totalTypeTime + 300, () => {
+                this.renderChoiceButtons(step.choices, step);
+            });
+        } else {
+            this.renderChoiceButtons(step.choices, step);
+        }
+    }
+
+    renderChoiceButtons(choices, step) {
+        const { width, height } = this.scale;
+        const choiceStartY = Math.min(height * 0.50, 300);
+
+        const processedChoices = choices.map((choice, i) => {
+            const gateResult = QualityGate.checkDetailed(choice.requires);
+            return {
+                ...choice,
+                index: i,
+                available: gateResult.met,
+                lockedDetails: gateResult.details.filter(d => !d.met),
+                isBlue: choice.isBlueOption || false,
+            };
+        });
+
+        let visibleIndex = 0;
+        processedChoices.forEach((choice, originalIndex) => {
+            const shouldShow = choice.available || choice.requires;
+            if (!shouldShow && choice.isBlue) return;
+
+            const delay = visibleIndex * 200;
+            const displayIndex = visibleIndex;
+            visibleIndex++;
+
+            this.time.delayedCall(delay, () => {
+                const cy = choiceStartY + displayIndex * 55;
+
+                if (choice.available) {
+                    const borderColor = choice.isBlue ? 0x4488cc : 0x3a3a4e;
+                    const hoverColor = choice.isBlue ? 0x66aaee : 0xc9a84c;
+
+                    const cardBg = this.addStepObj(
+                        this.add.rectangle(width / 2, cy + 15, width * 0.72, 45, 0x1a1a2e, 0.85)
+                    );
+                    cardBg.setStrokeStyle(choice.isBlue ? 2 : 1, borderColor);
+
+                    const prefix = choice.isBlue ? '🔵  ' : `${originalIndex + 1}.  `;
+                    const choiceLabel = this.addStepObj(
+                        this.add.text(width * 0.18, cy + 5, `${prefix}${choice.label}`, {
+                            fontFamily: '"Playfair Display"',
+                            fontSize: '13px',
+                            color: choice.isBlue ? '#88bbdd' : '#b8b4af',
+                            wordWrap: { width: width * 0.62 },
+                        })
+                    );
+
+                    cardBg.setAlpha(0);
+                    choiceLabel.setAlpha(0);
+                    this.tweens.add({ targets: [cardBg, choiceLabel], alpha: 1, duration: 400 });
+
+                    cardBg.setInteractive({ useHandCursor: true });
+                    cardBg.on('pointerover', () => {
+                        cardBg.setStrokeStyle(2, hoverColor);
+                        choiceLabel.setColor(choice.isBlue ? '#aaddff' : '#c9a84c');
+                    });
+                    cardBg.on('pointerout', () => {
+                        cardBg.setStrokeStyle(choice.isBlue ? 2 : 1, borderColor);
+                        choiceLabel.setColor(choice.isBlue ? '#88bbdd' : '#b8b4af');
+                    });
+                    cardBg.on('pointerdown', () => {
+                        this.selectChoiceMultiStep(choice, originalIndex, step);
+                    });
+                } else {
+                    const cardBg = this.addStepObj(
+                        this.add.rectangle(width / 2, cy + 15, width * 0.72, 45, 0x0f0f1a, 0.6)
+                    );
+                    cardBg.setStrokeStyle(1, 0x222233);
+
+                    const reqHints = choice.lockedDetails.map(d => `${d.label} ${d.needed}`).join(', ');
+                    const choiceLabel = this.addStepObj(
+                        this.add.text(width * 0.18, cy + 2, `🔒  ${choice.label}`, {
+                            fontFamily: '"Playfair Display"',
+                            fontSize: '12px',
+                            color: '#3a3a4a',
+                            wordWrap: { width: width * 0.62 },
+                        })
+                    );
+
+                    this.addStepObj(
+                        this.add.text(width * 0.20, cy + 22, `Requires: ${reqHints}`, {
+                            fontFamily: '"Press Start 2P"',
+                            fontSize: '6px',
+                            color: '#2a2a3a',
+                        })
+                    );
+
+                    cardBg.setAlpha(0);
+                    choiceLabel.setAlpha(0);
+                    this.tweens.add({ targets: [cardBg, choiceLabel], alpha: 1, duration: 400 });
+                }
+            });
+        });
+    }
+
+    selectChoiceMultiStep(choice, choiceIndex, step) {
+        // Apply effects
+        if (choice.effects) {
+            GameState.applyEffects(choice.effects);
+        }
+
+        // Record to Decision Log
+        DecisionLog.record({
+            eventId: this.eventData.id,
+            eventTitle: this.eventData.title,
+            choiceIndex: choiceIndex,
+            choiceLabel: choice.label,
+            effects: choice.effects || {},
+            tags: choice.tags || this.eventData.tags || [this.eventData.category],
+            npcInvolved: choice.npcInvolved || this.eventData.npcInvolved || null,
+            isBlueOption: choice.isBlueOption || false,
+        });
+
+        // Schedule consequences
+        if (choice.schedules) {
+            choice.schedules.forEach(schedule => {
+                const weeksDelay = schedule.weeksDelay || (3 + Math.floor(Math.random() * 8));
+                ConsequenceScheduler.addRelative(weeksDelay, schedule.type, schedule.payload, {
+                    condition: schedule.condition || null,
+                    sourceEvent: this.eventData.id,
+                });
+            });
+        }
+
+        // Legacy decision record
+        GameState.state.decisions.push({
+            event: this.eventData.title,
+            choice: choice.label,
+            week: GameState.state.week,
+        });
+
+        if (choice.outcome) {
+            GameState.addNews(choice.outcome);
+        }
+
+        // Show outcome + stat changes, then advance
+        this.showOutcomeWithStats(choice, () => {
+            const next = choice.nextStep !== undefined ? choice.nextStep : this.currentStep + 1;
+            this.advanceStep(next);
+        });
+    }
+
+    // ─── STAT CHANGE STEP ─────────────────────
+    renderStatChangeStep(step) {
+        const { width, height } = this.scale;
+
+        // Apply the changes
+        if (step.changes) {
+            GameState.applyEffects(step.changes);
+        }
+
+        // Optional label
+        if (step.label) {
+            this.addStepObj(
+                this.add.text(width / 2, 120, step.label, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '10px',
+                    color: '#7a7a8a',
+                }).setOrigin(0.5)
+            );
+        }
+
+        // Optional text
+        if (step.text) {
+            this.addStepObj(
+                this.add.text(width / 2, 148, step.text, {
+                    fontFamily: '"Playfair Display"',
+                    fontSize: '14px',
+                    fontStyle: 'italic',
+                    color: '#b8b4af',
+                    wordWrap: { width: width * 0.6 },
+                    align: 'center',
+                }).setOrigin(0.5)
+            );
+        }
+
+        // Render the stat change display
+        const changes = step.changes || {};
+        this.renderStatIndicators(changes, height * 0.40, () => {
+            if (step.advance === 'auto') {
+                this.time.delayedCall(step.delay || 1500, () => {
+                    this.advanceStep();
+                });
+            } else {
+                // Click to continue
+                const prompt = this.addStepObj(
+                    this.add.text(width / 2, height - 50, '▸ click to continue', {
+                        fontFamily: '"Press Start 2P"',
+                        fontSize: '7px',
+                        color: '#4a4a5a',
+                    }).setOrigin(0.5)
+                );
+                this.tweens.add({
+                    targets: prompt,
+                    alpha: 0.3,
+                    duration: 800,
+                    yoyo: true,
+                    repeat: -1,
+                });
+                const clickZone = this.addStepObj(
+                    this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
+                        .setInteractive({ useHandCursor: true })
+                );
+                clickZone.on('pointerdown', () => this.advanceStep());
+            }
+        });
+    }
+
+    // ─── REVEAL STEP ──────────────────────────
+    renderRevealStep(step) {
+        const { width, height } = this.scale;
+
+        // Dramatic slow fade-in of key text
+        const revealText = this.addStepObj(
+            this.add.text(width / 2, height * 0.40, step.text, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '12px',
+                color: '#c9a84c',
+                wordWrap: { width: width * 0.6 },
+                align: 'center',
+                lineSpacing: 8,
+            }).setOrigin(0.5)
+        );
+        revealText.setAlpha(0);
+
+        // Slow dramatic reveal
+        this.tweens.add({
+            targets: revealText,
+            alpha: 1,
+            duration: 2000,
+            ease: 'Power2',
+            onComplete: () => {
+                this.time.delayedCall(800, () => {
+                    const prompt = this.addStepObj(
+                        this.add.text(width / 2, height - 50, '▸ click to continue', {
+                            fontFamily: '"Press Start 2P"',
+                            fontSize: '7px',
+                            color: '#4a4a5a',
+                        }).setOrigin(0.5)
+                    );
+                    this.tweens.add({
+                        targets: prompt,
+                        alpha: 0.3,
+                        duration: 800,
+                        yoyo: true,
+                        repeat: -1,
+                    });
+
+                    const clickZone = this.addStepObj(
+                        this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
+                            .setInteractive({ useHandCursor: true })
+                    );
+                    clickZone.on('pointerdown', () => this.advanceStep());
+                });
+            },
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    //  STAT CHANGE DISPLAY (shared by both flows)
+    // ═══════════════════════════════════════════
+
+    /**
+     * Renders animated stat change indicators.
+     * Used by both multi-step stat_change steps and the outcome screen.
+     */
+    renderStatIndicators(effects, startY, onComplete) {
+        const { width } = this.scale;
+        const statConfig = {
+            cash: { icon: '💰', label: 'Cash', color: '#c9a84c' },
+            reputation: { icon: '⭐', label: 'Reputation', color: '#c9a84c' },
+            intel: { icon: '🔍', label: 'Intel', color: '#88bbdd' },
+            marketHeat: { icon: '🔥', label: 'Heat', color: '#cc6644' },
+            suspicion: { icon: '👁', label: 'Suspicion', color: '#aa6688' },
+            burnout: { icon: '💤', label: 'Burnout', color: '#7a7a8a' },
+        };
+
+        // Filter only displayable stat changes
+        const displayable = Object.entries(effects).filter(([key]) => key in statConfig);
+        if (displayable.length === 0) {
+            if (onComplete) onComplete();
+            return;
+        }
+
+        // Container box
+        const boxH = displayable.length * 32 + 20;
+        const boxY = startY + boxH / 2;
+        const statBox = this.addStepObj(
+            this.add.rectangle(width / 2, boxY, width * 0.5, boxH, 0x0f0f1a, 0.85)
+        );
+        statBox.setStrokeStyle(1, 0x2a2a3e);
+        statBox.setAlpha(0);
+        this.tweens.add({ targets: statBox, alpha: 1, duration: 300 });
+
+        displayable.forEach(([key, value], i) => {
+            const conf = statConfig[key];
+            const y = startY + 16 + i * 32;
+            const isPositive = value > 0;
+            const sign = isPositive ? '+' : '';
+            const valueColor = isPositive ? '#4a9e6a' : '#c44a4a';
+
+            // Format value
+            let displayValue;
+            if (key === 'cash') {
+                displayValue = `${sign}$${Math.abs(value).toLocaleString()}`;
+            } else {
+                displayValue = `${sign}${value}`;
+            }
+
+            // Icon + label
+            const labelText = this.addStepObj(
+                this.add.text(width * 0.30, y, `${conf.icon}  ${conf.label}`, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '8px',
+                    color: conf.color,
+                }).setOrigin(0, 0.5)
+            );
+
+            // Value (slides in from right)
+            const valueText = this.addStepObj(
+                this.add.text(width * 0.68, y, displayValue, {
+                    fontFamily: '"Press Start 2P"',
+                    fontSize: '9px',
+                    color: valueColor,
+                    fontStyle: 'bold',
+                }).setOrigin(1, 0.5)
+            );
+
+            // Animate: stagger each row
+            labelText.setAlpha(0);
+            valueText.setAlpha(0);
+            valueText.setX(width * 0.75);
+
+            this.tweens.add({
+                targets: labelText,
+                alpha: 1,
+                duration: 300,
+                delay: 200 + i * 200,
+            });
+            this.tweens.add({
+                targets: valueText,
+                alpha: 1,
+                x: width * 0.68,
+                duration: 400,
+                delay: 300 + i * 200,
+                ease: 'Back.easeOut',
+            });
+        });
+
+        // Complete callback after all animations
+        const totalAnimTime = 500 + displayable.length * 200;
+        this.time.delayedCall(totalAnimTime, () => {
+            if (onComplete) onComplete();
+        });
+    }
+
+    /**
+     * Shows outcome text + stat changes after a choice (both legacy and multi-step).
+     */
+    showOutcomeWithStats(choice, onComplete) {
+        const { width, height } = this.scale;
+
+        this.clearStepObjects();
+
+        const dimOverlay = this.addStepObj(
+            this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a0f, 0.7)
+        );
+
+        // Outcome text
+        const outcomeText = this.addStepObj(
+            this.add.text(width / 2, height * 0.28, choice.outcome || 'Done.', {
+                fontFamily: '"Playfair Display"',
+                fontSize: '15px',
+                fontStyle: 'italic',
+                color: '#c9a84c',
+                wordWrap: { width: width * 0.6 },
+                align: 'center',
+            }).setOrigin(0.5)
+        );
+        outcomeText.setAlpha(0);
+
+        this.tweens.add({
+            targets: outcomeText,
+            alpha: 1,
+            duration: 500,
+            onComplete: () => {
+                // Show stat changes below the outcome text
+                const effects = choice.effects || {};
+                this.renderStatIndicators(effects, height * 0.42, () => {
+                    // Wait, then either advance or exit
+                    this.time.delayedCall(1200, () => {
+                        if (onComplete) {
+                            onComplete();
+                        }
+                    });
+                });
+            },
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    //  LEGACY SINGLE-STEP FORMAT (backwards compat)
+    // ═══════════════════════════════════════════
+
+    renderLegacyEvent() {
+        const { width, height } = this.scale;
+
+        // Description with typewriter
+        const descText = this.add.text(width * 0.15, 120, '', {
+            fontFamily: '"Playfair Display"',
+            fontSize: '14px',
+            color: '#e8e4df',
+            wordWrap: { width: width * 0.7 },
+            lineSpacing: 6,
+        });
+
+        const fullDesc = this.eventData.description;
+        let charIndex = 0;
+        this.time.addEvent({
+            delay: 18,
+            repeat: fullDesc.length - 1,
+            callback: () => {
+                charIndex++;
+                descText.setText(fullDesc.substring(0, charIndex));
+            },
+        });
+
+        const choiceStartY = Math.min(height * 0.55, 320);
+        const totalTypeTime = fullDesc.length * 18;
+
+        const processedChoices = this.eventData.choices.map((choice, i) => {
+            const gateResult = QualityGate.checkDetailed(choice.requires);
+            return {
+                ...choice,
+                index: i,
+                available: gateResult.met,
+                lockedDetails: gateResult.details.filter(d => !d.met),
+                isBlue: choice.isBlueOption || false,
+            };
+        });
+
+        let visibleIndex = 0;
+        processedChoices.forEach((choice, originalIndex) => {
+            const shouldShow = choice.available || choice.requires;
+            if (!shouldShow && choice.isBlue) return;
+
+            const delay = totalTypeTime + 300 + visibleIndex * 200;
+            const displayIndex = visibleIndex;
+            visibleIndex++;
+
+            this.time.delayedCall(delay, () => {
+                const cy = choiceStartY + displayIndex * 55;
+
+                if (choice.available) {
+                    const borderColor = choice.isBlue ? 0x4488cc : 0x3a3a4e;
+                    const hoverColor = choice.isBlue ? 0x66aaee : 0xc9a84c;
+
+                    const cardBg = this.add.rectangle(width / 2, cy + 15, width * 0.72, 45, 0x1a1a2e, 0.85);
+                    cardBg.setStrokeStyle(choice.isBlue ? 2 : 1, borderColor);
+
+                    const prefix = choice.isBlue ? '🔵  ' : `${originalIndex + 1}.  `;
+                    const choiceLabel = this.add.text(width * 0.18, cy + 5, `${prefix}${choice.label}`, {
+                        fontFamily: '"Playfair Display"',
+                        fontSize: '13px',
+                        color: choice.isBlue ? '#88bbdd' : '#b8b4af',
+                        wordWrap: { width: width * 0.62 },
+                    });
+
+                    cardBg.setAlpha(0);
+                    choiceLabel.setAlpha(0);
+                    this.tweens.add({ targets: [cardBg, choiceLabel], alpha: 1, duration: 400 });
+
+                    cardBg.setInteractive({ useHandCursor: true });
+                    cardBg.on('pointerover', () => {
+                        cardBg.setStrokeStyle(2, hoverColor);
+                        choiceLabel.setColor(choice.isBlue ? '#aaddff' : '#c9a84c');
+                    });
+                    cardBg.on('pointerout', () => {
+                        cardBg.setStrokeStyle(choice.isBlue ? 2 : 1, borderColor);
+                        choiceLabel.setColor(choice.isBlue ? '#88bbdd' : '#b8b4af');
+                    });
+                    cardBg.on('pointerdown', () => {
+                        this.selectChoiceLegacy(choice, originalIndex);
+                    });
+                } else {
+                    const cardBg = this.add.rectangle(width / 2, cy + 15, width * 0.72, 45, 0x0f0f1a, 0.6);
+                    cardBg.setStrokeStyle(1, 0x222233);
+
+                    const reqHints = choice.lockedDetails.map(d => `${d.label} ${d.needed}`).join(', ');
+                    const choiceLabel = this.add.text(width * 0.18, cy + 2, `🔒  ${choice.label}`, {
+                        fontFamily: '"Playfair Display"',
+                        fontSize: '12px',
+                        color: '#3a3a4a',
+                        wordWrap: { width: width * 0.62 },
+                    });
+
+                    this.add.text(width * 0.20, cy + 22, `Requires: ${reqHints}`, {
+                        fontFamily: '"Press Start 2P"',
+                        fontSize: '6px',
+                        color: '#2a2a3a',
+                    });
+
+                    cardBg.setAlpha(0);
+                    choiceLabel.setAlpha(0);
+                    this.tweens.add({ targets: [cardBg, choiceLabel], alpha: 1, duration: 400 });
+                }
+            });
+        });
+    }
+
+    selectChoiceLegacy(choice, choiceIndex) {
+        // Apply effects
+        if (choice.effects) {
+            GameState.applyEffects(choice.effects);
+        }
+
+        // Record to Decision Log
+        DecisionLog.record({
+            eventId: this.eventData.id,
+            eventTitle: this.eventData.title,
+            choiceIndex: choiceIndex,
+            choiceLabel: choice.label,
+            effects: choice.effects || {},
+            tags: choice.tags || this.eventData.tags || [this.eventData.category],
+            npcInvolved: choice.npcInvolved || this.eventData.npcInvolved || null,
+            isBlueOption: choice.isBlueOption || false,
+        });
+
+        // Schedule consequences
+        if (choice.schedules) {
+            choice.schedules.forEach(schedule => {
+                const weeksDelay = schedule.weeksDelay || (3 + Math.floor(Math.random() * 8));
+                ConsequenceScheduler.addRelative(weeksDelay, schedule.type, schedule.payload, {
+                    condition: schedule.condition || null,
+                    sourceEvent: this.eventData.id,
+                });
+            });
+        }
+
+        // Legacy decision record
+        GameState.state.decisions.push({
+            event: this.eventData.title,
+            choice: choice.label,
+            week: GameState.state.week,
+        });
+
+        if (choice.outcome) {
+            GameState.addNews(choice.outcome);
+        }
+
+        // Show outcome + stat changes, then exit
+        this.showOutcomeWithStats(choice, () => {
+            this.exitToHub();
+        });
+    }
+
+    // ═══════════════════════════════════════════
+    //  UTILITIES
+    // ═══════════════════════════════════════════
+
+    addStepObj(obj) {
+        this.stepObjects.push(obj);
+        return obj;
+    }
+
+    getCategoryBackground(category) {
+        const map = {
+            social: 'bg_social',
+            market: 'bg_market',
+            drama: 'bg_drama',
+            personal: 'bg_personal',
+            fair: 'bg_fair',
+            opportunity: 'bg_opportunity',
+            scandal: 'bg_drama',
+        };
+        return map[category] || 'bg_gallery';
+    }
+
+    exitToHub() {
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            if (this.returnScene) {
+                this.scene.start(this.returnScene, { ...this.returnArgs, ui: this.ui });
+            } else {
+                if (this.onExitCallback) {
+                    this.onExitCallback();
+                } else if (this.ui && this.ui._container) {
+                    this.ui._container.style.display = 'block';
+                    this.ui.popScreen(); // pop the blank trap screen
+                    this.ui.render();
+                }
+
+                if (this.ui && this.ui._container) {
+                    this.ui._container.style.display = 'block';
+                }
+
+                this.scene.stop();
+            }
+        });
+    }
+}

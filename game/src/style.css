@@ -1,0 +1,1803 @@
+/* ═══════════════════════════════════════════
+   ArtLife Terminal UI — Styles
+   ═══════════════════════════════════════════ */
+
+:root {
+  --bg: #0a0a0f;
+  --fg: #c8c8d8;
+  --gold: #c9a84c;
+  --green: #3a8a5c;
+  --red: #c94040;
+  --blue: #88bbdd;
+  --dim: #5a5a6a;
+  --highlight-bg: #1a1a2e;
+  --border: #2a2a3a;
+  --font: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: clamp(12px, 2.5vw, 16px);
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#terminal {
+  width: 100%;
+  max-width: 700px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 16px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar */
+#terminal::-webkit-scrollbar {
+  width: 4px;
+}
+
+#terminal::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+#terminal::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* ── Line Types ── */
+
+.t-line {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.t-header {
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 1.15em;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+
+.t-subheader {
+  font-weight: 700;
+  color: var(--blue);
+  font-size: 0.95em;
+  margin-top: 6px;
+}
+
+.t-divider {
+  color: var(--border);
+  margin: 6px 0;
+  font-size: 0.8em;
+}
+
+.t-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 1px 0;
+}
+
+.t-stat-label {
+  color: var(--dim);
+}
+
+.t-stat-value {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.t-stat-value.green {
+  color: var(--green);
+}
+
+.t-stat-value.red {
+  color: var(--red);
+}
+
+.t-stat-value.gold {
+  color: var(--gold);
+}
+
+.t-news {
+  color: var(--dim);
+  font-size: 0.9em;
+  padding-left: 8px;
+  border-left: 2px solid var(--border);
+  margin: 2px 0;
+}
+
+.t-blank {
+  height: 8px;
+}
+
+.t-dim {
+  color: var(--dim);
+  font-size: 0.9em;
+}
+
+.t-gold {
+  color: var(--gold);
+}
+
+.t-green {
+  color: var(--green);
+}
+
+.t-red {
+  color: var(--red);
+}
+
+/* ── Options ── */
+
+.t-option {
+  padding: 8px 12px;
+  margin: 2px 0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+  color: var(--fg);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Section Headers (Agent-2: Action Hub) ── */
+
+.t-section-header {
+  color: var(--gold);
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin: 10px 0 2px 0;
+  padding: 0 4px;
+  opacity: 0.7;
+}
+
+.t-option:hover {
+  background: var(--highlight-bg);
+}
+
+.t-option-selected {
+  background: var(--highlight-bg);
+  color: var(--gold);
+  font-weight: 700;
+  border-left: 3px solid var(--gold);
+}
+
+.t-option-disabled {
+  color: var(--dim) !important;
+  cursor: default;
+  opacity: 0.5;
+}
+
+.t-option-disabled:hover {
+  background: transparent;
+}
+
+/* ── Mobile: Touch & Layout ── */
+
+/* Prevent pull-to-refresh and overscroll bounce */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent double-tap zoom on interactive elements */
+.t-option,
+.t-section-header,
+button {
+  touch-action: manipulation;
+}
+
+/* Active press feedback for touch */
+.t-option:active {
+  transform: scale(0.97);
+  transition: transform 0.05s ease;
+}
+
+@media (max-width: 600px) {
+
+  /* Safe-area aware terminal container */
+  #terminal {
+    padding: 12px 14px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(14px + env(safe-area-inset-left, 0px));
+    padding-right: calc(14px + env(safe-area-inset-right, 0px));
+  }
+
+  /* 44px+ touch targets (48px with padding) */
+  .t-option {
+    padding: 14px 16px;
+    font-size: 1em;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    margin: 3px 0;
+  }
+
+  /* Stack stats vertically on very narrow screens */
+  .t-stat {
+    font-size: 0.9em;
+  }
+
+  /* ASCII art scales down for phones */
+  .t-ascii-art {
+    font-size: 0.55em;
+  }
+
+  /* Section headers get more room */
+  .t-section-header {
+    margin: 14px 0 4px 0;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Dividers tighter */
+  .t-divider {
+    margin: 4px 0;
+  }
+
+  /* News items readable */
+  .t-news {
+    font-size: 0.85em;
+    padding: 6px 8px;
+  }
+
+  /* Save slots touch-friendly */
+  .t-save-slot {
+    padding: 14px 16px;
+    margin: 8px 0;
+  }
+
+  /* Header and subheader sizing */
+  .t-header {
+    font-size: 1.05em;
+  }
+
+  .t-subheader {
+    font-size: 0.9em;
+  }
+
+  /* World map compact on mobile */
+  .t-worldmap {
+    padding: 6px 10px;
+  }
+
+  .t-worldmap-row {
+    font-size: 0.72em;
+    line-height: 1.6;
+  }
+}
+
+/* Extra small devices (iPhone SE, 375px and below) */
+@media (max-width: 400px) {
+  #terminal {
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .t-option {
+    padding: 12px 14px;
+    font-size: 0.95em;
+  }
+
+  .t-stat {
+    flex-direction: column;
+    gap: 0;
+    padding: 3px 0;
+  }
+
+  .t-stat-label {
+    font-size: 0.85em;
+  }
+
+  .t-stat-value {
+    font-size: 0.95em;
+  }
+
+  .t-header {
+    font-size: 1em;
+    letter-spacing: 0.5px;
+  }
+
+  .t-ascii-art {
+    font-size: 0.45em;
+  }
+
+  /* World map: hide pre-formatted grid, show as list */
+  .t-worldmap-row {
+    font-size: 0.65em;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+}
+
+/* ── Title Screen ── */
+
+.t-ascii-art {
+  color: var(--gold);
+  font-family: var(--font);
+  font-size: 0.7em;
+  line-height: 1.15;
+  white-space: pre;
+  text-align: center;
+  padding: 12px 0 4px;
+  animation: titleGlow 3s ease-in-out infinite alternate;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+}
+
+@keyframes titleGlow {
+  0% {
+    text-shadow: 0 0 10px rgba(201, 168, 76, 0.15);
+    opacity: 0.9;
+  }
+
+  100% {
+    text-shadow: 0 0 25px rgba(201, 168, 76, 0.4);
+    opacity: 1;
+  }
+}
+
+.t-center {
+  text-align: center;
+  line-height: 1.6;
+}
+
+.t-center.t-tagline {
+  color: var(--dim);
+  font-size: 0.95em;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  animation: fadeInUp 1.2s ease-out 0.3s both;
+}
+
+.t-center.t-version {
+  color: var(--border);
+  font-size: 0.75em;
+  margin-top: 16px;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Save Slots ── */
+
+.t-save-slot {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 6px 0;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.t-save-slot:hover {
+  border-color: var(--dim);
+}
+
+.t-save-active {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.05);
+}
+
+.t-save-header {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.95em;
+  margin-bottom: 2px;
+}
+
+.t-save-meta {
+  color: var(--dim);
+  font-size: 0.8em;
+  line-height: 1.4;
+}
+
+/* ── Fade-in on load ── */
+
+#terminal {
+  animation: terminalFade 0.6s ease-out;
+}
+
+@keyframes terminalFade {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ── World Map ── */
+
+.t-worldmap {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  background: rgba(26, 26, 46, 0.4);
+}
+
+.t-worldmap-header {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.85em;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.t-worldmap-row {
+  font-family: var(--font);
+  font-size: 0.82em;
+  line-height: 1.8;
+  white-space: pre;
+  min-height: 1em;
+}
+
+.t-worldmap-legend {
+  color: var(--dim);
+  font-size: 0.7em;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.5px;
+}
+
+/* World map marker colors */
+.wm-current {
+  color: var(--gold);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(201, 168, 76, 0.3);
+}
+
+.wm-event {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.wm-event-label {
+  color: var(--green);
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.wm-city {
+  color: var(--dim);
+}
+
+/* ── Notification Toast ── */
+
+.t-notification-bar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 700px;
+  padding: 10px 20px;
+  background: rgba(10, 10, 15, 0.95);
+  border-bottom: 2px solid var(--gold);
+  color: var(--gold);
+  font-family: var(--font);
+  font-size: 0.9em;
+  font-weight: 700;
+  z-index: 1000;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(201, 168, 76, 0.1);
+}
+
+.t-notif-slide-in {
+  animation: notifSlideIn 0.35s ease-out forwards;
+}
+
+.t-notif-fade-out {
+  animation: notifFadeOut 0.5s ease-in forwards;
+}
+
+@keyframes notifSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes notifFadeOut {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%);
+  }
+}
+
+@media (max-width: 600px) {
+  .t-notification-bar {
+    font-size: 0.8em;
+    padding: 8px 14px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Scene & Cutscene System (Agent-3)
+   ═══════════════════════════════════════════ */
+
+/* ── Scene Header ── */
+.t-scene-header {
+  text-align: center;
+  padding: 16px 0 12px;
+  margin-bottom: 8px;
+  border-top: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  position: relative;
+  animation: sceneHeaderFade 0.8s ease-out;
+}
+
+.t-scene-header::before,
+.t-scene-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+
+.t-scene-header::before {
+  top: 3px;
+}
+
+.t-scene-header::after {
+  bottom: 3px;
+}
+
+.t-scene-title {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 1.3em;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.3);
+}
+
+.t-scene-location {
+  color: var(--dim);
+  font-size: 0.85em;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+@keyframes sceneHeaderFade {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.7);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+/* ── Scene Text (narrative prose) ── */
+.t-scene-text {
+  line-height: 1.8;
+  color: var(--fg);
+  padding: 4px 0;
+  animation: sceneFadeIn 0.6s ease-out;
+}
+
+@keyframes sceneFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Typewriter Animation ── */
+.t-typewriter {
+  line-height: 1.8;
+  color: var(--fg);
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.t-typewriter .t-char {
+  opacity: 0;
+  animation: charAppear 0.05s forwards;
+}
+
+@keyframes charAppear {
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Dialogue ── */
+.t-dialogue {
+  margin: 6px 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--gold);
+  background: rgba(201, 168, 76, 0.03);
+  animation: sceneFadeIn 0.5s ease-out;
+}
+
+.t-dialogue-speaker {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.9em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.t-dialogue-text {
+  color: var(--fg);
+  font-style: italic;
+  line-height: 1.7;
+}
+
+/* ── Scene Separator ── */
+.t-scene-separator {
+  text-align: center;
+  color: var(--border);
+  margin: 12px 0;
+  font-size: 0.7em;
+  letter-spacing: 6px;
+}
+
+/* ── Pixel Art / Background Image ── */
+.t-pixel-art {
+  text-align: center;
+  margin: 12px 0;
+  animation: sceneFadeIn 0.8s ease-out;
+}
+
+.t-pixel-art img {
+  max-width: 100%;
+  max-height: 200px;
+  image-rendering: pixelated;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  filter: brightness(0.85) contrast(1.1);
+}
+
+/* ── Scene Transition Overlay ── */
+.t-scene-transition {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  z-index: 999;
+  pointer-events: none;
+  animation: sceneTransition 0.7s ease-in-out forwards;
+}
+
+@keyframes sceneTransition {
+  0% {
+    opacity: 1;
+  }
+
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Blue Option Star ── */
+.t-option .t-blue-star {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* ── Scene Option Styling ── */
+.t-scene-options .t-option {
+  border-left: 2px solid transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.t-scene-options .t-option:hover {
+  border-left-color: var(--dim);
+}
+
+.t-scene-options .t-option-selected {
+  border-left-color: var(--gold);
+}
+
+/* ── Mobile adjustments for scenes ── */
+@media (max-width: 600px) {
+  .t-scene-header {
+    padding: 12px 0 8px;
+  }
+
+  .t-scene-title {
+    font-size: 1.1em;
+    letter-spacing: 2px;
+  }
+
+  .t-dialogue {
+    padding: 8px 12px;
+  }
+
+  .t-pixel-art img {
+    max-height: 150px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Animation System
+   Analog feel: no fade-ins or slide-ins.
+   Text appears instantly or via JS typewriter.
+   Only functional animations remain.
+   ═══════════════════════════════════════════ */
+
+/* Classes kept on elements for JS typewriter targeting — no visual styles */
+.t-anim-line,
+.t-anim-option {
+  /* targeted by _animatedReveal() */
+}
+
+/* ── Blue Option Rarity Border ── */
+.t-option-blue {
+  border-left: 3px solid var(--blue) !important;
+  background: rgba(136, 187, 221, 0.04);
+  box-shadow: inset 0 0 12px rgba(136, 187, 221, 0.06);
+}
+
+.t-option-blue.t-option-selected {
+  border-left-color: var(--blue) !important;
+  background: rgba(136, 187, 221, 0.08);
+}
+
+/* ── Stat Change Flash (functional — shows stat changes) ── */
+.stat-flash-pos {
+  animation: statPop 0.6s ease-out;
+  color: var(--green) !important;
+}
+
+.stat-flash-neg {
+  animation: statPop 0.6s ease-out;
+  color: var(--red) !important;
+}
+
+@keyframes statPop {
+  0% {
+    transform: scale(1);
+  }
+
+  25% {
+    transform: scale(1.25);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ── Atmosphere line type (dim italic mood text) ── */
+.t-atmosphere {
+  color: var(--dim);
+  font-style: italic;
+  font-size: 0.9em;
+  line-height: 1.8;
+  padding: 2px 0;
+  opacity: 0.7;
+}
+
+/* ── Reveal line type (dramatic bold text) ── */
+.t-reveal {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 1.05em;
+  line-height: 1.8;
+  padding: 4px 0;
+}
+
+/* ── Typewriter Cursor ── */
+.t-cursor {
+  animation: cursorBlink 0.7s step-end infinite;
+  color: var(--gold);
+  font-weight: 400;
+}
+
+@keyframes cursorBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── Accessibility: Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+
+  .stat-flash-pos,
+  .stat-flash-neg,
+  .t-cursor {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Pokémon-Style Haggle Battle (Agent-3 v2)
+   ═══════════════════════════════════════════ */
+
+/* ── Battle Container — full-screen takeover ── */
+.haggle-battle {
+  position: fixed;
+  inset: 0;
+  background: #0a0a0f;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+/* ── Letterbox Bars (Game Boy feel) ── */
+.haggle-bar-top,
+.haggle-bar-bottom {
+  background: #000;
+  flex-shrink: 0;
+  z-index: 101;
+}
+
+.haggle-bar-top {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.haggle-bar-top .round-label {
+  color: var(--dim);
+  font-size: 0.7em;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.haggle-bar-bottom {
+  height: 8px;
+}
+
+/* ── Battle Arena — the main scene ── */
+.haggle-arena {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: linear-gradient(180deg, #0d0d14 0%, #12121e 40%, #161626 100%);
+  overflow: hidden;
+}
+
+/* ── Opponent Zone (top half) ── */
+.haggle-opponent {
+  flex: 0 0 40%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 16px 20px 0;
+  position: relative;
+}
+
+.haggle-opponent-info {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  background: rgba(10, 10, 15, 0.85);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 180px;
+}
+
+.haggle-opponent-name {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.85em;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.haggle-opponent-type {
+  color: var(--dim);
+  font-size: 0.65em;
+  letter-spacing: 1px;
+}
+
+/* HP-style patience bar */
+.haggle-patience-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.haggle-patience-label {
+  color: var(--dim);
+  font-size: 0.65em;
+  font-weight: 700;
+  min-width: 28px;
+}
+
+.haggle-patience-track {
+  flex: 1;
+  height: 6px;
+  background: #1a1a2e;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.haggle-patience-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c94040, #c9a84c, #3a8a5c);
+  border-radius: 3px;
+  transition: width 0.6s ease-out;
+}
+
+.haggle-opponent-sprite {
+  width: 120px;
+  height: 120px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: opponentSlideIn 0.8s ease-out;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  mix-blend-mode: lighten;
+  border-radius: 8px;
+}
+
+@keyframes opponentSlideIn {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Center Zone — gap + artwork ── */
+.haggle-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 5;
+}
+
+.haggle-artwork-name {
+  color: var(--fg);
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.haggle-vs {
+  color: var(--gold);
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 3px;
+  opacity: 0.6;
+}
+
+/* Gap meter */
+.haggle-gap-meter {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.haggle-gap-track {
+  width: 120px;
+  height: 8px;
+  background: #1a1a2e;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.haggle-gap-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--gold));
+  border-radius: 4px;
+  transition: width 0.8s ease-out;
+}
+
+.haggle-gap-text {
+  color: var(--dim);
+  font-size: 0.6em;
+  white-space: nowrap;
+}
+
+/* ── Player Zone (bottom half) ── */
+.haggle-player {
+  flex: 0 0 35%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-end;
+  padding: 0 20px 8px;
+  position: relative;
+}
+
+.haggle-player-info {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  background: rgba(10, 10, 15, 0.85);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  min-width: 160px;
+}
+
+.haggle-player-label {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.85em;
+  margin-bottom: 2px;
+}
+
+.haggle-player-offer {
+  color: var(--gold);
+  font-size: 0.9em;
+  font-weight: 700;
+}
+
+.haggle-player-sprite {
+  width: 100px;
+  height: 100px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: playerSlideIn 0.8s ease-out 0.2s both;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  mix-blend-mode: lighten;
+  border-radius: 8px;
+}
+
+@keyframes playerSlideIn {
+  from {
+    transform: translateX(-100px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Dialogue Box (Pokémon-style, bottom overlay) ── */
+.haggle-dialogue {
+  position: relative;
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  padding: 14px 18px 14px 18px;
+  margin: 0 12px 8px;
+  background: rgba(10, 10, 15, 0.95);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  min-height: 60px;
+  animation: dialogueFadeIn 0.3s ease-out;
+}
+
+.haggle-dialogue .speaker-tab {
+  position: absolute;
+  top: -11px;
+  left: 14px;
+  background: #0a0a0f;
+  padding: 2px 10px;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.7em;
+  letter-spacing: 1px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+}
+
+.haggle-dialogue .dialogue-text {
+  color: var(--fg);
+  font-size: 0.85em;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.haggle-dialogue .dialogue-arrow {
+  position: absolute;
+  bottom: 8px;
+  right: 14px;
+  color: var(--gold);
+  font-size: 0.8em;
+  animation: arrowBounce 0.8s ease-in-out infinite;
+}
+
+@keyframes arrowBounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+@keyframes dialogueFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Tactic Grid (2×2, Pokémon-style) ── */
+.haggle-tactics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
+.haggle-tactic {
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: rgba(26, 26, 46, 0.7);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 0.8em;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s, background 0.15s, transform 0.05s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.haggle-tactic:hover {
+  border-color: var(--gold);
+  background: rgba(26, 26, 46, 0.9);
+}
+
+.haggle-tactic:active {
+  transform: scale(0.96);
+}
+
+.haggle-tactic.selected {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+  color: var(--gold);
+}
+
+.haggle-tactic.blue-option {
+  border-color: var(--blue);
+  box-shadow: inset 0 0 10px rgba(96, 165, 250, 0.12);
+}
+
+.haggle-tactic.disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.haggle-tactic .tactic-icon {
+  font-size: 1.1em;
+}
+
+.haggle-tactic .tactic-label {
+  flex: 1;
+  line-height: 1.3;
+}
+
+.haggle-tactic .tactic-desc {
+  font-size: 0.75em;
+  font-weight: 400;
+  color: var(--dim);
+  display: block;
+}
+
+/* ── Blue options span full width ── */
+.haggle-tactic.blue-option {
+  grid-column: 1 / -1;
+}
+
+/* ── Battle Animations ── */
+
+/* Tactic flash */
+.haggle-tactic-flash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 15, 0.7);
+  z-index: 110;
+  pointer-events: none;
+  animation: tacticFlashAnim 1.2s ease-out forwards;
+}
+
+.haggle-tactic-flash .flash-text {
+  color: var(--gold);
+  font-size: 1.4em;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.5);
+}
+
+@keyframes tacticFlashAnim {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Opponent shake (on success) */
+.haggle-shake {
+  animation: battleShake 0.4s ease-out;
+}
+
+@keyframes battleShake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-6px);
+  }
+
+  50% {
+    transform: translateX(6px);
+  }
+
+  75% {
+    transform: translateX(-3px);
+  }
+}
+
+/* Success/fail flash on arena */
+.haggle-arena.flash-success {
+  animation: arenaFlashGreen 0.5s ease-out;
+}
+
+.haggle-arena.flash-fail {
+  animation: arenaFlashRed 0.5s ease-out;
+}
+
+@keyframes arenaFlashGreen {
+  0% {
+    box-shadow: inset 0 0 60px rgba(58, 138, 92, 0.4);
+  }
+
+  100% {
+    box-shadow: none;
+  }
+}
+
+@keyframes arenaFlashRed {
+  0% {
+    box-shadow: inset 0 0 60px rgba(201, 64, 64, 0.4);
+  }
+
+  100% {
+    box-shadow: none;
+  }
+}
+
+/* Proposal letter */
+.haggle-proposal {
+  position: absolute;
+  left: 10%;
+  top: 50%;
+  font-size: 1.6em;
+  z-index: 10;
+  animation: proposalFly 1.5s ease-in-out forwards;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+@keyframes proposalFly {
+  0% {
+    left: 10%;
+    top: 65%;
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    left: 50%;
+    top: 45%;
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+  100% {
+    left: 80%;
+    top: 25%;
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* ── Intro Cutscene ── */
+.haggle-intro {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: introFade 0.6s ease-out;
+}
+
+.haggle-intro .intro-vs {
+  color: var(--gold);
+  font-size: 2em;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-shadow: 0 0 30px rgba(201, 168, 76, 0.4);
+  animation: introPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes introPulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.haggle-intro .intro-line {
+  color: var(--dim);
+  font-size: 0.8em;
+  letter-spacing: 1px;
+  margin-top: 8px;
+  opacity: 0;
+  animation: introLineReveal 0.5s ease-out forwards;
+}
+
+@keyframes introLineReveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes introFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Result Screen ── */
+.haggle-result-banner {
+  text-align: center;
+  padding: 20px 0;
+  margin: 12px 0;
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  background: rgba(201, 168, 76, 0.05);
+  animation: resultPop 0.6s ease-out;
+}
+
+.haggle-result-banner.deal {
+  border-color: var(--green);
+  background: rgba(58, 138, 92, 0.05);
+}
+
+.haggle-result-banner.fail {
+  border-color: var(--red);
+  background: rgba(201, 64, 64, 0.05);
+}
+
+@keyframes resultPop {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Mobile adjustments for battle ── */
+@media (max-width: 500px) {
+  .haggle-opponent-sprite {
+    width: 96px;
+    height: 96px;
+  }
+
+  .haggle-player-sprite {
+    width: 80px;
+    height: 80px;
+  }
+
+  .haggle-opponent-info {
+    min-width: 150px;
+    padding: 8px 10px;
+  }
+
+  .haggle-player-info {
+    min-width: 130px;
+    padding: 8px 10px;
+  }
+
+  .haggle-dialogue {
+    margin: 0 8px 6px;
+    padding: 12px 14px;
+  }
+
+  .haggle-tactics {
+    gap: 4px;
+    padding: 0 8px 8px;
+  }
+
+  .haggle-tactic {
+    min-height: 48px;
+    padding: 8px 12px;
+    font-size: 0.75em;
+  }
+
+  .haggle-gap-track {
+    width: 90px;
+  }
+}
+
+@media (max-width: 380px) {
+  .haggle-tactics {
+    grid-template-columns: 1fr;
+  }
+
+  .haggle-bar-top {
+    height: 20px;
+  }
+
+  .haggle-bar-bottom {
+    height: 4px;
+  }
+}
+
+
+/* ═══════════════════════════════════════════
+   Week Transition Interstitial
+   ═══════════════════════════════════════════ */
+
+.t-week-transition {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.t-week-transition-title {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 1.2em;
+  letter-spacing: 4px;
+  padding: 12px 0;
+  border-top: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  margin-bottom: 16px;
+  animation: weekTitlePulse 1.5s ease-in-out;
+}
+
+@keyframes weekTitlePulse {
+  0% {
+    opacity: 0;
+    letter-spacing: 8px;
+  }
+
+  100% {
+    opacity: 1;
+    letter-spacing: 4px;
+  }
+}
+
+.t-week-summary-line {
+  color: var(--fg);
+  font-size: 0.9em;
+  line-height: 1.8;
+  padding: 2px 0;
+}
+
+/* ═══════════════════════════════════════════
+   Pokémon-Style Battle Header (Agent-2)
+   ═══════════════════════════════════════════ */
+
+.t-battle-header {
+  background: rgba(10, 10, 30, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+}
+
+.t-battle-vs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.t-battle-card {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(10, 10, 25, 0.8);
+}
+
+.t-battle-player {
+  border-color: var(--green);
+  box-shadow: inset 0 0 8px rgba(58, 138, 92, 0.15);
+}
+
+.t-battle-dealer {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 8px rgba(201, 168, 76, 0.15);
+}
+
+.t-battle-icon {
+  font-size: 1.8em;
+  margin-bottom: 4px;
+}
+
+.t-battle-name {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.75em;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.t-battle-offer {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.95em;
+  margin-top: 4px;
+}
+
+.t-battle-vs-text {
+  color: var(--gold);
+  font-size: 1.2em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.t-battle-round {
+  text-align: center;
+  color: var(--dim);
+  font-size: 0.7em;
+  letter-spacing: 3px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.t-battle-gap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.t-battle-gap-label {
+  color: var(--dim);
+  font-size: 0.7em;
+  font-weight: 700;
+  min-width: 50px;
+}
+
+.t-battle-gap-bar {
+  color: var(--gold);
+  font-size: 0.8em;
+  letter-spacing: 1px;
+}
+
+.t-battle-patience {
+  text-align: center;
+  font-size: 0.9em;
+  letter-spacing: 2px;
+}
+
+/* Tactic feedback — shake on pick */
+@keyframes tacticShake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-3px);
+  }
+
+  40% {
+    transform: translateX(3px);
+  }
+
+  60% {
+    transform: translateX(-2px);
+  }
+
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+.t-battle-shake {
+  animation: tacticShake 0.4s ease-out;
+}
+
+/* ═══════════════════════════════════════════
+   Work Cards — Market Screen (Agent-2)
+   ═══════════════════════════════════════════ */
+
+.t-work-card {
+  border-left: 3px solid var(--border);
+  padding: 8px 12px;
+  margin: 4px 0;
+  background: rgba(10, 10, 25, 0.4);
+  border-radius: 0 4px 4px 0;
+}
+
+.t-wc-gold {
+  border-left-color: var(--gold);
+}
+
+.t-wc-silver {
+  border-left-color: #a0a0b2;
+}
+
+.t-wc-teal {
+  border-left-color: #4dc9b0;
+}
+
+.t-wc-white {
+  border-left-color: var(--fg);
+}
+
+.t-wc-title {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.95em;
+}
+
+.t-wc-meta {
+  color: var(--dim);
+  font-size: 0.8em;
+  margin-top: 2px;
+}
+
+/* ═══════════════════════════════════════════
+   Mobile Spacing Improvements (Agent-2)
+   ═══════════════════════════════════════════ */
+
+/* Compact section headers on mobile */
+@media (max-width: 600px) {
+  .t-section-header {
+    margin: 6px 0 0;
+    font-size: 0.7em;
+    padding: 4px 0;
+  }
+
+  /* Larger touch targets for options */
+  .t-option {
+    padding: 10px 14px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Compact stats */
+  .t-stat {
+    padding: 2px 0;
+    font-size: 0.85em;
+  }
+
+  /* Battle cards stack tighter */
+  .t-battle-card {
+    padding: 6px;
+  }
+
+  .t-battle-icon {
+    font-size: 1.4em;
+  }
+}
