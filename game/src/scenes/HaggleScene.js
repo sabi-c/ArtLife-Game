@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { HaggleManager } from '../managers/HaggleManager.js';
-import { TACTICS, BLUE_OPTIONS } from '../data/haggle_config.js';
+import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES } from '../data/haggle_config.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 export class HaggleScene extends Phaser.Scene {
     constructor() {
@@ -12,17 +13,42 @@ export class HaggleScene extends Phaser.Scene {
         this.haggleInfo = data.haggleInfo; // initial state
         this.state = data.haggleInfo?.state || HaggleManager.getState() || this.haggleInfo;
 
-        if (this.ui && this.ui._container) {
-            this.ui._container.style.display = 'none';
+        if (this.ui && this.ui.container) {
+            this.ui.container.style.display = 'none';
+        }
+    }
+
+    preload() {
+        // Dynamically load custom background or sprites if provided in State
+        if (this.state.bgKey && !this.textures.exists(this.state.bgKey)) {
+            this.load.image(this.state.bgKey, `/backgrounds/${this.state.bgKey}`);
+        }
+        if (this.state.dealerSpriteKey && !this.textures.exists(this.state.dealerSpriteKey)) {
+            this.load.image(this.state.dealerSpriteKey, `/sprites/${this.state.dealerSpriteKey}`);
+        }
+        if (this.state.playerSpriteKey && !this.textures.exists(this.state.playerSpriteKey)) {
+            this.load.image(this.state.playerSpriteKey, `/sprites/${this.state.playerSpriteKey}`);
         }
     }
 
     create() {
         const { width, height } = this.scale;
 
-        // 1. Background
-        if (this.textures.exists('bg_gallery')) {
-            this.bg = this.add.image(width / 2, height / 2 - 80, 'bg_gallery');
+        // ── Cinematic Entry (pokemon-react-phaser battle transition) ──
+        this.cameras.main.fadeIn(500, 0, 0, 0);
+        try {
+            const vignette = this.cameras.main.postFX.addVignette();
+            vignette.radius = 0.75; // Tighter vignette for battle intensity
+        } catch (e) { /* Canvas renderer fallback */ }
+
+        // Emit battle start event
+        GameEventBus.emit(GameEvents.HAGGLE_START, {
+            dealerType: this.state.dealerTypeKey,
+            round: this.state.round,
+        });
+        const bgKey = this.state.bgKey || 'bg_gallery';
+        if (this.textures.exists(bgKey)) {
+            this.bg = this.add.image(width / 2, height / 2 - 80, bgKey);
             const scale = Math.max(width / this.bg.width, (height - 250) / this.bg.height);
             this.bg.setScale(scale).setTint(0x888888);
         } else {
@@ -30,19 +56,23 @@ export class HaggleScene extends Phaser.Scene {
         }
 
         // 2. Sprites
-        const dealerKey = `dealer_${this.state.dealerTypeKey || 'patron'}`;
+        const dealerKey = this.state.dealerSpriteKey || `dealer_${this.state.dealerTypeKey || 'patron'}`;
         const dealerSprite = this.textures.exists(dealerKey) ? dealerKey : 'dealer_patron';
 
         if (this.textures.exists(dealerSprite)) {
+            // Need custom scaling if passing manual assets
+            const dlScale = this.state.dealerSpriteKey ? 1 : 3;
             this.dealer = this.add.image(width - 150, height / 2 - 120, dealerSprite)
-                .setOrigin(0.5, 1).setScale(3).setBlendMode(Phaser.BlendModes.LIGHTEN);
+                .setOrigin(0.5, 1).setScale(dlScale).setBlendMode(Phaser.BlendModes.LIGHTEN);
         } else {
             this.dealer = this.add.text(width - 150, height / 2 - 120, this.state.dealerIcon || '👤', { fontSize: '100px' }).setOrigin(0.5, 1);
         }
 
-        if (this.textures.exists('player_back')) {
-            this.player = this.add.image(150, height - 250, 'player_back')
-                .setOrigin(0.5, 1).setScale(3).setBlendMode(Phaser.BlendModes.LIGHTEN);
+        const playerKey = this.state.playerSpriteKey || 'player_back';
+        if (this.textures.exists(playerKey)) {
+            const plScale = this.state.playerSpriteKey ? 1 : 3;
+            this.player = this.add.image(150, height - 250, playerKey)
+                .setOrigin(0.5, 1).setScale(plScale).setBlendMode(Phaser.BlendModes.LIGHTEN);
         } else {
             this.player = this.add.text(150, height - 250, '🕵️', { fontSize: '120px' }).setOrigin(0.5, 1).setScale(-1, 1);
         }
@@ -76,6 +106,9 @@ export class HaggleScene extends Phaser.Scene {
                 this.renderTactics();
             });
         });
+
+        // ── ESC key force-exit (safety hatch) ──
+        this.input.keyboard.on('keydown-ESC', this.forceExit, this);
     }
 
     drawUIContainers(width, height) {
@@ -182,7 +215,8 @@ export class HaggleScene extends Phaser.Scene {
     }
 
     renderTactics() {
-        if (!this.state.isActive && this.state.resolved) {
+        // If the haggle is already resolved, skip straight to result screen
+        if (this.state.resolved) {
             this.renderResult();
             return;
         }
@@ -195,9 +229,8 @@ export class HaggleScene extends Phaser.Scene {
         const dlHeight = 120;
         const dlY = height - dlHeight - 40;
 
+        // WalkAway comes from HaggleManager.getAvailableTactics() already — do NOT push again
         const tactics = HaggleManager.getAvailableTactics();
-        // Add Walk Away manually
-        tactics.push({ id: 'walkAway', label: '🗡️ Walk Away', description: 'End negotiation', baseSuccess: 1, tacticId: 'walkAway' });
 
         // Draw 2x2 grid inside dialogue box area
         const cols = 2;
@@ -216,19 +249,49 @@ export class HaggleScene extends Phaser.Scene {
             const y = oy + Math.floor(index / cols) * (btnH + padY);
 
             const isBlue = t.isBlueOption;
-            const bg = this.add.rectangle(x + btnW / 2, y + btnH / 2, btnW, btnH, isBlue ? 0x1a2e4e : 0x1a1a2e)
-                .setStrokeStyle(1, isBlue ? 0x4488cc : 0x3a3a4e).setInteractive({ useHandCursor: true });
 
-            const txt = this.add.text(x + 10, y + btnH / 2, t.label, {
-                fontFamily: '"Press Start 2P"', fontSize: '10px', color: isBlue ? '#88ccff' : '#e8e4df'
+            // Map tactic types to header colors
+            let typeColor = isBlue ? '#88ccff' : '#e8e4df';
+            let typeBgColor = isBlue ? 0x1a2e4e : 0x1a1a2e;
+            let typeHoverColor = isBlue ? 0x2a3e6e : 0x2a2a3e;
+            let typeBorderColor = isBlue ? 0x4488cc : 0x3a3a4e;
+
+            // Type styling
+            let typeLabel = '';
+            if (t.type) {
+                switch (t.type) {
+                    case HAGGLE_TYPES.EMOTIONAL: typeBorderColor = 0xff88aa; typeLabel = 'EMOTION'; break;
+                    case HAGGLE_TYPES.LOGICAL: typeBorderColor = 0x88bbff; typeLabel = 'LOGIC'; break;
+                    case HAGGLE_TYPES.AGGRESSIVE: typeBorderColor = 0xff6666; typeLabel = 'AGGRESSIVE'; break;
+                    case HAGGLE_TYPES.FINANCIAL: typeBorderColor = 0x88cc88; typeLabel = 'FINANCIAL'; break;
+                }
+            }
+            if (t.id === 'walkAway') {
+                typeBorderColor = 0xff6666;
+            }
+
+            const bg = this.add.rectangle(x + btnW / 2, y + btnH / 2, btnW, btnH, typeBgColor)
+                .setStrokeStyle(1.5, typeBorderColor).setInteractive({ useHandCursor: true });
+
+            const txt = this.add.text(x + 10, y + btnH / 2 - 5, t.label, {
+                fontFamily: '"Press Start 2P"', fontSize: '10px', color: typeColor
             }).setOrigin(0, 0.5);
 
-            bg.on('pointerover', () => bg.setFillStyle(isBlue ? 0x2a3e6e : 0x2a2a3e));
-            bg.on('pointerout', () => bg.setFillStyle(isBlue ? 0x1a2e4e : 0x1a1a2e));
+            // Add the type label in the top right corner
+            let typeBadge = null;
+            if (typeLabel) {
+                typeBadge = this.add.text(x + btnW - 5, y + 5, typeLabel, {
+                    fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#' + typeBorderColor.toString(16).padStart(6, '0')
+                }).setOrigin(1, 0).setAlpha(0.7);
+            }
+
+            bg.on('pointerover', () => bg.setFillStyle(typeHoverColor));
+            bg.on('pointerout', () => bg.setFillStyle(typeBgColor));
 
             bg.on('pointerdown', () => this.executeTactic(t.id, t.label));
 
             this.tacticsContainer.add([bg, txt]);
+            if (typeBadge) this.tacticsContainer.add(typeBadge);
         });
     }
 
@@ -274,6 +337,13 @@ export class HaggleScene extends Phaser.Scene {
         this.time.delayedCall(animDuration, () => {
             const result = HaggleManager.executeTactic(tacticId);
 
+            // Guard: if tactic was locked or state invalid, recover gracefully
+            if (!result) {
+                console.warn('[HaggleScene] executeTactic returned null for:', tacticId);
+                this.renderTactics();
+                return;
+            }
+
             // Animate dealer reaction based on success
             if (result.success) {
                 this.cameras.main.shake(200, 0.01);
@@ -284,16 +354,24 @@ export class HaggleScene extends Phaser.Scene {
                 this.tweens.add({ targets: this.dealer, y: this.dealer.y - 10, duration: 100, yoyo: true });
             }
 
-            const flavor = result.success ? "It's super effective!" : "But it failed!";
-            this.playDialogue(`> Used ${label.split(' ')[1] || label}...\n> ${flavor}`, () => {
+            // Use real dealer dialogue from haggle_config instead of generic text
+            const dealerDialogue = result.dialogue ? result.dialogue.replace(/"/g, '') : (result.success ? 'Interesting...' : 'I don\'t think so.');
+            const priceInfo = result.priceChange ? `\n> Price shifted by $${Math.abs(result.priceChange).toLocaleString()}` : '';
+
+            let effectText = result.success ? '✦ Effective!' : '✗ No effect.';
+            if (result.effectivenessMessage) {
+                effectText = `✦ ${result.effectivenessMessage}`;
+            }
+
+            this.playDialogue(`> ${effectText}${priceInfo}`, () => {
                 this.updateBars();
-                this.time.delayedCall(1000, () => {
+                this.time.delayedCall(800, () => {
                     this.speakerTab.setText(this.state.dealerName?.toUpperCase() || 'DEALER');
                     // Check if game over
                     if (result.dealReached || result.dealFailed) {
-                        this.playDialogue(result.finalDialogue, () => this.renderResult());
+                        this.playDialogue(result.finalDialogue ? result.finalDialogue.replace(/"/g, '') : 'We\'re done here.', () => this.renderResult());
                     } else {
-                        this.playDialogue(result.dialogue.replace(/"/g, ''), () => this.renderTactics());
+                        this.playDialogue(dealerDialogue, () => this.renderTactics());
                     }
                 });
             });
@@ -306,40 +384,142 @@ export class HaggleScene extends Phaser.Scene {
         this.tacticsContainer.setVisible(true);
 
         const { width, height } = this.scale;
-        const dlHeight = 120;
-        const dlY = height - dlHeight - 40;
-
         const isDeal = this.state.result === 'deal';
 
-        this.speakerTab.setText('RESULT');
-        this.dialogueTextContent.setText('');
+        // Hide the dialogue box area
+        this.dialogueBg.setAlpha(0);
+        this.speakerTab.setAlpha(0);
+        this.dialogueTextContent.setAlpha(0);
 
-        const banner = this.add.text(width / 2, dlY + 40, isDeal ? '🤝 DEAL STRUCK' : '🏃 NEGOTIATION FAILED', {
-            fontFamily: '"Press Start 2P"', fontSize: '16px', color: isDeal ? '#3a8a5c' : '#c94040'
-        }).setOrigin(0.5);
+        if (isDeal) {
+            // ═══ ART ACQUISITION CELEBRATION ═══
+            // Full-screen dramatic overlay
+            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92).setDepth(200);
+            overlay.setAlpha(0);
+            this.tweens.add({ targets: overlay, alpha: 1, duration: 600 });
 
-        const sub = this.add.text(width / 2, dlY + 70, isDeal ? `Final Price: $${this.state.finalPrice.toLocaleString()}` : `They walked away.`, {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#e8e4df'
-        }).setOrigin(0.5);
+            // Screen flash
+            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.9).setDepth(201);
+            this.tweens.add({ targets: flash, alpha: 0, duration: 400, delay: 300 });
+            this.cameras.main.shake(300, 0.02);
 
-        const btnW = 200;
-        const btnY = dlY + dlHeight - 30;
-        const bg = this.add.rectangle(width / 2, btnY, btnW, 30, 0x1a2e4e).setStrokeStyle(1, 0x4488cc).setInteractive({ useHandCursor: true });
-        const txt = this.add.text(width / 2, btnY, 'CONTINUE →', { fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#88ccff' }).setOrigin(0.5);
+            // Art piece title
+            const titleText = this.add.text(width / 2, height / 2 - 80, '🎨  ACQUIRED', {
+                fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#c9a84c', align: 'center'
+            }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            this.tweens.add({ targets: titleText, alpha: 1, y: height / 2 - 90, duration: 800, delay: 500, ease: 'Power2' });
 
-        bg.on('pointerdown', () => {
-            HaggleManager.applyResult();
-            this.endBattle();
-        });
+            const workTitle = this.add.text(width / 2, height / 2 - 30, `"${this.state.work?.title || 'Untitled'}"`, {
+                fontFamily: '"Playfair Display"', fontSize: '22px', color: '#e8e4df', fontStyle: 'italic', align: 'center'
+            }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            this.tweens.add({ targets: workTitle, alpha: 1, duration: 600, delay: 800 });
 
-        this.tacticsContainer.add([banner, sub, bg, txt]);
+            const artistText = this.add.text(width / 2, height / 2 + 10, `by ${this.state.work?.artist || 'Unknown Artist'}`, {
+                fontFamily: '"Playfair Display"', fontSize: '16px', color: '#7a7a8a', align: 'center'
+            }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            this.tweens.add({ targets: artistText, alpha: 1, duration: 600, delay: 1000 });
+
+            // Price details
+            const savings = (this.state.askingPrice || 0) - (this.state.finalPrice || 0);
+            const priceText = this.add.text(width / 2, height / 2 + 60, `Final Price: $${(this.state.finalPrice || 0).toLocaleString()}`, {
+                fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#3a8a5c', align: 'center'
+            }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            this.tweens.add({ targets: priceText, alpha: 1, duration: 600, delay: 1200 });
+
+            if (savings > 0) {
+                const savingsText = this.add.text(width / 2, height / 2 + 90, `You saved $${savings.toLocaleString()} from the asking price`, {
+                    fontFamily: '"Playfair Display"', fontSize: '14px', color: '#c9a84c', align: 'center'
+                }).setOrigin(0.5).setDepth(202).setAlpha(0);
+                this.tweens.add({ targets: savingsText, alpha: 1, duration: 600, delay: 1400 });
+            }
+
+            // Continue button (appears last)
+            const btnY = height / 2 + 140;
+            const bg = this.add.rectangle(width / 2, btnY, 220, 36, 0x1a2e4e, 0.9).setStrokeStyle(2, 0x4488cc).setInteractive({ useHandCursor: true }).setDepth(202).setAlpha(0);
+            const txt = this.add.text(width / 2, btnY, 'CONTINUE →', { fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#88ccff' }).setOrigin(0.5).setDepth(202).setAlpha(0);
+
+            this.tweens.add({ targets: [bg, txt], alpha: 1, duration: 400, delay: 1800 });
+
+            bg.on('pointerover', () => bg.setFillStyle(0x2a3e6e));
+            bg.on('pointerout', () => bg.setFillStyle(0x1a2e4e));
+            bg.on('pointerdown', () => {
+                HaggleManager.applyResult();
+                this.endBattle();
+            });
+
+            this.tacticsContainer.add([overlay, flash, titleText, workTitle, artistText, priceText, bg, txt]);
+
+        } else {
+            // ═══ FAILED DEAL SCREEN ═══
+            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85).setDepth(200);
+            overlay.setAlpha(0);
+            this.tweens.add({ targets: overlay, alpha: 1, duration: 400 });
+
+            // Dealer walks away — slide out
+            if (this.dealer) {
+                this.tweens.add({ targets: this.dealer, x: width + 200, alpha: 0, duration: 1000, ease: 'Power2' });
+            }
+
+            const failHeader = this.add.text(width / 2, height / 2 - 60, '💨  DEAL FELL THROUGH', {
+                fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#c94040', align: 'center'
+            }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            this.tweens.add({ targets: failHeader, alpha: 1, duration: 600, delay: 400 });
+
+            const failSub = this.add.text(width / 2, height / 2, `"${this.state.work?.title || 'The artwork'}" slipped through your fingers.`, {
+                fontFamily: '"Playfair Display"', fontSize: '16px', color: '#7a7a8a', align: 'center', wordWrap: { width: width - 200 }
+            }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            this.tweens.add({ targets: failSub, alpha: 1, duration: 600, delay: 700 });
+
+            const btnY = height / 2 + 80;
+            const bg = this.add.rectangle(width / 2, btnY, 200, 36, 0x2e1a1a, 0.9).setStrokeStyle(2, 0xc94040).setInteractive({ useHandCursor: true }).setDepth(202).setAlpha(0);
+            const txt = this.add.text(width / 2, btnY, 'RETURN →', { fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888' }).setOrigin(0.5).setDepth(202).setAlpha(0);
+
+            this.tweens.add({ targets: [bg, txt], alpha: 1, duration: 400, delay: 1200 });
+
+            bg.on('pointerover', () => bg.setFillStyle(0x4e2a2a));
+            bg.on('pointerout', () => bg.setFillStyle(0x2e1a1a));
+            bg.on('pointerdown', () => {
+                HaggleManager.applyResult();
+                this.endBattle();
+            });
+
+            this.tacticsContainer.add([overlay, failHeader, failSub, bg, txt]);
+        }
+    }
+
+    /**
+     * Force-exit the haggle scene (ESC key safety hatch).
+     * Cleans up state and restores the terminal UI regardless of battle state.
+     */
+    forceExit() {
+        console.warn('[HaggleScene] Force-exiting via ESC');
+        this.input.keyboard.off('keydown-ESC', this.forceExit, this);
+        if (this.typeEvent) this.typeEvent.remove();
+        try { HaggleManager.applyResult(); } catch (e) { /* no active haggle to apply */ }
+        GameEventBus.emit(GameEvents.HAGGLE_END, { dealerType: this.state?.dealerTypeKey, result: 'force_exit', round: this.state?.round });
+        if (this.ui && this.ui.container) {
+            this.ui.container.style.display = 'block';
+            this.ui.popScreen();
+        }
+        this.scene.stop();
     }
 
     endBattle() {
-        if (this.ui && this.ui._container) {
-            this.ui._container.style.display = 'block';
-            this.ui.render();
-        }
-        this.scene.stop();
+        // Emit result event via event bus
+        this.input.keyboard.off('keydown-ESC', this.forceExit, this);
+        GameEventBus.emit(GameEvents.HAGGLE_END, {
+            dealerType: this.state.dealerTypeKey,
+            result: this.state.result,
+            round: this.state.round,
+        });
+
+        this.cameras.main.fadeOut(600, 0, 0, 0);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+            if (this.ui && this.ui.container) {
+                this.ui.container.style.display = 'block';
+                this.ui.popScreen();
+            }
+            this.scene.stop();
+        });
     }
 }

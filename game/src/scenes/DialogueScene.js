@@ -30,8 +30,8 @@ export class DialogueScene extends Phaser.Scene {
         this.onExitCallback = data.onExit || null;
 
         // Hide the terminal DOM
-        if (this.ui && this.ui._container) {
-            this.ui._container.style.display = 'none';
+        if (this.ui && this.ui.container) {
+            this.ui.container.style.display = 'none';
         }
     }
 
@@ -431,6 +431,40 @@ export class DialogueScene extends Phaser.Scene {
         // Apply effects
         if (choice.effects) {
             GameState.applyEffects(choice.effects);
+        }
+
+        if (choice.triggerHaggle) {
+            this.clearStepObjects();
+
+            // Derive seller from context
+            const sellerId = choice.npcInvolved || this.eventData.npcInvolved ||
+                (this.eventData.id ? this.eventData.id.split('_').slice(0, 2).join('_') : 'seller');
+            const basePrice = Math.abs(choice.effects?.cash || 10000);
+
+            const haggleInfo = {
+                type: 'buy',
+                targetName: sellerId.toUpperCase().replace(/_/g, ' '),
+                dealerTypeKey: 'patron', // generic fallback
+                repRequired: 0,
+                basePrice: basePrice,
+                minPrice: Math.floor(basePrice * 0.8),
+                patience: 3,
+                pieceName: 'Selected Artwork',
+                pieceArtist: 'Various',
+                pieceQuality: 7,
+                pieceHeat: 5
+            };
+
+            this.cameras.main.fadeOut(300, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('HaggleScene', {
+                    ui: this.ui,
+                    haggleInfo: haggleInfo,
+                    returnScene: this.returnScene || 'LocationScene',
+                    returnArgs: this.returnArgs || {}
+                });
+            });
+            return;
         }
 
         // Record to Decision Log
@@ -918,14 +952,14 @@ export class DialogueScene extends Phaser.Scene {
             } else {
                 if (this.onExitCallback) {
                     this.onExitCallback();
-                } else if (this.ui && this.ui._container) {
-                    this.ui._container.style.display = 'block';
+                } else if (this.ui && this.ui.container) {
+                    this.ui.container.style.display = 'block';
                     this.ui.popScreen(); // pop the blank trap screen
                     this.ui.render();
                 }
 
-                if (this.ui && this.ui._container) {
-                    this.ui._container.style.display = 'block';
+                if (this.ui && this.ui.container) {
+                    this.ui.container.style.display = 'block';
                 }
 
                 this.scene.stop();

@@ -1,0 +1,150 @@
+import Phaser from 'phaser';
+import { useUIStore } from '../stores/uiStore.js';
+
+export class MacDialogueScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'MacDialogueScene' });
+    }
+
+    init(data) {
+        // Data should contain { bgKey, leftSpriteKey, rightSpriteKey, dialogueSequence, onComplete, ui }
+        this.dialogueData = data;
+        this.ui = data.ui;
+
+        // Hide DOM UI
+        if (this.ui && this.ui.container) {
+            this.ui.container.style.display = 'none';
+        }
+    }
+
+    preload() {
+        if (this.dialogueData.bgKey && !this.textures.exists(this.dialogueData.bgKey)) {
+            this.load.image(this.dialogueData.bgKey, `/backgrounds/${this.dialogueData.bgKey}`);
+        }
+        if (this.dialogueData.rewardItem && this.dialogueData.rewardItem.imageKey && !this.textures.exists(this.dialogueData.rewardItem.imageKey)) {
+            this.load.image(this.dialogueData.rewardItem.imageKey, `/sprites/${this.dialogueData.rewardItem.imageKey}`);
+        }
+    }
+
+    create() {
+        try {
+            const camW = this.cameras.main.width;
+            const camH = this.cameras.main.height;
+
+            // 1. Background
+            if (this.dialogueData.bgKey && this.textures.exists(this.dialogueData.bgKey)) {
+                const src = this.textures.get(this.dialogueData.bgKey).source[0];
+                if (src.width > 1) { // >1px means a real image, not our placeholder
+                    this.bg = this.add.image(camW / 2, camH / 2, this.dialogueData.bgKey);
+                    const scale = Math.max(camW / this.bg.width, camH / this.bg.height);
+                    this.bg.setScale(scale).setScrollFactor(0);
+                } else {
+                    this.cameras.main.setBackgroundColor('#1a1a2e');
+                }
+            } else {
+                this.cameras.main.setBackgroundColor('#1a1a2e');
+            }
+
+            // 2. Trigger React Overlay UI via Zustand Store
+            if (!this.dialogueData.dialogueSequence?.length) {
+                console.warn('[MacDialogueScene] No dialogue sequence provided — ending immediately.');
+                this.endDialogue(true);
+                return;
+            }
+
+            useUIStore.getState().openDialogue({
+                steps: this.dialogueData.dialogueSequence,
+                leftSprite: this.dialogueData.leftSpriteKey,
+                rightSprite: this.dialogueData.rightSpriteKey,
+                callback: () => { this.endDialogue(); }
+            });
+        } catch (err) {
+            window.ArtLife?.recordSceneError('MacDialogueScene', err);
+            this.endDialogue(true); // Bail out gracefully
+        }
+    }
+
+    forceExit() {
+        useUIStore.getState().closeDialogue();
+        this.endDialogue(true);
+    }
+
+    endDialogue(isForceExit = false) {
+        // If there's a reward item and we're not force-exiting, show it in Phaser
+        if (!isForceExit && this.dialogueData.rewardItem) {
+            this.showReward();
+            return;
+        }
+
+        // Fade out
+        this.cameras.main.fadeOut(800, 0, 0, 0);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+            if (this.ui && this.ui.container) {
+                this.ui.container.style.display = 'block';
+            }
+            if (!isForceExit && this.dialogueData.onComplete) {
+                this.dialogueData.onComplete();
+            } else {
+                if (this.ui) {
+                    this.ui.popScreen();
+                }
+            }
+            this.scene.stop();
+        });
+    }
+
+    showReward() {
+        const camW = this.cameras.main.width;
+        const camH = this.cameras.main.height;
+
+        // Dim background further
+        this.add.rectangle(0, 0, camW, camH, 0x000000, 0.7).setOrigin(0, 0);
+
+        const itemStr = this.dialogueData.rewardItem.name;
+        const valStr = `Value: $${this.dialogueData.rewardItem.value.toLocaleString()}`;
+
+        this.add.text(camW / 2, camH / 2 - 120, 'You received:', {
+            fontFamily: 'monospace', fontSize: '24px', color: '#ffffff'
+        }).setOrigin(0.5);
+
+        if (this.dialogueData.rewardItem.imageKey) {
+            const rewardSprite = this.add.image(camW / 2, camH / 2, this.dialogueData.rewardItem.imageKey);
+            rewardSprite.setScale(100 / rewardSprite.height); // Scale to roughly 100px height
+        }
+
+        this.add.text(camW / 2, camH / 2 + 100, itemStr, {
+            fontFamily: '"Chicago", "Courier New", monospace', fontSize: '28px', color: '#00ff00', fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        this.add.text(camW / 2, camH / 2 + 140, valStr, {
+            fontFamily: 'monospace', fontSize: '20px', color: '#aaaaaa'
+        }).setOrigin(0.5);
+
+        const tapText = this.add.text(camW / 2, camH - 60, '[ SPACE TO CONTINUE ]', {
+            fontFamily: 'monospace', fontSize: '18px', color: '#ffffff'
+        }).setOrigin(0.5).setAlpha(0);
+
+        this.tweens.add({ targets: tapText, alpha: 1, duration: 800, yoyo: true, repeat: -1 });
+
+        const finishFn = () => {
+            this.input.keyboard.off('keydown-SPACE', finishFn);
+            this.input.keyboard.off('keydown-ENTER', finishFn);
+            this.input.off('pointerdown');
+
+            // Re-apply state consequences for reward
+            import('../managers/GameState.js').then(({ GameState }) => {
+                if (GameState.state && this.dialogueData.rewardItem) {
+                    GameState.state.portfolio.push(this.dialogueData.rewardItem);
+                }
+            });
+
+            this.endDialogue(true);
+        };
+
+        this.time.delayedCall(500, () => {
+            this.input.keyboard.on('keydown-SPACE', finishFn);
+            this.input.keyboard.on('keydown-ENTER', finishFn);
+            this.input.on('pointerdown', finishFn);
+        });
+    }
+}

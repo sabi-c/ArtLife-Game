@@ -17,6 +17,8 @@ export class MarketManager {
 
     static tick() {
         const state = GameState.state;
+        if (!state) return; // Guard: no game in progress
+        if (MarketManager.artists.length === 0) MarketManager.init([]); // Guard: artists not loaded yet
 
         // Update each artist's heat
         MarketManager.artists.forEach((artist) => {

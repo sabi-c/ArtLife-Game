@@ -2,149 +2,201 @@ import Phaser from 'phaser';
 import { CHARACTERS } from '../data/characters.js';
 import { GameState } from '../managers/GameState.js';
 
+/**
+ * CharacterSelectScene.js — Graphical selection flow replacing TerminalUI.
+ * Inspired by Pokemon Emerald's start sequence.
+ */
 export class CharacterSelectScene extends Phaser.Scene {
     constructor() {
         super({ key: 'CharacterSelectScene' });
-        this.selectedIndex = 0;
+    }
+
+    init(data) {
+        this.ui = data.ui; // TerminalUI reference for handing control back
     }
 
     create() {
-        const { width, height } = this.scale;
-        this.cameras.main.fadeIn(400, 10, 10, 15);
+        this.width = this.scale.width;
+        this.height = this.scale.height;
 
-        // Header
-        this.add.text(width / 2, 40, 'CHOOSE YOUR PATH', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '18px',
-            color: '#c9a84c',
-        }).setOrigin(0.5);
+        this.cameras.main.setBackgroundColor('#14141f');
 
-        this.add.text(width / 2, 70, 'Each collector begins with different advantages', {
-            fontFamily: '"Playfair Display"',
-            fontSize: '14px',
-            color: '#7a7a8a',
-            fontStyle: 'italic',
-        }).setOrigin(0.5);
-
-        // Character cards
-        this.cards = [];
-        const cardWidth = 280;
-        const cardSpacing = 20;
-        const totalWidth = CHARACTERS.length * cardWidth + (CHARACTERS.length - 1) * cardSpacing;
-        const startX = (width - totalWidth) / 2;
-
-        CHARACTERS.forEach((char, i) => {
-            const x = startX + i * (cardWidth + cardSpacing);
-            const card = this.createCharacterCard(x, 100, cardWidth, char, i);
-            this.cards.push(card);
-        });
-
-        // Select button
-        this.selectButton = this.add.text(width / 2, height - 60, '[ BEGIN ]', {
+        // ── Header ──
+        this.add.text(this.width / 2, 40, 'CHOOSE YOUR BACKGROUND', {
             fontFamily: '"Press Start 2P"',
             fontSize: '16px',
-            color: '#c9a84c',
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            color: '#e8e4df'
+        }).setOrigin(0.5);
 
-        this.selectButton.on('pointerover', () => this.selectButton.setScale(1.05));
-        this.selectButton.on('pointerout', () => this.selectButton.setScale(1));
-        this.selectButton.on('pointerdown', () => {
-            const chosen = CHARACTERS[this.selectedIndex];
-            GameState.init(chosen);
-            this.cameras.main.fadeOut(400, 10, 10, 15);
-            this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('GameScene');
-            });
+        // ── State variables ──
+        this.selectedIndex = 0;
+        this.portraits = [];
+        this.typewriterEvent = null;
+
+        // ── Render Portraits (Placeholders for now) ──
+        const portraitWidth = 140;
+        const portraitHeight = 180;
+        const spacing = 180;
+        const startX = this.width / 2 - spacing;
+        const startY = this.height * 0.4;
+
+        CHARACTERS.forEach((char, i) => {
+            const x = startX + (i * spacing);
+
+            // Container for ease of scaling/animations
+            const container = this.add.container(x, startY);
+
+            // Background card
+            const bg = this.add.rectangle(0, 0, portraitWidth, portraitHeight, 0x1a1a2e)
+                .setStrokeStyle(2, 0x333344);
+            container.add(bg);
+
+            // Icon
+            const icon = this.add.text(0, -30, char.icon, { fontSize: '48px' }).setOrigin(0.5);
+            container.add(icon);
+
+            // Name
+            const nameObj = this.add.text(0, 40, char.name, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '10px',
+                color: '#e8e4df',
+                align: 'center',
+                wordWrap: { width: portraitWidth - 20 }
+            }).setOrigin(0.5).setLineSpacing(6);
+            container.add(nameObj);
+
+            this.portraits.push({ container, bg, nameObj });
         });
 
-        this.highlightCard(0);
+        // ── Info Panel ──
+        const panelWidth = this.width * 0.8;
+        this.add.rectangle(this.width / 2, this.height * 0.8, panelWidth, 120, 0x000000, 0.5)
+            .setStrokeStyle(1, 0x444455);
+
+        this.titleText = this.add.text(this.width / 2, this.height * 0.8 - 40, '', {
+            fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ffd700'
+        }).setOrigin(0.5);
+
+        this.descText = this.add.text(this.width / 2, this.height * 0.8 - 15, '', {
+            fontFamily: '"Courier"', fontSize: '14px', color: '#aaaaaa',
+            wordWrap: { width: panelWidth - 40 },
+            lineHeight: 1.5,
+            align: 'center'
+        }).setOrigin(0.5, 0);
+
+        // Instructions
+        this.add.text(this.width / 2, this.height - 20, '← → to select  |  SPACE to confirm', {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#8888aa'
+        }).setOrigin(0.5);
+
+        // ── Input ──
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.wasd = this.input.keyboard.addKeys({
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D,
+            space: Phaser.Input.Keyboard.KeyCodes.SPACE,
+            enter: Phaser.Input.Keyboard.KeyCodes.ENTER
+        });
+
+        // Initial selection render
+        this.updateSelection();
     }
 
-    createCharacterCard(x, y, w, char, index) {
-        const h = 420;
-        const container = this.add.container(x, y);
+    update() {
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left) || Phaser.Input.Keyboard.JustDown(this.wasd.left)) {
+            this.selectedIndex = Phaser.Math.Wrap(this.selectedIndex - 1, 0, CHARACTERS.length);
+            this.updateSelection();
+        } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right) || Phaser.Input.Keyboard.JustDown(this.wasd.right)) {
+            this.selectedIndex = Phaser.Math.Wrap(this.selectedIndex + 1, 0, CHARACTERS.length);
+            this.updateSelection();
+        }
 
-        // Card background
-        const bg = this.add.graphics();
-        bg.fillStyle(0x14141f, 1);
-        bg.fillRoundedRect(0, 0, w, h, 6);
-        bg.lineStyle(1, 0x2a2a3a);
-        bg.strokeRoundedRect(0, 0, w, h, 6);
-        container.add(bg);
-
-        // Icon
-        this.add.text(x + w / 2, y + 30, char.icon, {
-            fontSize: '32px',
-        }).setOrigin(0.5);
-
-        // Name
-        this.add.text(x + w / 2, y + 70, char.name, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '11px',
-            color: '#e8e4df',
-        }).setOrigin(0.5);
-
-        // Tagline
-        this.add.text(x + w / 2, y + 95, `"${char.tagline}"`, {
-            fontFamily: '"Playfair Display"',
-            fontSize: '12px',
-            color: '#7a7a8a',
-            fontStyle: 'italic',
-            wordWrap: { width: w - 30 },
-            align: 'center',
-        }).setOrigin(0.5);
-
-        // Stats
-        const statsY = y + 130;
-        const statsStyle = {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
-            color: '#b0b0c0',
-            lineSpacing: 10,
-        };
-
-        const statsText = [
-            `CASH:  ${char.startingCash}`,
-            `WORKS: ${char.startingWorks}`,
-            `PERK:  ${char.perk}`,
-        ].join('\n');
-
-        this.add.text(x + 15, statsY, statsText, statsStyle);
-
-        // Description
-        this.add.text(x + 15, statsY + 80, char.description, {
-            fontFamily: '"Playfair Display"',
-            fontSize: '12px',
-            color: '#7a7a8a',
-            wordWrap: { width: w - 30 },
-            lineSpacing: 4,
-        });
-
-        // Make entire area clickable
-        const hitArea = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
-            .setInteractive({ useHandCursor: true });
-
-        hitArea.on('pointerdown', () => {
-            this.selectedIndex = index;
-            this.highlightCard(index);
-        });
-
-        return { container, bg, index };
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.space) || Phaser.Input.Keyboard.JustDown(this.wasd.space) || Phaser.Input.Keyboard.JustDown(this.wasd.enter)) {
+            this.confirmSelection();
+        }
     }
 
-    highlightCard(index) {
-        this.cards.forEach((card, i) => {
-            card.bg.clear();
-            if (i === index) {
-                card.bg.fillStyle(0x1e1e2e, 1);
-                card.bg.fillRoundedRect(0, 0, 280, 420, 6);
-                card.bg.lineStyle(2, 0xc9a84c);
-                card.bg.strokeRoundedRect(0, 0, 280, 420, 6);
+    updateSelection() {
+        // Reset all styles
+        this.portraits.forEach((p, i) => {
+            p.container.setScale(1.0);
+            p.bg.setStrokeStyle(2, 0x333344);
+            p.bg.fillColor = 0x1a1a2e;
+            p.nameObj.setColor('#e8e4df');
+        });
+
+        // Highlight selected
+        const selected = this.portraits[this.selectedIndex];
+
+        this.tweens.add({
+            targets: selected.container,
+            scale: 1.1,
+            duration: 150,
+            ease: 'Back.easeOut'
+        });
+
+        selected.bg.setStrokeStyle(2, 0xffd700); // Gold border
+        selected.bg.fillColor = 0x2a2a4e;
+        selected.nameObj.setColor('#ffd700');
+
+        // Typewriter Effect for Description
+        const char = CHARACTERS[this.selectedIndex];
+        this.titleText.setText(char.tagline);
+
+        const fullDesc = `Starting Cash: $${char.startingCash.toLocaleString()} | Perk: ${char.perk}\n\n${char.description}`;
+        this.typewrite(fullDesc);
+    }
+
+    typewrite(text) {
+        if (this.typewriterEvent) {
+            this.typewriterEvent.remove();
+        }
+
+        this.descText.setText('');
+        let charIndex = 0;
+
+        this.typewriterEvent = this.time.addEvent({
+            delay: 15,
+            repeat: text.length - 1,
+            callback: () => {
+                this.descText.text += text[charIndex];
+                charIndex++;
+            }
+        });
+    }
+
+    confirmSelection() {
+        this.input.keyboard.removeAllKeys();
+
+        const char = CHARACTERS[this.selectedIndex];
+
+        // Final flash animation on the selected portrait
+        const selected = this.portraits[this.selectedIndex];
+        this.tweens.add({
+            targets: selected.bg,
+            fillColor: 0xffffff,
+            duration: 100,
+            yoyo: true,
+            repeat: 3
+        });
+
+        this.cameras.main.flash(800, 255, 255, 255);
+        this.time.delayedCall(800, () => {
+            // Initialize GameState with selected character
+            GameState.init(char);
+
+            // Transition control back to Terminal UI
+            if (this.ui && this.ui.container) {
+                this.ui.container.style.display = 'block';
+                import('../terminal/screens.js').then(({ dashboardScreen }) => {
+                    this.ui.pushScreen(dashboardScreen(this.ui));
+
+                    // Hide the Phaser canvas — terminal takes over
+                    this.sys.game.canvas.style.display = 'none';
+                    this.scene.stop();
+                });
             } else {
-                card.bg.fillStyle(0x14141f, 1);
-                card.bg.fillRoundedRect(0, 0, 280, 420, 6);
-                card.bg.lineStyle(1, 0x2a2a3a);
-                card.bg.strokeRoundedRect(0, 0, 280, 420, 6);
+                this.scene.stop();
             }
         });
     }

@@ -5,7 +5,7 @@
  * and price convergence. Works with both buying and selling scenarios.
  */
 
-import { DEALER_TYPES, TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG } from '../data/haggle_config.js';
+import { DEALER_TYPES, TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG, HAGGLE_TYPES, TYPE_EFFECTIVENESS } from '../data/haggle_config.js';
 import { GameState } from './GameState.js';
 
 class _HaggleManager {
@@ -132,6 +132,21 @@ class _HaggleManager {
     }
 
     // ════════════════════════════════════════════
+    // Helper: Get Type Effectiveness Multiplier
+    // ════════════════════════════════════════════
+    _getTypeEffectiveness(tacticType, dealerStyle) {
+        if (!tacticType || !dealerStyle) return 1.0;
+
+        const typeData = TYPE_EFFECTIVENESS[tacticType];
+        if (!typeData) return 1.0;
+
+        if (typeData.strongAgainst === dealerStyle) return 1.5; // Super Effective
+        if (typeData.weakAgainst === dealerStyle) return 0.5;   // Not very effective
+
+        return 1.0; // Neutral
+    }
+
+    // ════════════════════════════════════════════
     // Execute a tactic
     // ════════════════════════════════════════════
 
@@ -153,8 +168,9 @@ class _HaggleManager {
         // ── Calculate success ──
         let successChance = tactic.baseSuccess;
 
-        // Stat bonus
-        if (tactic.statBonus && TACTICS[tacticId]) {
+        // Stat bonus — check both base TACTICS and BLUE_OPTIONS dictionaries
+        const tacticDef = TACTICS[tacticId] || BLUE_OPTIONS.find(b => b.id === tacticId);
+        if (tactic.statBonus && tacticDef) {
             const statVal = h.playerStats[tactic.statBonus] || 0;
             successChance += statVal * (tactic.statWeight || 0);
         }
@@ -170,6 +186,22 @@ class _HaggleManager {
         // Blue option bonus against collector-type dealers
         if (tactic.isBlueOption && h.dealerTypeKey === 'collector') {
             successChance += 0.15;
+        }
+
+        // ── Type Effectiveness System ──
+        let effectivenessMult = 1.0;
+        let effectivenessMessage = null;
+
+        if (tactic.type && h.dealerType.haggleStyle) {
+            effectivenessMult = this._getTypeEffectiveness(tactic.type, h.dealerType.haggleStyle);
+
+            if (effectivenessMult > 1.0) {
+                effectivenessMessage = 'It\'s super effective!';
+                successChance += 0.20; // Big boost to success chance
+            } else if (effectivenessMult < 1.0) {
+                effectivenessMessage = 'It\'s not very effective...';
+                successChance -= 0.15; // Penalty to success chance
+            }
         }
 
         // Suspicion penalty
@@ -190,8 +222,12 @@ class _HaggleManager {
         let patienceChange = tactic.patienceEffect || 0;
 
         if (success) {
-            // Price moves in player's favor
-            priceChange = Math.round(h.askingPrice * Math.abs(tactic.priceShift));
+            // Price moves in player's favor, multiplied by effectiveness if it's a good move
+            let actualPriceShift = tactic.priceShift;
+            if (effectivenessMult > 1.0) actualPriceShift *= 1.5; // 50% more shift if super effective
+            else if (effectivenessMult < 1.0) actualPriceShift *= 0.5; // 50% less shift if not very effective
+
+            priceChange = Math.round(h.askingPrice * Math.abs(actualPriceShift));
             if (h.mode === 'buy') {
                 h.currentOffer = h.currentOffer; // Player's offer stays
                 h.askingPrice = Math.max(h.currentOffer, h.askingPrice - priceChange);
@@ -267,6 +303,9 @@ class _HaggleManager {
             dealReached,
             dealFailed,
             isBlueOption: tactic.isBlueOption || false,
+            tacticType: tactic.type,
+            effectivenessMult,
+            effectivenessMessage,
         };
 
         h.rounds.push(roundResult);
@@ -325,22 +364,43 @@ class _HaggleManager {
 
         if (h.result === 'deal') {
             if (h.mode === 'buy') {
-                // Buy: deduct cash, add to portfolio
+                // Buy: deduct cash, add to portfolio with full provenance record
                 GameState.state.cash -= h.finalPrice;
-                GameState.state.portfolio.push({
+                const acquiredWork = {
                     ...h.work,
+                    onMarket: false,
                     purchasePrice: h.finalPrice,
-                    purchasedWeek: GameState.state.week,
+                    purchaseWeek: GameState.state.week,
+                    purchaseCity: GameState.state.currentCity,
                     storage: 'home',
                     insured: false,
-                });
+                    provenance: [{
+                        type: 'acquired (haggle)',
+                        week: GameState.state.week,
+                        city: GameState.state.currentCity,
+                        price: h.finalPrice,
+                        source: h.dealerName,
+                    }],
+                };
+                GameState.state.portfolio.push(acquiredWork);
                 GameState.state.totalWorksBought = (GameState.state.totalWorksBought || 0) + 1;
                 GameState.addNews(`🤝 Haggled and bought "${h.work.title}" for $${h.finalPrice.toLocaleString()} (saved $${(h.askingPrice - h.finalPrice).toLocaleString()})`);
             } else {
-                // Sell: add cash, remove from portfolio
+                // Sell: add cash, remove from portfolio, track flip history
                 GameState.state.cash += h.finalPrice;
                 GameState.state.portfolio = GameState.state.portfolio.filter(w => w.id !== h.work.id);
                 GameState.state.totalWorksSold = (GameState.state.totalWorksSold || 0) + 1;
+
+                // Flip tracking — mirrors GameState.sellWork() logic
+                const holdTime = GameState.state.week - (h.work.purchaseWeek || 0);
+                GameState.state.flipHistory = GameState.state.flipHistory || [];
+                GameState.state.flipHistory.push({
+                    workId: h.work.id,
+                    buyWeek: h.work.purchaseWeek || 0,
+                    sellWeek: GameState.state.week,
+                    holdTime,
+                });
+
                 GameState.addNews(`💰 Sold "${h.work.title}" for $${h.finalPrice.toLocaleString()}`);
             }
 

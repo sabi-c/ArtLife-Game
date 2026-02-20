@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
 import { VENUE_MAP } from '../data/rooms.js';
-import { CHARACTERS } from '../data/characters.js';
+import { CONTACTS } from '../data/contacts.js';
 import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
 import { DialogueTreeManager } from '../managers/DialogueTreeManager.js';
 import { QualityGate } from '../managers/QualityGate.js';
+import { GameState } from '../managers/GameState.js';
 
 /**
  * LocationScene — Top-Down Exploration Engine
@@ -17,35 +18,42 @@ export class LocationScene extends Phaser.Scene {
     init(data) {
         this.venueId = data.venueId || 'gallery_opening';
         this.roomId = data.roomId || 'chelsea_main_floor';
+        this.returnScene = data.returnScene || null;
+        this.returnArgs = data.returnArgs || {};
         this.ui = data.ui;
+
         // Find room data
         const venue = VENUE_MAP[this.venueId];
         this.roomData = venue ? venue.rooms.find(r => r.id === this.roomId) : null;
 
+        // Resolve player sprite key from GameState character, fallback to generic
+        const charId = GameState.state?.character?.id || 'julian_vance';
+        this.playerSpriteKey = `walk_${charId}_walk`;
+
         // Hide terminal
-        if (this.ui && this.ui._container) {
-            this.ui._container.style.display = 'none';
+        if (this.ui && this.ui.container) {
+            this.ui.container.style.display = 'none';
         }
     }
 
     preload() {
         this.load.image('kenney_indoor', '/assets/tilesets/kenney_roguelike_indoors/Tilesheets/roguelikeIndoor_transparent.png');
 
-        if (!this.textures.exists('placeholder_player')) {
-            const gfx = this.add.graphics();
-            gfx.fillStyle(0x4cc966, 1);
-            gfx.fillRect(0, 0, 16, 16);
-            gfx.generateTexture('placeholder_player', 16, 16);
-            gfx.destroy();
-        }
+        const npcKeys = [
+            'walk_legacy_gallerist_walk', 'walk_auction_house_type_walk', 'walk_elena_ross_walk',
+            'walk_old_money_gallerist_walk', 'walk_academic_curator_walk', 'walk_young_artist_walk',
+            'walk_art_flipper_walk', 'walk_tech_collector_f_walk', 'walk_power_collector_f_walk',
+            'walk_art_critic_walk', 'walk_young_power_dealer_walk', 'walk_underground_connector_walk',
+            'walk_it_girl_dealer_walk', 'walk_margaux_villiers_walk', 'walk_avant_garde_curator_walk',
+            'walk_julian_vance_walk'
+        ];
 
-        if (!this.textures.exists('placeholder_npc')) {
-            const gfx = this.add.graphics();
-            gfx.fillStyle(0xc94040, 1);
-            gfx.fillRect(0, 0, 16, 16);
-            gfx.generateTexture('placeholder_npc', 16, 16);
-            gfx.destroy();
-        }
+        npcKeys.forEach(key => {
+            // Assume 4x4 grid. The images are typically 64x64 or 128x128 total.
+            // If it's a 32x32 pixel character in a 4x4 sheet, the frame is usually 16x16, 24x24, or 32x32. 
+            // We'll assume typical RPG Maker size or generic 32x32.
+            this.load.spritesheet(key, `/sprites/${key}.png`, { frameWidth: 32, frameHeight: 32 });
+        });
 
         if (!this.textures.exists('placeholder_exit')) {
             const gfx = this.add.graphics();
@@ -57,11 +65,29 @@ export class LocationScene extends Phaser.Scene {
     }
 
     create() {
+        // Setup sprite animations globally for this scene
+        const npcKeys = Object.keys(this.textures.list).filter(k => k.startsWith('walk_'));
+        npcKeys.forEach(key => {
+            // Typical 4x4 grid mappings: Down (0-3), Left (4-7), Right (8-11), Up (12-15)
+            if (!this.anims.exists(`${key}_down`)) {
+                this.anims.create({ key: `${key}_down`, frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
+                this.anims.create({ key: `${key}_left`, frames: this.anims.generateFrameNumbers(key, { start: 4, end: 7 }), frameRate: 6, repeat: -1 });
+                this.anims.create({ key: `${key}_right`, frames: this.anims.generateFrameNumbers(key, { start: 8, end: 11 }), frameRate: 6, repeat: -1 });
+                this.anims.create({ key: `${key}_up`, frames: this.anims.generateFrameNumbers(key, { start: 12, end: 15 }), frameRate: 6, repeat: -1 });
+            }
+        });
+
         const { width, height } = this.scale;
 
         // Fade in
         this.cameras.main.fadeIn(300, 0, 0, 0);
         this.cameras.main.setBackgroundColor('#14141f');
+
+        // ── Camera Vignette PostFX (visual consistency with OverworldScene) ──
+        try {
+            const vignette = this.cameras.main.postFX.addVignette();
+            vignette.radius = 0.85;
+        } catch (e) { /* Canvas renderer fallback */ }
 
         if (!this.roomData) {
             this.add.text(width / 2, height / 2, `Error: Room missing.`).setOrigin(0.5);
@@ -130,8 +156,9 @@ export class LocationScene extends Phaser.Scene {
         this.interactables = this.physics.add.group();
         this.populateRoom(width / 2, height / 2);
 
-        // Player Setup
-        this.player = this.physics.add.sprite(width / 2, height / 2, 'placeholder_player');
+        // Player Setup — use character-aware sprite key, fall back gracefully
+        const spriteKey = this.textures.exists(this.playerSpriteKey) ? this.playerSpriteKey : 'walk_julian_vance_walk';
+        this.player = this.physics.add.sprite(width / 2, height / 2, spriteKey);
         this.player.setScale(2);
         this.player.setCollideWorldBounds(true);
         this.physics.world.setBounds(ox, oy, mapW, mapH);
@@ -156,8 +183,10 @@ export class LocationScene extends Phaser.Scene {
             this.roomData.characters.forEach((charData, i) => {
                 if (charData.requires && !QualityGate.check(charData.requires)) return;
 
-                const charDef = CHARACTERS.find(c => c.id === charData.id) || { name: charData.id };
-                const charSprite = this.add.sprite(centerX + (i * 60) - 30, centerY - 60, 'placeholder_npc');
+                const charDef = CONTACTS.find(c => c.id === charData.id) || { name: charData.id };
+                const spriteKey = charDef.spriteKey || 'walk_legacy_gallerist_walk';
+                const charSprite = this.add.sprite(centerX + (i * 60) - 30, centerY - 60, spriteKey);
+                charSprite.anims.play(`${spriteKey}_down`, true);
                 charSprite.setScale(2);
                 this.physics.add.existing(charSprite);
                 charSprite.body.setImmovable(true);
@@ -205,18 +234,25 @@ export class LocationScene extends Phaser.Scene {
         this.player.body.setVelocity(0);
 
         // Handle 4-way Input (Classic Pokemon movement)
+        const sk = this.player.texture.key; // active sprite key
         if (this.cursors.left.isDown) {
             this.player.body.setVelocityX(-this.walkSpeed);
             this.player.facing = 'left';
+            if (this.anims.exists(`${sk}_left`)) this.player.anims.play(`${sk}_left`, true);
         } else if (this.cursors.right.isDown) {
             this.player.body.setVelocityX(this.walkSpeed);
             this.player.facing = 'right';
+            if (this.anims.exists(`${sk}_right`)) this.player.anims.play(`${sk}_right`, true);
         } else if (this.cursors.up.isDown) {
             this.player.body.setVelocityY(-this.walkSpeed);
             this.player.facing = 'up';
+            if (this.anims.exists(`${sk}_up`)) this.player.anims.play(`${sk}_up`, true);
         } else if (this.cursors.down.isDown) {
             this.player.body.setVelocityY(this.walkSpeed);
             this.player.facing = 'down';
+            if (this.anims.exists(`${sk}_down`)) this.player.anims.play(`${sk}_down`, true);
+        } else {
+            this.player.anims.stop();
         }
 
         // Interaction Check
@@ -308,12 +344,21 @@ export class LocationScene extends Phaser.Scene {
     leaveLocation() {
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            if (this.ui && this.ui._container) {
-                this.ui._container.style.display = 'block';
-                this.ui.popScreen(); // Remove empty trap screen
-                this.ui.render();
+            if (this.returnScene) {
+                // Return to previous visual scene (e.g., CityScene)
+                this.scene.start(this.returnScene, {
+                    ...this.returnArgs,
+                    ui: this.ui
+                });
+            } else {
+                // Return to DOM Dashboard
+                if (this.ui && this.ui.container) {
+                    this.ui.container.style.display = 'block';
+                    this.ui.popScreen(); // Remove empty trap screen
+                    this.ui.render();
+                }
+                this.scene.stop();
             }
-            this.scene.stop();
         });
     }
 }

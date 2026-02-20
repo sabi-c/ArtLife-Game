@@ -8,14 +8,28 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test-cli.mjs auto",
-    "test:cli": "node test-cli.mjs"
+    "test": "node test_game.cjs",
+    "test:cli": "node test-cli.mjs",
+    "launch": "node launch.cjs",
+    "launch:test": "node launch.cjs --test",
+    "launch:open": "node launch.cjs --open",
+    "report": "node launch.cjs --report",
+    "test:flow": "node test_flow.cjs",
+    "expose": "npx localtunnel --port 5173 --subdomain artlife"
   },
   "dependencies": {
+    "grid-engine": "^2.48.2",
     "inkjs": "^2.3.0",
-    "phaser": "^3.87.0"
+    "lucide-react": "^0.575.0",
+    "phaser": "^3.87.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.4",
+    "localtunnel": "^2.0.2",
+    "playwright": "^1.58.2",
     "vite": "^5.4.14"
   }
 }

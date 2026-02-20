@@ -13,6 +13,20 @@ export class EndScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
         const state = GameState.state;
+
+        // Guard: if somehow we reach EndScene without a game state, show minimal screen
+        if (!state || !state.character) {
+            this.cameras.main.setBackgroundColor('#0a0a0f');
+            this.add.text(width / 2, height / 2, 'GAME OVER', {
+                fontFamily: '"Press Start 2P"', fontSize: '32px', color: '#c94040',
+            }).setOrigin(0.5);
+            this.add.text(width / 2, height / 2 + 60, '[ CLICK TO RELOAD ]', {
+                fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#c9a84c',
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+              .on('pointerdown', () => window.location.reload());
+            return;
+        }
+
         this.cameras.main.fadeIn(600, 10, 10, 15);
 
         // Title

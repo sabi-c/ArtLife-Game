@@ -4,8 +4,8 @@ import { PhoneManager } from './PhoneManager.js';
 import { ConsequenceScheduler } from './ConsequenceScheduler.js';
 import { DecisionLog } from './DecisionLog.js';
 import { CONTACTS } from '../data/contacts.js';
-
 import { BACKGROUND_TRAITS } from '../data/backgrounds.js';
+import { GameEventBus, GameEvents } from './GameEventBus.js';
 
 /**
  * Central game state manager for ArtLife
@@ -94,6 +94,14 @@ export class GameState {
             consecutiveEventWeeks: 0, // tracks back-to-back event weeks for burnout
             forcedRest: false,   // set to true when burnout forces a rest week
             actionsUsed: 0,      // resets each week, max 3
+            // ── Phase 41: Persistent World Position ──
+            playerLocation: {
+                locationId: 'player_apartment',  // current world_locations.js ID
+                cityX: 5,                        // tile X in CityScene
+                cityY: 14,                       // tile Y in CityScene
+                insideVenue: false,              // true when inside a LocationScene
+            },
+            hoursUsedToday: 0,   // resets each week, max ~8 hours of activity
         };
     }
 
@@ -210,13 +218,18 @@ export class GameState {
         }
 
         // ── Insurance / Theft risk (home-stored uninsured works) ──
-        state.portfolio.forEach((work, idx) => {
+        // Collect stolen works first, then remove — avoids index-shift bugs from splice-inside-forEach
+        const stolen = [];
+        state.portfolio = state.portfolio.filter(work => {
             if (work.storage === 'home' && !work.insured && Math.random() < 0.01) {
-                // 1% chance of theft/damage per home-stored uninsured piece per week
-                const val = MarketManager.getWorkValue(work);
-                state.portfolio.splice(idx, 1);
-                GameState.addNews(`🚨 THEFT: "${work.title}" by ${work.artist} ($${val.toLocaleString()}) was stolen from your home! Uninsured.`);
+                stolen.push(work);
+                return false;
             }
+            return true;
+        });
+        stolen.forEach(work => {
+            const val = MarketManager.getWorkValue(work);
+            GameState.addNews(`🚨 THEFT: "${work.title}" by ${work.artist} ($${val.toLocaleString()}) was stolen from your home! Uninsured.`);
         });
 
         // ── Burnout tracking ──
@@ -250,6 +263,11 @@ export class GameState {
                     : '➡️ Market stabilising. Flat conditions ahead.';
             GameState.addNews(newsText);
         }
+
+        // ── Game-Over check ──
+        if (GameState.isBankrupt()) {
+            GameEventBus.emit(GameEvents.GAME_OVER, { reason: 'bankrupt', week: state.week });
+        }
     }
 
     static changeCity(newCity) {
@@ -259,7 +277,50 @@ export class GameState {
         // Traveling takes a week
         GameState.advanceWeek();
         GameState.addNews(`✈️ Traveled to ${newCity.replace('-', ' ').toUpperCase()}.`);
+        // Reset player position to that city's default spawn
+        GameState.state.playerLocation = {
+            locationId: 'player_apartment',
+            cityX: 5,
+            cityY: 14,
+            insideVenue: false,
+        };
         return true;
+    }
+
+    /**
+     * Move to a world location (Phase 41 — fast travel / walking).
+     * Deducts cost, advances hours, and updates persistent position.
+     */
+    static moveToLocation(location) {
+        const state = GameState.state;
+        if (location.cost && state.cash < location.cost) return false;
+        if (location.cost) state.cash -= location.cost;
+        state.hoursUsedToday = (state.hoursUsedToday || 0) + (location.travelTime || 0);
+        state.playerLocation = {
+            locationId: location.id,
+            cityX: location.spawnX,
+            cityY: location.spawnY,
+            insideVenue: false,
+        };
+        if (location.travelTime > 0) {
+            GameState.addNews(`🚶 Walked to ${location.name}. (${location.travelTime}h)`);
+        }
+        return true;
+    }
+
+    /**
+     * Enter a building (sets insideVenue flag).
+     */
+    static enterVenue(locationId) {
+        GameState.state.playerLocation.insideVenue = true;
+        GameState.state.playerLocation.locationId = locationId;
+    }
+
+    /**
+     * Exit a building (clears insideVenue flag, keeps cityX/Y for door spawn).
+     */
+    static exitVenue() {
+        GameState.state.playerLocation.insideVenue = false;
     }
 
     static buyWork(work) {
@@ -505,6 +566,10 @@ export class GameState {
         });
     }
 
+    // ════════════════════════════════════════
+    // Global Settings are now handled by SettingsManager.js
+    // ════════════════════════════════════════
+
     // ══════════════════════════════════════════
     // Save / Load — Multi-Slot System
     // ══════════════════════════════════════════
@@ -538,6 +603,8 @@ export class GameState {
 
     /**
      * Load from a specific slot.
+     * Re-initialises MarketManager and ConsequenceScheduler so their in-memory
+     * state is consistent with the restored GameState.
      */
     static load(slotIndex = 0) {
         // Migrate old save format if needed
@@ -550,6 +617,19 @@ export class GameState {
             const saveData = JSON.parse(raw);
             GameState.state = saveData.state;
             GameState.activeSlot = slotIndex;
+
+            // Re-initialise market with fresh works so price calculations work.
+            // Artist heat values from the save would be more accurate, but works
+            // list is not serialised — reinit gives a correct-enough market.
+            MarketManager.init(generateInitialWorks());
+
+            // Restore phone manager so NPC inboxes are ready
+            PhoneManager.init();
+
+            // ConsequenceScheduler state is lost on load (pending consequences
+            // are not serialised). Reset so we start clean rather than corrupt.
+            ConsequenceScheduler.reset();
+
             return true;
         } catch (e) {
             console.error('Failed to load save slot', slotIndex, e);
