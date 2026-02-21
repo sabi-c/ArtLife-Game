@@ -782,6 +782,111 @@ function weekReportScreen(ui) {
 // ════════════════════════════════════════════
 // SCREEN: Main Dashboard (Ego Terminal v2)
 // ════════════════════════════════════════════
+// ════════════════════════════════════════════
+// SCREEN: Calendar Event Detail
+// ════════════════════════════════════════════
+function calendarEventScreen(ui, event, apCost) {
+    return () => {
+        const s = TerminalAPI.state();
+        const cost = event.cost || 0;
+        const canAfford = s.cash >= cost;
+
+        const lines = [
+            H(event.name),
+            DIM(`${event.location} · ${event.type.toUpperCase()}`),
+            DIV(),
+            event.description,
+            BLANK(),
+        ];
+
+        if (event.dealOpportunity) {
+            lines.push(SUB('OPPORTUNITY'));
+            lines.push(DIM(`  ${event.dealOpportunity}`));
+            lines.push(BLANK());
+        }
+
+        if (event.npcPresence && event.npcPresence.length > 0) {
+            lines.push(SUB('WHO\'S HERE'));
+            event.npcPresence.forEach(npcId => {
+                const contact = TerminalAPI.contacts.find(c => c.id === npcId);
+                if (contact) {
+                    lines.push(DIM(`  ${contact.emoji || '👤'} ${contact.name} — ${contact.role || ''}`));
+                }
+            });
+            lines.push(BLANK());
+        }
+
+        if (cost > 0) {
+            lines.push(STAT('Entry Cost', `$${cost.toLocaleString()}`, canAfford ? '' : 'red'));
+        }
+        lines.push(STAT('Action Cost', `${apCost} AP`));
+        lines.push(STAT('Tier', event.tier === 1 ? 'Major Event' : 'Regional Event', event.tier === 1 ? 'gold' : ''));
+        lines.push(DIV());
+
+        const options = [];
+
+        if (canAfford && hasActions(apCost)) {
+            // Stat rewards scale by tier
+            const repGain = event.tier === 1 ? 3 : 1;
+            const accessGain = event.tier === 1 ? 2 : 1;
+            const tasteGain = event.type === 'biennale' || event.type === 'exhibition' ? 3 : 1;
+
+            options.push({
+                label: `${cost > 0 ? `Pay $${cost.toLocaleString()} & ` : ''}Attend (+${repGain} rep, +${accessGain} acc, +${tasteGain} taste)`,
+                action: () => {
+                    useAction(`Attended ${event.name}`, apCost);
+                    if (cost > 0) s.cash -= cost;
+                    s.reputation = Math.min(100, s.reputation + repGain);
+                    s.access = Math.min(100, s.access + accessGain);
+                    s.taste = Math.min(100, s.taste + tasteGain);
+
+                    // Meet a random NPC from the event
+                    if (event.npcPresence && event.npcPresence.length > 0) {
+                        const randomNpcId = event.npcPresence[Math.floor(Math.random() * event.npcPresence.length)];
+                        const contact = TerminalAPI.network.getContact(randomNpcId);
+                        if (contact && !contact.met) {
+                            contact.met = true;
+                            const data = TerminalAPI.contacts.find(c => c.id === randomNpcId);
+                            TerminalAPI.addNews(`Met ${data?.name || randomNpcId} at ${event.name}.`);
+                        } else if (contact) {
+                            TerminalAPI.network.adjustFavor(randomNpcId, 1);
+                        }
+                    }
+
+                    TerminalAPI.addNews(`Attended ${event.name} in ${event.location}.`);
+                    ui.popScreen();
+                    ui.replaceScreen(dashboardScreen(ui));
+                }
+            });
+
+            // If it's a fair/auction, also offer to browse market there
+            if ((event.type === 'fair' || event.type === 'auction') && hasActions(apCost)) {
+                options.push({
+                    label: `Browse works at ${event.name}`,
+                    action: () => {
+                        useAction(`Browsed art at ${event.name}`, apCost);
+                        if (cost > 0) s.cash -= cost;
+                        s.access = Math.min(100, s.access + accessGain);
+                        TerminalAPI.addNews(`Browsed works at ${event.name}.`);
+                        ui.popScreen();
+                        ui.pushScreen(marketScreen(ui));
+                    }
+                });
+            }
+        } else if (!canAfford) {
+            options.push({ label: `Can't afford entry ($${cost.toLocaleString()})`, disabled: true });
+        } else {
+            options.push({ label: 'Not enough AP this week', disabled: true });
+        }
+
+        options.push({ label: '← Back', action: () => ui.popScreen() });
+        return { lines, options };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: Main Dashboard (Ego Terminal v2)
+// ════════════════════════════════════════════
 export function dashboardScreen(ui) {
     return () => {
         const s = TerminalAPI.state();
@@ -862,11 +967,21 @@ export function dashboardScreen(ui) {
             });
         }
 
-        // ── World Map ──
-        lines.push(DIV());
-        lines.push(generateWorldMap(s.week));
+        // ── World Map (unlocks at week 5) ──
+        if (s.week > 4) {
+            lines.push(DIV());
+            lines.push(generateWorldMap(s.week));
+        }
 
-        // ── Options (unchanged) ──
+        // ── Progressive Disclosure Tease ──
+        if (s.week <= 4) {
+            lines.push(DIV());
+            lines.push(DIM(`Week ${5 - s.week} until venues, travel, and the global art circuit unlock.`));
+        } else if (s.week <= 12) {
+            lines.push(DIM(`Week ${13 - s.week} until full dossier, inventory, and neighborhood access.`));
+        }
+
+        // ── Options ──
         const availableWorks = TerminalAPI.market.getAvailableWorks ? TerminalAPI.market.getAvailableWorks().length : 0;
         const pendingCount = s.pendingOffers ? s.pendingOffers.length : 0;
         const unreadMessages = TerminalAPI.network.initialized ? TerminalAPI.network.getUnreadCount() : 0;
@@ -899,6 +1014,9 @@ export function dashboardScreen(ui) {
             });
         }
 
+        // ── Progressive Disclosure Phases ──
+        const phase = s.week <= 4 ? 'early' : s.week <= 12 ? 'mid' : 'late';
+
         // ═══ ART ═══
         options.push({ label: `═══ MARKET DESK ═══`, disabled: true, _sectionHeader: true });
         options.push({
@@ -911,35 +1029,59 @@ export function dashboardScreen(ui) {
             action: () => safePush(portfolioScreen)
         });
 
-        // ═══ BUSINESS ═══
-        options.push({ label: `═══ OPERATIONS ═══`, disabled: true, _sectionHeader: true });
-        options.push({
-            label: `[1 AP] 🎨  Visit Venue`,
-            disabled: !hasActions(1),
-            action: hasActions(1) ? () => safePush(venuePickerScreen) : undefined
-        });
-        options.push({
-            label: `🗺️  Walk the Neighborhood (Pokemon Mode)`,
-            action: () => {
-                if (window.game?.startTestScene) {
-                    window.game.startTestScene('OverworldScene', { ui });
-                    ui.container.style.display = 'none';
-                    ui.pushScreen(() => ({ lines: [], options: [] })); // trap terminal
-                } else {
-                    ui.showNotification('Visual engine not loaded.', '⚠️');
-                }
-            }
-        });
-        options.push({
-            label: `[1 AP] ✈️  Travel (${cityInfo.name})`,
-            disabled: !hasActions(1),
-            action: hasActions(1) ? () => safePush(cityScreen) : undefined
-        });
+        // ═══ CALENDAR EVENTS ═══ (active this week)
+        const thisWeekEvents = getUpcomingEvents(s.week, 1).filter(e => e.weeksAway === 0);
+        if (thisWeekEvents.length > 0 && phase !== 'early') {
+            options.push({ label: `═══ THIS WEEK ═══`, disabled: true, _sectionHeader: true });
+            thisWeekEvents.forEach(ev => {
+                const icon = CAL_ICONS[ev.type] || '▸';
+                const cost = ev.cost > 0 ? ev.cost : 0;
+                const apCost = ev.tier === 1 ? 2 : 1;
+                const canAfford = s.cash >= cost;
+                const canAttend = hasActions(apCost) && canAfford;
+                const costLabel = cost > 0 ? ` · $${cost.toLocaleString()}` : '';
+                options.push({
+                    label: `[${apCost} AP] ${icon} ${ev.name} (${ev.location}${costLabel})`,
+                    disabled: !canAttend,
+                    action: canAttend ? () => {
+                        ui.pushScreen(calendarEventScreen(ui, ev, apCost));
+                    } : undefined
+                });
+            });
+        }
 
-        options.push({
-            label: `📊  Market Intel (${s.marketState} market)`,
-            action: () => safePush(newsScreen)
-        });
+        // ═══ BUSINESS ═══ (Venue + Travel unlock at week 5)
+        if (phase !== 'early') {
+            options.push({ label: `═══ OPERATIONS ═══`, disabled: true, _sectionHeader: true });
+            options.push({
+                label: `[1 AP] 🎨  Visit Venue`,
+                disabled: !hasActions(1),
+                action: hasActions(1) ? () => safePush(venuePickerScreen) : undefined
+            });
+            if (phase === 'late') {
+                options.push({
+                    label: `🗺️  Walk the Neighborhood (Pokemon Mode)`,
+                    action: () => {
+                        if (window.game?.startTestScene) {
+                            window.game.startTestScene('OverworldScene', { ui });
+                            ui.container.style.display = 'none';
+                            ui.pushScreen(() => ({ lines: [], options: [] })); // trap terminal
+                        } else {
+                            ui.showNotification('Visual engine not loaded.', '⚠️');
+                        }
+                    }
+                });
+            }
+            options.push({
+                label: `[1 AP] ✈️  Travel (${cityInfo.name})`,
+                disabled: !hasActions(1),
+                action: hasActions(1) ? () => safePush(cityScreen) : undefined
+            });
+            options.push({
+                label: `📊  Market Intel (${s.marketState} market)`,
+                action: () => safePush(newsScreen)
+            });
+        }
 
         if (pendingCount > 0) {
             options.push({
@@ -950,21 +1092,33 @@ export function dashboardScreen(ui) {
 
         // ═══ YOU ═══
         options.push({ label: `═══ DOSSIER ═══`, disabled: true, _sectionHeader: true });
-        options.push({
-            label: `🪞  Ego Dashboard & Profile`,
-            action: () => {
-                GameEventBus.emit(GameEvents.TOGGLE_DASHBOARD, { state: true });
-            }
-        });
+        if (phase === 'late') {
+            options.push({
+                label: `🧰  Inventory & Artifacts`,
+                action: () => {
+                    GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY');
+                }
+            });
+        }
+        if (phase !== 'early') {
+            options.push({
+                label: `🪞  Ego Dashboard & Profile`,
+                action: () => {
+                    GameEventBus.emit(GameEvents.TOGGLE_DASHBOARD, { state: true });
+                }
+            });
+        }
         options.push({
             label: unreadMessages > 0 ? `[1 AP] 📱  Phone (${unreadMessages} unread)` : `[1 AP] 📱  Phone`,
             disabled: !hasActions(1),
             action: hasActions(1) ? () => safePush(phoneScreen) : undefined
         });
-        options.push({
-            label: '📓  Journal & Calendar',
-            action: () => safePush(journalScreen)
-        });
+        if (phase !== 'early') {
+            options.push({
+                label: '📓  Journal & Calendar',
+                action: () => safePush(journalScreen)
+            });
+        }
         options.push({
             label: '⚙️  System & Settings',
             action: () => safePush(pauseMenuScreen)

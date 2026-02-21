@@ -169,6 +169,8 @@
 |---|---|---|
 | **Calendar & Time UI** | ✅ Done | Action budget pip panel (4 AP), calendar strip with upcoming events, variable AP costs (1/2), `[AP]` labels, priority advance CTA. New CSS: `db-action-*`, `db-cal-*` |
 | **Variable Action Costs** | ✅ Done | `useAction(label, cost=1)`, `hasActions(cost=1)`, MAX_ACTIONS=4. Haggle/sell/art fair=2 AP, browse/visit/call=1 AP |
+| **Progressive Disclosure** | ✅ Done | Early (wk 1-4): core loop only. Mid (5-12): +venues, travel, journal, ego dash. Late (13+): +inventory, overworld, retire. Unlock tease messages in dashboard. |
+| **Calendar Events Attendance** | ✅ Done | `calendarEventScreen()` — attend art fairs, auctions, biennales from dashboard. Tier-scaled stat rewards, NPC encounters, entry costs. Browse works at fairs/auctions. |
 | Tone system for NPC dialogues (5 tones from Roadwarden) | TODO | Spec in `Implementation_Plan.md` A2 |
 | Week 20 character specialization (dominant tone → perk) | TODO | |
 | Progressive disclosure (UI reveals through gameplay) | TODO | Early/mid/late game phases |

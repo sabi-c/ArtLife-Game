@@ -357,6 +357,8 @@ game/
 | Ego Terminal v2 (sparklines, stat bars, market intel) | ✅ |
 | Calendar & Time UI (event strip, action budget pips) | ✅ |
 | Variable action costs (1-2 AP per action type) | ✅ |
+| Progressive disclosure (early/mid/late game phases) | ✅ |
+| Calendar event attendance (fairs, auctions, biennales) | ✅ |
 | Rooms wired into game loop (full B4/C1) | ❌ TODO |
 | Tone system for dialogues | ❌ TODO |
 | Admin Narrative Dashboard | ❌ TODO |
