@@ -85,8 +85,10 @@ export class MacDialogueScene extends BaseScene {
         }
 
         // Fade out
-        this.cameras.main.fadeOut(800, 0, 0, 0);
-        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
             this.showTerminalUI();
             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
 
@@ -98,7 +100,11 @@ export class MacDialogueScene extends BaseScene {
                 }
             }
             this.scene.stop();
-        });
+        };
+        this.cameras.main.fadeOut(800, 0, 0, 0);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, cleanup);
+        // Safety: if fade doesn't complete (headless/broken WebGL), cleanup after timeout
+        this.time.delayedCall(1200, cleanup);
     }
 
     showReward() {
