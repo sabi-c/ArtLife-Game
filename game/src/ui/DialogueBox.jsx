@@ -1,15 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useUIStore } from '../stores/uiStore.js';
 
+/**
+ * DialogueBox — React overlay for MacDialogueScene.
+ *
+ * Subscribes to the Zustand store via useState + useEffect rather than the
+ * Zustand hook wrapper (useUIStore(selector)), which internally calls
+ * useCallback as an argument to useSyncExternalStore. In Vite's CJS-interop
+ * bundle that causes "Cannot read properties of null (reading 'useCallback')"
+ * because import_react.default resolves to null at hook-dispatch time.
+ * Using direct store subscription sidesteps that entirely.
+ */
 export default function DialogueBox() {
-    const dialog = useUIStore((state) => state.dialog);
-    const advanceDialogue = useUIStore((state) => state.advanceDialogue);
+    const [dialog, setDialog] = useState(() => useUIStore.getState().dialog);
+
+    // Subscribe to store changes for the lifetime of this component
+    useEffect(() => {
+        const unsub = useUIStore.subscribe((state) => setDialog(state.dialog));
+        return unsub;
+    }, []);
+
     const [displayedText, setDisplayedText] = useState("");
     const [isTyping, setIsTyping] = useState(false);
 
     const currentStep = dialog.steps?.[dialog.currentStepIndex];
 
-    // Typewriter effect logic
+    // Typewriter effect
     useEffect(() => {
         if (!currentStep) return;
         setDisplayedText("");
@@ -24,7 +40,7 @@ export default function DialogueBox() {
                 setIsTyping(false);
                 clearInterval(interval);
             }
-        }, 30); // 30ms per character
+        }, 30);
 
         return () => clearInterval(interval);
     }, [currentStep]);
@@ -34,29 +50,27 @@ export default function DialogueBox() {
         const handleKeyDown = (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
-                // If it's still typing, skip to the end
                 if (isTyping) {
                     setIsTyping(false);
                     setDisplayedText(currentStep.text);
                 } else {
-                    // Otherwise go to next step
-                    advanceDialogue();
+                    useUIStore.getState().advanceDialogue();
                 }
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isTyping, currentStep, advanceDialogue]);
+    }, [isTyping, currentStep]);
 
     // Determine layout based on speaker side
     const isLeft = currentStep?.speakerSide === 'left';
 
-    // If dialog is closed, render nothing. This MUST be after all hooks to prevent Rules of Hooks violations.
+    // Render nothing when dialog is closed (all hooks above must be unconditional)
     if (!dialog.isOpen) return null;
 
     return (
         <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-8 z-50">
-            {/* Dark overlay backdrop for readability (optional) */}
+            {/* Dark overlay backdrop for readability */}
             <div className="absolute inset-0 bg-black/30 w-full h-full -z-10 absolute pointer-events-none" />
 
             <div className="w-full max-w-4xl mx-auto flex gap-6 items-end relative pointer-events-auto">
@@ -66,7 +80,7 @@ export default function DialogueBox() {
                         <img src={`/sprites/${dialog.leftSprite}`} className="h-full object-contain pixelated" alt="Left Speaker" />
                     </div>
                 )}
-                {/* Empty spacer if right is speaking to keep text box centered */}
+                {/* Empty spacer if right is speaking */}
                 {dialog.leftSprite && !isLeft && <div className="w-32 shrink-0 opacity-0" />}
 
                 {/* Text Box */}

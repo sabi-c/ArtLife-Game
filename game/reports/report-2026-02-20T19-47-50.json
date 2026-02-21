@@ -1,0 +1,151 @@
+{
+  "timestamp": "2026-02-20T19:47:50.284Z",
+  "url": "http://localhost:5174",
+  "passed": 23,
+  "failed": 0,
+  "total": 23,
+  "passRate": "100%",
+  "tests": [
+    {
+      "id": 1,
+      "name": "Boot Sequence",
+      "checks": [
+        {
+          "pass": true,
+          "label": "Phaser engine is running and ready"
+        },
+        {
+          "pass": true,
+          "label": "Terminal UI state is manageable"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Backroom Deal Dialogue",
+      "checks": [
+        {
+          "pass": true,
+          "label": "MacDialogueScene is active"
+        },
+        {
+          "pass": true,
+          "label": "Dialogue has 6 lines (expected 6)"
+        },
+        {
+          "pass": true,
+          "label": "Dialogue has a reward item"
+        },
+        {
+          "pass": true,
+          "label": "Terminal UI restored after dialogue"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Gallery Opening Dialogue",
+      "checks": [
+        {
+          "pass": true,
+          "label": "MacDialogueScene is active (Gallery Opening)"
+        },
+        {
+          "pass": true,
+          "label": "Dialogue has 6 lines (expected 6)"
+        },
+        {
+          "pass": true,
+          "label": "No reward item (expected)"
+        },
+        {
+          "pass": true,
+          "label": "Terminal UI restored after Gallery Opening"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Underground Deal Dialogue",
+      "checks": [
+        {
+          "pass": true,
+          "label": "MacDialogueScene is active (Underground Deal)"
+        },
+        {
+          "pass": true,
+          "label": "Dialogue has 5 lines (expected 5)"
+        },
+        {
+          "pass": true,
+          "label": "First speaker is \"Connector\" (expected Connector)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Haggle Scene",
+      "checks": [
+        {
+          "pass": true,
+          "label": "startHaggle() returned started=true"
+        },
+        {
+          "pass": true,
+          "label": "HaggleScene is active"
+        },
+        {
+          "pass": true,
+          "label": "Haggle phase: opening, round: 0"
+        },
+        {
+          "pass": true,
+          "label": "HaggleScene in Phaser scene list"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Scene Cleanup",
+      "checks": [
+        {
+          "pass": true,
+          "label": "No lingering active scenes (found 0)"
+        },
+        {
+          "pass": true,
+          "label": "Terminal UI visible after cleanup"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Venue Picker",
+      "checks": [
+        {
+          "pass": true,
+          "label": "Game started — week 1"
+        },
+        {
+          "pass": true,
+          "label": "Dashboard has \"Visit Venue\" option"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "GameEventBus",
+      "checks": [
+        {
+          "pass": true,
+          "label": "GameEventBus exposed on window.game"
+        },
+        {
+          "pass": true,
+          "label": "GameEvents constants exposed on window.game"
+        }
+      ]
+    }
+  ],
+  "browserErrors": []
+}

@@ -1,8 +1,10 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene.js';
 import { GameState } from '../managers/GameState.js';
 import { QualityGate } from '../managers/QualityGate.js';
 import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
 import { DecisionLog } from '../managers/DecisionLog.js';
+import { HaggleManager } from '../managers/HaggleManager.js';
+import { SCENE_KEYS } from '../data/scene-keys.js';
 
 /**
  * Dialogue / Event scene — Multi-step engine
@@ -13,29 +15,22 @@ import { DecisionLog } from '../managers/DecisionLog.js';
  *
  * Step types: 'narrative', 'dialogue', 'choice', 'stat_change', 'reveal'
  */
-export class DialogueScene extends Phaser.Scene {
+export class DialogueScene extends BaseScene {
     constructor() {
         super('DialogueScene');
     }
 
-    init(data) {
-        this.eventData = data.event;
+    create(data) {
+        super.create({ ...data, hideUI: true }); // BaseScene applies DOM hiding
+        this.eventData = data?.event || {};
         this.currentStep = 0;
         this.stepObjects = [];  // Track objects per step for cleanup
         this.isTransitioning = false;
 
-        this.ui = data.ui;
-        this.returnScene = data.returnScene || null;
-        this.returnArgs = data.returnArgs || {};
-        this.onExitCallback = data.onExit || null;
+        this.returnScene = data?.returnScene || null;
+        this.returnArgs = data?.returnArgs || {};
+        this.onExitCallback = data?.onExit || null;
 
-        // Hide the terminal DOM
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'none';
-        }
-    }
-
-    create() {
         const { width, height } = this.scale;
 
         // ── Persistent background layer ──
@@ -436,32 +431,38 @@ export class DialogueScene extends Phaser.Scene {
         if (choice.triggerHaggle) {
             this.clearStepObjects();
 
-            // Derive seller from context
+            // Derive artwork and seller from choice context
             const sellerId = choice.npcInvolved || this.eventData.npcInvolved ||
                 (this.eventData.id ? this.eventData.id.split('_').slice(0, 2).join('_') : 'seller');
             const basePrice = Math.abs(choice.effects?.cash || 10000);
+            const work = choice.work || {
+                id: `dialogue_${Date.now()}`,
+                title: 'Selected Artwork',
+                artist: 'Various',
+                year: String(new Date().getFullYear()),
+            };
+
+            // Initialise HaggleManager state before launching HaggleScene
+            const haggleStart = HaggleManager.start({
+                mode: 'buy',
+                work,
+                npc: null,
+                askingPrice: basePrice,
+            });
 
             const haggleInfo = {
-                type: 'buy',
-                targetName: sellerId.toUpperCase().replace(/_/g, ' '),
-                dealerTypeKey: 'patron', // generic fallback
-                repRequired: 0,
-                basePrice: basePrice,
-                minPrice: Math.floor(basePrice * 0.8),
-                patience: 3,
-                pieceName: 'Selected Artwork',
-                pieceArtist: 'Various',
-                pieceQuality: 7,
-                pieceHeat: 5
+                ...haggleStart,
+                openingDialogue: haggleStart.openingDialogue || `Let's talk about the price.`,
+                bgKey: 'bg_gallery_main_1bit_1771587911969.png',
             };
 
             this.cameras.main.fadeOut(300, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start('HaggleScene', {
+                this.scene.start(SCENE_KEYS.HAGGLE, {
                     ui: this.ui,
-                    haggleInfo: haggleInfo,
-                    returnScene: this.returnScene || 'LocationScene',
-                    returnArgs: this.returnArgs || {}
+                    haggleInfo,
+                    returnScene: this.returnScene || SCENE_KEYS.LOCATION,
+                    returnArgs: this.returnArgs || {},
                 });
             });
             return;
@@ -950,16 +951,12 @@ export class DialogueScene extends Phaser.Scene {
             if (this.returnScene) {
                 this.scene.start(this.returnScene, { ...this.returnArgs, ui: this.ui });
             } else {
+                this.showTerminalUI();
                 if (this.onExitCallback) {
                     this.onExitCallback();
-                } else if (this.ui && this.ui.container) {
-                    this.ui.container.style.display = 'block';
+                } else if (this.ui) {
                     this.ui.popScreen(); // pop the blank trap screen
                     this.ui.render();
-                }
-
-                if (this.ui && this.ui.container) {
-                    this.ui.container.style.display = 'block';
                 }
 
                 this.scene.stop();

@@ -1,20 +1,14 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene.js';
 import { useUIStore } from '../stores/uiStore.js';
 
-export class MacDialogueScene extends Phaser.Scene {
+export class MacDialogueScene extends BaseScene {
     constructor() {
-        super({ key: 'MacDialogueScene' });
+        super('MacDialogueScene');
     }
 
     init(data) {
-        // Data should contain { bgKey, leftSpriteKey, rightSpriteKey, dialogueSequence, onComplete, ui }
         this.dialogueData = data;
         this.ui = data.ui;
-
-        // Hide DOM UI
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'none';
-        }
     }
 
     preload() {
@@ -26,7 +20,9 @@ export class MacDialogueScene extends Phaser.Scene {
         }
     }
 
-    create() {
+    create(data) {
+        super.create({ ...data, hideUI: true }); // BaseScene hides terminal UI
+
         try {
             const camW = this.cameras.main.width;
             const camH = this.cameras.main.height;
@@ -79,9 +75,8 @@ export class MacDialogueScene extends Phaser.Scene {
         // Fade out
         this.cameras.main.fadeOut(800, 0, 0, 0);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-            if (this.ui && this.ui.container) {
-                this.ui.container.style.display = 'block';
-            }
+            this.showTerminalUI();
+
             if (!isForceExit && this.dialogueData.onComplete) {
                 this.dialogueData.onComplete();
             } else {

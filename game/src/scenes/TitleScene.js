@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { SceneTransition } from '../utils/SceneTransition.js';
+import { SCENE_KEYS } from '../data/scene-keys.js';
 
 /**
  * TitleScene.js — The graphical Phaser entry point for ArtLife.
@@ -87,10 +89,7 @@ export class TitleScene extends Phaser.Scene {
         this.input.keyboard.removeAllKeys();
         this.input.off('pointerdown');
 
-        // Flash white and transition
-        this.cameras.main.flash(500, 255, 255, 255);
-        this.time.delayedCall(500, () => {
-            this.scene.start('CharacterSelectScene', { ui: this.ui });
-        });
+        // Iris wipe → IntroScene → CharacterSelectScene
+        SceneTransition.irisWipeToScene(this, SCENE_KEYS.INTRO, { ui: this.ui }, 600);
     }
 }

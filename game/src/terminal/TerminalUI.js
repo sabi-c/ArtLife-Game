@@ -109,6 +109,7 @@ export class TerminalUI {
     // ── Navigation ──
 
     pushScreen(renderFn) {
+        if (window.lastError) window.lastError = null;
         if (this.onScreen) {
             this.screenStack.push(this.onScreen);
         }
@@ -118,6 +119,7 @@ export class TerminalUI {
     }
 
     popScreen() {
+        if (window.lastError) window.lastError = null;
         if (this.screenStack.length > 0) {
             this.onScreen = this.screenStack.pop();
             this.selectedIndex = 0;
@@ -126,6 +128,7 @@ export class TerminalUI {
     }
 
     replaceScreen(renderFn) {
+        if (window.lastError) window.lastError = null;
         this.onScreen = renderFn;
         this.selectedIndex = 0;
         this.render();
@@ -148,25 +151,29 @@ export class TerminalUI {
             lineIdx++;
             if (typeof line === 'string') {
                 html += `<div class="t-line t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line)}</div>`;
-            } else if (line.type === 'header') {
+            } else if (line.type === 'header' || line.style === 'header') {
                 html += `<div class="t-header t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
-            } else if (line.type === 'subheader') {
+            } else if (line.type === 'subheader' || line.style === 'subheader') {
                 html += `<div class="t-subheader t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
-            } else if (line.type === 'divider') {
+            } else if (line.type === 'divider' || line.style === 'divider') {
                 html += `<div class="t-divider" data-anim-line>${'─'.repeat(50)}</div>`;
-            } else if (line.type === 'stat') {
+            } else if (line.type === 'stat' || line.isStatRow) {
                 html += `<div class="t-stat t-anim-line" data-anim-line style="--i:${lineIdx}"><span class="t-stat-label">${this.escapeHtml(line.label)}</span> <span class="t-stat-value ${line.color || ''}">${this.escapeHtml(String(line.value))}</span></div>`;
-            } else if (line.type === 'news') {
+            } else if (line.type === 'news' || line.style === 'news') {
                 html += `<div class="t-news t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
-            } else if (line.type === 'blank') {
-                html += `<div class="t-blank" data-anim-line>&nbsp;</div>`;
-            } else if (line.type === 'dim') {
+            } else if (line.type === 'blank' || line.style === 'normal') {
+                if (line.style === 'normal' && line.text !== '') {
+                    html += `<div class="t-line t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
+                } else {
+                    html += `<div class="t-blank" data-anim-line>&nbsp;</div>`;
+                }
+            } else if (line.type === 'dim' || line.style === 'dim') {
                 html += `<div class="t-dim t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
-            } else if (line.type === 'gold') {
+            } else if (line.type === 'gold' || line.style === 'gold') {
                 html += `<div class="t-gold t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
-            } else if (line.type === 'green') {
+            } else if (line.type === 'green' || line.style === 'green') {
                 html += `<div class="t-green t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
-            } else if (line.type === 'red') {
+            } else if (line.type === 'red' || line.style === 'red') {
                 html += `<div class="t-red t-anim-line" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
             } else if (line.type === 'ascii-art') {
                 // Pre-formatted ASCII art — no escaping, preserves whitespace
@@ -174,6 +181,8 @@ export class TerminalUI {
             } else if (line.type === 'center') {
                 const cls = line.className || '';
                 html += `<div class="t-center ${cls}">${this.escapeHtml(line.text)}</div>`;
+            } else if (line.type === 'raw') {
+                html += line.text;
             } else if (line.type === 'save-slot') {
                 // Rich save slot card
                 const m = line.meta;
@@ -188,7 +197,7 @@ export class TerminalUI {
 
                 // ── Scene & Cutscene Line Types (Agent-3) ──
 
-            } else if (line.type === 'scene-header') {
+            } else if (line.type === 'scene-header' || line.isSceneHeader) {
                 // Full-width atmospheric header with title and optional location
                 html += `<div class="t-scene-header">`;
                 html += `<div class="t-scene-title">${this.escapeHtml(line.title)}</div>`;
@@ -197,11 +206,11 @@ export class TerminalUI {
                 }
                 html += `</div>`;
 
-            } else if (line.type === 'scene-text') {
+            } else if (line.type === 'scene-text' || line.isSceneText) {
                 // Narrative prose with fade-in animation
                 html += `<div class="t-scene-text" data-anim-line>${this.escapeHtml(line.text)}</div>`;
 
-            } else if (line.type === 'dialogue') {
+            } else if (line.type === 'dialogue' || line.isDialogue) {
                 // Speaker name in gold, quoted text in italics, gold left border
                 const speaker = line.speakerName || line.speaker || '???';
                 html += `<div class="t-dialogue" data-anim-line>`;
@@ -209,17 +218,17 @@ export class TerminalUI {
                 html += `<div class="t-dialogue-text" data-anim-line>"${this.escapeHtml(line.text)}"</div>`;
                 html += `</div>`;
 
-            } else if (line.type === 'scene-separator') {
+            } else if (line.type === 'scene-separator' || line.style === 'scene-sep') {
                 // Decorative separator between scene beats
                 html += `<div class="t-scene-separator" data-anim-line>· · ·</div>`;
 
-            } else if (line.type === 'pixel-art-bg') {
+            } else if (line.type === 'pixel-art-bg' || line.isPixelArt) {
                 // Background image from public/backgrounds/
                 const src = line.src || '';
                 html += `<div class="t-pixel-art"><img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(line.alt || 'Scene')}"></div>`;
 
                 // ── Agent-2: Section headers for categorized dashboard ──
-            } else if (line.type === 'section-header') {
+            } else if (line.type === 'section-header' || line.style === 'section') {
                 html += `<div class="t-section-header">${this.escapeHtml(line.text)}</div>`;
 
                 // ── Agent-2: Pokémon-style Battle Header ──
@@ -250,9 +259,9 @@ export class TerminalUI {
                 html += `<div class="t-wc-meta">${this.escapeHtml(line.artist || 'Unknown')} · $${(line.price || 0).toLocaleString()} ${heatDots}</div>`;
                 html += `</div>`;
 
-            } else if (line.type === 'worldmap') {
+            } else if (line.type === 'worldmap' || line.isWorldMap) {
                 // World map — rendered as a styled box with city markers
-                html += `<div class="t-worldmap">`;
+                html += `<div class="world-map">`;
                 html += `<div class="t-worldmap-header">${this.escapeHtml(line.title || '🗺️ WORLD MAP')}</div>`;
                 (line.rows || []).forEach(row => {
                     html += `<div class="t-worldmap-row">${row}</div>`; // rows are pre-built HTML
@@ -269,6 +278,11 @@ export class TerminalUI {
                 html += `<div class="t-reveal" data-anim-line style="--i:${lineIdx}">${this.escapeHtml(line.text)}</div>`;
             }
         });
+
+        // ── BUG 6: Global Error Display ──
+        if (window.lastError) {
+            html += `<div class="t-line t-red" style="padding: 10px; border: 1px solid #c94040; margin: 10px 0; background: rgba(201, 64, 64, 0.1);">[ERROR] ${this.escapeHtml(window.lastError)}</div>`;
+        }
 
         // Render options
         if (this.options.length > 0) {
@@ -315,7 +329,13 @@ export class TerminalUI {
                 const opt = this.options[idx];
                 if (opt && !opt.disabled && opt.action) {
                     this.selectedIndex = idx;
-                    opt.action();
+                    try {
+                        opt.action();
+                    } catch (err) {
+                        console.error('[TerminalUI] Error executing action:', err);
+                        window.lastError = err.message || String(err);
+                        this.render();
+                    }
                 } else {
                     // Just highlight if disabled
                     this.selectedIndex = idx;

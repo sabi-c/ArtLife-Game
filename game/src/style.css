@@ -27,19 +27,19 @@ body {
   color: var(--fg);
   font-family: var(--font);
   font-size: clamp(12px, 2.5vw, 16px);
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: none;
 }
 
 #terminal {
   width: 100%;
   max-width: 700px;
-  height: 100%;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 16px 20px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 100px 20px;
+  overflow: visible;
 }
 
 /* Scrollbar */
@@ -54,6 +54,118 @@ body {
 #terminal::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 2px;
+}
+
+/* ── Barbara Kruger Ticker ── */
+.t-kruger-ticker-wrapper {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow: hidden;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-weight: 800;
+  /* Heavy/Bold */
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Single mode background */
+.t-kruger-single {
+  background-color: #df1f1f;
+  color: #ffffff;
+  padding: 10px 0;
+}
+
+.t-kruger-single .ticker-track {
+  display: flex;
+  white-space: nowrap;
+  animation: kruger-ticker 60s linear infinite;
+}
+
+/* Multi mode styles */
+.t-kruger-multi {
+  background-color: transparent;
+}
+
+.t-ticker-row {
+  background-color: #df1f1f;
+  color: #ffffff;
+  padding: 10px 0;
+  margin-bottom: 44px;
+  /* Equal to the height of one row (24px font + 20px padding) */
+  font-size: 20px;
+  line-height: 1.2;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+}
+
+.t-ticker-row:last-child {
+  margin-bottom: 0;
+}
+
+.ticker-track {
+  display: flex;
+  flex-shrink: 0;
+  min-width: 200%;
+  /* Ensure track is twice as wide */
+}
+
+.t-ticker-forward .ticker-track {
+  animation: kruger-ticker 80s linear infinite;
+}
+
+.t-ticker-reverse .ticker-track {
+  animation: kruger-ticker-reverse 80s linear infinite;
+}
+
+.t-kruger-ticker-wrapper:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-track>div {
+  display: flex;
+  flex-shrink: 0;
+  min-width: 50%;
+  /* Each half takes exactly 50% of the total 200% width */
+  justify-content: space-around;
+}
+
+.ticker-track span {
+  padding-right: 50px;
+}
+
+.t-kruger-angled {
+  transform: rotate(-3deg) scale(1.1);
+  transform-origin: center;
+  margin-top: 50px;
+  margin-bottom: 50px;
+}
+
+@keyframes kruger-ticker {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes kruger-ticker-reverse {
+  0% {
+    transform: translate3d(-50%, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 /* ── Line Types ── */
@@ -436,12 +548,15 @@ button {
 
 /* ── World Map ── */
 
-.t-worldmap {
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 8px 12px;
-  margin: 8px 0;
-  background: rgba(26, 26, 46, 0.4);
+.world-map {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  line-height: 1.8;
+  color: #555566;
+  padding: 6px 8px;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: pre;
 }
 
 .t-worldmap-header {
@@ -455,7 +570,7 @@ button {
 }
 
 .t-worldmap-row {
-  font-family: var(--font);
+  font-family: 'Courier New', monospace;
   font-size: 0.82em;
   line-height: 1.8;
   white-space: pre;

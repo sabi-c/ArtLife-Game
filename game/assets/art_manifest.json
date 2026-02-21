@@ -1,0 +1,25 @@
+{
+  "query": "abstract expressionism",
+  "results": [
+    {
+      "id": "437422",
+      "title": "Charity",
+      "artist": "Guido Reni",
+      "year": "ca. 1630",
+      "image_url": "https://images.metmuseum.org/CRDImages/ep/web-large/DT10776.jpg",
+      "filename": "art_charity_437422.png",
+      "approved": true,
+      "processed": true
+    },
+    {
+      "id": "317877",
+      "title": "Processional Cross",
+      "artist": "Northern Highlands artist",
+      "year": "14th\u201315th century",
+      "image_url": "https://images.metmuseum.org/CRDImages/ao/web-large/DP100984.jpg",
+      "filename": "art_processional_cross_317877.png",
+      "approved": false,
+      "processed": false
+    }
+  ]
+}

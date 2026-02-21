@@ -1,6 +1,7 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene.js';
 import { VENUES } from '../data/rooms.js';
 import { GameState } from '../managers/GameState.js';
+import { SCENE_KEYS } from '../data/scene-keys.js';
 
 /**
  * CityScene — Phase 41 City Hub & World Expansion
@@ -26,22 +27,17 @@ const CITY_LOCATIONS = [
     { id: 'taxi', label: '🚕 Taxi Stand', venueId: null, x: 0.15, y: 0.75, color: '#cccc44', isTaxi: true },
 ];
 
-export class CityScene extends Phaser.Scene {
+export class CityScene extends BaseScene {
     constructor() {
-        super({ key: 'CityScene' });
+        super('CityScene');
     }
 
-    init(data) {
-        this.ui = data.ui;
-        this.spawnAt = data.spawnAt || null; // locationId to highlight after exiting a building
+    // Note: init() function removed and folded into create() per BaseScene pattern.
 
-        // Hide terminal UI when city is active
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'none';
-        }
-    }
+    create(data) {
+        super.create({ ...data, hideUI: true }); // Extends from BaseScene
+        this.spawnAt = data?.spawnAt || null;
 
-    create() {
         this.cameras.main.fadeIn(400, 0, 0, 0);
         const { width, height } = this.scale;
 
@@ -100,8 +96,12 @@ export class CityScene extends Phaser.Scene {
                 card.on('pointerover', () => { card.setStrokeStyle(2, 0xcccc44); label.setColor('#ffff66'); });
                 card.on('pointerout', () => { card.setStrokeStyle(1, 0x3a3a4e); label.setColor(loc.color); });
                 card.on('pointerdown', () => {
-                    // Placeholder: just shake the camera
-                    this.cameras.main.shake(150, 0.003);
+                    // Launch FastTravelScene as overlay, pause CityScene
+                    this.scene.launch(SCENE_KEYS.FAST_TRAVEL, {
+                        ui: this.ui,
+                        callerScene: SCENE_KEYS.CITY,
+                    });
+                    this.scene.pause();
                 });
             } else if (loc.id === 'apartment') {
                 // Apartment → save point (Agent-2 will implement)
@@ -180,8 +180,8 @@ export class CityScene extends Phaser.Scene {
 
         this.cameras.main.fadeOut(400, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            if (this.ui && this.ui.container) {
-                this.ui.container.style.display = 'block';
+            this.showTerminalUI();
+            if (this.ui) {
                 this.ui.popScreen(); // pop the trap screen
                 this.ui.render();
             }

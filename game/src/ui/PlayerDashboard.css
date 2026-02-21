@@ -1,0 +1,389 @@
+/* PlayerDashboard.css */
+
+.pd-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.95);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Courier New', Courier, monospace;
+    color: #e0e0e0;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    backdrop-filter: blur(8px);
+}
+
+.pd-overlay.visible {
+    opacity: 1;
+}
+
+.pd-container {
+    width: 90vw;
+    height: 90vh;
+    max-width: 1400px;
+    display: flex;
+    flex-direction: column;
+    background: #14141a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+/* Header */
+.pd-header {
+    height: 50px;
+    background: #1a1a24;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.pd-header-title {
+    color: #c9a84c;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.pd-close-btn {
+    background: transparent;
+    border: none;
+    color: #777;
+    cursor: pointer;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+}
+
+.pd-close-btn:hover {
+    color: #fff;
+    text-shadow: 0 0 5px #fff;
+}
+
+.pd-edit-btn {
+    background: transparent;
+    border: none;
+    color: #c9a84c;
+    cursor: pointer;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.pd-edit-btn:hover {
+    color: #fff;
+    text-shadow: 0 0 5px #c9a84c;
+}
+
+/* Content Columns */
+.pd-content {
+    flex: 1;
+    display: flex;
+    padding: 20px;
+    gap: 20px;
+    height: calc(100% - 50px);
+}
+
+.pd-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.pd-left {
+    flex: 0 0 300px;
+}
+
+.pd-center {
+    flex: 0 0 350px;
+}
+
+.pd-right {
+    flex: 1;
+}
+
+/* Cards & Forms */
+.pd-card {
+    background: #1a1a24;
+    border: 1px solid #2a2a35;
+    border-radius: 6px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.pd-card-header {
+    margin: 0 0 15px 0;
+    color: #888;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px dashed #333;
+    padding-bottom: 8px;
+}
+
+.pd-form-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pd-form-group label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.pd-input {
+    background: #111;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    border-radius: 4px;
+}
+
+.pd-input:focus {
+    border-color: #c9a84c;
+}
+
+.pd-edit-warning {
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(201, 168, 76, 0.1);
+    border: 1px solid #c9a84c;
+    color: #c9a84c;
+    font-size: 11px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+/* Left: Identity */
+.pd-identity-card {
+    align-items: center;
+    text-align: center;
+}
+
+.pd-avatar {
+    font-size: 64px;
+    margin-bottom: 10px;
+}
+
+.pd-name {
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    color: #fff;
+}
+
+.pd-class {
+    color: #aaa;
+    margin-bottom: 15px;
+}
+
+.pd-divider {
+    width: 100%;
+    height: 1px;
+    background: #333;
+    margin: 15px 0;
+}
+
+.pd-tray {
+    font-size: 13px;
+    color: #bbb;
+    margin-bottom: 10px;
+}
+
+.pd-vice {
+    font-size: 12px;
+    color: #c94040;
+    padding: 4px 8px;
+    border: 1px solid #c94040;
+    border-radius: 4px;
+    background: rgba(201, 64, 64, 0.1);
+    margin-top: 10px;
+}
+
+/* Left: Stats */
+.pd-stat-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+}
+
+.pd-stat-label {
+    width: 45px;
+    font-weight: bold;
+    color: #aaa;
+}
+
+.pd-stat-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: #000;
+    margin: 0 10px;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.pd-stat-bar-fill {
+    height: 100%;
+    background: #c9a84c;
+    transition: width 1s ease-out;
+}
+
+.pd-stat-val {
+    width: 25px;
+    text-align: right;
+}
+
+.pd-stats-helper {
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    margin-top: 15px;
+    line-height: 1.5;
+}
+
+/* Center: Ledger */
+.pd-ledger-card {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.pd-ledger-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pd-ledger-row {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    background: #111;
+    padding: 8px;
+    border-radius: 4px;
+    border-left: 2px solid #555;
+}
+
+.pd-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.pd-tag-buy {
+    background: #4caf50;
+    color: #000;
+}
+
+.pd-tag-sell {
+    background: #c94040;
+    color: #fff;
+}
+
+.pd-ledger-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pd-ledger-price {
+    font-weight: bold;
+    margin: 0 15px;
+}
+
+.pd-ledger-week {
+    color: #777;
+    font-size: 10px;
+}
+
+/* Center: Status */
+.pd-status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.pd-status-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.pd-status-value {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Right: Graph */
+.pd-graph-card {
+    flex: 1;
+}
+
+.pd-graph-container {
+    flex: 1;
+    position: relative;
+    min-height: 300px;
+}
+
+/* Colors */
+.pd-color-green {
+    color: #4caf50;
+}
+
+.pd-color-red {
+    color: #c94040;
+}
+
+.pd-color-gold {
+    color: #c9a84c;
+}
+
+/* Graph Tooltip */
+.pd-tooltip {
+    background: rgba(20, 20, 26, 0.95);
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.pd-tooltip p {
+    margin: 0 0 5px 0;
+}
+
+.pd-tooltip-title {
+    font-weight: bold;
+    color: #fff;
+    border-bottom: 1px solid #444;
+    padding-bottom: 5px;
+    margin-bottom: 5px !important;
+}
+
+.pd-tooltip-liquid {
+    color: #4caf50;
+}
+
+.pd-tooltip-assets {
+    color: #c9a84c;
+}
+
+.pd-tooltip-events {
+    margin-top: 8px;
+    color: #aaa;
+    font-size: 11px;
+    font-style: italic;
+}

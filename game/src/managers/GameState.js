@@ -22,11 +22,12 @@ export class GameState {
         DecisionLog.reset();
 
         // Calculate initial stats starting from character base
-        let initialCash = character.startingCash;
-        let initialAccess = 50;
-        let initialTaste = 50;
-        let initialReputation = 50;
-        let initialIntel = 0;
+        let initialCash       = character.startingCash;
+        let initialReputation = character.startingStats?.reputation ?? 50;
+        let initialTaste      = character.startingStats?.taste      ?? 50;
+        let initialAudacity   = character.startingStats?.audacity   ?? 30;
+        let initialAccess     = character.startingStats?.access     ?? 50;
+        let initialIntel      = character.startingStats?.intel      ?? 0;
 
         // Apply background trait modifiers
         const traitsList = [];
@@ -37,14 +38,48 @@ export class GameState {
                 if (traitData) {
                     traitsList.push(traitData.trait);
                     if (traitData.effects) {
-                        if (traitData.effects.cash) initialCash += traitData.effects.cash;
-                        if (traitData.effects.access) initialAccess += traitData.effects.access;
-                        if (traitData.effects.taste) initialTaste += traitData.effects.taste;
+                        if (traitData.effects.cash)       initialCash       += traitData.effects.cash;
+                        if (traitData.effects.access)     initialAccess     += traitData.effects.access;
+                        if (traitData.effects.taste)      initialTaste      += traitData.effects.taste;
+                        if (traitData.effects.audacity)   initialAudacity   = Math.min(100, initialAudacity + traitData.effects.audacity);
                         if (traitData.effects.reputation) initialReputation += traitData.effects.reputation;
-                        if (traitData.effects.intel) initialIntel += traitData.effects.intel;
+                        if (traitData.effects.intel)      initialIntel      += traitData.effects.intel;
                     }
                 }
             });
+        }
+
+        // Apply selected trait (Phase 3 of character creator) stat bonuses
+        if (character.selectedTrait?.effects) {
+            const fx = character.selectedTrait.effects;
+            if (fx.reputation) initialReputation = Math.min(100, initialReputation + fx.reputation);
+            if (fx.taste)      initialTaste      = Math.min(100, initialTaste + fx.taste);
+            if (fx.audacity)   initialAudacity   = Math.min(100, initialAudacity + fx.audacity);
+            if (fx.access)     initialAccess     = Math.min(100, initialAccess + fx.access);
+            if (fx.intel)      initialIntel      = Math.min(100, initialIntel + fx.intel);
+            if (fx.cash)       initialCash       += fx.cash;
+        }
+
+        // Apply drip aesthetic bonuses (Phase 4)
+        if (character.selectedDrip?.effects) {
+            const fx = character.selectedDrip.effects;
+            if (fx.reputation) initialReputation = Math.min(100, initialReputation + fx.reputation);
+            if (fx.taste)      initialTaste      = Math.min(100, initialTaste + fx.taste);
+            if (fx.audacity)   initialAudacity   = Math.min(100, initialAudacity + fx.audacity);
+            if (fx.access)     initialAccess     = Math.min(100, initialAccess + fx.access);
+            if (fx.intel)      initialIntel      = Math.min(100, initialIntel + fx.intel);
+            if (fx.cash)       initialCash       += fx.cash;
+        }
+
+        // Apply vice bonuses (Phase 5, optional)
+        if (character.selectedVice?.effects) {
+            const fx = character.selectedVice.effects;
+            if (fx.reputation) initialReputation = Math.min(100, initialReputation + fx.reputation);
+            if (fx.taste)      initialTaste      = Math.min(100, initialTaste + fx.taste);
+            if (fx.audacity)   initialAudacity   = Math.min(100, initialAudacity + fx.audacity);
+            if (fx.access)     initialAccess     = Math.min(100, initialAccess + fx.access);
+            if (fx.intel)      initialIntel      = Math.min(100, initialIntel + fx.intel);
+            if (fx.cash)       initialCash       += fx.cash;
         }
 
         // Build starting portfolio for characters with starting works
@@ -65,9 +100,15 @@ export class GameState {
             }
         }
 
+        // Expose state reference for React components (read-only reference)
+        window._artLifeState = null; // will be set after object construction below
+
         GameState.state = {
             character: character,
             playerName: character.playerName || 'The Dealer',
+            selectedTrait: character.selectedTrait ?? null,
+            selectedDrip:  character.selectedDrip  ?? null,
+            selectedVice:  character.selectedVice  ?? null,
             traits: traitsList,
             cash: initialCash,
             portfolio: startingPortfolio,
@@ -75,10 +116,14 @@ export class GameState {
             currentCity: 'new-york', // Starting city
             marketState: 'flat', // bull, bear, flat
             marketStateTurnsRemaining: 20 + Math.floor(Math.random() * 40),
-            reputation: initialReputation,
-            taste: initialTaste,           // curatorial eye
-            access: initialAccess,          // network reach
+            reputation: initialReputation,  // HYP — industry attention
+            taste: initialTaste,            // TST — curatorial eye
+            audacity: initialAudacity,      // AUD — shamelessness / haggle edge
+            access: initialAccess,          // ACC — network reach
             intel: initialIntel,
+            // ── History tracking (used by Ego Dashboard graph & ledger) ──
+            wealthHistory: [{ week: 1, cash: initialCash, assets: 0 }],
+            transactions: [],
             newsFeed: [],
             decisions: [],
             activeDeals: [],     // tracks works currently pending sale/action
@@ -93,7 +138,7 @@ export class GameState {
             dealerBlacklisted: false, // locked out of primary market if true
             consecutiveEventWeeks: 0, // tracks back-to-back event weeks for burnout
             forcedRest: false,   // set to true when burnout forces a rest week
-            actionsUsed: 0,      // resets each week, max 3
+            actionsThisWeek: 0,  // resets each week, max 3
             // ── Phase 41: Persistent World Position ──
             playerLocation: {
                 locationId: 'player_apartment',  // current world_locations.js ID
@@ -103,12 +148,15 @@ export class GameState {
             },
             hoursUsedToday: 0,   // resets each week, max ~8 hours of activity
         };
+
+        // Expose reference for React UI components (PlayerDashboard etc.)
+        window._artLifeState = GameState.state;
     }
 
     static advanceWeek() {
         const state = GameState.state;
         state.week++;
-        state.actionsUsed = 0;  // Reset action budget
+        state.actionsThisWeek = 0;  // Reset action budget
         // ── Forced rest check (burnout) ──
         if (state.forcedRest) {
             state.forcedRest = false;
@@ -154,6 +202,18 @@ export class GameState {
                 const holdTime = state.week - deal.work.purchaseWeek;
                 if (holdTime < 4) state.marketHeat += 8;
                 else if (holdTime < 8) state.marketHeat += 3;
+
+                // Record transaction for Ego Dashboard ledger
+                (state.transactions = state.transactions || []).unshift({
+                    id: `sell_${Date.now()}_${deal.work.id}`,
+                    action: 'SELL',
+                    title: deal.work.title,
+                    artist: deal.work.artist,
+                    price: finalPrice,
+                    week: state.week,
+                    strategy: deal.strategy,
+                });
+                if (state.transactions.length > 50) state.transactions.pop();
 
                 GameState.addNews(`🤝 SALE COMPLETE: "${deal.work.title}" sold via ${deal.strategy} for $${finalPrice.toLocaleString()}`);
             }
@@ -264,6 +324,15 @@ export class GameState {
             GameState.addNews(newsText);
         }
 
+        // ── Wealth snapshot (for Ego Dashboard graph) ──
+        const portfolioVal = GameState.getPortfolioValue();
+        (state.wealthHistory = state.wealthHistory || []).push({
+            week: state.week,
+            cash: state.cash,
+            assets: portfolioVal,
+        });
+        if (state.wealthHistory.length > 52) state.wealthHistory.shift(); // keep 1 year
+
         // ── Game-Over check ──
         if (GameState.isBankrupt()) {
             GameEventBus.emit(GameEvents.GAME_OVER, { reason: 'bankrupt', week: state.week });
@@ -342,6 +411,17 @@ export class GameState {
         }];
         GameState.state.portfolio.push(work);
         GameState.state.totalWorksBought++;
+
+        // Record transaction for Ego Dashboard ledger
+        (GameState.state.transactions = GameState.state.transactions || []).unshift({
+            id: `buy_${Date.now()}`,
+            action: 'BUY',
+            title: work.title,
+            artist: work.artist,
+            price: work.price,
+            week: GameState.state.week,
+        });
+        if (GameState.state.transactions.length > 50) GameState.state.transactions.pop();
 
         GameState.addNews(`Acquired "${work.title}" by ${work.artist} for $${work.price.toLocaleString()}`);
         return true;
@@ -480,6 +560,10 @@ export class GameState {
         if (effects.taste) {
             state.taste = Math.max(0, Math.min(100, state.taste + effects.taste));
             summary.push(`Taste ${effects.taste > 0 ? '+' : ''}${effects.taste}`);
+        }
+        if (effects.audacity) {
+            state.audacity = Math.max(0, Math.min(100, (state.audacity || 30) + effects.audacity));
+            summary.push(`Audacity ${effects.audacity > 0 ? '+' : ''}${effects.audacity}`);
         }
         if (effects.access) {
             state.access = Math.max(0, Math.min(100, state.access + effects.access));

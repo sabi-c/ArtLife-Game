@@ -40,9 +40,7 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 | Agent | Current Task | Files Being Touched | Status |
 |---|---|---|---|
-| Agent-1 | Phase 31: Data & Routing Wire-up | `screens.js`, `LocationScene.js`, `DialogueScene.js` | 🚀 Starting |
-| Agent-2 | Phase 31: Visual Transitions & Polish | `TerminalUI.js`, `LocationScene.js` | � Starting |
-| Agent-3 | Phase 31: Gameplay Loop Validation | `screens.js`, `GameState.js` | 🔧 Building |
+| — | — | — | — |
 
 ### Rules
 1. **Register** your task in the table above before starting
@@ -54,66 +52,52 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 ## 🔥 Highest-Impact Tasks
 
-1. **Haggle Battle Polish** — Pokémon-style VS layout, animated gap bar, tactic feedback, round counter
-2. **Mobile Spacing** — compact section headers, 44px option touch targets, stat grid layout
-3. **Work Card Line Type** — visual artwork cards in market screen (tier-colored borders)
-4. **Convert 5+ events to deep branching** — use `collector_dinner` as template
-5. **NPC reputation consequences** — wire `npcEffects` into `resolveEventChoice()`
-6. **Wire rooms into game loop** — `rooms.js` and `dialogue_trees.js` exist but aren't connected
-7. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API)
-8. **Tutorial / first-time experience** — guided first week for new players
+1. **Phase 40.5 — Overworld Refactor** — Extract `Player.js`, `NPC.js`, `MapManager.js` from monolithic scenes
+2. **Wire rooms into game loop** — `rooms.js` and `dialogue_trees.js` exist but aren't connected via B4/C1
+3. **Convert 5+ events to deep branching** — use `collector_dinner` as template
+4. **NPC reputation consequences** — wire `npcEffects` into `resolveEventChoice()`
+5. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API)
+6. **Tutorial / first-time experience** — guided first week for new players
 
 ---
 
-## 📋 Agent-2 Plan: UX Polish, Haggle Aesthetics & Visual Bridge
+## 🏗️ Phase 7: React UI Integration (Current Focus)
 
-### Stream 1: Pokémon-Style Haggle Battle Polish
+**Goal:** Merge ArtLife's core gameplay loop (NPC dialogues, Haggle Battles) into the robust React/Zustand UI architecture demonstrated by `pokemon-react-phaser`. 
 
-Target layout:
-```
-┌─────────────────────┐
-│  ┌─────┐   ┌─────┐  │
-│  │ YOU  │   │ 🎭  │  │
-│  │ 👤   │   │ELENA│  │
-│  └──┬──┘   └──┬──┘  │
-│     │  ⚔️ VS ⚔️  │     │
-│ ────┴─────────┴──── │
-│ YOUR OFFER: $50,000  │
-│ THEIR ASK:  $80,000  │
-│ ░░░░░████████░░░░░░  │
-│ GAP: 37%  PAT: ❤️❤️🖤│
-│ ─────────────────── │
-│ ELENA: "Interesting" │
-│                      │
-│ ⚔️ CHOOSE TACTIC:   │
-│ 🤝 Charm  (+chance)  │
-│ 🗡️ Hardball (-pat)   │
-│ 💰 Sweeten (+$5K)    │
-│ 🏃 Walk Away         │
-└─────────────────────┘
-```
+### The Migration Strategy
+We will perform a **vertical slice integration** to prove the pipeline before a full rewrite. We will port ONE specific interaction (e.g. the NPC Dialogue "Backroom Deal" test) into a new React overlay.
 
-- [ ] **VS layout** — two character cards side by side, `⚔️ VS ⚔️` divider
-- [ ] **Animated gap bar** — CSS transition on width when price moves
-- [ ] **Tactic feedback** — text flash + dealer shake on pick (`@keyframes shake`)
-- [ ] **Round counter** — `ROUND 2/5` prominently displayed
-- [ ] **Success/fail reveal** — typewriter "✓ Success!" / "✗ Failed!" with color flash
-- [ ] **Mobile spacing** — `padding: 12px 16px`, `min-height: 48px` per option
+1. **Environment Setup:** Refactor `index.html` and `main.js` into an `index.html` + `src/main.jsx` structure. Install `react`, `react-dom`, and `zustand`. Wrap the Phaser Game boot inside a top-level React Component (`<App />`).
+2. **State Bridge (`Zustand`):** Create `src/stores/uiStore.js`. This acts as the global state manager bridging React and Phaser, replacing the need for our old `TerminalUI` rendering loop for this slice.
+3. **Phaser Refactor:** Update `MacDialogueScene.js` so that instead of using Phaser's WebGL text renderer, it calls `uiStore.getState().openDialogue(payload)`.
+4. **React Overlays:** Create `src/ui/DialogueBox.jsx`. The component listens to `uiStore`, renders elegantly on top of the `<canvas>` via CSS, and uses callbacks to resume the Phaser gameplay sequence upon completion.
 
-### Stream 2: Mobile Spacing & Touch Targets
+## 📋 Code Health Audit
 
-- [ ] **Compact section headers** — reduce margin from `10px 0 2px` to `6px 0 0`
-- [ ] **Option padding** — `padding: 10px 14px` on mobile (`min-height: 44px`)
-- [ ] **Stat grid** — 2-column on wider screens (`grid-template-columns: 1fr 1fr`)
-- [ ] **Collapsible stats** — show CASH + ACTIONS + NET WORTH by default, expandable
-- [ ] **Scroll position memory** — restore scroll on popScreen
+> [!WARNING]
+> **Large files that should be split:** `screens.js` (140KB, ~3800 lines) and `events.js` (150KB). Consider breaking `screens.js` into domain-specific modules (e.g. `screens/market.js`, `screens/phone.js`).
 
-### Stream 3: Market & Collection Visual Prep
+| Layer | Files | Total Size | Notes |
+|---|---|---|---|
+| `scenes/` | 12 | ~175KB | Largest: `GameScene.js` (44KB), `DialogueScene.js` (36KB) |
+| `managers/` | 13 | ~132KB | Largest: `GameState.js` (31KB). New: `GameEventBus.js` |
+| `data/` | 15 + 1 dir | ~320KB | Largest: `events.js` (150KB), `rooms.js` (76KB) |
+| `terminal/` | 2 | ~165KB | `screens.js` = 140KB — candidate for splitting |
+| `sprites/` | 2 | ~5KB | `Player.js`, `NPC.js` (decoupled entity classes) |
+| `anims/` | 1 | ~1.5KB | `CharacterAnims.js` (centralized animation registry) |
+| `ui/` | 1 | TBD | New UI component directory |
 
-- [ ] **Work card line type** — `work-card` in TerminalUI: title, artist, price, heat as styled card
-  - Gold border = blue-chip, Silver = mid-career, Teal = hot, White = emerging
-- [ ] **Market screen redesign** — work-card layout instead of raw text
-- [ ] **Gallery-view hook** — commented-out placeholder for Phase 29 visual grid
+### Missing Modules (referenced but not yet created)
+- `RoomManager.js` — room traversal state machine (currently handled inline by `LocationScene`)
+- `src/managers/MapManager.js` — tilemap parsing helper (Phase 40.5)
+
+### Patterns Adopted from [pokemon-react-phaser](https://github.com/jvnm-dev/pokemon-react-phaser)
+- **GameEventBus** — singleton `Phaser.Events.EventEmitter` bridging scenes↔terminal UI
+- **Camera Vignette** — `postFX.addVignette()` on all exploration scenes
+- **Daylight Overlay** — in-game week-based tinting on overworld
+- **Position Auto-Save** — `gridEngine.positionChangeFinished()` subscriber
+- **Cinematic Transitions** — `fadeIn()`/`fadeOut()` on scene enter/exit
 
 ---
 
@@ -121,8 +105,8 @@ Target layout:
 
 | Layer | Technology |
 |---|---|
-| **Engine** | Phaser 3 (scene management only) |
-| **Rendering** | DOM-based `TerminalUI.js` (all gameplay is styled text) |
+| **Engine** | Phaser 3 (scene management, Canvas rendering, physics) |
+| **Rendering** | Dual: DOM `TerminalUI.js` (menus/dashboard) + Phaser Canvas (haggle, overworld, dialogue) |
 | **Language** | JavaScript (vanilla ES modules) |
 | **Data** | JS modules exporting `const` arrays/objects |
 | **State** | Static class singletons (`GameState.state`, `PhoneManager.contacts`) |
@@ -136,34 +120,71 @@ Target layout:
 ```
 game/
 ├── src/
-│   ├── main.js                     # Entry point
-│   ├── style.css                   # All styling
-│   ├── data/                       # Game data modules
-│   │   ├── artists.js, characters.js, contacts.js
-│   │   ├── events.js, scenes.js, rooms.js
-│   │   ├── dialogue_trees.js, calendar_events.js
-│   │   ├── cities.js, backgrounds.js
-│   │   └── haggle_config.js
-│   ├── managers/                   # Game systems
-│   │   ├── GameState.js, MarketManager.js
-│   │   ├── PhoneManager.js, EventManager.js
-│   │   ├── ConsequenceScheduler.js, DecisionLog.js
-│   │   ├── DialogueEngine.js, DialogueTreeManager.js
-│   │   ├── HaggleManager.js, QualityGate.js
-│   │   └── (RoomManager.js — TODO)
-│   ├── terminal/                   # UI layer
-│   │   ├── TerminalUI.js           # Core renderer
-│   │   └── screens.js              # 20+ screen functions
-│   └── scenes/                     # Phaser scenes
-│       ├── BootScene.js, MenuScene.js
-│       ├── CharacterSelectScene.js, GameScene.js
-│       ├── DialogueScene.js, LocationScene.js
-│       └── EndScene.js
+│   ├── main.js                     # Entry point + Phaser config
+│   ├── style.css                   # All styling (34KB)
+│   │
+│   ├── data/                       # ── DATA LAYER ──
+│   │   ├── artists.js              # 8 artists + work generator
+│   │   ├── artworks.js             # Artwork definitions
+│   │   ├── backgrounds.js          # Background traits (Alma Mater, Language)
+│   │   ├── calendar_events.js      # 22 recurring calendar events
+│   │   ├── characters.js           # 3 character classes
+│   │   ├── cities.js               # 5 cities with travel costs
+│   │   ├── contacts.js             # 16 NPC contacts across 10 roles
+│   │   ├── dialogue_trees.js       # V2 dialogue trees (39KB)
+│   │   ├── events.js               # 49+ events (150KB)
+│   │   ├── haggle_config.js        # Haggle types, tactics, dealer types, dialogue
+│   │   ├── rooms.js                # Room/venue data (76KB)
+│   │   ├── scenes.js               # Dialogue scene content data
+│   │   ├── ticker_phrases.js       # News ticker phrase bank
+│   │   ├── world_locations.js      # World location definitions
+│   │   └── maps/                   # Tiled JSON map data
+│   │
+│   ├── managers/                   # ── ENGINE LAYER ──
+│   │   ├── GameState.js            # Central state singleton (31KB)
+│   │   ├── MarketManager.js        # Art market simulation
+│   │   ├── PhoneManager.js         # NPC communication hub (22KB)
+│   │   ├── EventManager.js         # Event selection + pacing
+│   │   ├── HaggleManager.js        # Haggle battle state machine (17KB)
+│   │   ├── ConsequenceScheduler.js # Delayed effect queue
+│   │   ├── DecisionLog.js          # Player decision journal
+│   │   ├── DialogueEngine.js       # Branching narrative parser
+│   │   ├── DialogueTreeManager.js  # V2 dialogue tree manager
+│   │   ├── OverworldHelper.js      # Map/physics helper (12KB)
+│   │   ├── QualityGate.js          # Stat-gating system
+│   │   └── SettingsManager.js      # Game settings persistence
+│   │
+│   ├── terminal/                   # ── TERMINAL UI LAYER ──
+│   │   ├── TerminalUI.js           # Screen stack renderer (25KB)
+│   │   └── screens.js              # 30+ screen functions (140KB)
+│   │
+│   ├── ui/                         # ── UI COMPONENTS ──
+│   │   └── (emerging)              # New UI component directory
+│   │
+│   └── scenes/                     # ── PHASER SCENE LAYER ──
+│       ├── BootScene.js            # Asset preloading
+│       ├── MenuScene.js            # Title screen
+│       ├── CharacterSelectScene.js # Character class picker
+│       ├── GameScene.js            # Main game scene (hosts TerminalUI, 44KB)
+│       ├── DialogueScene.js        # Event rendering + multi-step engine (36KB)
+│       ├── HaggleScene.js          # Pokémon-style haggle battle (23KB)
+│       ├── MacDialogueScene.js     # 1-bit Macintosh dialogue scene (15KB)
+│       ├── LocationScene.js        # Room navigation scene (15KB)
+│       ├── OverworldScene.js        # Top-down overworld (12KB)
+│       ├── CityScene.js            # City hub tilemap (9KB)
+│       ├── FastTravelScene.js      # Taxi/fast travel system (11KB)
+│       └── EndScene.js             # Game over summary
+│
 ├── public/
-│   ├── backgrounds/                # 9 pixel art backgrounds
+│   ├── backgrounds/                # 15+ pixel art backgrounds
+│   ├── sprites/                    # 8 dealer sprites + 18 NPC portraits
+│   ├── portraits/                  # 3 character class portraits
+│   ├── art/                        # In-game artwork assets
+│   ├── assets/tilesets/            # Tileset data for overworld
 │   ├── icons/                      # PWA icons
+│   ├── player.png, tileset.png
 │   ├── manifest.json, sw.js
-│   └── index.html
+│   └── (index.html is at game root)
 └── vite.config.js
 ```
 
@@ -178,16 +199,22 @@ game/
 | Multi-step branching engine (`nextSteps`) | ✅ |
 | 16 NPC contacts with phone/favor system | ✅ |
 | Market simulation (8 artists, bull/bear cycles) | ✅ |
-| Terminal UI (20+ screens, keyboard+touch) | ✅ |
+| Terminal UI (30+ screens, keyboard+touch) | ✅ |
 | Save/Load (5 slots, auto-save) | ✅ |
 | PWA (manifest, service worker, offline) | ✅ |
 | Mobile layout (safe-area, touch targets, swipe) | ✅ |
 | Typewriter screen transitions | ✅ |
-| Pixel art backgrounds (9 scenes) | ✅ |
-| Haggle Battle v1 (engine + screens) | ✅ |
-| Scene system (`DialogueEngine`, 3 scenes) | ✅ |
+| Pixel art backgrounds (15+ scenes) | ✅ |
+| Haggle Battle v3 (type attributes, Phaser visual) | ✅ |
+| 1-bit Macintosh dialogue scene | ✅ |
+| Scene system (12 Phaser scenes) | ✅ |
 | Rooms + dialogue trees (data files) | ✅ |
-| Rooms wired into game loop | ❌ TODO |
+| LocationScene (room navigation) | ✅ |
+| OverworldScene (top-down movement) | ✅ |
+| CityScene + FastTravel | ✅ |
+| Settings system | ✅ |
+| News ticker phrase bank | ✅ |
+| Rooms wired into game loop (full B4/C1) | ❌ TODO |
 | Inventory system | ❌ TODO |
 | Sound design | ❌ TODO |
 | Endgame reckoning (Week 26) | ❌ TODO |
@@ -197,12 +224,13 @@ game/
 ## Active Roadmap
 
 ```
- NOW    Agent-2 Streams (haggle polish, mobile spacing, work cards)
+  NOW    Phase 40.5: Overworld Refactor (Player.js, NPC.js, MapManager.js)
   ↓     B4 (wire dialogue trees) → C1-C2 (room integration)
   ↓     Phase 14 (convert 10+ events to deep branching)
   ↓     Phase 15 (NPC depth — personalityTraits, rivalries, quest lines)
-  ↓     Phase 16.5b (Haggle v2 — Pokémon feel, sprites)
   ↓     Phase 29 (Visual Gallery — Canvas-rendered artworks)
+  ↓     Phase 41 (City Hub & World Expansion)
+  ↓     Phase 42 (UX Polish & Robustness Test Hub)
   ↓     Endgame reckoning + sound design
 ```
 
@@ -226,114 +254,162 @@ game/
 
 ---
 
-## 🚀 Phase 30: Phaser 3 Pokémon Battle Integration
+## ✅ Phase 30: Phaser 3 Pokémon Battle Integration — COMPLETED
 
-> **Status:** APPROVED. We are pivoting the Haggle Battle to a full visual scene in Phaser 3. The pure-text version has been backed up to `Art-Market-Game-V1-Backup`.
+> **Status:** ✅ COMPLETED. Haggle Battle is now a full visual scene in Phaser 3 with type attributes. Pure-text version backed up to `Art-Market-Game-V1-Backup`. See Phase 16.5c below.
 
-**The Architectural Shift:**
-Currently, `GameScene` just hosts the `TerminalUI` DOM element. For haggle battles, we will **pause/hide the DOM UI** and launch a dedicated **`HaggleScene` in Phaser**. This gives us Canvas pixel rendering, sprite animations, camera shakes, and particle effects without rewriting the whole game. `HaggleManager` remains the source of truth for battle state.
+---
 
-### Implementation Plan & Agent Tasks
+## ✅ Phase 16.5c: Haggle Type & Attribute System — COMPLETED
 
-#### 🔧 Agent-2: Core Engine & Scene Bridge (Lead)
-- **Task 1:** Modify `HaggleManager.js` and `screens.js`. Instead of pushing HTML screens, they should dispatch an event to launch `HaggleScene` in Phaser.
-- **Task 2:** Create `HaggleScene.js`. Set up the scene lifecycle (init, create, update). Receive state from `HaggleManager`.
-- **Task 3:** Build the Scene Return mechanism — when the battle ends (deal or fail), destroy `HaggleScene` and unpause/reshow the terminal `GameScene`.
-
-#### 🎨 Agent-1: Visual Arena & Assets (Support)
-- **Task 1:** Modify `BootScene.js` to preload sprites: player sprite (`sprite_player.png`), dealer sprites (e.g., `portrait_elena.png`), and backgrounds (e.g., `bg_gallery.png`).
-- **Task 2:** Add a `spriteKey` property to all dealers in `characters.js` / contact data so the scene knows which sprite to load.
-- **Task 3:** In `HaggleScene`, draw the background, place the two sprites facing off, and implement the visual Gap & Patience bars using `Phaser.GameObjects.Graphics` (rectangles that tween their width).
-
-#### ✨ Agent-3: Interactive UI & Animations (Support)
-- **Task 1:** Build the Interactive UI in `HaggleScene`. Create a dialogue box overlay and the 4-button Tactic menu. This can be done via Phaser's `DOM Element` game objects or standard Phaser Text + Interactive Zones.
-- **Task 2:** Wire the tactic buttons back to `HaggleManager.executeTactic()`.
-- **Task 3:** Implement "Pokémon Animations". When a tactic is executed, add camera shakes, sprite tween impact effects, and typewriter text for the dialogue. Add logic in `haggle_config.js` to map tactics to specific animation types (e.g., Charm = hearts, Hardball = shake).
+> **Status:** ✅ COMPLETED. 4 tactic types (`Emotional`, `Logical`, `Aggressive`, `Financial`) with rock-paper-scissors effectiveness. Types assigned to all TACTICS, BLUE_OPTIONS, and DEALER_TYPES in `haggle_config.js`. Effectiveness calculated in `HaggleManager.executeTactic()` and feedback rendered in `HaggleScene.js`.
 
 ---
 
 ## 🏗️ Phase 31: Full Systems Integration
 
-> **Status:** ACTIVE. Time to fuse the three distinct architecture pillars we've built into one cohesive gameplay loop.
+> **Status:** PARTIALLY DONE. `LocationScene.js`, `MacDialogueScene.js`, and basic scene transitions between DOM and Phaser exist. Remaining: B4 dialogue tree wiring and full venue flow.
 
-**The Three Systems:**
-1. **The DOM Hub (`TerminalUI`):** The dashboard, menus, portfolio, and phone system. This is our central routing station.
-2. **The Visual Engine (`Phaser`):** Currently used for `HaggleScene`. We need to expand this to handle `LocationScene` and `DialogueScene` so events are fully visual.
-3. **The Data Engine (`rooms.js`, `dialogue_trees.js`, `ConsequenceScheduler`):** The narrative brain that holds all the text, choices, and consequences.
-
-**The Integration Goal:**
-To seamlessly move from the DOM Dashboard → into a Phaser Visual Event (loading a room from `rooms.js` and running a conversation from `dialogue_trees.js`) → haggling over a piece of art → and returning to the DOM Dashboard with the portfolio updated.
-
-### Execution Plan & Agent Tasks
-
-#### 🔧 Agent-1: Data & Routing Wire-up (Lead)
-- **Task 1:** Inspect how `dashboardScreen` in `screens.js` handles "Attend Event". Right now it pushes a DOM `sceneScreen`. Update this to trigger a Phaser transition (similar to the Haggle bridge).
-- **Task 2:** Build or update `LocationScene.js` to read from `rooms.js`. It should load the correct background, draw the room's title, and place any present NPCs (using `characters.js`).
-- **Task 3:** Plumb the `dialogue_trees.js` engine into the visual scene so clicking an NPC opens a visual dialogue box.
-
-#### 🎨 Agent-2: Visual Transitions & Polish (Support)
-- **Task 1:** Ensure smooth handoffs between `TerminalUI` (DOM) and `Phaser` (Canvas). The transition shouldn't flash black. Build a unified fade-in/fade-out mechanism.
-- **Task 2:** Polish the `LocationScene` layout. Add UI for clicking to move between rooms or leaving the location.
-
-#### ✨ Agent-3: Gameplay Loop Validation (Support)
-- **Task 1:** Test the full loop end-to-end: Dashboard → Event → Dialogue → Haggle → Dashboard.
-- **Task 2:** Fix any state sync issues (e.g., ensuring `GameState` properly saves after a Phaser scene ends).
-- **Task 3:** Consolidate any obsolete legacy DOM screens (like the old text-based `roomScreen` or `eventScreen`) to clean up the codebase.
-
-> **Next Step:** Agents will claim tasks and begin executing Phase 31.
+**Remaining Tasks:**
+- [ ] B4: Modify `DialogueScene.js` to add `room_talk` + `dialogue_tree` step types, wire tone system
+- [ ] C1: Wire rooms + dialogue trees into EventManager, GameState, PhoneManager
+- [ ] C2: Testing + verification of full venue flow (Dashboard → Event → Dialogue → Haggle → Dashboard)
 
 ---
 
 ## 🗺️ Phase 40: Overworld Exploration Engine
 
-> **Status:** PLANNED. Expanding the Pokémon-style visual aesthetic into a full top-down explorable overworld.
+> **Status:** PARTIALLY DONE. `OverworldScene.js` (12KB), `CityScene.js` (9KB), `FastTravelScene.js` (11KB), and `OverworldHelper.js` (12KB) already exist with basic movement, tilemap loading, and taxi system. See Phase 40.5 for the refactoring plan.
 
-**The Overworld Goal:**
-Allow the player to physically walk around galleries, art fairs, and studios to interact with NPCs and artworks, fully replacing text-based menus for spatial exploration.
+---
 
-### Execution Plan & Agent Tasks
+## 🗺️ Phase 40.5: Top-Down RPG Usability & Code Integration Plan
 
-#### 🕹️ Agent-1: Core Physics & Tilemap Engine (Lead)
-- **Task 1:** Set up `OverworldScene.js` as a new Phaser scene with Arcade Physics and camera follow logic.
-- **Task 2:** Integrate Tiled JSON maps to render grid-based environments (walls, floors, collisions).
-- **Task 3:** Implement 4-directional player movement (pixel-smooth or grid-locking) using a walking spritesheet.
+> **Status:** PLANNING. Based on audits of industry-standard Phaser 3 top-down RPG templates (`phaser3-top-down-template`, `phaser_dungeon_crawler`, `theodoric`), we are refactoring our `LocationScene` and `OverworldScene` approach to ensure long-term scalability, clean code, and excellent usability.
 
-#### 💬 Agent-2: Interaction & Dialogue (Support)
-- **Task 1:** Add proximity triggers and interaction zones (e.g., facing an NPC and pressing action).
-- **Task 2:** Pause the overworld and overlay a Pokémon-style dialogue box during interactions.
-- **Task 3:** Wire interactions seamlessly into `dialogue_trees.js` and transition to `HaggleScene` when a deal starts.
+### 1. Code Architecture Audit & Refactor
+*Reference: `phaser3-top-down-template` & `phaser_dungeon_crawler`*
+Our current scenes handle too much generic logic. We need to decouple entities to match best practices:
+- **Extract Player Class (`src/sprites/Player.js`):** Move player creation, GridEngine linkage, WASD/arrow input handling, and animation processing into a standalone class extending `Phaser.Physics.Arcade.Sprite`.
+- **Extract Map Manager (`src/managers/MapManager.js`):** Create a robust helper to load Tiled maps, generate collision layers (`setCollisionByProperty`), and handle map cleanup.
+- **Tilemap Object Spawning:** Do not hardcode NPC coordinates. Read them directly from an `NPCs` object layer in Tiled (`map.getObjectLayer('NPCs')`) to spawn custom `NPC.js` sprites.
+- **Parallel UI Scene (`src/scenes/GameUI.js`):** The HUD/TerminalUI needs to be cleanly decoupled from the physics scene. Run a persistent `GameUI` scene in parallel (`this.scene.run('GameUI')`) to handle UI overlays without being affected by camera zooming or scrolling.
+- **State Syncing (`GameState.state`):** Ensure player coordinates, direction, and current map `roomId` are saved to the persistent game state on scene exit, so returning to the overworld feels seamless.
 
-#### 🎨 Agent-3: Assets & Aesthetics (Support)
-- **Task 1:** Source or generate top-down 8-bit Noir tilesets and character sprite sheets.
-- **Task 2:** Build out intricate Tiled maps for key locations (Chelsea Gallery, Artist Studio).
-- **Task 3:** Add ambient polish (idle animations, rendering layers, lighting/shadows).
+### 2. Usability & Controls (The "Action RPG" Feel)
+*Reference: `theodoric`*
+The movement needs to feel hyper-responsive and modern.
+- **Control Scheme:** Standardize WASD + Arrow Keys for movement.
+- **Interaction Raycasting:** Add a dedicated interaction key (Spacebar or 'E'). Use GridEngine's `getFacingDirection()` and `getCharactersAt(targetTile)` to trigger dialogues safely.
+- **Pointer/Touch Support:** Implement click-to-move pathfinding (`gridEngine.moveTo`) or a virtual D-Pad in the `GameUI` scene to ensure the game remains fully playable on mobile devices.
+- **Camera Bounds:** Lock the `cameras.main.setBounds(...)` strictly to the tilemap dimensions so the camera never reveals the void outside the map edges.
 
-> **Next Step:** Agent-1 to begin setting up `LocationScene.js` and movement mechanics.
+### 3. Visual Depth & Layering
+*Reference: `phaser_dungeon_crawler`*
+Top-down games break immersion if layering is wrong.
+- **Y-Sorting (Depth by Y-coordinate):** Implement dynamic depth sorting. In the scene or sprite's `update()` loop, set `sprite.setDepth(sprite.y)` so entities overlap correctly.
+- **Overhead Masks:** Use custom "wall_above" or "roof" layers in Tiled. These must be rendered *above* the player sprite (e.g., `setDepth(9999)`) to act as masks when the player walks closely behind tall objects.
+
+### Implementation Checklist
+- [ ] Create `src/sprites/Player.js` hooked to GridEngine and keyboard inputs.
+- [ ] Create `src/sprites/NPC.js` to standardize GridEngine setup and ambient wandering behaviors.
+- [ ] Create `src/anims/CharacterAnims.js` to centralize all `.anims.create` calls.
+- [ ] Create `src/managers/MapManager.js` to abstract Tiled map parsing and collision setup.
+- [ ] Refactor `LocationScene.js`/`OverworldScene.js` to utilize the new decoupled classes.
+- [ ] Establish a parallel `GameUI.js` scene for overlays.
+- [ ] Add directional interaction raycasting (tied to Spacebar/E) for talking to NPCs.
+- [ ] Create dynamic Y-sorting logic (`setDepth(y)`) for all moving objects.
+- [ ] Add "wall_above" roof mask layers in Tiled rendering above the player.
+- [ ] Add collision debug toggles (using `phaser_dungeon_crawler`'s `debugDraw` pattern).
+- [ ] Implement mobile control fallbacks (click-to-move or virtual joystick).
+- [ ] Connect `GameState.state.location` persistence so the player resumes exactly where they left off after an encounter.
 
 ---
 
 ## 🏙️ Phase 41: City Hub & World Expansion
 
-> **Status:** PLANNED. Connecting all indoor locations through a massive, persistent outdoor city tilemap for a true RPG feel.
+> **Status:** PARTIALLY DONE. `CityScene.js` and `FastTravelScene.js` already exist with basic city tilemap rendering and taxi fast-travel. Remaining: doorway warps, persistent spawn tracking, ambient polish.
 
-**The World Hub Goal:**
-Escalate the game from isolated rooms into a physical city block. Players spawn in the city (e.g. outside their apartment), walk the streets to the gallery, or catch a taxi to the airport.
+**Remaining Tasks:**
+- [ ] Implement doorway warps — walking into a gallery door loads `LocationScene` interiors
+- [ ] Configure persistent `GameState.state.playerLocation` tracking
+- [ ] Build the Apartment as the player's primary hub/save point
+- [ ] Add ambient city elements (animated pedestrians, day/night tinting)
+- [ ] Build master `CityMap.json` in Tiled (streets, Chelsea gallery district, airport)
+
+---
+
+## 🛠️ Phase 42: UX Polish & Robustness Test Hub
+
+> **Status:** PLANNED. Hardening the interactive systems against soft-locks, adding sensory polish (sound/animation), and building an explicit testing hub into the Main Menu.
+
+**The Polish & Test Goal:**
+Ensure the custom dialogue and haggle logic has unbreakable fallbacks (like force-quit buttons) so players never get stuck. Add the sensory layer (ambient audio, weather effects), and expose all these modules directly on the Title Screen so we can rapidly test art and logic integration.
 
 ### Execution Plan & Agent Tasks
 
-#### 🕹️ Agent-1: World Engine & Maps (Lead)
-- **Task 1:** Build `CityScene.js` to load the massive outdoor city tilemap (using the Kenney Urban pack).
-- **Task 2:** Implement Doorway Warps — walking into the gallery door seamlessly loads `LocationScene` interiors.
-- **Task 3:** Configure persistent tracking for `GameState.state.playerLocation` so leaving a building spawns you outside its specific door.
+#### 🛡️ Agent-1: Robustness & Error Handling (Lead)
+- **Task 1:** Update `MacDialogueScene.js` and `DialogueScene.js` to include failsafe "Force Exit" or "Back" buttons (e.g., `ESC` key or a persistent UI button).
+- **Task 2:** Ensure broken dialogue sequences or missing assets do not crash the game; implement graceful fallbacks (e.g., pure white background if image fails to load).
+- **Task 3:** Expand the Main Menu to include a dedicated "Test Hub" section with shortcuts to:
+  - 💬 `Test RPG Dialogue Scene` (Already started)
+  - 🤝 `Test Haggle Scene` (Direct jump into a generic haggle config)
+  - 🚶 `Test Overworld/City` (Direct to exploration)
 
-#### 💬 Agent-2: Fast Travel & World Logic (Support)
-- **Task 1:** Place Taxi NPCs/Objects around the city that trigger a Fast Travel Dialogue menu (e.g. "Take me to Teterboro FBO").
-- **Task 2:** Time mechanics: Ensure walking or taking a taxi advances the game clock/week state appropriately.
-- **Task 3:** Wire up the Apartment building as the player's primary hub/save point.
+#### ✨ Agent-2: Sensory Polish — Animations & Audio (Support)
+- **Task 1:** Build out scene-specific CSS or Phaser particle animations (e.g., animated rain out the window, cigarette smoke, blinking cursors).
+- **Task 2:** Introduce simple Web Audio API integration for:
+  - Terminal blips and UI typing sounds.
+  - Ambient noise (gallery murmur, street traffic).
+- **Task 3:** Smooth out timing for the MacDialogueScene typewriter effect, allowing the player to rapidly skip ahead linearly without sequence breaking.
 
-#### 🎨 Agent-3: Urban Asset Integration (Support)
-- **Task 1:** Download and configure the Kenney RPG Urban Pack (`roguelike-city` or similar) to ensure aesthetic consistency with `LocationScene`.
-- **Task 2:** Build the master `CityMap.json` in Tiled, laying out the streets, the Chelsea gallery district, and the airport helipad.
-- **Task 3:** Add ambient city polish (animated cars, pedestrians, day/night color tinting).
+#### 🎨 Agent-3: 1-Bit Asset Refinement (Support)
+- **Task 1:** Continue generating and iterating on 1-bit backgrounds and portraits for the MacDialogue aesthetics.
+- **Task 2:** Create standard UI asset sets (speech bubbles, dialog boxes, cursor icons) to replace primitive drawn rectangles in Phaser.
 
-> **Next Step:** Agents will claim tasks and begin executing Phase 41.
+---
+
+## 🎨 Sprite Generation Pipeline
+
+> **Status:** RESEARCH COMPLETE. Pipeline documented. 8 dealer sprites + 18 NPC portraits + 15 backgrounds generated. See [README_ARCHIVE.md](README_ARCHIVE.md) for full master prompt templates and post-processing pipeline details.
+
+### Asset Manifest
+
+| Asset | Current | Needed | Priority |
+|---|---|---|---|
+| NPC Portraits | 18 portraits | All 16 contacts covered | ✅ Done |
+| Dealer Sprites | 8 dealer sprites | 6 dealer types covered | ✅ Done |
+| Player Walking Sheet | `player.png` + `player_walk.png` | 3 class variants | MEDIUM |
+| Scene Backgrounds | 15+ | Sufficient for current content | ✅ Done |
+| Item Icons | none | artworks, phone, menu | LOW |
+| UI Elements | none | buttons, frames, cursors | LOW |
+
+### Implementation Tasks
+- [x] Generate NPC portraits for all contact archetypes
+- [x] Generate dealer sprites for all dealer types
+- [x] Generate scene backgrounds (gallery, backroom, 1-bit variants)
+- [ ] Create `scripts/bg_remove.py` with color-key and rembg modes
+- [ ] Create `scripts/sprite_slice.py` for spritesheet cutting
+- [ ] Generate 3 player class walking spritesheets
+- [ ] Store master prompts in `07_Project/sprite_prompts.md` for reproducibility
+
+---
+
+## 🎮 Phase 42: Phaser-Based Title & Character Selection
+
+> **Status:** PLANNING. We are transitioning the game's Title and Character Selection screens from the DOM-based `TerminalUI` to fully graphical, animated Phaser scenes, drawing inspiration from classic RPGs like Pokemon.
+
+### 1. Code Architecture Review
+Currently, ArtLife's entry flow (`characterSelectScreen`, `characterDetailScreen`) relies exclusively on drawing HTML strings to a static `div`. We will introduce a distinct pre-game Scene flow that completely bypasses `TerminalUI` until the player enters the main game loop (`Dashboard`).
+
+### 2. Scene Blueprint
+- **`src/scenes/TitleScene.js`:** A full-screen pixel-art background with a pulsing "Press SPACE to Start" prompt. Booted immediately by `main.js`.
+- **`src/scenes/CharacterSelectScene.js`:** Arrow keys or WASD cycle through graphical portrait cards representing each archetype (`rich_kid`, `hedge_fund`, `gallery_insider`). The bottom screen dynamically types out the character stats via a typewriter effect. Pressing SPACE commits the choice, triggering `GameState.init(char)` and advancing to the overworld.
+
+### Implementation Tasks
+- [ ] Create `src/scenes/TitleScene.js` with pulsing "Press SPACE" animation.
+- [ ] Create `src/scenes/CharacterSelectScene.js` with graphical portrait navigation.
+- [ ] Implement keyboard cursors (Up/Down or Left/Right) to cycle through imported `CHARACTERS`.
+- [ ] Implement typewriter effect for the character description text panel.
+- [ ] Update `main.js` to boot `TitleScene` first, keeping the HTML Terminal hidden until needed.
+- [ ] Wire the final selection to fire `GameState.init(char)` and transition cleanly to the `Dashboard` or `OverworldScene`.

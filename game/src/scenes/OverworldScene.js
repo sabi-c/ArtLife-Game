@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene.js';
 import { Player } from '../sprites/Player.js';
 import { NPC } from '../sprites/NPC.js';
 import { registerAllAnims } from '../anims/CharacterAnims.js';
@@ -11,21 +11,12 @@ import { GameState } from '../managers/GameState.js';
  * Now uses decoupled Player, NPC, and CharacterAnims classes.
  * Handles: tilemap setup, GridEngine config, camera, and scene transitions.
  */
-export class OverworldScene extends Phaser.Scene {
+export class OverworldScene extends BaseScene {
     constructor() {
-        super({ key: 'OverworldScene' });
+        super('OverworldScene');
     }
 
-    init(data) {
-        this.venueId = data.venueId || 'gallery_test';
-        this.roomId = data.roomId || 'entrance';
-        this.ui = data.ui;
 
-        // Hide terminal UI when overworld is active
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'none';
-        }
-    }
 
     preload() {
         // Load Kenney Urban Tileset
@@ -33,17 +24,21 @@ export class OverworldScene extends Phaser.Scene {
 
         // Load spritesheets (idempotent)
         if (!this.textures.exists('player_walk')) {
-            this.load.spritesheet('player_walk', '/sprites/player_walk.png', { frameWidth: 16, frameHeight: 16 });
+            this.load.spritesheet('player_walk', '/sprites/player_walk.png', { frameWidth: 160, frameHeight: 160 });
         }
         if (!this.textures.exists('npc_elena')) {
-            this.load.spritesheet('npc_elena', '/sprites/walk_elena_ross_walk.png', { frameWidth: 16, frameHeight: 16 });
+            this.load.spritesheet('npc_elena', '/sprites/walk_elena_ross_walk.png', { frameWidth: 160, frameHeight: 160 });
         }
         if (!this.textures.exists('npc_margaux')) {
-            this.load.spritesheet('npc_margaux', '/sprites/walk_margaux_villiers_walk.png', { frameWidth: 16, frameHeight: 16 });
+            this.load.spritesheet('npc_margaux', '/sprites/walk_margaux_villiers_walk.png', { frameWidth: 160, frameHeight: 160 });
         }
     }
 
-    create() {
+    create(data) {
+        super.create({ ...data, hideUI: true }); // Hides UI via BaseScene
+        this.venueId = data?.venueId || 'gallery_test';
+        this.roomId = data?.roomId || 'entrance';
+
         const { width, height } = this.scale;
 
         // ── Fade In (cinematic entry, pokemon-react-phaser pattern) ──
@@ -259,10 +254,8 @@ export class OverworldScene extends Phaser.Scene {
         GameEventBus.emit(GameEvents.OVERWORLD_EXIT, { venueId: this.venueId });
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            if (this.ui && this.ui.container) {
-                this.ui.container.style.display = 'block';
-                this.ui.render();
-            }
+            this.showTerminalUI();
+            if (this.ui) this.ui.render();
             this.scene.stop();
         });
     }

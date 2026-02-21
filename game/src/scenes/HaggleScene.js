@@ -1,21 +1,19 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES } from '../data/haggle_config.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
-export class HaggleScene extends Phaser.Scene {
+export class HaggleScene extends BaseScene {
     constructor() {
         super({ key: 'HaggleScene' });
     }
 
     init(data) {
         this.ui = data.ui;
-        this.haggleInfo = data.haggleInfo; // initial state
-        this.state = data.haggleInfo?.state || HaggleManager.getState() || this.haggleInfo;
-
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'none';
-        }
+        this.haggleInfo = data.haggleInfo || {}; // initial state
+        this.state = HaggleManager.getState() || data.haggleInfo?.state || this.haggleInfo;
+        this.returnScene = data.returnScene || null;
+        this.returnArgs = data.returnArgs || {};
     }
 
     preload() {
@@ -31,7 +29,9 @@ export class HaggleScene extends Phaser.Scene {
         }
     }
 
-    create() {
+    create(data) {
+        super.create({ ...data, hideUI: true }); // Hides UI via BaseScene
+
         const { width, height } = this.scale;
 
         // ── Cinematic Entry (pokemon-react-phaser battle transition) ──
@@ -60,38 +60,51 @@ export class HaggleScene extends Phaser.Scene {
         const dealerSprite = this.textures.exists(dealerKey) ? dealerKey : 'dealer_patron';
 
         if (this.textures.exists(dealerSprite)) {
-            // Need custom scaling if passing manual assets
-            const dlScale = this.state.dealerSpriteKey ? 1 : 3;
-            this.dealer = this.add.image(width - 150, height / 2 - 120, dealerSprite)
-                .setOrigin(0.5, 1).setScale(dlScale).setBlendMode(Phaser.BlendModes.LIGHTEN);
+            const dealerTargetH = 200;
+            const dlTex = this.textures.get(dealerSprite).source[0];
+            const dlScale = dlTex.height > 0 ? dealerTargetH / dlTex.height : 1;
+            this.dealer = this.add.image(width - 180, height / 2 - 60, dealerSprite)
+                .setOrigin(0.5, 1)
+                .setScale(dlScale)
+                .setAlpha(0.95);
+
+            const isWebGL = this.sys.game.renderer.type === Phaser.WEBGL;
+            if (isWebGL) { this.dealer.setBlendMode(Phaser.BlendModes.LIGHTEN); }
         } else {
-            this.dealer = this.add.text(width - 150, height / 2 - 120, this.state.dealerIcon || '👤', { fontSize: '100px' }).setOrigin(0.5, 1);
+            this.dealer = this.add.text(width - 180, height / 2 - 60, this.state.dealerIcon || '👤', { fontSize: '100px' }).setOrigin(0.5, 1);
         }
 
         const playerKey = this.state.playerSpriteKey || 'player_back';
         if (this.textures.exists(playerKey)) {
-            const plScale = this.state.playerSpriteKey ? 1 : 3;
-            this.player = this.add.image(150, height - 250, playerKey)
-                .setOrigin(0.5, 1).setScale(plScale).setBlendMode(Phaser.BlendModes.LIGHTEN);
+            const playerTargetH = 200;
+            const plTex = this.textures.get(playerKey).source[0];
+            const plScale = plTex.height > 0 ? playerTargetH / plTex.height : 1;
+            this.player = this.add.image(180, height - 200, playerKey)
+                .setOrigin(0.5, 1)
+                .setScale(plScale)
+                .setAlpha(0.95);
+
+            const isWebGL = this.sys.game.renderer.type === Phaser.WEBGL;
+            if (isWebGL) { this.player.setBlendMode(Phaser.BlendModes.LIGHTEN); }
         } else {
-            this.player = this.add.text(150, height - 250, '🕵️', { fontSize: '120px' }).setOrigin(0.5, 1).setScale(-1, 1);
+            this.player = this.add.text(180, height - 200, '🕵️', { fontSize: '120px' }).setOrigin(0.5, 1).setScale(-1, 1);
         }
 
         // Letterbox bars
         this.add.rectangle(0, 0, width, 40, 0x000000).setOrigin(0, 0).setDepth(100);
         this.add.rectangle(0, height - 40, width, 40, 0x000000).setOrigin(0, 0).setDepth(100);
         this.roundText = this.add.text(width / 2, 20, `ROUND ${this.state.round || 1} / ${this.state.maxRounds || 5}`, {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#888888'
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
         }).setOrigin(0.5, 0.5).setDepth(101);
 
         // Intro slides
         this.dealer.x += 200;
         this.dealer.alpha = 0;
-        this.tweens.add({ targets: this.dealer, x: width - 150, alpha: 1, duration: 800, ease: 'Power2' });
+        this.tweens.add({ targets: this.dealer, x: width - 180, alpha: 0.95, duration: 800, ease: 'Power2' });
 
         this.player.x -= 200;
         this.player.alpha = 0;
-        this.tweens.add({ targets: this.player, x: 150, alpha: 1, duration: 800, ease: 'Power2', delay: 200 });
+        this.tweens.add({ targets: this.player, x: 180, alpha: 0.95, duration: 800, ease: 'Power2', delay: 200 });
 
         // 3. UI
         this.drawUIContainers(width, height);
@@ -175,14 +188,14 @@ export class HaggleScene extends Phaser.Scene {
 
     drawInteractiveUI(width, height) {
         // Dialogue Box at bottom
-        const dlHeight = 120;
+        const dlHeight = 150;
         const dlY = height - dlHeight - 40;
 
         this.dialogueBg = this.add.rectangle(width / 2, dlY + dlHeight / 2, width - 60, dlHeight, 0x14141f, 0.95);
         this.dialogueBg.setStrokeStyle(3, 0x3a3a4e);
 
         this.speakerTab = this.add.text(45, dlY - 14, this.state.dealerName?.toUpperCase() || 'DEALER', {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#14141f', backgroundColor: '#e8e4df', padding: { x: 8, y: 4 }
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c', backgroundColor: '#14141f', padding: { x: 8, y: 4 }
         });
 
         this.dialogueTextContent = this.add.text(50, dlY + 20, '', {
@@ -226,7 +239,7 @@ export class HaggleScene extends Phaser.Scene {
         this.speakerTab.setText('YOUR TURN');
 
         const { width, height } = this.scale;
-        const dlHeight = 120;
+        const dlHeight = 150;
         const dlY = height - dlHeight - 40;
 
         // WalkAway comes from HaggleManager.getAvailableTactics() already — do NOT push again
@@ -273,8 +286,12 @@ export class HaggleScene extends Phaser.Scene {
             const bg = this.add.rectangle(x + btnW / 2, y + btnH / 2, btnW, btnH, typeBgColor)
                 .setStrokeStyle(1.5, typeBorderColor).setInteractive({ useHandCursor: true });
 
-            const txt = this.add.text(x + 10, y + btnH / 2 - 5, t.label, {
+            const txt = this.add.text(x + 10, y + btnH / 2 - 12, t.label, {
                 fontFamily: '"Press Start 2P"', fontSize: '10px', color: typeColor
+            }).setOrigin(0, 0.5);
+
+            const descText = this.add.text(x + 10, y + btnH / 2 + 10, t.description || '', {
+                fontFamily: '"Playfair Display"', fontSize: '12px', color: '#7a7a8a'
             }).setOrigin(0, 0.5);
 
             // Add the type label in the top right corner
@@ -290,7 +307,7 @@ export class HaggleScene extends Phaser.Scene {
 
             bg.on('pointerdown', () => this.executeTactic(t.id, t.label));
 
-            this.tacticsContainer.add([bg, txt]);
+            this.tacticsContainer.add([bg, txt, descText]);
             if (typeBadge) this.tacticsContainer.add(typeBadge);
         });
     }
@@ -421,7 +438,7 @@ export class HaggleScene extends Phaser.Scene {
 
             // Price details
             const savings = (this.state.askingPrice || 0) - (this.state.finalPrice || 0);
-            const priceText = this.add.text(width / 2, height / 2 + 60, `Final Price: $${(this.state.finalPrice || 0).toLocaleString()}`, {
+            const priceText = this.add.text(width / 2, height / 2 + 60, `DEAL AT $${(this.state.finalPrice || 0).toLocaleString()}`, {
                 fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#3a8a5c', align: 'center'
             }).setOrigin(0.5).setDepth(202).setAlpha(0);
             this.tweens.add({ targets: priceText, alpha: 1, duration: 600, delay: 1200 });
@@ -460,7 +477,7 @@ export class HaggleScene extends Phaser.Scene {
                 this.tweens.add({ targets: this.dealer, x: width + 200, alpha: 0, duration: 1000, ease: 'Power2' });
             }
 
-            const failHeader = this.add.text(width / 2, height / 2 - 60, '💨  DEAL FELL THROUGH', {
+            const failHeader = this.add.text(width / 2, height / 2 - 60, '💨  WALKED AWAY', {
                 fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#c94040', align: 'center'
             }).setOrigin(0.5).setDepth(202).setAlpha(0);
             this.tweens.add({ targets: failHeader, alpha: 1, duration: 600, delay: 400 });
@@ -495,13 +512,23 @@ export class HaggleScene extends Phaser.Scene {
         console.warn('[HaggleScene] Force-exiting via ESC');
         this.input.keyboard.off('keydown-ESC', this.forceExit, this);
         if (this.typeEvent) this.typeEvent.remove();
-        try { HaggleManager.applyResult(); } catch (e) { /* no active haggle to apply */ }
-        GameEventBus.emit(GameEvents.HAGGLE_END, { dealerType: this.state?.dealerTypeKey, result: 'force_exit', round: this.state?.round });
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'block';
-            this.ui.popScreen();
-        }
-        this.scene.stop();
+
+        const { width, height } = this.scale;
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9).setDepth(200);
+        this.add.text(width / 2, height / 2, 'LEFT THE TABLE', {
+            fontFamily: '"Press Start 2P"', fontSize: '24px', color: '#c94040'
+        }).setOrigin(0.5).setDepth(201);
+
+        this.cameras.main.fadeOut(800, 0, 0, 0);
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+            try { HaggleManager.applyResult(); } catch (e) { /* no active haggle to apply */ }
+            GameEventBus.emit(GameEvents.HAGGLE_END, { dealerType: this.state?.dealerTypeKey, result: 'force_exit', round: this.state?.round });
+            this.showTerminalUI();
+            if (this.ui) {
+                this.ui.popScreen();
+            }
+            this.scene.stop();
+        });
     }
 
     endBattle() {
@@ -514,12 +541,22 @@ export class HaggleScene extends Phaser.Scene {
         });
 
         this.cameras.main.fadeOut(600, 0, 0, 0);
-        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-            if (this.ui && this.ui.container) {
-                this.ui.container.style.display = 'block';
-                this.ui.popScreen();
+        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, async () => {
+            if (this.returnScene) {
+                // Return to the scene that launched the haggle (e.g. LocationScene)
+                this.scene.start(this.returnScene, {
+                    ...this.returnArgs,
+                    ui: this.ui,
+                });
+            } else {
+                // Fall back to terminal dashboard
+                this.showTerminalUI();
+                if (this.ui) {
+                    const { dashboardScreen } = await import('../terminal/screens/dashboard.js');
+                    this.ui.replaceScreen(dashboardScreen(this.ui));
+                }
+                this.scene.stop();
             }
-            this.scene.stop();
         });
     }
 }

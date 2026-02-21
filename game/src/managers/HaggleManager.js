@@ -72,6 +72,7 @@ class _HaggleManager {
             playerStats: {
                 reputation: s.reputation || 0,
                 taste: s.taste || 0,
+                audacity: s.audacity || 30,
                 access: s.access || 0,
                 intel: s.intel || 0,
                 cash: s.cash || 0,

@@ -1,121 +1,106 @@
-# 📦 Asset Manifest — ArtLife
+# 🎨 ArtLife Asset Manifest — Gallery Environment
 
-> Complete inventory of all existing and needed game assets. Status tracked per item.
+> Master tracking document for all generated visual assets.
+> Updated by agents as assets are produced and processed.
 
 ---
 
-## Backgrounds (public/backgrounds/)
+## Pipeline Reference
 
-### ✅ Existing (7)
-| File | Category | Size | Status |
+```
+generate_image → bg_remove.py (flood-fill) → deploy to public/
+```
+
+**Commands:**
+```bash
+# Remove background (auto-detects color from corners)
+python3 scripts/bg_remove.py raw/input.png public/sprites/output.png
+
+# Slice a spritesheet into frames
+python3 scripts/sprite_slice.py raw/sheet.png --tile 16 --output frames/
+
+# Batch process a folder
+python3 scripts/bg_remove.py raw/ processed/ --batch
+```
+
+---
+
+## Section 1: Gallery Interior — White-Walled Art Gallery
+
+### 1A. Scene Backgrounds
+
+| # | Asset | Description | Size | Status | File |
+|---|---|---|---|---|---|
+| 1 | Gallery Main Hall | White-walled gallery, hardwood floor, track lighting, paintings visible | 512×512 | ⬜ TODO | — |
+| 2 | Gallery Back Room | Dimly lit storage/viewing room, crates, easels | 512×512 | ⬜ TODO | — |
+| 3 | Gallery Entrance | Glass door, reception desk, welcome area | 512×512 | ⬜ TODO | — |
+| 4 | Gallery Courtyard | Outdoor sculpture garden, white gravel paths | 512×512 | ⬜ TODO | — |
+
+### 1B. Gallery Objects (Top-Down Tiles — 16×16 or 32×32)
+
+| # | Asset | Description | Qty Frames | Status | File |
+|---|---|---|---|---|---|
+| 5 | Painting Frame (Gold) | Ornate gold frame on wall, front-facing | 1 | ⬜ TODO | — |
+| 6 | Painting Frame (Black) | Minimalist modern black frame | 1 | ⬜ TODO | — |
+| 7 | Painting Frame (White) | Clean white gallery frame | 1 | ⬜ TODO | — |
+| 8 | Sculpture Pedestal | White marble pedestal, top-down | 1 | ⬜ TODO | — |
+| 9 | Reception Desk | Sleek modern desk, top-down | 1 | ⬜ TODO | — |
+| 10 | Gallery Bench | Leather bench for sitting, top-down | 1 | ⬜ TODO | — |
+| 11 | Potted Plant (Fig) | Fiddle leaf fig in white pot | 1 | ⬜ TODO | — |
+| 12 | Potted Plant (Palm) | Small indoor palm | 1 | ⬜ TODO | — |
+| 13 | Wine Glass | Champagne/wine glass on surface | 1 | ⬜ TODO | — |
+| 14 | Art Crate | Wooden shipping crate | 1 | ⬜ TODO | — |
+| 15 | Track Light | Ceiling track light fixture | 1 | ⬜ TODO | — |
+
+### 1C. Gallery NPC Portraits (Dialogue/Battle — 512×512)
+
+| # | Asset | Character | Description | Status | File |
+|---|---|---|---|---|---|
+| 16 | Elena Ross | Gallery Owner | 40s, sharp features, power suit, confident smirk | ✅ Exists | `dealer_shark.png` |
+| 17 | Margaux Villiers | Art Advisor | 50s, elegant, pearl necklace, knowing eyes | ⬜ TODO | — |
+| 18 | Julian Vance | Rival Collector | 30s, slicked hair, tailored suit, competitive eyes | ⬜ TODO | — |
+| 19 | The Auctioneer | Christie's | 60s, distinguished, bow tie, commanding presence | ⬜ TODO | — |
+| 20 | Young Artist | Emerging Talent | 20s, paint-stained clothes, passionate expression | ⬜ TODO | — |
+| 21 | Art Critic | Press | 50s, glasses, notebook, skeptical expression | ⬜ TODO | — |
+| 22 | Tech Collector | New Money | 30s, casual luxury, AirPods, disruptive energy | ⬜ TODO | — |
+| 23 | Gallery Assistant | Staff | 20s, all black outfit, headset, helpful smile | ⬜ TODO | — |
+
+### 1D. Gallery NPC Walking Sprites (Overworld — 64×64 spritesheet)
+
+| # | Asset | Character | Status | File |
+|---|---|---|---|---|
+| 24 | Player (Class 1) | Hedge Fund Collector | ✅ Generated | `player_walk.png` |
+| 25 | Player (Class 2) | Gallery Insider | ⬜ TODO | — |
+| 26 | Player (Class 3) | Old Money Heir | ⬜ TODO | — |
+| 27 | Elena Ross Walk | Gallery Owner | ⬜ TODO | — |
+| 28 | Margaux Walk | Art Advisor | ⬜ TODO | — |
+| 29 | Julian Vance Walk | Rival Collector | ⬜ TODO | — |
+| 30 | Generic Patron Walk | Background NPC | ⬜ TODO | — |
+| 31 | Gallery Assistant Walk | Staff NPC | ⬜ TODO | — |
+
+---
+
+## Section 2: City Exterior (Phase 41)
+
+| # | Asset | Description | Status | File |
+|---|---|---|---|---|
+| 32 | Chelsea Street | Night-time street with gallery storefronts | ⬜ TODO | — |
+| 33 | Apartment Building | Player's home exterior | ⬜ TODO | — |
+| 34 | Taxi | Yellow cab, top-down | ⬜ TODO | — |
+| 35 | Airport | Small jet terminal | ⬜ TODO | — |
+
+---
+
+## Section 3: Auction House (Future)
+
+(To be expanded when Phase 16.5b starts)
+
+---
+
+## Processing Log
+
+| Date | Asset | Action | Notes |
 |---|---|---|---|
-| `bg_gallery.png` | Gallery / Social | 63KB | ✅ Done |
-| `bg_market.png` | Market / Trading | 29KB | ✅ Done |
-| `bg_drama.png` | Scandal / Crisis | 67KB | ✅ Done |
-| `bg_fair.png` | Art Fair | 39KB | ✅ Done |
-| `bg_opportunity.png` | Deal / Opportunity | 51KB | ✅ Done |
-| `bg_personal.png` | Personal Life | 55KB | ✅ Done |
-| `bg_social.png` | Networking | 62KB | ✅ Done |
-
-### ❌ Needed (7)
-| File | Category | Priority | Notes |
-|---|---|---|---|
-| `bg_auction.png` | Auction House | P1 (Phase 4) | Rows of seats, raised paddle, spotlight |
-| `bg_freeport.png` | Freeport Storage | P2 (Phase 4) | Cold fluorescent, endless crates |
-| `bg_studio.png` | Artist Studio | P2 (Phase 3) | Messy, creative, bohemian |
-| `bg_office.png` | Financial Office | P2 (Phase 3) | Bloomberg terminals, glass walls |
-| `bg_estate.png` | Estate Sale | P3 (Phase 4) | Old money mansion, dusty grandeur |
-| `bg_investigation.png` | Investigation | P3 (Phase 4) | Dark forensic room, magnifying glass |
-| `bg_title.png` | Title Screen | P1 (Phase 5) | City skyline, gallery windows glowing |
-
----
-
-## Character Portraits (public/portraits/ — TO CREATE)
-
-### Player Characters
-| File | Character | Size | Status |
-|---|---|---|---|
-| `portrait_rich_kid.png` | The Rich Kid | 128×128 | ❌ Needed (Phase 3) |
-| `portrait_hedge_fund.png` | The Hedge Fund | 128×128 | ❌ Needed (Phase 3) |
-| `portrait_insider.png` | The Insider | 128×128 | ❌ Needed (Phase 3) |
-| `portrait_speculator.png` | The Speculator | 128×128 | ❌ Needed (Phase 3) |
-| `portrait_curator.png` | The Curator | 128×128 | ❌ Stretch Goal |
-
-### Key NPCs
-| File | NPC Archetype | Size | Status |
-|---|---|---|---|
-| `npc_mega_dealer.png` | The Mega-Dealer (Gagosian type) | 128×128 | ❌ Phase 3+ |
-| `npc_young_hustler.png` | The Young Hustler (Philbrick type) | 128×128 | ❌ Phase 3+ |
-| `npc_trusted_advisor.png` | The Trusted Advisor (Bouvier type) | 128×128 | ❌ Phase 3+ |
-| `npc_speculator_collector.png` | The Speculator Collector (Saatchi type) | 128×128 | ❌ Phase 3+ |
-| `npc_institutional.png` | The Institutional Voice (Broad type) | 128×128 | ❌ Phase 3+ |
-
----
-
-## UI Elements (Currently Phaser-rendered — No External Assets)
-
-| Element | Current State | Notes |
-|---|---|---|
-| Nokia phone frame | Programmatic (Phaser Graphics) | Could be replaced with sprite |
-| Tab buttons | Programmatic | Working fine as-is |
-| Heat bars | Programmatic (colored rectangles) | Working fine as-is |
-| Event choice buttons | Programmatic | Working fine as-is |
-| Top bar stats | Programmatic | Working fine as-is |
-
-### Potential Sprite Upgrades (Phase 5)
-| File | Element | Notes |
-|---|---|---|
-| `ui_phone_frame.png` | Nokia phone bezel | Replace programmatic with detailed pixel sprite |
-| `ui_gavel.png` | Auction gavel icon | For auction events |
-| `ui_magnifier.png` | Magnifying glass icon | For investigation/intel events |
-| `ui_paddles.png` | Bidding paddles | For auction mini-game |
-
----
-
-## Audio (Phase 5 — Not Yet Started)
-
-### Music
-| File | Usage | Style | Status |
-|---|---|---|---|
-| `ost_menu.ogg` | Title / Menu screen | Slow jazz noir, chiptune | ❌ |
-| `ost_hub.ogg` | Main game hub | Ambient lo-fi noir | ❌ |
-| `ost_tension.ogg` | High-stakes events | Fast tempo, building | ❌ |
-| `ost_victory.ogg` | Successful deal / end screen | Triumphant chiptune | ❌ |
-
-### SFX
-| File | Usage | Status |
-|---|---|---|
-| `sfx_typewriter.ogg` | Text reveal | ❌ |
-| `sfx_cashregister.ogg` | Buy/sell | ❌ |
-| `sfx_phone_buzz.ogg` | New message | ❌ |
-| `sfx_gavel.ogg` | Auction lot sold | ❌ |
-| `sfx_page_turn.ogg` | Tab switching | ❌ |
-
----
-
-## Fonts (Loaded via Google Fonts in index.html)
-
-| Font | Usage | Status |
-|---|---|---|
-| Press Start 2P | UI text | ✅ Loaded |
-| Playfair Display | Narrative text | ✅ Loaded |
-| Courier New | Monospace data | ✅ System font |
-
----
-
-## Summary
-
-| Category | Existing | Needed | Total |
-|---|---|---|---|
-| Backgrounds | 7 | 7 | 14 |
-| Player Portraits | 0 | 5 | 5 |
-| NPC Portraits | 0 | 5+ | 5+ |
-| UI Sprites | 0 | 4 | 4 |
-| Music Tracks | 0 | 4 | 4 |
-| SFX | 0 | 5 | 5 |
-| **Total** | **7** | **30+** | **37+** |
-
----
-
-## Tags
-#assets #manifest #art #tracking #game-design
+| 2026-02-20 | `dealer_shark.png` | bg_remove test (flood-fill) | ✅ Clean removal, suit preserved |
+| 2026-02-20 | `dealer_patron.png` | bg_remove test (flood-fill) | ⚠️ Mixed bg (white+black), partial removal |
+| 2026-02-20 | `player_walk.png` | Generated + deployed | Spritesheet 4×4 grid, noir collector |

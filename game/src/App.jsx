@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 
 import { createPhaserGame } from './phaserInit.js';
 import DialogueBox from './ui/DialogueBox.jsx';
+import PlayerDashboard from './ui/PlayerDashboard.jsx';
 import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
 
 export default function App() {
@@ -21,6 +22,18 @@ export default function App() {
 
         return () => {
             if (phaserInstance) phaserInstance.destroy(true);
+        };
+    }, []);
+
+    const [showDashboard, setShowDashboard] = useState(false);
+
+    useEffect(() => {
+        // Expose a global hook so TerminalAPI (non-React) can open the dashboard
+        window.toggleEgoDashboard = (state) => {
+            setShowDashboard(state !== undefined ? state : true);
+        };
+        return () => {
+            delete window.toggleEgoDashboard;
         };
     }, []);
 
@@ -46,6 +59,10 @@ export default function App() {
         <ErrorBoundary>
             {/* The React UI Layer sits on top */}
             <DialogueBox />
+
+            {showDashboard && (
+                <PlayerDashboard onClose={() => setShowDashboard(false)} />
+            )}
 
             {/* The Phaser Canvas Layer sets up in this div */}
             <div id="phaser-game-container" />

@@ -6,6 +6,24 @@
  */
 
 // ════════════════════════════════════════════
+// Haggle Type & Attribute System
+// ════════════════════════════════════════════
+export const HAGGLE_TYPES = {
+    EMOTIONAL: 'emotional',
+    LOGICAL: 'logical',
+    AGGRESSIVE: 'aggressive',
+    FINANCIAL: 'financial',
+};
+
+// Type multipliers (Rock-Paper-Scissors)
+export const TYPE_EFFECTIVENESS = {
+    [HAGGLE_TYPES.EMOTIONAL]: { strongAgainst: HAGGLE_TYPES.AGGRESSIVE, weakAgainst: HAGGLE_TYPES.LOGICAL },
+    [HAGGLE_TYPES.LOGICAL]: { strongAgainst: HAGGLE_TYPES.EMOTIONAL, weakAgainst: HAGGLE_TYPES.FINANCIAL },
+    [HAGGLE_TYPES.AGGRESSIVE]: { strongAgainst: HAGGLE_TYPES.FINANCIAL, weakAgainst: HAGGLE_TYPES.EMOTIONAL },
+    [HAGGLE_TYPES.FINANCIAL]: { strongAgainst: HAGGLE_TYPES.LOGICAL, weakAgainst: HAGGLE_TYPES.AGGRESSIVE },
+};
+
+// ════════════════════════════════════════════
 // Dealer Personality Types
 // ════════════════════════════════════════════
 export const DEALER_TYPES = {
@@ -16,10 +34,11 @@ export const DEALER_TYPES = {
         patience: 3,          // Rounds before they walk away
         greedFactor: 1.3,     // Multiplier on their asking price
         bluffResistance: 0.4, // How well they detect bluffs (0-1)
-        weakTo: 'walkAway',   // Tactic they're most vulnerable to
-        strongAgainst: 'holdFirm',
+        weakTo: 'walkAway',   // Tactic they're most vulnerable to (legacy)
+        strongAgainst: 'holdFirm', // legacy
         counterStyle: 'aggressive', // How they respond to offers
         dialoguePool: 'shark',
+        haggleStyle: HAGGLE_TYPES.AGGRESSIVE, // Strong vs Financial, Weak vs Emotional
     },
     patron: {
         name: 'Patron',
@@ -32,6 +51,7 @@ export const DEALER_TYPES = {
         strongAgainst: 'walkAway',
         counterStyle: 'warm',
         dialoguePool: 'patron',
+        haggleStyle: HAGGLE_TYPES.EMOTIONAL, // Strong vs Aggressive, Weak vs Logical
     },
     calculator: {
         name: 'Calculator',
@@ -44,6 +64,7 @@ export const DEALER_TYPES = {
         strongAgainst: 'holdFirm',
         counterStyle: 'analytical',
         dialoguePool: 'calculator',
+        haggleStyle: HAGGLE_TYPES.LOGICAL, // Strong vs Emotional, Weak vs Financial
     },
     nervous: {
         name: 'Nervous',
@@ -56,6 +77,7 @@ export const DEALER_TYPES = {
         strongAgainst: 'bluff',
         counterStyle: 'anxious',
         dialoguePool: 'nervous',
+        haggleStyle: HAGGLE_TYPES.EMOTIONAL,
     },
     collector: {
         name: 'Collector',
@@ -68,6 +90,7 @@ export const DEALER_TYPES = {
         strongAgainst: 'walkAway',
         counterStyle: 'passionate',
         dialoguePool: 'collector',
+        haggleStyle: HAGGLE_TYPES.EMOTIONAL,
     },
     hustler: {
         name: 'Young Hustler',
@@ -80,6 +103,7 @@ export const DEALER_TYPES = {
         strongAgainst: 'raise',
         counterStyle: 'fast',
         dialoguePool: 'hustler',
+        haggleStyle: HAGGLE_TYPES.FINANCIAL, // Strong vs Logical, Weak vs Aggressive
     },
 };
 
@@ -89,6 +113,7 @@ export const DEALER_TYPES = {
 export const TACTICS = {
     raise: {
         id: 'raise',
+        type: HAGGLE_TYPES.FINANCIAL,
         label: '💰 Raise Offer',
         description: 'Increase your offer — shows good faith but costs more',
         baseSuccess: 0.6,
@@ -104,6 +129,7 @@ export const TACTICS = {
     },
     holdFirm: {
         id: 'holdFirm',
+        type: HAGGLE_TYPES.LOGICAL,
         label: '🤝 Hold Firm',
         description: 'Repeat your price — uses reputation as leverage',
         baseSuccess: 0.35,
@@ -119,12 +145,13 @@ export const TACTICS = {
     },
     walkAway: {
         id: 'walkAway',
+        type: HAGGLE_TYPES.AGGRESSIVE,
         label: '🗡️ Walk Away',
         description: 'Threaten to leave — risky, they might let you go',
         baseSuccess: 0.25,
         priceShift: -0.1,     // If successful, they drop price 10%
-        statBonus: 'access',
-        statWeight: 0.005,
+        statBonus: 'audacity', // Audacity determines how convincingly you sell the threat
+        statWeight: 0.006,
         patienceEffect: -2,
         heatGain: 1,
         suspicionGain: 0,
@@ -134,6 +161,7 @@ export const TACTICS = {
     },
     bluff: {
         id: 'bluff',
+        type: HAGGLE_TYPES.EMOTIONAL,
         label: '🎭 Bluff',
         description: 'Claim you have another offer — big swing, requires Intel',
         baseSuccess: 0.45,
@@ -155,6 +183,7 @@ export const TACTICS = {
 export const BLUE_OPTIONS = [
     {
         id: 'museumLoan',
+        type: HAGGLE_TYPES.EMOTIONAL,
         label: '★ Mention your museum loan',
         description: 'Name-drop your institutional connections',
         requiredStat: 'taste',
@@ -169,6 +198,7 @@ export const BLUE_OPTIONS = [
     },
     {
         id: 'insiderInfo',
+        type: HAGGLE_TYPES.LOGICAL,
         label: '★ Share insider market intel',
         description: 'Reveal you know something they don\'t',
         requiredStat: 'intel',
@@ -183,6 +213,7 @@ export const BLUE_OPTIONS = [
     },
     {
         id: 'socialProof',
+        type: HAGGLE_TYPES.EMOTIONAL,
         label: '★ Name-drop a mutual contact',
         description: 'Leverage your network',
         requiredStat: 'access',
@@ -197,6 +228,7 @@ export const BLUE_OPTIONS = [
     },
     {
         id: 'craquelure',
+        type: HAGGLE_TYPES.AGGRESSIVE,
         label: '★ Point out condition issues',
         description: 'Your trained eye spots something others miss',
         requiredStat: 'taste',
@@ -208,6 +240,21 @@ export const BLUE_OPTIONS = [
         suspicionGain: 1,
         animType: 'slash',
         dialogue: '"I notice faint craquelure along the lower right edge. Nothing serious, but it does affect valuation. You see it, don\'t you?"',
+    },
+    {
+        id: 'hardLowball',
+        type: HAGGLE_TYPES.AGGRESSIVE,
+        label: '★ Hard Lowball',
+        description: 'Drop a number so low it\'s an insult — then dare them to blink',
+        requiredStat: 'audacity',
+        requiredMin: 50,
+        baseSuccess: 0.35,
+        priceShift: -0.35,   // Huge drop if it lands
+        patienceEffect: -2,
+        heatGain: 3,
+        suspicionGain: 0,
+        animType: 'slash',
+        dialogue: '"I\'ll be honest — I could get this at auction for half that. So let\'s both save the theatre."',
     },
 ];
 

@@ -26,7 +26,7 @@ function assert(condition, label) {
     page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
     page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
 
-    await page.goto('http://localhost:5174', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5175', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // ── 1. Boot Verification ──
@@ -153,7 +153,7 @@ function assert(condition, label) {
 
     // ── 5. Haggle Scene (via direct API) ──
     console.log(`\n${INFO} Test 5: Haggle Scene`);
-    await page.goto('http://localhost:5174', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5175', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // Use direct API to bypass async import chain
@@ -189,7 +189,7 @@ function assert(condition, label) {
 
     // ── 7. Venue Picker ──
     console.log(`\n${INFO} Test 7: Venue Picker`);
-    await page.goto('http://localhost:5174', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5175', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // Start a game first
@@ -210,6 +210,97 @@ function assert(condition, label) {
     assert(hasBus, 'GameEventBus exposed on window.game');
     const hasEvents = await page.evaluate(() => !!window.game.events && !!window.game.events.OVERWORLD_ENTER);
     assert(hasEvents, 'GameEvents constants exposed on window.game');
+
+    // ── 9. HaggleManager.start() from dialogue context ──
+    console.log(`\n${INFO} Test 9: HaggleManager.start() from dialogue context`);
+    const haggleStartResult = await page.evaluate(async () => {
+        try {
+            const { HaggleManager } = await import('/src/managers/HaggleManager.js');
+            const { CHARACTERS } = await import('/src/data/characters.js');
+            const { GameState } = await import('/src/managers/GameState.js');
+            if (!GameState.state) GameState.init(CHARACTERS[0]);
+
+            const info = HaggleManager.start({
+                mode: 'buy',
+                work: { id: 'test_dlg', title: 'Untitled (Meridian)', artist: 'Unknown', year: '2025' },
+                npc: null,
+                askingPrice: 48000,
+            });
+            const state = HaggleManager.getState();
+            const ok = state !== null && state.askingPrice > 0 && state.mode === 'buy';
+            HaggleManager.active = null; // cleanup
+            return { ok, askingPrice: state?.askingPrice, mode: state?.mode };
+        } catch (e) {
+            return { ok: false, error: e.message };
+        }
+    });
+    assert(haggleStartResult.ok === true, `HaggleManager.start() from dialogue context — askingPrice: ${haggleStartResult.askingPrice}`);
+    assert(haggleStartResult.mode === 'buy', `HaggleManager mode is "buy" (got "${haggleStartResult.mode}")`);
+
+    // ── 10. Controls.js — null-safe keyboard ──
+    console.log(`\n${INFO} Test 10: Controls.js null-safe keyboard`);
+    const controlsResult = await page.evaluate(async () => {
+        try {
+            const { Controls } = await import('/src/utils/Controls.js');
+            const c = new Controls(null); // null scene — no keyboard
+            return {
+                spacePressed: c.wasSpaceKeyPressed(),
+                leftDown: c.isLeftDown,
+                leftPressed: c.wasLeftKeyPressed(),
+                lockedSpace: (() => { c.lockInput = true; return c.wasSpaceKeyPressed(); })(),
+            };
+        } catch (e) {
+            return { error: e.message };
+        }
+    });
+    assert(controlsResult.spacePressed === false, 'Controls with null scene: wasSpaceKeyPressed() = false');
+    assert(controlsResult.leftDown === false, 'Controls with null scene: isLeftDown = false');
+    assert(controlsResult.leftPressed === false, 'Controls with null scene: wasLeftKeyPressed() = false');
+    assert(controlsResult.lockedSpace === false, 'Controls with lockInput=true: wasSpaceKeyPressed() = false');
+
+    // ── 11. StateMachine — setState, update(), queue behaviour ──
+    console.log(`\n${INFO} Test 11: StateMachine`);
+    const smResult = await page.evaluate(async () => {
+        try {
+            const { StateMachine } = await import('/src/utils/StateMachine.js');
+            const log = [];
+            const sm = new StateMachine('test');
+            sm.addState('idle',     { onEnter() { log.push('enter:idle'); }, onExit() { log.push('exit:idle'); } })
+              .addState('attack',   { onEnter() { log.push('enter:attack'); } })
+              .addState('resolve',  { onUpdate() { log.push('update:resolve'); } });
+
+            // Initial update with no state set — should do nothing
+            sm.update();
+            const afterNoState = sm.getCurrentStateName();
+
+            // Transition to idle
+            sm.setState('idle');
+            sm.update(); // processes queue → enters idle
+
+            // Queue attack while in idle
+            sm.setState('attack');
+            sm.update(); // exits idle, enters attack
+
+            // Two queued transitions
+            sm.setState('idle');
+            sm.setState('resolve');
+            sm.update(); // processes first queued: enters idle
+            sm.update(); // processes second queued: enters resolve
+            sm.update(); // onUpdate fires
+            sm.update(); // onUpdate fires again
+
+            return { ok: true, log, currentState: sm.getCurrentStateName(), afterNoState };
+        } catch (e) {
+            return { ok: false, error: e.message };
+        }
+    });
+    assert(smResult.ok === true, `StateMachine: no errors (${smResult.error || ''})`);
+    assert(smResult.afterNoState === null, 'StateMachine: initial state is null');
+    assert(smResult.log.includes('enter:idle'), 'StateMachine: onEnter fired for "idle"');
+    assert(smResult.log.includes('exit:idle'), 'StateMachine: onExit fired when leaving "idle"');
+    assert(smResult.log.includes('enter:attack'), 'StateMachine: onEnter fired for "attack"');
+    assert(smResult.log.filter(l => l === 'update:resolve').length >= 2, 'StateMachine: onUpdate fires each update()');
+    assert(smResult.currentState === 'resolve', `StateMachine: final state is "resolve" (got "${smResult.currentState}")`);
 
     // ── Results ──
     console.log('\n═══════════════════════════════════════');

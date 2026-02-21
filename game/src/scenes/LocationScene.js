@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene.js';
 import { VENUE_MAP } from '../data/rooms.js';
 import { CONTACTS } from '../data/contacts.js';
 import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
@@ -10,31 +10,12 @@ import { GameState } from '../managers/GameState.js';
  * LocationScene — Top-Down Exploration Engine
  * Replaces the text menu bridge with a fully explorable tilemap.
  */
-export class LocationScene extends Phaser.Scene {
+export class LocationScene extends BaseScene {
     constructor() {
-        super({ key: 'LocationScene' });
+        super('LocationScene');
     }
 
-    init(data) {
-        this.venueId = data.venueId || 'gallery_opening';
-        this.roomId = data.roomId || 'chelsea_main_floor';
-        this.returnScene = data.returnScene || null;
-        this.returnArgs = data.returnArgs || {};
-        this.ui = data.ui;
-
-        // Find room data
-        const venue = VENUE_MAP[this.venueId];
-        this.roomData = venue ? venue.rooms.find(r => r.id === this.roomId) : null;
-
-        // Resolve player sprite key from GameState character, fallback to generic
-        const charId = GameState.state?.character?.id || 'julian_vance';
-        this.playerSpriteKey = `walk_${charId}_walk`;
-
-        // Hide terminal
-        if (this.ui && this.ui.container) {
-            this.ui.container.style.display = 'none';
-        }
-    }
+    // Initialize values during create() instead of init()
 
     preload() {
         this.load.image('kenney_indoor', '/assets/tilesets/kenney_roguelike_indoors/Tilesheets/roguelikeIndoor_transparent.png');
@@ -52,7 +33,7 @@ export class LocationScene extends Phaser.Scene {
             // Assume 4x4 grid. The images are typically 64x64 or 128x128 total.
             // If it's a 32x32 pixel character in a 4x4 sheet, the frame is usually 16x16, 24x24, or 32x32. 
             // We'll assume typical RPG Maker size or generic 32x32.
-            this.load.spritesheet(key, `/sprites/${key}.png`, { frameWidth: 32, frameHeight: 32 });
+            this.load.spritesheet(key, `/sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
         });
 
         if (!this.textures.exists('placeholder_exit')) {
@@ -64,7 +45,22 @@ export class LocationScene extends Phaser.Scene {
         }
     }
 
-    create() {
+    create(data) {
+        super.create({ ...data, hideUI: true }); // Extends from BaseScene
+
+        this.venueId = data?.venueId || 'gallery_opening';
+        this.roomId = data?.roomId || 'chelsea_main_floor';
+        this.returnScene = data?.returnScene || null;
+        this.returnArgs = data?.returnArgs || {};
+
+        // Find room data
+        const venue = VENUE_MAP[this.venueId];
+        this.roomData = venue ? venue.rooms.find(r => r.id === this.roomId) : null;
+
+        // Resolve player sprite key from GameState character, fallback to generic
+        const charId = GameState.state?.character?.id || 'julian_vance';
+        this.playerSpriteKey = `walk_${charId}_walk`;
+
         // Setup sprite animations globally for this scene
         const npcKeys = Object.keys(this.textures.list).filter(k => k.startsWith('walk_'));
         npcKeys.forEach(key => {
@@ -352,8 +348,8 @@ export class LocationScene extends Phaser.Scene {
                 });
             } else {
                 // Return to DOM Dashboard
-                if (this.ui && this.ui.container) {
-                    this.ui.container.style.display = 'block';
+                this.showTerminalUI();
+                if (this.ui) {
                     this.ui.popScreen(); // Remove empty trap screen
                     this.ui.render();
                 }
