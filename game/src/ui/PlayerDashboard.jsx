@@ -4,14 +4,16 @@ import {
     ResponsiveContainer, Legend
 } from 'recharts';
 import './PlayerDashboard.css';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { OVERLAY } from '../constants/views.js';
 
 // ─── Stat metadata (matches STAT_DEFS in CharacterSelectScene) ───────────────
 const STAT_META = [
-    { key: 'reputation', short: 'HYP', label: 'Hype',     color: '#8888ff' },
-    { key: 'taste',      short: 'TST', label: 'Taste',    color: '#ffaa44' },
-    { key: 'audacity',   short: 'AUD', label: 'Audacity', color: '#ee6644' },
-    { key: 'access',     short: 'ACC', label: 'Access',   color: '#44bbff' },
-    { key: 'intel',      short: 'INT', label: 'Intel',    color: '#88dd88' },
+    { key: 'reputation', short: 'HYP', label: 'Hype', color: '#8888ff' },
+    { key: 'taste', short: 'TST', label: 'Taste', color: '#ffaa44' },
+    { key: 'audacity', short: 'AUD', label: 'Audacity', color: '#ee6644' },
+    { key: 'access', short: 'ACC', label: 'Access', color: '#44bbff' },
+    { key: 'intel', short: 'INT', label: 'Intel', color: '#88dd88' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -33,7 +35,7 @@ function portfolioValue(portfolio) {
 function fmt$(n) {
     if (n === undefined || n === null) return '—';
     if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (Math.abs(n) >= 1_000)     return `$${(n / 1_000).toFixed(0)}k`;
+    if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
     return `$${n.toLocaleString()}`;
 }
 
@@ -115,28 +117,28 @@ export default function PlayerDashboard({ onClose }) {
         const pv = portfolioValue(s.portfolio);
         setSnap({
             // Identity
-            playerName:  s.playerName  || 'The Dealer',
-            character:   s.character   || {},
+            playerName: s.playerName || 'The Dealer',
+            character: s.character || {},
             selectedDrip: s.selectedDrip || null,
             selectedVice: s.selectedVice || null,
             // Stats
             reputation: s.reputation ?? 0,
-            taste:       s.taste      ?? 0,
-            audacity:    s.audacity   ?? 0,
-            access:      s.access     ?? 0,
-            intel:       s.intel      ?? 0,
+            taste: s.taste ?? 0,
+            audacity: s.audacity ?? 0,
+            access: s.access ?? 0,
+            intel: s.intel ?? 0,
             // Financials
-            cash:         s.cash      ?? 0,
+            cash: s.cash ?? 0,
             portfolioVal: pv,
-            netWorth:     (s.cash ?? 0) + pv,
-            marketHeat:   s.marketHeat ?? 0,
-            marketState:  s.marketState || 'flat',
-            week:         s.week       || 1,
-            currentCity:  s.currentCity || 'new-york',
+            netWorth: (s.cash ?? 0) + pv,
+            marketHeat: s.marketHeat ?? 0,
+            marketState: s.marketState || 'flat',
+            week: s.week || 1,
+            currentCity: s.currentCity || 'new-york',
             // History
             wealthHistory: s.wealthHistory || [],
-            transactions:  s.transactions  || [],
-            portfolio:     s.portfolio     || [],
+            transactions: s.transactions || [],
+            portfolio: s.portfolio || [],
         });
     }, []);
 
@@ -182,6 +184,7 @@ export default function PlayerDashboard({ onClose }) {
                             WK {snap.week} · {snap.currentCity.toUpperCase()} ·{' '}
                             <span style={{ color: marketColor }}>{snap.marketState.toUpperCase()}</span>
                         </span>
+                        <button className="pd-close-btn" onClick={() => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.SETTINGS)}>[*] SETTINGS</button>
                         <button className="pd-close-btn" onClick={onClose}>[X] ESC</button>
                     </div>
                 </div>

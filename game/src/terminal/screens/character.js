@@ -51,7 +51,7 @@ export function characterDetailScreen(ui, char, index) {
             {
                 label: `START GAME AS ${char.name.toUpperCase()}`,
                 action: () => {
-                    TerminalAPI.initGame(char);
+                    TerminalAPI.initGame.init(char);
 
                     // Transition to Main Game / Dashboard
                     ui.clearHistory();

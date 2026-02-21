@@ -60,12 +60,21 @@ export default function DialogueBox() {
     }, [isTyping, currentStep]);
 
     // Click/tap to advance
-    const handleClick = () => {
+    const handleClick = (e) => {
+        // Prevent click if hovering/clicking a choice button
+        if (e.target.closest('.dlg-choice-btn')) return;
+
         if (isTyping) {
             setIsTyping(false);
             setDisplayedText(currentStep.text);
-        } else {
+        } else if (!dialog.choices || dialog.choices.length === 0) {
             useUIStore.getState().advanceDialogue();
+        }
+    };
+
+    const handleChoiceClick = (choice) => {
+        if (choice.action) {
+            choice.action();
         }
     };
 
@@ -112,8 +121,35 @@ export default function DialogueBox() {
                         {isTyping && <span style={styles.cursor}>_</span>}
                     </div>
 
+                    {/* Choices (if any) */}
+                    {!isTyping && dialog.choices && dialog.choices.length > 0 && (
+                        <div style={styles.choicesContainer}>
+                            {dialog.choices.map((choice, idx) => (
+                                <button
+                                    key={idx}
+                                    className="dlg-choice-btn"
+                                    style={{
+                                        ...styles.choiceBtn,
+                                        borderColor: choice.isBlue ? '#88bbdd' : '#555'
+                                    }}
+                                    onClick={() => handleChoiceClick(choice)}
+                                    onMouseOver={(e) => {
+                                        e.target.style.borderColor = choice.isBlue ? '#aaddff' : '#c9a84c';
+                                        e.target.style.color = choice.isBlue ? '#aaddff' : '#c9a84c';
+                                    }}
+                                    onMouseOut={(e) => {
+                                        e.target.style.borderColor = choice.isBlue ? '#88bbdd' : '#555';
+                                        e.target.style.color = '#fff';
+                                    }}
+                                >
+                                    {choice.isBlue && '🔵 '}{choice.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Advance indicator */}
-                    {!isTyping && (
+                    {!isTyping && (!dialog.choices || dialog.choices.length === 0) && (
                         <div style={styles.advanceIndicator}>▼</div>
                     )}
                 </div>
@@ -223,4 +259,21 @@ const styles = {
         fontSize: 14,
         animation: 'dlg-bounce 1s infinite',
     },
+    choicesContainer: {
+        marginTop: 16,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+    },
+    choiceBtn: {
+        background: '#1a1a2e',
+        color: '#fff',
+        border: '2px solid #555',
+        padding: '10px 16px',
+        textAlign: 'left',
+        fontFamily: '"Chicago", "Courier New", monospace',
+        fontSize: 15,
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    }
 };

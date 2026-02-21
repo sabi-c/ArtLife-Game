@@ -15,3 +15,12 @@ export const VIEW = {
     SCENE_ENGINE: 'SCENE_ENGINE',   // The text-based event visual novel engine
     INVENTORY: 'INVENTORY'          // The neo-noir inventory grid
 };
+
+/**
+ * Defines the overlay states that can render ON TOP of active views.
+ */
+export const OVERLAY = {
+    NONE: null,
+    ADMIN: 'ADMIN',
+    SETTINGS: 'SETTINGS'
+};

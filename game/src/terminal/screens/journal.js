@@ -12,8 +12,7 @@ export function journalScreen(ui) {
         const s = TerminalAPI.state();
         const decisions = TerminalAPI.decisions.getJournalEntries(15);
         const news = (s.newsFeed || []).slice(-20).reverse();
-        // Since ConsequenceScheduler is not fully exposed yet we mock it here if missing
-        const pending = window.ConsequenceScheduler ? window.ConsequenceScheduler.getPending() : [];
+        const pending = TerminalAPI.scheduler.getPending ? TerminalAPI.scheduler.getPending() : [];
 
         const lines = [
             H('🗓️ CALENDAR & JOURNAL'),

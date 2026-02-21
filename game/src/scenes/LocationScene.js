@@ -57,6 +57,19 @@ export class LocationScene extends BaseScene {
         const venue = VENUE_MAP[this.venueId];
         this.roomData = venue ? venue.rooms.find(r => r.id === this.roomId) : null;
 
+        // ── Venue Time Budget Logic ──
+        // If coming from another room, we inherit the remaining time. 
+        // If this is a fresh entry (startRoom), we consume 1 Weekly Action and start full venue budget.
+        if (data && data.venueTimeRemaining !== undefined) {
+            this.venueTimeRemaining = data.venueTimeRemaining;
+        } else if (venue) {
+            this.venueTimeRemaining = venue.timeLimit || 5;
+            // Fresh entry: Cost 1 Weekly Action
+            GameState.consumeAction();
+        } else {
+            this.venueTimeRemaining = 5;
+        }
+
         // Resolve player sprite key from GameState character, fallback to generic
         const charId = GameState.state?.character?.id || 'julian_vance';
         this.playerSpriteKey = `walk_${charId}_walk`;
@@ -133,6 +146,13 @@ export class LocationScene extends BaseScene {
         exitBtn.on('pointerover', () => exitBtn.setColor('#ff8888'));
         exitBtn.on('pointerout', () => exitBtn.setColor('#c94040'));
         exitBtn.on('pointerdown', () => this.leaveLocation());
+
+        // Time Remaining HUD
+        this.timeText = this.add.text(width - 20, 40, `⏰ Time Left: ${this.venueTimeRemaining}`, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '8px',
+            color: '#aaaaaa'
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
 
         // Narrative Description popup at start
         if (this.roomData.desc) {
@@ -287,17 +307,49 @@ export class LocationScene extends BaseScene {
     handleInteraction(obj) {
         if (obj.interactType === 'exit') {
             if (obj.canEnter) {
+                // Find destination room cost
+                const venue = VENUE_MAP[this.venueId];
+                const destRoom = venue ? venue.rooms.find(r => r.id === obj.interactId) : null;
+                const cost = destRoom ? (destRoom.timeCost || 0) : 0;
+
+                if (this.venueTimeRemaining < cost) {
+                    this.cameras.main.shake(100, 0.005);
+                    this.showOverheadMessage("Out of Time! Venue closing.");
+                    this.time.delayedCall(1500, () => this.leaveLocation());
+                    return;
+                }
+
+                this.venueTimeRemaining -= cost;
+
                 this.cameras.main.fadeOut(300, 0, 0, 0);
                 this.cameras.main.once('camerafadeoutcomplete', () => {
-                    this.scene.restart({ venueId: this.venueId, roomId: obj.interactId, ui: this.ui });
+                    this.scene.restart({
+                        venueId: this.venueId,
+                        roomId: obj.interactId,
+                        venueTimeRemaining: this.venueTimeRemaining,
+                        ui: this.ui
+                    });
                 });
             } else {
                 this.cameras.main.shake(100, 0.005);
-                // Optionally show block message overhead
+                this.showOverheadMessage(obj.blockMsg || "Locked.");
             }
         } else if (obj.interactType === 'character') {
             this.startDialogue(obj.interactId);
         }
+    }
+
+    showOverheadMessage(text) {
+        const msg = this.add.text(this.player.x, this.player.y - 40, text, {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ff4444'
+        }).setOrigin(0.5);
+        this.tweens.add({
+            targets: msg,
+            y: msg.y - 20,
+            alpha: 0,
+            duration: 1500,
+            onComplete: () => msg.destroy()
+        });
     }
 
     startDialogue(characterId) {

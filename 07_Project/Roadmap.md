@@ -10,9 +10,12 @@
 **Tests:** 36/36 unit, 53/53 flow — all green
 **Build:** Clean (no new warnings)
 **Branch:** `main`
-**Deployed:** Cloudflare Pages
+**Deployed:** GitHub Pages (https://sabi-c.github.io/ArtLife-Game/)
 
 ### Recently Completed
+- **Calendar & Time UI + Variable Action Costs** — Action budget panel with gold pip bar (4 AP), calendar strip showing upcoming art world events, variable AP costs (1 AP cheap / 2 AP expensive actions), `[AP]` labels on all options, priority "WEEK COMPLETE" CTA when exhausted, ~90 lines new CSS
+- **Screen Audit Bug Fixes (7)** — Fixed initGame reference in character.js, ConsequenceScheduler imports in events.js + journal.js, dead code in phone.js, market.js inspect guard, dashboard.js sparkline null safety, system.js restart/return-to-title
+- **MVP Sprint: Quick Wins** — Fix restart option, add "Return to Title", auto-checkpoint saves after every action and week advance, terminal sound effects (hover/select/typewriter via WebAudioService), Quick Start demo option on title screen, cloudflare tunnel script for mobile testing
 - **Session Persistence** — Auto-resume from most recent save on page reload. Skips TerminalLogin, loads GameState, pushes dashboardScreen. `VIEW.TERMINAL` state in App.jsx router. All Phaser scene exits emit `UI_ROUTE: TERMINAL`.
 - **Haggle Battle Polish** — Multi-step tactic animations (coin rain, hex-shield, slash lines, heart cascade, shadow bluff), player lunge, dealer hit reactions, type effectiveness flashes, smooth bar tweening
 - **Dialogue Scene Visual Upgrade** — DialogueBox.jsx rewritten with inline styles (was broken Tailwind), back buttons added to HaggleScene + MacDialogueScene
@@ -149,11 +152,11 @@
 | Task | Status | Notes |
 |---|---|---|
 | Dev Test Toolbar (bottom-left quick-launch buttons) | ✅ Done | `[ SceneEngine ]` `[ Haggle Battle ]` `[ Dialogue ]` — jump to any Phaser scene from anywhere |
-| Admin Narrative Dashboard (God Mode via `~` key) | TODO | Spec: `Admin_Narrative_Tracker_Spec.md` |
-| Consequence Queue visualizer | TODO | Read from `ConsequenceScheduler` |
-| NPC Memory Matrix panel | TODO | Show hidden grudges/favors/witnessed |
-| State Importer (JSON dropzone for late-game testing) | TODO | |
-| Global Flags / Decision viewer | TODO | Read from `DecisionLog` |
+| Admin Narrative Dashboard (God Mode via `~` key) | ✅ Done | Spec: `Admin_Narrative_Tracker_Spec.md` |
+| Consequence Queue visualizer | ✅ Done | Read from `ConsequenceScheduler` |
+| NPC Memory Matrix panel | ✅ Done | Show hidden grudges/favors/witnessed |
+| State Importer (JSON dropzone for late-game testing) | ✅ Done | |
+| Global Flags / Decision viewer | ✅ Done | Read from `DecisionLog` |
 | **Content Management Studio (CMS)** | TODO | Spec: `Content_Management_Studio_Spec.md` |
 | CMS: Content Library panel (searchable entity tree) | TODO | NPCs, Events, Items, Scenes, Artists |
 | CMS: Timeline panel (drag events onto 40-year calendar) | TODO | Visual scheduling with zoom |
@@ -164,6 +167,8 @@
 ### 3C. Core System Gaps
 | Task | Status | Notes |
 |---|---|---|
+| **Calendar & Time UI** | ✅ Done | Action budget pip panel (4 AP), calendar strip with upcoming events, variable AP costs (1/2), `[AP]` labels, priority advance CTA. New CSS: `db-action-*`, `db-cal-*` |
+| **Variable Action Costs** | ✅ Done | `useAction(label, cost=1)`, `hasActions(cost=1)`, MAX_ACTIONS=4. Haggle/sell/art fair=2 AP, browse/visit/call=1 AP |
 | Tone system for NPC dialogues (5 tones from Roadwarden) | TODO | Spec in `Implementation_Plan.md` A2 |
 | Week 20 character specialization (dominant tone → perk) | TODO | |
 | Progressive disclosure (UI reveals through gameplay) | TODO | Early/mid/late game phases |
@@ -171,7 +176,7 @@
 | **Dialogue Scene Visual Upgrade** | ✅ Done | Pokemon-style dual portrait layout (player L, NPC R), typewriter text, speaker name labels. DialogueBox.jsx rewritten with inline styles. Back buttons on both HaggleScene and MacDialogueScene. |
 | **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
 | **Haggle Battle Animations** | ✅ Done | Multi-step tactic animations per type: coin rain (financial), hex-shield (logical), slash lines + sparks (aggressive), heart cascade (emotional), shadow eyes (bluff). Player lunge, dealer hit reactions, type effectiveness flashes ("SUPER EFFECTIVE!"), smooth bar tweening. |
-| **Juice & Sound Design** | TODO | `use-sound` for UI blips, `react-powerglitch` for Market Crash |
+| **Juice & Sound Design** | PARTIAL | Terminal SFX wired (hover/select/typewriter via WebAudioService). Remaining: ambient gallery noise, market crash glitch, Phaser scene sounds |
 | **Systemic Lattice Triggers** | TODO | Wire `subscribeWithSelector` for Fail States (Informant/Auteur arcs) |
 | **NPC Memory Modules** | TODO | Log interactions per NPC for `inkjs` narrative branching |
 
@@ -280,7 +285,7 @@
 | `04_Events/` | Event_Types, Scenarios, Venue_Encounters, Dialogue_Trees(_V2) | Narrative content |
 | `05_World/` | Locations, Free_Ports, Room_Schema, Rooms/ | World building |
 | `06_Economy/` | Art_Valuation | Economic model |
-| `07_Project/` | **This file**, README, Implementation_Plan, MVP_Definition, UI_and_Dynamic_Systems_Spec, Admin_Narrative_Tracker_Spec, **Dialogue_Tree_Template**, Phase_4_Multi_Agent_Orders, Content_Templates, Brainstorm_Notes | Project management |
+| `07_Project/` | **This file**, README, Implementation_Plan, MVP_Definition, UI_and_Dynamic_Systems_Spec, Admin_Narrative_Tracker_Spec, **Dialogue_Tree_Template**, Phase_4_Multi_Agent_Orders, Content_Templates, Brainstorm_Notes, Email_and_Walkaround_UI_Spec, UI_Architecture_and_Modularity_Spec | Project management |
 
 ---
 

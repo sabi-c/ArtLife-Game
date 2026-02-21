@@ -283,14 +283,12 @@ function resolveEventChoice(ui, event, choice, choiceIndex) {
 
     if (choice.schedules) {
         choice.schedules.forEach(sched => {
-            if (window.ConsequenceScheduler) {
-                window.ConsequenceScheduler.addRelative(
-                    sched.weeksDelay,
-                    sched.type,
-                    sched.payload,
-                    { sourceEvent: event.id }
-                );
-            }
+            TerminalAPI.scheduler.addRelative(
+                sched.weeksDelay,
+                sched.type,
+                sched.payload,
+                { sourceEvent: event.id }
+            );
         });
     }
 

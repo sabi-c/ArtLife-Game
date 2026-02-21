@@ -86,6 +86,15 @@ export class TitleScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.menuItems.push({ text: opt2, action: () => this.showSaveSlots(), enabled: this.hasSave });
 
+        // Option 3: Quick Start (skip character creator, load demo profile)
+        const opt3 = this.add.text(width / 2, menuY + gap * 2, '[3] QUICK START (DEMO)', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '11px',
+            color: '#888899',
+            align: 'center'
+        }).setOrigin(0.5);
+        this.menuItems.push({ text: opt3, action: () => this.quickStart(), enabled: true });
+
         // ── Save slot display area (initially hidden) ──
         this.slotContainer = this.add.container(0, 0).setVisible(false);
 
@@ -172,6 +181,10 @@ export class TitleScene extends Phaser.Scene {
                 this.confirmSelection();
             } else if (Phaser.Input.Keyboard.JustDown(this.twoKey)) {
                 this.selectedIndex = 1;
+                this.updateCursorPosition();
+                this.confirmSelection();
+            } else if (Phaser.Input.Keyboard.JustDown(this.threeKey)) {
+                this.selectedIndex = 2;
                 this.updateCursorPosition();
                 this.confirmSelection();
             }
@@ -280,6 +293,18 @@ export class TitleScene extends Phaser.Scene {
         this.input.keyboard.removeAllKeys();
         this.input.off('pointerdown');
         SceneTransition.irisWipeToScene(this, SCENE_KEYS.INTRO, { ui: this.ui }, 600);
+    }
+
+    quickStart() {
+        // Ensure demo profile exists in slot 0, then load it
+        if (!localStorage.getItem('artlife_slot_0')) {
+            // Temporarily bypass hasSave check to force seed
+            const origHasSave = GameState.hasSave.bind(GameState);
+            GameState.hasSave = () => false;
+            GameState.seedDemoSave();
+            GameState.hasSave = origHasSave;
+        }
+        this.loadSlot(0);
     }
 
     loadSlot(slotIndex) {

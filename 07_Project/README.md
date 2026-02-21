@@ -28,6 +28,7 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 - **Pokémon battle UI** is the reference for the Haggle Battle — clear zones, character cards, health bars, turn-based tactics.
 - **Only functional animations remain:** stat pop on value change, cursor blink on typewriter.
 - **Pixel art backgrounds** are used on event screens behind text (dark overlay for readability).
+- **Pantone Dark Blue Theme** is the default UI color scheme, giving a "blue-chip gallery" feeling. It can be toggled to Classic Dark via the Admin Dashboard (`~` hotkey).
 
 ---
 
@@ -114,18 +115,23 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 ---
 
-## 🔥 Highest-Impact Tasks
+## 🔥 Highest-Impact Tasks (MVP Readiness Audit)
 
 > **See [Roadmap.md](Roadmap.md) for the full task tracker with status columns.**
+> *Updated by Antigravity Codebase Manager after full flow audit.*
 
-1. **Dialogue Scene Visual Upgrade** — Pokemon-style dual portraits, typewriter text, speaker names. Make conversations look as good as the haggle battle.
-2. **Haggle Battle Animations** — sprite reactions per tactic (items thrown, shake, flash). Tween/particle system.
-3. **Session Persistence** — page reload should restore last screen, not restart from title.
-4. **Weekly Report Enhancement** — richer content: decisions, inventory, dialogue outcomes, events.
-5. **Admin Narrative Dashboard** — God Mode overlay for hidden flags, consequence queue, NPC memory
-6. **Comprehensive UI & Data Audit (Anti-Cheat)** — Deep research and implementation of state protection so players cannot manipulate the DOM or local storage to cheat.
-7. **Tone system for NPC dialogues** — 5 tones from Roadwarden research
-8. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API)
+To get this to a "Gaming Standards" MVP that the team can playtest end-to-end, we should focus on the easiest lifts that provide the most narrative depth and usability:
+
+1. **Finish the Room & Venue Integration (B4/C1)**: The venue flow exists, but we need to ensure every room drains the time budget properly and triggers the correct scheduled `events.js` so players actually play the calendar.
+2. **The Tone System**: Passing a "Tone" (Aggressive, Professional, Casual, Mysterious) down to the Dialogue engine requires very little infrastructural code but multiplies the narrative depth by 4x.
+3. **Admin Narrative Dashboard**: A "God Mode" (tied to the backtick `~` key) is critical for you to playtest the MVP without guessing if the Consequence Queue stored your grudges.
+4. **Week 26 Endgame Sequence**: We need to cap the MVP with a single satisfying "Reckoning" sequence (Museum Retrospective vs SEC Investigation) so playtesters experience a complete arc.
+
+*(Legacy High-Impact Tasks below)*
+5. **Session Persistence** — page reload should restore last screen, not restart from title. (✅ DONE)
+6. **Weekly Report Enhancement** — richer content: decisions, inventory, dialogue outcomes, events. (✅ DONE)
+7. **Comprehensive UI & Data Audit (Anti-Cheat)** — Deep research and implementation of state protection so players cannot manipulate the DOM or local storage to cheat.
+8. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API) (✅ PARTIAL - WebAudioService added)
 
 ---
 
@@ -164,6 +170,66 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 - **Daylight Overlay** — in-game week-based tinting on overworld
 - **Position Auto-Save** — `gridEngine.positionChangeFinished()` subscriber
 - **Cinematic Transitions** — `fadeIn()`/`fadeOut()` on scene enter/exit
+
+---
+
+## Dev Workflow & Testing
+
+### Getting Started
+```bash
+cd game
+npm install
+npm run dev          # Vite dev server on http://localhost:5173
+```
+
+### Running Tests
+```bash
+# Unit tests (needs dev server running on port 5175)
+npm test             # 36/36 tests
+
+# Full Playwright scene flow tests
+npm run test:flow    # 53/53 tests
+
+# Start server + open browser + run tests
+npm run launch
+```
+
+### Mobile Testing
+```bash
+# Option A: Cloudflare Quick Tunnel (requires cloudflared installed)
+npm run tunnel       # Gives a *.trycloudflare.com URL
+
+# Option B: localtunnel
+npm run expose       # Gives artlife.loca.lt URL
+```
+
+### Key Shortcuts (In-Game)
+| Key | Action |
+|---|---|
+| `~` (backtick) | Toggle Admin Dashboard (God Mode) |
+| Arrow Up/Down | Navigate terminal options |
+| Enter | Select option |
+| Escape | Go back |
+| 1-9 | Quick-select numbered option |
+
+### Save/Load System
+- **Auto-save:** Triggers after every action and week advance
+- **Manual save:** System Menu → Save Game (5 slots)
+- **Quick Start:** Title screen option 3 — loads demo profile, skips character creator
+- **Session persistence:** Page reload auto-resumes from last save
+
+### Build & Deploy
+```bash
+npm run build        # Vite production build → dist/
+# GitHub Pages auto-deploys from main branch
+# Preview: https://sabi-c.github.io/ArtLife-Game/
+```
+
+### Known Limitations
+- Overworld/City scenes are early-stage — room exploration is the primary gameplay loop
+- No multiplayer — single player only
+- Sound is procedural (Web Audio API oscillators) — no music yet
+- Save data is in localStorage — clearing browser data loses progress
 
 ---
 
@@ -289,11 +355,13 @@ game/
 | Settings system | ✅ |
 | News ticker phrase bank | ✅ |
 | Ego Terminal v2 (sparklines, stat bars, market intel) | ✅ |
+| Calendar & Time UI (event strip, action budget pips) | ✅ |
+| Variable action costs (1-2 AP per action type) | ✅ |
 | Rooms wired into game loop (full B4/C1) | ❌ TODO |
 | Tone system for dialogues | ❌ TODO |
 | Admin Narrative Dashboard | ❌ TODO |
 | Inventory system | ❌ TODO |
-| Sound design | ❌ TODO |
+| Sound design (terminal SFX) | ✅ Partial |
 | Endgame reckoning (Week 26) | ❌ TODO |
 
 ---

@@ -4,43 +4,12 @@
  */
 
 import { TerminalAPI } from '../TerminalAPI.js';
+import { GameState } from '../../managers/GameState.js';
+import { PhoneManager } from '../../managers/PhoneManager.js';
+import { ConsequenceScheduler } from '../../managers/ConsequenceScheduler.js';
+import { DecisionLog } from '../../managers/DecisionLog.js';
 import { H, SUB, DIV, DIM, GOLD, RED, GREEN, BLANK, STAT } from './shared.js';
 import { characterSelectScreen } from './character.js';
-
-// ════════════════════════════════════════════
-// SCREEN: Options
-// ════════════════════════════════════════════
-export function optionsScreen(ui) {
-    return () => {
-        const s = TerminalAPI.state();
-        const settings = s.settings || { textSpeed: 'normal' };
-
-        const lines = [
-            H('OPTIONS'),
-            DIV(),
-            STAT('Text Speed', settings.textSpeed.toUpperCase()),
-            BLANK(),
-            DIM('More options coming soon.')
-        ];
-
-        const options = [
-            {
-                label: `Toggle Text Speed (Current: ${settings.textSpeed})`,
-                action: () => {
-                    const speeds = ['slow', 'normal', 'fast', 'instant'];
-                    let idx = speeds.indexOf(settings.textSpeed) + 1;
-                    if (idx >= speeds.length) idx = 0;
-                    settings.textSpeed = speeds[idx];
-                    s.settings = settings;
-                    ui.replaceScreen(optionsScreen(ui));
-                }
-            },
-            { label: '← Back', action: () => ui.popScreen() }
-        ];
-
-        return { lines, options };
-    };
-}
 
 // ════════════════════════════════════════════
 // SCREEN: Save / Load Browser
@@ -211,13 +180,12 @@ export function pauseMenuScreen(ui) {
                 action: () => ui.pushScreen(_settings(ui))
             },
             {
-                label: '🔄 Restart (Abandon Run)',
-                action: () => {
-                    if (confirm("Are you sure? This will abandon your current run and return to character selection.")) {
-                        TerminalAPI.initGame.startNewGame?.();
-                        ui.replaceScreen(characterSelectScreen(ui));
-                    }
-                }
+                label: '🔄 Restart (New Character)',
+                action: () => ui.pushScreen(restartConfirmScreen(ui))
+            },
+            {
+                label: '🏠 Return to Title Screen',
+                action: () => ui.pushScreen(returnToTitleConfirmScreen(ui))
             },
             { label: '← Resume Game', action: () => ui.popScreen() }
         ];
@@ -272,6 +240,69 @@ export function settingsScreen(ui) {
             { label: `CRT Scanlines: [${s.settings.scanlines ? 'ON' : 'OFF'}]`, action: toggleScanlines },
             { label: `Screen Flicker: [${s.settings.crtFlicker ? 'ON' : 'OFF'}]`, action: toggleFlicker },
             { label: '← Back', action: () => ui.popScreen() }
+        ];
+
+        return { lines, options };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: Restart Confirmation
+// ════════════════════════════════════════════
+function restartConfirmScreen(ui) {
+    return () => {
+        const lines = [
+            H('RESTART GAME?'),
+            DIV(),
+            RED('This will abandon your current run.'),
+            DIM('Your save files will NOT be deleted.'),
+            DIM('You will return to character selection.'),
+            BLANK(),
+            'Are you sure?'
+        ];
+
+        const options = [
+            {
+                label: 'Yes, start over',
+                action: () => {
+                    GameState.state = null;
+                    PhoneManager.reset();
+                    ConsequenceScheduler.reset();
+                    DecisionLog.reset();
+                    ui.screenStack = [];
+                    ui.replaceScreen(characterSelectScreen(ui));
+                }
+            },
+            { label: 'Cancel', action: () => ui.popScreen() }
+        ];
+
+        return { lines, options };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: Return to Title Confirmation
+// ════════════════════════════════════════════
+function returnToTitleConfirmScreen(ui) {
+    return () => {
+        const lines = [
+            H('RETURN TO TITLE?'),
+            DIV(),
+            DIM('Your current progress will be auto-saved.'),
+            DIM('You will return to the login screen.'),
+            BLANK(),
+            'Continue?'
+        ];
+
+        const options = [
+            {
+                label: 'Yes, save & return to title',
+                action: () => {
+                    GameState.autoSave();
+                    window.location.reload();
+                }
+            },
+            { label: 'Cancel', action: () => ui.popScreen() }
         ];
 
         return { lines, options };

@@ -335,8 +335,8 @@ async function safeEval(page, fn, fallback = null) {
         await page.waitForTimeout(250);
     }
     await page.waitForTimeout(2500);
-    // Dismiss reward overlay
-    await page.click('canvas');
+    // Dismiss reward overlay by clicking anywhere on the body (canvas might be hidden by TerminalUI return)
+    await page.click('body');
     await page.keyboard.press('Space');
     await page.waitForTimeout(2000);
     const termAfterReward = await safeEval(page, () => window.game?.uiState()?.visible);

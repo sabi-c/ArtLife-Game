@@ -4,8 +4,10 @@
  */
 
 import { TerminalAPI } from '../TerminalAPI.js';
+import { GameState } from '../../managers/GameState.js';
 import { H, SUB, DIV, DIM, GOLD, RED, GREEN, BLANK, STAT } from './shared.js';
 import { dashboardScreen, hasActions, useAction } from './dashboard.js';
+import { useUIStore } from '../../stores/uiStore.js';
 function effectsResultScreen(ui, actionLabel, effects = []) {
     return () => {
         const lines = [
@@ -79,6 +81,14 @@ export function phoneScreen(ui) {
             });
         }
 
+        options.push({
+            label: '📧 Email (Coming Soon)',
+            action: () => {
+                useUIStore.getState().addToast('Email Minigame UI is under construction.', 'info');
+                ui.replaceScreen(phoneScreen(ui));
+            }
+        });
+
         if (unread > 0) {
             options.push({
                 label: 'Mark all read',
@@ -127,7 +137,7 @@ function messageDetailScreen(ui, msg) {
                     label: action.label || action.text || `Action ${i + 1}`,
                     action: () => {
                         PhoneManager.handleMessageAction(msg.id, i);
-                        const summary = TerminalAPI.state().lastEffectsSummary || [];
+                        const summary = GameState.lastEffectsSummary || [];
                         ui.replaceScreen(effectsResultScreen(ui, action.label || 'Action taken', summary));
                     }
                 });
@@ -229,7 +239,7 @@ export function contactDetailScreen(ui, contactState, contactData) {
         } else {
             // ── UNIVERSAL: Call (+1 favor) ──
             options.push({
-                label: `📞 Call ${contactData.name.split(' ')[0]} (+1 favor, 1 action)`,
+                label: `[1 AP] 📞 Call ${contactData.name.split(' ')[0]} (+1 favor)`,
                 action: () => {
                     useAction(`Called ${contactData.name}`);
                     PhoneManager.adjustFavor(contactState.id, 1);

@@ -158,11 +158,10 @@ export function inspectScreen(ui, work) {
         lines.push(DIM(`Your cash: $${s.cash.toLocaleString()}`));
 
         const options = [];
-        const canAct = hasActions();
 
-        if (canAfford && canAct && !alreadyOwn) {
+        if (canAfford && hasActions(1) && !alreadyOwn) {
             options.push({
-                label: `Buy for $${work.price.toLocaleString()} (1 action)`,
+                label: `[1 AP] Buy for $${work.price.toLocaleString()}`,
                 action: () => {
                     useAction(`Bought "${work.title}"`);
                     TerminalAPI.initGame.buyWork?.(work); // GameState method
@@ -172,15 +171,15 @@ export function inspectScreen(ui, work) {
             });
         } else if (!canAfford) {
             options.push({ label: `Can't afford ($${work.price.toLocaleString()})`, disabled: true });
-        } else if (!canAct) {
+        } else if (!hasActions(1)) {
             options.push({ label: 'No actions remaining this week', disabled: true });
         }
 
-        if (canAct && work.price > 1000 && !alreadyOwn) {
+        if (hasActions(2) && work.price > 1000 && !alreadyOwn) {
             options.push({
-                label: '🎮 Haggle — Negotiate the price (1 action)',
+                label: '[2 AP] 🎮 Haggle — Negotiate the price',
                 action: () => {
-                    useAction(`Started haggling for "${work.title}"`);
+                    useAction(`Started haggling for "${work.title}"`, 2);
                     const info = TerminalAPI.haggle.start({
                         mode: 'buy',
                         work,
@@ -188,7 +187,7 @@ export function inspectScreen(ui, work) {
                         askingPrice: work.price,
                     });
                     const state = TerminalAPI.haggle.getState();
-                    if (window.game.startTestScene) {
+                    if (window.game?.startTestScene) {
                         // Push a "return" screen so popScreen() on haggle exit lands cleanly
                         ui.pushScreen(() => ({
                             lines: [{ text: 'Returning from haggle...', style: 'dim' }],
@@ -206,7 +205,7 @@ export function inspectScreen(ui, work) {
             });
 
             options.push({
-                label: '✉️ Make Offer — Submit blind bid (1 action)',
+                label: '[1 AP] ✉️ Make Offer — Submit blind bid',
                 action: () => {
                     useAction(`Drafting offer for "${work.title}"`);
                     try {
@@ -219,9 +218,9 @@ export function inspectScreen(ui, work) {
             });
         }
 
-        if (canAct) {
+        if (hasActions(1)) {
             options.push({
-                label: 'Request Viewing (+2 taste, +1 intel, 1 action)',
+                label: '[1 AP] Request Viewing (+2 taste, +1 intel)',
                 action: () => {
                     useAction(`Viewed "${work.title}"`);
                     s.taste = Math.min(100, s.taste + 2);
@@ -495,7 +494,7 @@ export function pieceDetailScreen(ui, work) {
         lines.push(BLANK());
 
         const options = [];
-        const hasActionsLeft = hasActions();
+        const hasActionsLeft = hasActions(1);
 
         if (loc === 'home') {
             options.push({
@@ -519,7 +518,7 @@ export function pieceDetailScreen(ui, work) {
 
         if (hasActionsLeft) {
             options.push({
-                label: 'List for sale via Private Broker (1 action)',
+                label: '[2 AP] List for sale via Private Broker',
                 action: () => {
                     try {
                         ui.pushScreen(listWorkScreen(ui, work));
@@ -561,9 +560,9 @@ function listWorkScreen(ui, work) {
 
         const options = [
             {
-                label: `Quick Sale: $${quickValue.toLocaleString()} (Guaranteed instant sale)`,
+                label: `[2 AP] Quick Sale: $${quickValue.toLocaleString()} (Guaranteed instant sale)`,
                 action: () => {
-                    useAction(`Sold "${work.title}" for $${quickValue.toLocaleString()} (Quick Sale)`);
+                    useAction(`Sold "${work.title}" for $${quickValue.toLocaleString()} (Quick Sale)`, 2);
                     s.cash += quickValue;
                     s.portfolio = s.portfolio.filter(w => w.id !== work.id);
                     TerminalAPI.addNews(`Sold "${work.title}" instantly for $${quickValue.toLocaleString()}`);
@@ -571,9 +570,9 @@ function listWorkScreen(ui, work) {
                 }
             },
             {
-                label: `Market Price: $${marketValue.toLocaleString()} (~2-4 weeks)`,
+                label: `[2 AP] Market Price: $${marketValue.toLocaleString()} (~2-4 weeks)`,
                 action: () => {
-                    useAction(`Listed "${work.title}" for $${marketValue.toLocaleString()}`);
+                    useAction(`Listed "${work.title}" for $${marketValue.toLocaleString()}`, 2);
                     TerminalAPI.addNews(`Listed "${work.title}" for $${marketValue.toLocaleString()}`);
                     work.listed = true;
                     s.activeDeals.push({ work, strategy: 'Market Price', resolutionWeek: s.week + 2 + Math.floor(Math.random() * 3) });
@@ -582,9 +581,9 @@ function listWorkScreen(ui, work) {
                 }
             },
             {
-                label: `Premium Price: $${premiumValue.toLocaleString()} (~4-8 weeks, risky)`,
+                label: `[2 AP] Premium Price: $${premiumValue.toLocaleString()} (~4-8 weeks, risky)`,
                 action: () => {
-                    useAction(`Listed "${work.title}" for $${premiumValue.toLocaleString()}`);
+                    useAction(`Listed "${work.title}" for $${premiumValue.toLocaleString()}`, 2);
                     TerminalAPI.addNews(`Listed "${work.title}" for premium $${premiumValue.toLocaleString()}`);
                     work.listed = true;
                     s.activeDeals.push({ work, strategy: 'Premium Price', resolutionWeek: s.week + 4 + Math.floor(Math.random() * 5) });

@@ -55,6 +55,7 @@ export const GameEvents = {
 
     // UI toggles
     TOGGLE_DASHBOARD: 'ui:toggle:dashboard',
+    UI_TOGGLE_OVERLAY: 'ui:toggle:overlay',
 
     // Game lifecycle
     GAME_OVER: 'game:over',

@@ -10,9 +10,11 @@ import ScenePlayer from './ui/ScenePlayer.jsx';
 import InventoryDashboard from './ui/InventoryDashboard.jsx';
 import TerminalLogin from './ui/TerminalLogin.jsx';
 import AdminDashboard from './ui/AdminDashboard.jsx';
-import { VIEW } from './constants/views.js';
+import SettingsOverlay from './ui/SettingsOverlay.jsx';
+import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
+import { SettingsManager } from './managers/SettingsManager.js';
 
 export default function App() {
     const [game, setGame] = useState(null);
@@ -23,22 +25,51 @@ export default function App() {
         return params.get('skipBoot') ? VIEW.PHASER : VIEW.BOOT;
     });
     const [viewPayload, setViewPayload] = useState(null);
-    const [showAdmin, setShowAdmin] = useState(false);
+    const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
     const autoResumedRef = useRef(false);
 
-    // Global hotkey for Admin Dashboard (Backtick)
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === '`' || e.key === '~') {
-                setShowAdmin(prev => {
-                    if (!prev) WebAudioService.hover();
-                    else WebAudioService.select();
-                    return !prev;
+                setActiveOverlay(prev => {
+                    const next = prev === OVERLAY.ADMIN ? OVERLAY.NONE : OVERLAY.ADMIN;
+                    if (next === OVERLAY.ADMIN) WebAudioService.select();
+                    else WebAudioService.hover();
+                    return next;
+                });
+            } else if (e.key === 'Escape') {
+                setActiveOverlay(prev => {
+                    if (prev !== OVERLAY.NONE) {
+                        WebAudioService.hover();
+                        return OVERLAY.NONE;
+                    }
+                    return prev;
                 });
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Global Theme Applier
+    useEffect(() => {
+        const applyTheme = () => {
+            const theme = SettingsManager.get('colorTheme');
+            if (theme === 'pantone_blue') {
+                document.body.classList.add('theme-pantone-blue');
+            } else {
+                document.body.classList.remove('theme-pantone-blue');
+            }
+        };
+        applyTheme(); // apply initially
+
+        const onSettingsChange = (e) => {
+            if (e.detail?.key === 'colorTheme') {
+                applyTheme();
+            }
+        };
+        window.addEventListener('settings-changed', onSettingsChange);
+        return () => window.removeEventListener('settings-changed', onSettingsChange);
     }, []);
 
     useEffect(() => {
@@ -128,11 +159,19 @@ export default function App() {
         const legacyHandler = (data) => {
             setActiveView(data?.state ? VIEW.DASHBOARD : VIEW.PHASER);
         };
+
+        const overlayHandler = (overlayKey) => {
+            setActiveOverlay(prev => prev === overlayKey ? OVERLAY.NONE : overlayKey);
+        };
+
+        GameEventBus.on(GameEvents.UI_ROUTE, handler);
         GameEventBus.on(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
+        GameEventBus.on(GameEvents.UI_TOGGLE_OVERLAY, overlayHandler);
 
         return () => {
             GameEventBus.off(GameEvents.UI_ROUTE, handler);
             GameEventBus.off(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
+            GameEventBus.off(GameEvents.UI_TOGGLE_OVERLAY, overlayHandler);
         };
     }, []);
 
@@ -193,9 +232,13 @@ export default function App() {
                 <InventoryDashboard onClose={() => setActiveView(VIEW.PHASER)} />
             )}
 
-            {/* ── GOD MODE OVERLAYS ── */}
-            {showAdmin && (
-                <AdminDashboard onClose={() => setShowAdmin(false)} />
+            {/* ── OVERLAY REGISTRY ── */}
+            {activeOverlay === OVERLAY.ADMIN && (
+                <AdminDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.SETTINGS && (
+                <SettingsOverlay onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {/* The Phaser Canvas Layer sets up in this div */}

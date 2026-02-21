@@ -15,6 +15,14 @@
   --font: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
+body.theme-pantone-blue {
+  --bg: #00239c;
+  --fg: #ffffff;
+  --highlight-bg: #001b7a;
+  --border: #0030d1;
+}
+
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -899,6 +907,8 @@ button {
 .t-anim-line,
 .t-anim-option {
   /* targeted by _animatedReveal() */
+  box-sizing: border-box;
+  /* dummy property to fix empty ruleset lint */
 }
 
 /* ── Blue Option Rarity Border ── */
@@ -1955,8 +1965,13 @@ button {
   text-align: right;
 }
 
-.db-fin-value.green { color: var(--green); }
-.db-fin-value.gold { color: var(--gold); }
+.db-fin-value.green {
+  color: var(--green);
+}
+
+.db-fin-value.gold {
+  color: var(--gold);
+}
 
 .db-sparkline {
   color: var(--green);
@@ -2060,6 +2075,7 @@ button {
 
 /* Mobile: collapse grids to single column */
 @media (max-width: 480px) {
+
   .db-fin-grid,
   .db-stats-grid {
     grid-template-columns: 1fr;
@@ -2079,11 +2095,209 @@ button {
    ═══════════════════════════════════════════ */
 
 @keyframes dlg-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes dlg-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(4px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Action Budget Panel (db-action-*)
+   ═══════════════════════════════════════════ */
+
+.db-action-panel {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 6px 0;
+}
+
+.db-action-panel.exhausted {
+  border-color: var(--gold);
+  background: rgba(201, 168, 76, 0.04);
+}
+
+.db-action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--gold);
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.db-action-week {
+  color: var(--dim);
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: 0.95em;
+}
+
+.db-action-pips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.db-action-pip {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 2px solid var(--border);
+  transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.db-action-pip.filled {
+  background: var(--gold);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(201, 168, 76, 0.35);
+}
+
+.db-action-pip.spent {
+  background: #1a1a2e;
+  border-color: var(--border);
+}
+
+.db-action-status {
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.db-action-status.ok {
+  color: var(--green);
+}
+
+.db-action-status.low {
+  color: var(--gold);
+}
+
+.db-action-status.exhausted {
+  color: var(--red);
+}
+
+.db-action-cta {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  color: var(--gold);
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  animation: ctaPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ctaPulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; box-shadow: 0 0 12px rgba(201, 168, 76, 0.25); }
+}
+
+/* ═══════════════════════════════════════════
+   Calendar Strip (db-cal-*)
+   ═══════════════════════════════════════════ */
+
+.db-cal-panel {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 6px 0;
+}
+
+.db-cal-section-label {
+  color: var(--dim);
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin: 6px 0 2px;
+}
+
+.db-cal-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 0.85em;
+}
+
+.db-cal-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.db-cal-icon.gold {
+  color: var(--gold);
+}
+
+.db-cal-icon.dim {
+  color: var(--dim);
+}
+
+.db-cal-name {
+  flex: 1;
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.db-cal-loc {
+  color: var(--dim);
+  font-size: 0.85em;
+  flex-shrink: 0;
+}
+
+.db-cal-dist {
+  flex-shrink: 0;
+  font-size: 0.8em;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: right;
+}
+
+.db-cal-dist.now {
+  color: var(--gold);
+}
+
+.db-cal-dist.soon {
+  color: var(--red);
+}
+
+.db-cal-dist.future {
+  color: var(--dim);
+}
+
+/* Mobile: hide location, smaller pips */
+@media (max-width: 600px) {
+  .db-cal-loc {
+    display: none;
+  }
+
+  .db-action-pip {
+    width: 22px;
+    height: 22px;
+  }
+
+  .db-action-pips {
+    gap: 6px;
+  }
 }

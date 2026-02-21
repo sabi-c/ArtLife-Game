@@ -120,6 +120,9 @@ export class WeekEngine {
             suspicion: state.suspicion,
         };
 
+        // ── Auto-Save Checkpoint ──
+        GameState.autoSave();
+
         // ── Game-Over Check ──
         if (GameState.isBankrupt()) {
             GameEventBus.emit(GameEvents.GAME_OVER, { reason: 'bankrupt', week: state.week });

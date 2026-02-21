@@ -5,6 +5,7 @@ import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
 import { DecisionLog } from '../managers/DecisionLog.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
+import { useUIStore } from '../stores/uiStore.js';
 
 /**
  * Dialogue / Event scene — Multi-step engine
@@ -153,186 +154,40 @@ export class DialogueScene extends BaseScene {
 
     // ─── NARRATIVE STEP ───────────────────────
     renderNarrativeStep(step) {
-        const { width, height } = this.scale;
-
-        const textObj = this.addStepObj(
-            this.add.text(width * 0.15, 120, '', {
-                fontFamily: '"Playfair Display"',
-                fontSize: '14px',
-                fontStyle: 'italic',
-                color: '#e8e4df',
-                wordWrap: { width: width * 0.7 },
-                lineSpacing: 6,
-            })
-        );
-
-        // Typewriter
-        const fullText = step.text;
-        let charIndex = 0;
-        this.time.addEvent({
-            delay: 18,
-            repeat: fullText.length - 1,
-            callback: () => {
-                charIndex++;
-                textObj.setText(fullText.substring(0, charIndex));
-            },
-        });
-
-        // "Click to continue" prompt
-        const totalTime = fullText.length * 18;
-        this.time.delayedCall(totalTime + 400, () => {
-            const prompt = this.addStepObj(
-                this.add.text(width / 2, height - 50, '▸ click to continue', {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '7px',
-                    color: '#4a4a5a',
-                }).setOrigin(0.5)
-            );
-            this.tweens.add({
-                targets: prompt,
-                alpha: 0.3,
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
-            });
-
-            // Click anywhere to advance
-            const clickZone = this.addStepObj(
-                this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
-                    .setInteractive({ useHandCursor: true })
-            );
-            clickZone.on('pointerdown', () => this.advanceStep());
+        useUIStore.getState().openDialogue({
+            steps: [{
+                name: 'Narrator',
+                text: step.text,
+                speakerSide: 'left'
+            }],
+            callback: () => this.advanceStep()
         });
     }
 
     // ─── DIALOGUE STEP ────────────────────────
     renderDialogueStep(step) {
-        const { width, height } = this.scale;
-
-        // Speaker name bar
         const speakerName = step.speakerName || step.speaker || 'Unknown';
-        const speakerBar = this.addStepObj(
-            this.add.rectangle(width * 0.15, 118, 200, 22, 0x1a1a2e, 0.9)
-        );
-        speakerBar.setOrigin(0, 0.5);
-        speakerBar.setStrokeStyle(1, 0xc9a84c, 0.4);
 
-        const speakerLabel = this.addStepObj(
-            this.add.text(width * 0.15 + 10, 118, speakerName.toUpperCase(), {
-                fontFamily: '"Press Start 2P"',
-                fontSize: '7px',
-                color: '#c9a84c',
-            }).setOrigin(0, 0.5)
-        );
+        // Attempt to guess sprites based on NPC id (falling back to standard names if needed)
+        // DialogueTreeManager sets event.id to tree.id, we can also use step.speaker.
+        const leftSprite = 'player_back.png';
+        const rightSprite = step.speaker ? `${step.speaker}.png` : null;
 
-        // Dialogue text in quote style
-        const textObj = this.addStepObj(
-            this.add.text(width * 0.15, 142, '', {
-                fontFamily: '"Playfair Display"',
-                fontSize: '14px',
-                color: '#d4d0cc',
-                wordWrap: { width: width * 0.7 },
-                lineSpacing: 6,
-            })
-        );
-
-        // Left accent bar (dialogue visual cue)
-        const accentBar = this.addStepObj(
-            this.add.rectangle(width * 0.13, 170, 3, 60, 0xc9a84c, 0.6)
-        );
-
-        // Typewriter
-        const fullText = `"${step.text}"`;
-        let charIndex = 0;
-        this.time.addEvent({
-            delay: 22,
-            repeat: fullText.length - 1,
-            callback: () => {
-                charIndex++;
-                textObj.setText(fullText.substring(0, charIndex));
-            },
-        });
-
-        // Click to continue
-        const totalTime = fullText.length * 22;
-        this.time.delayedCall(totalTime + 400, () => {
-            const prompt = this.addStepObj(
-                this.add.text(width / 2, height - 50, '▸ click to continue', {
-                    fontFamily: '"Press Start 2P"',
-                    fontSize: '7px',
-                    color: '#4a4a5a',
-                }).setOrigin(0.5)
-            );
-            this.tweens.add({
-                targets: prompt,
-                alpha: 0.3,
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
-            });
-
-            const clickZone = this.addStepObj(
-                this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
-                    .setInteractive({ useHandCursor: true })
-            );
-            clickZone.on('pointerdown', () => this.advanceStep());
+        useUIStore.getState().openDialogue({
+            steps: [{
+                name: speakerName.toUpperCase(),
+                text: `"${step.text}"`,
+                speakerSide: 'right'
+            }],
+            leftSprite,
+            rightSprite,
+            callback: () => this.advanceStep()
         });
     }
 
     // ─── CHOICE STEP ──────────────────────────
     renderChoiceStep(step) {
-        const { width, height } = this.scale;
-
-        // Prompt text (if any)
-        if (step.text) {
-            const promptText = this.addStepObj(
-                this.add.text(width * 0.15, 120, '', {
-                    fontFamily: '"Playfair Display"',
-                    fontSize: '14px',
-                    color: '#e8e4df',
-                    wordWrap: { width: width * 0.7 },
-                    lineSpacing: 6,
-                })
-            );
-
-            // If there's a speaker, show as dialogue
-            if (step.speaker) {
-                const speakerName = step.speakerName || step.speaker;
-                this.addStepObj(
-                    this.add.text(width * 0.15, 108, speakerName.toUpperCase(), {
-                        fontFamily: '"Press Start 2P"',
-                        fontSize: '7px',
-                        color: '#c9a84c',
-                    })
-                );
-                promptText.setY(130);
-            }
-
-            const fullText = step.text;
-            let charIndex = 0;
-            this.time.addEvent({
-                delay: 18,
-                repeat: fullText.length - 1,
-                callback: () => {
-                    charIndex++;
-                    promptText.setText(fullText.substring(0, charIndex));
-                },
-            });
-
-            const totalTypeTime = fullText.length * 18;
-            this.time.delayedCall(totalTypeTime + 300, () => {
-                this.renderChoiceButtons(step.choices, step);
-            });
-        } else {
-            this.renderChoiceButtons(step.choices, step);
-        }
-    }
-
-    renderChoiceButtons(choices, step) {
-        const { width, height } = this.scale;
-        const choiceStartY = Math.min(height * 0.50, 300);
-
-        const processedChoices = choices.map((choice, i) => {
+        const processedChoices = step.choices.map((choice, i) => {
             const gateResult = QualityGate.checkDetailed(choice.requires);
             return {
                 ...choice,
@@ -343,82 +198,32 @@ export class DialogueScene extends BaseScene {
             };
         });
 
-        let visibleIndex = 0;
-        processedChoices.forEach((choice, originalIndex) => {
+        const uiChoices = processedChoices.map((choice, originalIndex) => {
             const shouldShow = choice.available || choice.requires;
-            if (!shouldShow && choice.isBlue) return;
+            if (!shouldShow && choice.isBlue) return null;
 
-            const delay = visibleIndex * 200;
-            const displayIndex = visibleIndex;
-            visibleIndex++;
+            return {
+                label: choice.available ? choice.label : `🔒 ${choice.label} (Requires: ${choice.lockedDetails.map(d => d.label + ' ' + d.needed).join(', ')})`,
+                isBlue: choice.isBlue,
+                action: choice.available ? () => {
+                    useUIStore.getState().closeDialogue();
+                    this.selectChoiceMultiStep(choice, originalIndex, step);
+                } : null
+            };
+        }).filter(Boolean);
 
-            this.time.delayedCall(delay, () => {
-                const cy = choiceStartY + displayIndex * 55;
+        const leftSprite = 'player_back.png';
+        const rightSprite = step.speaker ? `${step.speaker}.png` : null;
 
-                if (choice.available) {
-                    const borderColor = choice.isBlue ? 0x4488cc : 0x3a3a4e;
-                    const hoverColor = choice.isBlue ? 0x66aaee : 0xc9a84c;
-
-                    const cardBg = this.addStepObj(
-                        this.add.rectangle(width / 2, cy + 15, width * 0.72, 45, 0x1a1a2e, 0.85)
-                    );
-                    cardBg.setStrokeStyle(choice.isBlue ? 2 : 1, borderColor);
-
-                    const prefix = choice.isBlue ? '🔵  ' : `${originalIndex + 1}.  `;
-                    const choiceLabel = this.addStepObj(
-                        this.add.text(width * 0.18, cy + 5, `${prefix}${choice.label}`, {
-                            fontFamily: '"Playfair Display"',
-                            fontSize: '13px',
-                            color: choice.isBlue ? '#88bbdd' : '#b8b4af',
-                            wordWrap: { width: width * 0.62 },
-                        })
-                    );
-
-                    cardBg.setAlpha(0);
-                    choiceLabel.setAlpha(0);
-                    this.tweens.add({ targets: [cardBg, choiceLabel], alpha: 1, duration: 400 });
-
-                    cardBg.setInteractive({ useHandCursor: true });
-                    cardBg.on('pointerover', () => {
-                        cardBg.setStrokeStyle(2, hoverColor);
-                        choiceLabel.setColor(choice.isBlue ? '#aaddff' : '#c9a84c');
-                    });
-                    cardBg.on('pointerout', () => {
-                        cardBg.setStrokeStyle(choice.isBlue ? 2 : 1, borderColor);
-                        choiceLabel.setColor(choice.isBlue ? '#88bbdd' : '#b8b4af');
-                    });
-                    cardBg.on('pointerdown', () => {
-                        this.selectChoiceMultiStep(choice, originalIndex, step);
-                    });
-                } else {
-                    const cardBg = this.addStepObj(
-                        this.add.rectangle(width / 2, cy + 15, width * 0.72, 45, 0x0f0f1a, 0.6)
-                    );
-                    cardBg.setStrokeStyle(1, 0x222233);
-
-                    const reqHints = choice.lockedDetails.map(d => `${d.label} ${d.needed}`).join(', ');
-                    const choiceLabel = this.addStepObj(
-                        this.add.text(width * 0.18, cy + 2, `🔒  ${choice.label}`, {
-                            fontFamily: '"Playfair Display"',
-                            fontSize: '12px',
-                            color: '#3a3a4a',
-                            wordWrap: { width: width * 0.62 },
-                        })
-                    );
-
-                    this.addStepObj(
-                        this.add.text(width * 0.20, cy + 22, `Requires: ${reqHints}`, {
-                            fontFamily: '"Press Start 2P"',
-                            fontSize: '6px',
-                            color: '#2a2a3a',
-                        })
-                    );
-
-                    cardBg.setAlpha(0);
-                    choiceLabel.setAlpha(0);
-                    this.tweens.add({ targets: [cardBg, choiceLabel], alpha: 1, duration: 400 });
-                }
-            });
+        useUIStore.getState().openDialogue({
+            steps: [{
+                name: step.speakerName || step.speaker || 'Player',
+                text: step.text || 'Choose a response...',
+                speakerSide: 'left'
+            }],
+            choices: uiChoices,
+            leftSprite,
+            rightSprite
         });
     }
 
@@ -727,6 +532,8 @@ export class DialogueScene extends BaseScene {
      * Shows outcome text + stat changes after a choice (both legacy and multi-step).
      */
     showOutcomeWithStats(choice, onComplete) {
+        useUIStore.getState().closeDialogue();
+
         const { width, height } = this.scale;
 
         this.clearStepObjects();

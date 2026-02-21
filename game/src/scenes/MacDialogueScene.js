@@ -101,10 +101,14 @@ export class MacDialogueScene extends BaseScene {
             }
             this.scene.stop();
         };
-        this.cameras.main.fadeOut(800, 0, 0, 0);
-        this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, cleanup);
-        // Safety: if fade doesn't complete (headless/broken WebGL), cleanup after timeout
-        this.time.delayedCall(1200, cleanup);
+        if (this.cameras && this.cameras.main) {
+            this.cameras.main.fadeOut(800, 0, 0, 0);
+            this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, cleanup);
+            // Safety: if fade doesn't complete (headless/broken WebGL), cleanup after timeout
+            this.time.delayedCall(1200, cleanup);
+        } else {
+            cleanup();
+        }
     }
 
     showReward() {

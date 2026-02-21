@@ -15,7 +15,8 @@
     "launch:open": "node launch.cjs --open",
     "report": "node launch.cjs --report",
     "test:flow": "node test_flow.cjs",
-    "expose": "npx localtunnel --port 5173 --subdomain artlife"
+    "expose": "npx localtunnel --port 5173 --subdomain artlife",
+    "tunnel": "npx cloudflared tunnel --url http://localhost:5173"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.1",

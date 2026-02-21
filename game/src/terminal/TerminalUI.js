@@ -1,6 +1,8 @@
+import { WebAudioService } from '../managers/WebAudioService.js';
+
 /**
  * TerminalUI — Core text-based game renderer
- * 
+ *
  * Renders the game as styled text in a single DOM container.
  * Handles keyboard navigation (↑↓ Enter Esc) and touch/click on options.
  * Manages a screen stack for push/pop navigation.
@@ -334,6 +336,7 @@ export class TerminalUI {
                 const opt = this.options[idx];
                 if (opt && !opt.disabled && opt.action) {
                     this.selectedIndex = idx;
+                    WebAudioService.select();
                     try {
                         opt.action();
                     } catch (err) {
@@ -435,6 +438,7 @@ export class TerminalUI {
                         break;
                     }
                     lineEl.textContent += originalText[i];
+                    if (i % 3 === 0) WebAudioService.type();
                     // Pause longer on punctuation
                     const char = originalText[i];
                     const pause = (char === '.' || char === '!' || char === '?') ? charDelay * 4 :
@@ -509,6 +513,7 @@ export class TerminalUI {
                 while (this.selectedIndex > 0 && this.options[this.selectedIndex]?._sectionHeader) {
                     this.selectedIndex--;
                 }
+                WebAudioService.hover();
                 this.render();
                 break;
             case 'ArrowDown':
@@ -518,10 +523,12 @@ export class TerminalUI {
                 while (this.selectedIndex < this.options.length - 1 && this.options[this.selectedIndex]?._sectionHeader) {
                     this.selectedIndex++;
                 }
+                WebAudioService.hover();
                 this.render();
                 break;
             case 'Enter':
                 e.preventDefault();
+                WebAudioService.select();
                 this.selectOption();
                 break;
             case 'Escape':

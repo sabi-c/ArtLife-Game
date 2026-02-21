@@ -49,7 +49,7 @@ export function cityScreen(ui) {
             DIM(currentCity.vibe),
             DIV(),
             STAT('Cash', `$${s.cash.toLocaleString()}`),
-            STAT('Actions', Array(3).fill(0).map((_, i) => i < getActionsRemaining() ? '■' : '□').join(' '), getActionsRemaining() === 0 ? 'red' : getActionsRemaining() === 1 ? 'gold' : 'green'),
+            STAT('Actions', Array(4).fill(0).map((_, i) => i < getActionsRemaining() ? '■' : '□').join(' '), getActionsRemaining() === 0 ? 'red' : getActionsRemaining() === 1 ? 'gold' : 'green'),
             DIV(),
         ];
 
@@ -99,7 +99,7 @@ export function cityScreen(ui) {
 
         if (jetData && canAct) {
             options.push({
-                label: `✈️ Use ${jetData.name}'s jet (free, +3 rep, 1 action)`,
+                label: `[1 AP] ✈️ Use ${jetData.name}'s jet (free, +3 rep)`,
                 action: () => {
                     useAction(`Flew on ${jetData.name}'s jet`);
                     const dests = cities.filter(c => c !== current);
@@ -116,7 +116,7 @@ export function cityScreen(ui) {
 
         if (canAct && currentCity.venues.length > 0) {
             options.push({
-                label: `🖼️ Visit Gallery — Browse curated selection (1 action)`,
+                label: `[1 AP] 🖼️ Visit Gallery — Browse curated selection`,
                 action: () => {
                     useAction('Visited local gallery');
                     s.taste = Math.min(100, s.taste + 1);
@@ -124,7 +124,7 @@ export function cityScreen(ui) {
                 }
             });
             options.push({
-                label: `🔨 Auction House — Bid on premium lots (1 action)`,
+                label: `[1 AP] 🔨 Auction House — Bid on premium lots`,
                 action: () => {
                     useAction('Attended auction');
                     s.access = Math.min(100, s.access + 1);
@@ -132,7 +132,7 @@ export function cityScreen(ui) {
                 }
             });
             options.push({
-                label: `🏛️ Visit Museum — Study the masters (+3 taste, +2 rep)`,
+                label: `[1 AP] 🏛️ Visit Museum — Study the masters (+3 taste, +2 rep)`,
                 action: () => {
                     useAction('Visited museum');
                     s.taste = Math.min(100, s.taste + 3);
@@ -141,11 +141,11 @@ export function cityScreen(ui) {
                     ui.replaceScreen(cityScreen(ui));
                 }
             });
-            if (s.cash >= 1000) {
+            if (s.cash >= 1000 && hasActions(2)) {
                 options.push({
-                    label: `🌟 Art Fair — Network & browse ($1,000 entry, +3 access, 1 action)`,
+                    label: `[2 AP] 🌟 Art Fair — Network & browse ($1,000 entry, +3 access)`,
                     action: () => {
-                        useAction('Attended art fair');
+                        useAction('Attended art fair', 2);
                         s.cash -= 1000;
                         s.access = Math.min(100, s.access + 3);
                         s.reputation = Math.min(100, s.reputation + 1);

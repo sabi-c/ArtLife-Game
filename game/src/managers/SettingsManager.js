@@ -10,6 +10,16 @@ export class SettingsManager {
     // Core Schema Definition
     static SCHEMA = [
         {
+            id: 'colorTheme',
+            label: 'Color Theme',
+            type: 'cycle',
+            options: [
+                { value: 'pantone_blue', display: 'Pantone Dark Blue C' },
+                { value: 'classic_dark', display: 'Classic Dark' }
+            ],
+            default: 'pantone_blue'
+        },
+        {
             id: 'menuTheme',
             label: 'Menu Theme',
             type: 'cycle',
@@ -19,6 +29,16 @@ export class SettingsManager {
                 { value: 'vaporwave', display: 'Vaporwave (WIP)' }
             ],
             default: 'kruger'
+        },
+        {
+            id: 'dialogueStyle',
+            label: 'Dialogue Style',
+            type: 'cycle',
+            options: [
+                { value: 'visual', display: 'Visual (Pokemon RPG)' },
+                { value: 'terminal', display: 'Classic Terminal' }
+            ],
+            default: 'visual'
         },
         {
             id: 'tickerStyle',
@@ -109,6 +129,7 @@ export class SettingsManager {
         if (!this._cache) this.init();
         this._cache[key] = value;
         this.save();
+        window.dispatchEvent(new CustomEvent('settings-changed', { detail: { key, value } }));
     }
 
     /**

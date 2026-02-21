@@ -13,6 +13,8 @@ import { phoneScreen } from './phone.js';
 import { cityScreen, newsScreen } from './world.js';
 import { journalScreen, legacyEndScreen } from './journal.js';
 import { pauseMenuScreen } from './system.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
+import { getUpcomingEvents } from '../../data/calendar_events.js';
 
 // ════════════════════════════════════════════
 // SCREEN: Venue Picker
@@ -25,7 +27,7 @@ function venuePickerScreen(ui) {
         const lines = [
             H('VISIT VENUE'),
             DIM('Choose where to spend your time. Each visit costs 1 action.'),
-            STAT('Actions', Array(3).fill(0).map((_, i) => i < getActionsRemaining() ? '■' : '□').join(' '), getActionsRemaining() === 0 ? 'red' : 'green'),
+            STAT('Actions', Array(MAX_ACTIONS).fill(0).map((_, i) => i < getActionsRemaining() ? '■' : '□').join(' '), getActionsRemaining() === 0 ? 'red' : 'green'),
             DIV(),
         ];
 
@@ -362,7 +364,9 @@ function npcTalkScreen(ui, charData, contactData, venue, timeKey) {
                     label: `💬 ${tree.title || tree.id}`,
                     action: () => {
                         const event = TerminalAPI.dialogue.convertTreeToEvent(tree);
-                        if (window.game?.startTestScene) {
+                        const style = SettingsManager.get('dialogueStyle');
+
+                        if (style === 'visual' && window.game?.startTestScene) {
                             // Push trap screen, hide terminal, launch dialogue
                             ui.pushScreen(() => ({ lines: [DIM('In conversation...')], options: [] }));
                             ui.container.style.display = 'none';
@@ -470,21 +474,23 @@ function terminalDialogueScreen(ui, event, npcName) {
 // ════════════════════════════════════════════
 // Action Budget System
 // ════════════════════════════════════════════
-const MAX_ACTIONS = 3;
+export const MAX_ACTIONS = 4;
 
 export function getActionsRemaining() {
     return MAX_ACTIONS - (TerminalAPI.state().actionsThisWeek || 0);
 }
 
-export function useAction(label) {
+export function useAction(label, cost = 1) {
     if (!TerminalAPI.state().actionsThisWeek) TerminalAPI.state().actionsThisWeek = 0;
-    TerminalAPI.state().actionsThisWeek++;
-    TerminalAPI.addNews(`⏱️ ${label} (${getActionsRemaining()} actions left)`);
+    TerminalAPI.state().actionsThisWeek += cost;
+    TerminalAPI.addNews(`⏱️ ${label} (${getActionsRemaining()} AP left)`);
+    // Auto-checkpoint after every action
+    TerminalAPI.initGame.autoSave?.();
     return true;
 }
 
-export function hasActions() {
-    return getActionsRemaining() > 0;
+export function hasActions(cost = 1) {
+    return getActionsRemaining() >= cost;
 }
 
 // ════════════════════════════════════════════
@@ -559,6 +565,76 @@ function generateFlavorNews(s) {
 }
 
 // ════════════════════════════════════════════
+// Action Budget Panel (raw HTML)
+// ════════════════════════════════════════════
+function actionBudgetPanelHtml(actionsLeft, maxActions, weekLabel) {
+    const pips = Array.from({ length: maxActions }, (_, i) =>
+        `<span class="db-action-pip ${i < actionsLeft ? 'filled' : 'spent'}"></span>`
+    ).join('');
+
+    const statusClass = actionsLeft === 0 ? 'exhausted' : actionsLeft <= 1 ? 'low' : 'ok';
+    const statusText = actionsLeft === 0
+        ? 'ALL ACTIONS SPENT'
+        : `${actionsLeft} AP REMAINING`;
+
+    const cta = actionsLeft === 0
+        ? `<div class="db-action-cta">WEEK COMPLETE — ADVANCE WEEK →</div>`
+        : '';
+
+    return `<div class="db-action-panel${actionsLeft === 0 ? ' exhausted' : ''}">`
+        + `<div class="db-action-header"><span>ACTION POINTS</span><span class="db-action-week">${weekLabel}</span></div>`
+        + `<div class="db-action-pips">${pips}</div>`
+        + `<div class="db-action-status ${statusClass}">${statusText}</div>`
+        + cta
+        + `</div>`;
+}
+
+// ════════════════════════════════════════════
+// Calendar Strip (raw HTML)
+// ════════════════════════════════════════════
+const CAL_ICONS = { fair: '◈', auction: '◆', biennale: '★', market: '▸', social: '●', exhibition: '○' };
+
+function calendarStripHtml(currentWeek, month, year) {
+    const events = getUpcomingEvents(currentWeek, 8);
+
+    const thisWeek = events.filter(e => e.weeksAway === 0);
+    const upcoming = events.filter(e => e.weeksAway > 0).slice(0, 3);
+
+    const eventRow = (ev) => {
+        const icon = CAL_ICONS[ev.type] || '▸';
+        const iconClass = ev.tier === 1 ? 'gold' : 'dim';
+        const distClass = ev.weeksAway === 0 ? 'now' : ev.weeksAway <= 2 ? 'soon' : 'future';
+        const distLabel = ev.weeksAway === 0 ? 'NOW' : `${ev.weeksAway}w`;
+        return `<div class="db-cal-event">`
+            + `<span class="db-cal-icon ${iconClass}">${icon}</span>`
+            + `<span class="db-cal-name">${ev.name}</span>`
+            + `<span class="db-cal-loc">${ev.location}</span>`
+            + `<span class="db-cal-dist ${distClass}">${distLabel}</span>`
+            + `</div>`;
+    };
+
+    let html = `<div class="db-cal-panel">`;
+    html += `<div class="db-panel-header">CALENDAR · ${month} ${year}</div>`;
+
+    if (thisWeek.length > 0) {
+        html += `<div class="db-cal-section-label">THIS WEEK</div>`;
+        thisWeek.forEach(ev => { html += eventRow(ev); });
+    }
+
+    if (upcoming.length > 0) {
+        html += `<div class="db-cal-section-label">COMING UP</div>`;
+        upcoming.forEach(ev => { html += eventRow(ev); });
+    }
+
+    if (thisWeek.length === 0 && upcoming.length === 0) {
+        html += `<div class="db-cal-event"><span class="db-cal-name" style="color:var(--dim)">No events on the horizon</span></div>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+// ════════════════════════════════════════════
 // World Map Helper
 // ════════════════════════════════════════════
 const CITY_NAMES = {
@@ -622,9 +698,11 @@ function weekReportScreen(ui) {
 
         // ── Forced Rest ──
         if (report.forcedRest) {
-            lines.push({ type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">⚠ FORCED REST</div>`
-                + `<div class="db-news-item">Burnout forced you to rest this week. Take it easy.</div>`
-                + `</div>` });
+            lines.push({
+                type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">⚠ FORCED REST</div>`
+                    + `<div class="db-news-item">Burnout forced you to rest this week. Take it easy.</div>`
+                    + `</div>`
+            });
             lines.push(BLANK());
             return {
                 lines,
@@ -638,20 +716,24 @@ function weekReportScreen(ui) {
         const cashColor = report.cashDelta >= 0 ? 'green' : 'red';
         const portColor = report.portfolioDelta >= 0 ? 'green' : 'red';
 
-        lines.push({ type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">FINANCIAL SUMMARY</div>`
-            + `<div class="db-fin-grid">`
-            + `<span class="db-fin-label">Cash Change</span><span class="db-fin-value ${cashColor}">${cashSign}$${Math.abs(report.cashDelta).toLocaleString()}</span>`
-            + `<span class="db-fin-label">Portfolio Change</span><span class="db-fin-value ${portColor}">${portSign}$${Math.abs(report.portfolioDelta).toLocaleString()}</span>`
-            + `<span class="db-fin-label">Net Worth</span><span class="db-fin-value gold">$${(report.netWorth || 0).toLocaleString()}</span>`
-            + `</div></div>` });
+        lines.push({
+            type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">FINANCIAL SUMMARY</div>`
+                + `<div class="db-fin-grid">`
+                + `<span class="db-fin-label">Cash Change</span><span class="db-fin-value ${cashColor}">${cashSign}$${Math.abs(report.cashDelta).toLocaleString()}</span>`
+                + `<span class="db-fin-label">Portfolio Change</span><span class="db-fin-value ${portColor}">${portSign}$${Math.abs(report.portfolioDelta).toLocaleString()}</span>`
+                + `<span class="db-fin-label">Net Worth</span><span class="db-fin-value gold">$${(report.netWorth || 0).toLocaleString()}</span>`
+                + `</div></div>`
+        });
 
         // ── Market Conditions ──
         if (report.marketChanged) {
             const dotClass = report.marketState === 'bull' ? 'bull' : report.marketState === 'bear' ? 'bear' : 'stable';
-            lines.push({ type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">MARKET SHIFT</div>`
-                + `<div class="db-news-item"><span class="db-dot ${dotClass}"></span> `
-                + `Market moved from <strong>${(report.prevMarketState || '').toUpperCase()}</strong> → <strong>${report.marketState.toUpperCase()}</strong></div>`
-                + `</div>` });
+            lines.push({
+                type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">MARKET SHIFT</div>`
+                    + `<div class="db-news-item"><span class="db-dot ${dotClass}"></span> `
+                    + `Market moved from <strong>${(report.prevMarketState || '').toUpperCase()}</strong> → <strong>${report.marketState.toUpperCase()}</strong></div>`
+                    + `</div>`
+            });
         }
 
         // ── Headlines / Events ──
@@ -666,9 +748,11 @@ function weekReportScreen(ui) {
 
         // ── Messages ──
         if (report.newMessages > 0) {
-            lines.push({ type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">MESSAGES</div>`
-                + `<div class="db-news-item">📱 ${report.newMessages} new message${report.newMessages > 1 ? 's' : ''} on your phone</div>`
-                + `</div>` });
+            lines.push({
+                type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">MESSAGES</div>`
+                    + `<div class="db-news-item">📱 ${report.newMessages} new message${report.newMessages > 1 ? 's' : ''} on your phone</div>`
+                    + `</div>`
+            });
         }
 
         // ── Anti-Resource Warnings ──
@@ -708,8 +792,8 @@ export function dashboardScreen(ui) {
         const portfolioValue = TerminalAPI.getPortfolioValue();
         const netWorth = s.cash + portfolioValue;
         const actionsLeft = getActionsRemaining();
-        const actionBoxes = Array(MAX_ACTIONS).fill(0).map((_, i) => i < actionsLeft ? '■' : '□').join(' ');
         const cityInfo = { name: s.currentCity || 'new-york' };
+        const weekLabel = `Week ${s.week} · ${month} ${year}`;
 
         // Wealth sparkline from history
         const wealthNums = (s.wealthHistory || []).map(h => (h.cash || 0) + (h.assets || 0));
@@ -725,31 +809,39 @@ export function dashboardScreen(ui) {
 
         // ── Header ──
         lines.push(H('EGO TERMINAL'));
-        lines.push(DIM(`Week ${s.week} · ${month} ${year}`));
-        lines.push(STAT('ACTIONS', actionBoxes, actionsLeft === 0 ? 'red' : actionsLeft === 1 ? 'gold' : 'green'));
+
+        // ── Action Budget Panel ──
+        lines.push({ type: 'raw', text: actionBudgetPanelHtml(actionsLeft, MAX_ACTIONS, weekLabel) });
+
+        // ── Calendar Strip ──
+        lines.push({ type: 'raw', text: calendarStripHtml(s.week, month, year) });
 
         // ── Financials Panel ──
-        lines.push({ type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">FINANCIALS</div>`
-            + `<div class="db-fin-grid">`
-            + `<span class="db-fin-label">Cash</span><span class="db-fin-value green">$${s.cash.toLocaleString()}</span>`
-            + `<span class="db-fin-label">Portfolio</span><span class="db-fin-value">$${portfolioValue.toLocaleString()}  (${s.portfolio.length} works)</span>`
-            + `<span class="db-fin-label">Net Worth</span><span class="db-fin-value gold">$${netWorth.toLocaleString()}  <span class="db-sparkline">${spark} ${trend}</span></span>`
-            + `<span class="db-fin-label">Market</span><span class="db-fin-value"><span class="db-dot ${dotClass}"></span>${s.marketState.toUpperCase()}</span>`
-            + `</div></div>` });
+        lines.push({
+            type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">FINANCIALS</div>`
+                + `<div class="db-fin-grid">`
+                + `<span class="db-fin-label">Cash</span><span class="db-fin-value green">$${s.cash.toLocaleString()}</span>`
+                + `<span class="db-fin-label">Portfolio</span><span class="db-fin-value">$${portfolioValue.toLocaleString()}  (${s.portfolio.length} works)</span>`
+                + `<span class="db-fin-label">Net Worth</span><span class="db-fin-value gold">$${netWorth.toLocaleString()}  <span class="db-sparkline">${spark} ${trend}</span></span>`
+                + `<span class="db-fin-label">Market</span><span class="db-fin-value"><span class="db-dot ${dotClass}"></span>${s.marketState.toUpperCase()}</span>`
+                + `</div></div>`
+        });
 
         // ── Stats Panel ──
-        lines.push({ type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">STATS</div>`
-            + `<div class="db-stats-grid">`
-            + statBarHtml('HYP', s.reputation, 100, 'var(--gold)')
-            + statBarHtml('AUD', s.audacity ?? 0, 100, 'var(--red)')
-            + statBarHtml('TST', s.taste, 100, 'var(--blue)')
-            + statBarHtml('ACC', s.access, 100, 'var(--green)')
-            + `</div>`
-            + `<div class="db-secondary">`
-            + `<span class="db-secondary-item${s.marketHeat > 30 ? ' warn' : ''}">Heat ${s.marketHeat}</span>`
-            + `<span class="db-secondary-item${s.burnout > 5 ? ' warn' : ''}">Burnout ${Math.round(s.burnout)}</span>`
-            + `</div>`
-            + `</div>` });
+        lines.push({
+            type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">STATS</div>`
+                + `<div class="db-stats-grid">`
+                + statBarHtml('HYP', s.reputation, 100, 'var(--gold)')
+                + statBarHtml('AUD', s.audacity ?? 0, 100, 'var(--red)')
+                + statBarHtml('TST', s.taste, 100, 'var(--blue)')
+                + statBarHtml('ACC', s.access, 100, 'var(--green)')
+                + `</div>`
+                + `<div class="db-secondary">`
+                + `<span class="db-secondary-item${s.marketHeat > 30 ? ' warn' : ''}">Heat ${s.marketHeat}</span>`
+                + `<span class="db-secondary-item${s.burnout > 5 ? ' warn' : ''}">Burnout ${Math.round(s.burnout)}</span>`
+                + `</div>`
+                + `</div>`
+        });
 
         // ── Market Intelligence Panel ──
         const newsItems = generateFlavorNews(s);
@@ -791,11 +883,28 @@ export function dashboardScreen(ui) {
 
         const options = [];
 
+        // ── Priority: Advance Week when exhausted ──
+        if (actionsLeft === 0) {
+            options.push({
+                label: '⏩  WEEK COMPLETE — Advance Week →',
+                action: () => {
+                    try {
+                        TerminalAPI.advanceWeek();
+                        ui.replaceScreen(weekReportScreen(ui));
+                    } catch (err) {
+                        window.lastError = err.message;
+                        ui.render();
+                    }
+                }
+            });
+        }
+
         // ═══ ART ═══
         options.push({ label: `═══ MARKET DESK ═══`, disabled: true, _sectionHeader: true });
         options.push({
-            label: `🖼️  Browse Market (${availableWorks} works available)`,
-            action: () => safePush(marketScreen)
+            label: `[1 AP] 🖼️  Browse Market (${availableWorks} works)`,
+            disabled: !hasActions(1),
+            action: hasActions(1) ? () => safePush(marketScreen) : undefined
         });
         options.push({
             label: `📁  My Collection (${s.portfolio.length} works, $${portfolioValue.toLocaleString()})`,
@@ -805,13 +914,14 @@ export function dashboardScreen(ui) {
         // ═══ BUSINESS ═══
         options.push({ label: `═══ OPERATIONS ═══`, disabled: true, _sectionHeader: true });
         options.push({
-            label: `🎨  Visit Venue`,
-            action: () => safePush(venuePickerScreen)
+            label: `[1 AP] 🎨  Visit Venue`,
+            disabled: !hasActions(1),
+            action: hasActions(1) ? () => safePush(venuePickerScreen) : undefined
         });
         options.push({
             label: `🗺️  Walk the Neighborhood (Pokemon Mode)`,
             action: () => {
-                if (window.game.startTestScene) {
+                if (window.game?.startTestScene) {
                     window.game.startTestScene('OverworldScene', { ui });
                     ui.container.style.display = 'none';
                     ui.pushScreen(() => ({ lines: [], options: [] })); // trap terminal
@@ -821,13 +931,13 @@ export function dashboardScreen(ui) {
             }
         });
         options.push({
-            label: `✈️  Travel (${cityInfo.name})`,
-            action: () => safePush(cityScreen)
+            label: `[1 AP] ✈️  Travel (${cityInfo.name})`,
+            disabled: !hasActions(1),
+            action: hasActions(1) ? () => safePush(cityScreen) : undefined
         });
 
-        const marketLabel = `📊  Market Intel (${s.marketState} market)`;
         options.push({
-            label: marketLabel,
+            label: `📊  Market Intel (${s.marketState} market)`,
             action: () => safePush(newsScreen)
         });
 
@@ -847,8 +957,9 @@ export function dashboardScreen(ui) {
             }
         });
         options.push({
-            label: unreadMessages > 0 ? `📱  Phone (${unreadMessages} unread)` : `📱  Phone`,
-            action: () => safePush(phoneScreen)
+            label: unreadMessages > 0 ? `[1 AP] 📱  Phone (${unreadMessages} unread)` : `[1 AP] 📱  Phone`,
+            disabled: !hasActions(1),
+            action: hasActions(1) ? () => safePush(phoneScreen) : undefined
         });
         options.push({
             label: '📓  Journal & Calendar',
@@ -868,17 +979,19 @@ export function dashboardScreen(ui) {
             });
         }
 
-        options.push({
-            label: '⏩  Advance Week →', action: () => {
-                try {
-                    TerminalAPI.advanceWeek();
-                    ui.replaceScreen(weekReportScreen(ui));
-                } catch (err) {
-                    window.lastError = err.message;
-                    ui.render();
+        if (actionsLeft > 0) {
+            options.push({
+                label: '⏩  Advance Week →', action: () => {
+                    try {
+                        TerminalAPI.advanceWeek();
+                        ui.replaceScreen(weekReportScreen(ui));
+                    } catch (err) {
+                        window.lastError = err.message;
+                        ui.render();
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // Ticker bar — rendered as raw HTML below options
         const footerHtml = TickerSystem.generate('single');
