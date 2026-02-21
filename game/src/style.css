@@ -1903,14 +1903,6 @@ button {
     padding: 4px 0;
   }
 
-  /* Larger touch targets for options */
-  .t-option {
-    padding: 10px 14px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-  }
-
   /* Compact stats */
   .t-stat {
     padding: 2px 0;
@@ -2286,7 +2278,7 @@ button {
   color: var(--dim);
 }
 
-/* Mobile: hide location, smaller pips */
+/* Mobile: hide location, smaller pips, tappable CTA */
 @media (max-width: 600px) {
   .db-cal-loc {
     display: none;
@@ -2298,6 +2290,32 @@ button {
   }
 
   .db-action-pips {
+    gap: 6px;
+  }
+
+  .db-action-cta {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .db-action-cta:active {
+    transform: scale(0.97);
+    transition: transform 0.05s ease;
+  }
+
+  /* Option text wraps cleanly on small screens */
+  .t-option {
+    word-break: break-word;
+    line-height: 1.4;
+  }
+
+  /* Calendar events more compact */
+  .db-cal-event {
+    font-size: 0.8em;
     gap: 6px;
   }
 }

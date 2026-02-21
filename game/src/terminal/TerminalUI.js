@@ -351,6 +351,19 @@ export class TerminalUI {
                 }
             });
         });
+
+        // CTA buttons (e.g. "WEEK COMPLETE" in action panel) — delegate to first option
+        this.container.querySelectorAll('.db-action-cta').forEach(el => {
+            el.style.cursor = 'pointer';
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const firstOpt = this.options[0];
+                if (firstOpt && !firstOpt.disabled && firstOpt.action) {
+                    WebAudioService.select();
+                    firstOpt.action();
+                }
+            });
+        });
     }
 
     // ── Scene Transition ──
