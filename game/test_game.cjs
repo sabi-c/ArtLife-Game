@@ -113,11 +113,15 @@ function assert(condition, label) {
     // Advance through all lines
     for (let i = 0; i < 14; i++) {
         await page.evaluate(() => window.game.advanceDialogue());
-        await page.waitForTimeout(200);
+        await page.waitForTimeout(300);
     }
-    await page.waitForTimeout(2000);
-
-    const ui3 = await page.evaluate(() => window.game.uiState());
+    // Poll for terminal restoration (CI runners are slower)
+    let ui3 = { visible: false };
+    for (let attempt = 0; attempt < 10; attempt++) {
+        await page.waitForTimeout(500);
+        ui3 = await page.evaluate(() => window.game.uiState());
+        if (ui3.visible) break;
+    }
     assert(ui3.visible === true, 'Terminal UI restored after Gallery Opening');
 
     // ── 4. Underground Deal (Connector) ──
