@@ -1,6 +1,7 @@
 import { GameState } from './GameState.js';
 import { PhoneManager } from './PhoneManager.js';
 import { EventManager } from './EventManager.js';
+import { generateId } from '../utils/id.js';
 
 /**
  * ConsequenceScheduler — King of Dragon Pass-style delayed consequences
@@ -27,7 +28,7 @@ export class ConsequenceScheduler {
      */
     static add(consequence) {
         ConsequenceScheduler.queue.push({
-            id: `csq_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            id: generateId('csq'),
             triggerWeek: consequence.triggerWeek,
             type: consequence.type,
             payload: consequence.payload,

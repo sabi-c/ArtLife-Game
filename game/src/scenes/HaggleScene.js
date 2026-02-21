@@ -122,6 +122,14 @@ export class HaggleScene extends BaseScene {
 
         // ── ESC key force-exit (safety hatch) ──
         this.input.keyboard.on('keydown-ESC', this.forceExit, this);
+
+        // Visible back button (top-right)
+        const backBtn = this.add.text(width - 16, 12, '[ ESC: BACK ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#7a7a8a'
+        }).setOrigin(1, 0).setDepth(102).setInteractive({ useHandCursor: true });
+        backBtn.on('pointerover', () => backBtn.setColor('#c9a84c'));
+        backBtn.on('pointerout', () => backBtn.setColor('#7a7a8a'));
+        backBtn.on('pointerdown', () => this.forceExit());
     }
 
     drawUIContainers(width, height) {
@@ -140,9 +148,9 @@ export class HaggleScene extends BaseScene {
         this.patBarBg.fillStyle(0x000000, 1).fillRect(120, dPanelY + 28, 150, 10).lineStyle(1, 0x3a3a4e).strokeRect(120, dPanelY + 28, 150, 10);
         this.patBarFill = this.add.graphics();
 
-        // Player Info
+        // Player Info — includes NERVE (AUD) bar
         const pPanelY = height - 250;
-        this.add.rectangle(width - 290, pPanelY, 260, 60, 0x1a1a2e, 0.9).setOrigin(0, 0).setStrokeStyle(2, 0x2a2a3a);
+        this.add.rectangle(width - 290, pPanelY, 260, 80, 0x1a1a2e, 0.9).setOrigin(0, 0).setStrokeStyle(2, 0x2a2a3a);
 
         this.add.text(width - 275, pPanelY + 12, 'GAP TO ASK', {
             fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#e8e4df'
@@ -159,28 +167,91 @@ export class HaggleScene extends BaseScene {
         this.gapText = this.add.text(width - 40, pPanelY + 27, '100%', {
             fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
         }).setOrigin(1, 0);
+
+        // NERVE (AUD) bar
+        const audacity = this.state.playerStats?.audacity ?? 0;
+        this.add.text(width - 275, pPanelY + 60, 'NERVE', {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#7a7a8a'
+        });
+
+        const nerveBarW = 120;
+        this.add.graphics()
+            .fillStyle(0x000000, 1).fillRect(width - 215, pPanelY + 58, nerveBarW, 10)
+            .lineStyle(1, 0x3a3a4e).strokeRect(width - 215, pPanelY + 58, nerveBarW, 10);
+
+        const nerveFill = Math.min(1, audacity / 100);
+        const nerveColor = audacity >= 50 ? 0x4488cc : 0x3a5a8a;
+        this.add.graphics()
+            .fillStyle(nerveColor, 1)
+            .fillRect(width - 215, pPanelY + 58, nerveBarW * nerveFill, 10);
+
+        this.add.text(width - 215 + nerveBarW + 8, pPanelY + 57, `${audacity}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: audacity >= 50 ? '#88ccff' : '#5a6a8a'
+        });
+
+        // AUD > 50 glow on player sprite
+        if (audacity >= 50 && this.player) {
+            if (this.player.setTint) this.player.setTint(0x88aadd);
+        }
     }
 
-    updateBars() {
+    updateBars(animate = false) {
         this.state = HaggleManager.getState();
         this.roundText.setText(`ROUND ${this.state.round || 1} / ${this.state.maxRounds || 5}`);
 
         const patPercent = Math.max(0, this.state.patience / (this.state.maxPatience || 1));
         const patColor = patPercent > 0.5 ? 0x3a8a5c : patPercent > 0.25 ? 0xc9a84c : 0xc94040;
 
-        this.patBarFill.clear();
-        this.patBarFill.fillStyle(patColor, 1);
-        this.patBarFill.fillRect(120, 68, 150 * patPercent, 10);
-
         const asking = this.state.askingPrice || 1;
         const gapPercentRaw = this.state.gap / asking;
         const gapPercent = Math.min(1, Math.max(0, gapPercentRaw));
         const gapColor = gapPercent > 0.5 ? 0xc94040 : gapPercent > 0.1 ? 0xc9a84c : 0x3a8a5c;
 
-        this.gapBarFill.clear();
-        this.gapBarFill.fillStyle(gapColor, 1);
-        const pPanelY = this.scale.height - 250;
-        this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, 230 * gapPercent, 10);
+        if (animate) {
+            // Animate bars with tweened redraw
+            const targetPatW = 150 * patPercent;
+            const targetGapW = 230 * gapPercent;
+            const pPanelY = this.scale.height - 250;
+
+            // Use a dummy object to tween bar widths
+            const barState = {
+                patW: this._lastPatW ?? targetPatW,
+                gapW: this._lastGapW ?? targetGapW,
+            };
+
+            this.tweens.add({
+                targets: barState,
+                patW: targetPatW,
+                gapW: targetGapW,
+                duration: 600,
+                ease: 'Power2',
+                onUpdate: () => {
+                    this.patBarFill.clear();
+                    this.patBarFill.fillStyle(patColor, 1);
+                    this.patBarFill.fillRect(120, 68, barState.patW, 10);
+
+                    this.gapBarFill.clear();
+                    this.gapBarFill.fillStyle(gapColor, 1);
+                    this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, barState.gapW, 10);
+                },
+                onComplete: () => {
+                    this._lastPatW = targetPatW;
+                    this._lastGapW = targetGapW;
+                }
+            });
+        } else {
+            // Instant redraw (initial draw)
+            this.patBarFill.clear();
+            this.patBarFill.fillStyle(patColor, 1);
+            this.patBarFill.fillRect(120, 68, 150 * patPercent, 10);
+            this._lastPatW = 150 * patPercent;
+
+            this.gapBarFill.clear();
+            this.gapBarFill.fillStyle(gapColor, 1);
+            const pPanelY = this.scale.height - 250;
+            this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, 230 * gapPercent, 10);
+            this._lastGapW = 230 * gapPercent;
+        }
 
         this.gapText.setText(`${Math.round(gapPercent * 100)}%`);
         this.gapText.setColor(gapColor === 0xc94040 ? '#c94040' : gapColor === 0x3a8a5c ? '#3a8a5c' : '#c9a84c');
@@ -236,7 +307,7 @@ export class HaggleScene extends BaseScene {
 
         this.tacticsContainer.removeAll(true);
         this.tacticsContainer.setVisible(true);
-        this.speakerTab.setText('YOUR TURN');
+        this.speakerTab.setText('YOUR MOVE');
 
         const { width, height } = this.scale;
         const dlHeight = 150;
@@ -244,6 +315,15 @@ export class HaggleScene extends BaseScene {
 
         // WalkAway comes from HaggleManager.getAvailableTactics() already — do NOT push again
         const tactics = HaggleManager.getAvailableTactics();
+
+        // "Extend Hand" climax — when gap < 10% or patience < 2
+        const currentState = HaggleManager.getState();
+        const asking = currentState.askingPrice || 1;
+        const gapPct = (currentState.gap / asking) * 100;
+        if (gapPct < 10 || currentState.patience < 2) {
+            this._renderExtendHand(width, height, dlY, dlHeight, currentState);
+            return;
+        }
 
         // Draw 2x2 grid inside dialogue box area
         const cols = 2;
@@ -286,7 +366,8 @@ export class HaggleScene extends BaseScene {
             const bg = this.add.rectangle(x + btnW / 2, y + btnH / 2, btnW, btnH, typeBgColor)
                 .setStrokeStyle(1.5, typeBorderColor).setInteractive({ useHandCursor: true });
 
-            const txt = this.add.text(x + 10, y + btnH / 2 - 12, t.label, {
+            const displayLabel = (t.id !== 'walkAway') ? `Drop: ${t.label}` : t.label;
+            const txt = this.add.text(x + 10, y + btnH / 2 - 12, displayLabel, {
                 fontFamily: '"Press Start 2P"', fontSize: '10px', color: typeColor
             }).setOrigin(0, 0.5);
 
@@ -312,64 +393,387 @@ export class HaggleScene extends BaseScene {
         });
     }
 
+    _renderExtendHand(width, height, dlY, dlHeight, currentState) {
+        this.tacticsContainer.removeAll(true);
+        this.tacticsContainer.setVisible(true);
+        this.speakerTab.setText('═══ EXTEND HAND ═══');
+
+        // Dim the screen
+        const dimOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.4).setDepth(50);
+        this.tacticsContainer.add(dimOverlay);
+
+        const btnW = width - 120;
+        const btnH = dlHeight - 30;
+        const btnX = width / 2;
+        const btnY = dlY + dlHeight / 2;
+
+        const bg = this.add.rectangle(btnX, btnY, btnW, btnH, 0x1a2e1a, 0.95)
+            .setStrokeStyle(2, 0x3a8a5c).setInteractive({ useHandCursor: true }).setDepth(51);
+
+        const label = this.add.text(btnX, btnY - 14, '═══ EXTEND HAND ═══', {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#c9a84c'
+        }).setOrigin(0.5).setDepth(52);
+
+        const desc = this.add.text(btnX, btnY + 14, 'Accept the current terms and close the deal.', {
+            fontFamily: '"Playfair Display"', fontSize: '14px', color: '#8a8a9a'
+        }).setOrigin(0.5).setDepth(52);
+
+        this.tacticsContainer.add([bg, label, desc]);
+
+        // Heartbeat pulse tween
+        this.tweens.add({
+            targets: bg,
+            scaleX: 1.02, scaleY: 1.02,
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+
+        bg.on('pointerover', () => bg.setFillStyle(0x2a3e2a));
+        bg.on('pointerout', () => bg.setFillStyle(0x1a2e1a));
+
+        bg.on('pointerdown', () => {
+            bg.disableInteractive();
+            dimOverlay.destroy();
+
+            // 3-second dramatic pause
+            const pauseOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setDepth(60);
+            const pauseText = this.add.text(width / 2, height / 2, '...', {
+                fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#c9a84c'
+            }).setOrigin(0.5).setDepth(61);
+
+            this.tweens.add({
+                targets: pauseText, alpha: 0.3, duration: 500, yoyo: true, repeat: 2,
+                onComplete: () => {
+                    pauseOverlay.destroy();
+                    pauseText.destroy();
+                    // Auto-resolve at current gap price
+                    const result = HaggleManager.executeTactic('walkAway');
+                    // Force deal at current price
+                    const state = HaggleManager.getState();
+                    state.result = 'deal';
+                    state.finalPrice = (state.askingPrice || 0) - (state.gap || 0);
+                    state.resolved = true;
+                    this.state = state;
+                    this.renderResult();
+                }
+            });
+        });
+    }
+
+    /**
+     * Play the player-side "attack lunge" — sprite moves toward dealer then snaps back.
+     */
+    playerLunge(onMidpoint) {
+        if (!this.player) { onMidpoint?.(); return; }
+        const origX = this.player.x;
+        this.tweens.add({
+            targets: this.player,
+            x: origX + 40,
+            duration: 120,
+            ease: 'Power2',
+            yoyo: true,
+            onYoyo: () => onMidpoint?.(),
+        });
+    }
+
+    /**
+     * Flash "SUPER EFFECTIVE!" or "Not very effective..." text overlay.
+     */
+    showEffectivenessFlash(msg, color = '#c9a84c') {
+        const { width, height } = this.scale;
+        const txt = this.add.text(width / 2, height / 2 - 30, msg, {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color, align: 'center',
+            stroke: '#000000', strokeThickness: 4,
+        }).setOrigin(0.5).setDepth(210).setAlpha(0);
+
+        this.tweens.add({
+            targets: txt,
+            alpha: 1, y: height / 2 - 50,
+            duration: 300, ease: 'Back.easeOut',
+            hold: 600,
+            onComplete: () => {
+                this.tweens.add({ targets: txt, alpha: 0, y: height / 2 - 70, duration: 300, onComplete: () => txt.destroy() });
+            }
+        });
+    }
+
+    /**
+     * Dealer hit reaction — shake, tint, knockback based on severity.
+     */
+    dealerHitReaction(success, isSuperEffective) {
+        if (!this.dealer) return;
+        const origX = this.dealer.x;
+
+        if (success) {
+            const intensity = isSuperEffective ? 0.02 : 0.01;
+            const shakeCount = isSuperEffective ? 5 : 3;
+            this.cameras.main.shake(200, intensity);
+
+            // Knockback
+            this.tweens.add({
+                targets: this.dealer,
+                x: origX + (isSuperEffective ? 25 : 12),
+                duration: 60,
+                yoyo: true,
+                repeat: shakeCount,
+                onComplete: () => { this.dealer.x = origX; }
+            });
+
+            // Flash white then tint red
+            if (this.dealer.setTint) {
+                this.dealer.setTint(0xffffff);
+                this.time.delayedCall(100, () => {
+                    this.dealer.setTint(isSuperEffective ? 0xff4444 : 0xff8888);
+                    this.time.delayedCall(400, () => { try { this.dealer.clearTint(); } catch(e) {} });
+                });
+            }
+        } else {
+            // Dealer resists — smug bob up
+            this.tweens.add({
+                targets: this.dealer,
+                y: this.dealer.y - 8,
+                duration: 150,
+                yoyo: true,
+                ease: 'Sine.easeOut',
+            });
+        }
+    }
+
+    /**
+     * Enhanced tactic animation — multi-step, type-specific visual effects.
+     */
+    playTacticAnimation(animType, onComplete) {
+        const { width, height } = this.scale;
+        const dx = this.dealer?.x ?? width - 180;
+        const dy = this.dealer?.y ?? height / 2 - 60;
+        const px = this.player?.x ?? 180;
+        const py = this.player?.y ?? height - 200;
+
+        if (animType === 'coin') {
+            // FINANCIAL — raining coins with green screen tint
+            const tint = this.add.rectangle(width / 2, height / 2, width, height, 0x22aa44, 0.15).setDepth(190);
+            this.tweens.add({ targets: tint, alpha: 0, duration: 800, onComplete: () => tint.destroy() });
+
+            // Multiple coins cascade
+            const emojis = ['💰', '💵', '💎', '💰', '💵'];
+            emojis.forEach((e, i) => {
+                const coin = this.add.text(
+                    dx + Phaser.Math.Between(-60, 60),
+                    dy - 160 - i * 20,
+                    e, { fontSize: '28px' }
+                ).setOrigin(0.5).setDepth(195).setAlpha(0);
+
+                this.tweens.add({
+                    targets: coin,
+                    alpha: 1, y: dy - 20,
+                    duration: 400 + i * 80,
+                    delay: i * 60,
+                    ease: 'Bounce.easeOut',
+                    onComplete: () => {
+                        this.tweens.add({ targets: coin, alpha: 0, scale: 0.3, duration: 200, onComplete: () => coin.destroy() });
+                    }
+                });
+            });
+
+            this.playerLunge();
+            this.time.delayedCall(700, onComplete);
+
+        } else if (animType === 'shield') {
+            // LOGICAL — expanding hex-shield with data flash
+            this.playerLunge();
+
+            // Shield rings expanding outward
+            for (let i = 0; i < 3; i++) {
+                const ring = this.add.circle(px, py - 60, 30 + i * 15, 0x4488cc, 0).setStrokeStyle(2, 0x4488cc).setDepth(195);
+                this.tweens.add({
+                    targets: ring,
+                    radius: 80 + i * 20,
+                    alpha: 0,
+                    duration: 500,
+                    delay: i * 100,
+                    onComplete: () => ring.destroy(),
+                });
+                // Fade the stroke
+                this.tweens.add({ targets: ring, strokeAlpha: 0, duration: 500, delay: i * 100 });
+            }
+
+            // Data flash text
+            const dataText = this.add.text(px + 60, py - 80, '▓▒░ HOLD ░▒▓', {
+                fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#4488cc',
+            }).setDepth(196).setAlpha(0);
+            this.tweens.add({
+                targets: dataText, alpha: 1, duration: 150,
+                hold: 300,
+                onComplete: () => this.tweens.add({ targets: dataText, alpha: 0, duration: 200, onComplete: () => dataText.destroy() }),
+            });
+
+            this.time.delayedCall(600, onComplete);
+
+        } else if (animType === 'slash') {
+            // AGGRESSIVE — diagonal slash lines + red flash + heavy shake
+            this.playerLunge(() => {
+                // Red screen flash
+                const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xff2200, 0.6).setDepth(200);
+                this.tweens.add({ targets: flash, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
+
+                this.cameras.main.shake(250, 0.025);
+
+                // Slash lines across dealer
+                const slashGraphics = this.add.graphics().setDepth(199);
+                const slashLines = [
+                    { x1: dx - 60, y1: dy - 80, x2: dx + 60, y2: dy + 20 },
+                    { x1: dx + 60, y1: dy - 80, x2: dx - 60, y2: dy + 20 },
+                ];
+                slashLines.forEach((sl, i) => {
+                    this.time.delayedCall(i * 80, () => {
+                        slashGraphics.lineStyle(3, 0xffffff, 1);
+                        slashGraphics.lineBetween(sl.x1, sl.y1, sl.x2, sl.y2);
+                    });
+                });
+                this.tweens.add({
+                    targets: slashGraphics, alpha: 0, duration: 400, delay: 200,
+                    onComplete: () => slashGraphics.destroy(),
+                });
+
+                // Impact sparks
+                for (let i = 0; i < 6; i++) {
+                    const spark = this.add.text(
+                        dx + Phaser.Math.Between(-40, 40),
+                        dy - 30 + Phaser.Math.Between(-30, 30),
+                        '✦', { fontSize: '16px', color: '#ffaa00' }
+                    ).setOrigin(0.5).setDepth(201);
+                    this.tweens.add({
+                        targets: spark,
+                        x: spark.x + Phaser.Math.Between(-50, 50),
+                        y: spark.y + Phaser.Math.Between(-50, 50),
+                        alpha: 0, scale: 0,
+                        duration: 300 + i * 50,
+                        onComplete: () => spark.destroy(),
+                    });
+                }
+            });
+
+            this.time.delayedCall(700, onComplete);
+
+        } else if (animType === 'charm') {
+            // EMOTIONAL — hearts/stars cascade from player to dealer, pink tint
+            const tint = this.add.rectangle(width / 2, height / 2, width, height, 0xff88aa, 0.12).setDepth(190);
+            this.tweens.add({ targets: tint, alpha: 0, duration: 1000, onComplete: () => tint.destroy() });
+
+            this.playerLunge();
+
+            const charms = ['💖', '✨', '💫', '💖', '✨'];
+            charms.forEach((c, i) => {
+                const charm = this.add.text(px + 40, py - 80, c, { fontSize: '24px' }).setOrigin(0.5).setDepth(195).setAlpha(0);
+                this.tweens.add({
+                    targets: charm,
+                    x: dx + Phaser.Math.Between(-30, 30),
+                    y: dy - 40 + Phaser.Math.Between(-20, 20),
+                    alpha: { from: 0, to: 1 },
+                    duration: 500 + i * 80,
+                    delay: i * 100,
+                    ease: 'Sine.easeOut',
+                    onComplete: () => {
+                        this.tweens.add({ targets: charm, alpha: 0, scale: 1.5, duration: 200, onComplete: () => charm.destroy() });
+                    }
+                });
+            });
+
+            this.time.delayedCall(800, onComplete);
+
+        } else if (animType === 'shadow') {
+            // BLUFF — dramatic darkness, glowing eyes, reveal
+            const darkness = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0).setDepth(190);
+            this.tweens.add({ targets: darkness, alpha: 0.75, duration: 300 });
+
+            // Mysterious eyes appear
+            const eyeL = this.add.text(px + 20, py - 90, '👁', { fontSize: '20px' }).setOrigin(0.5).setDepth(195).setAlpha(0);
+            const eyeR = this.add.text(px + 50, py - 90, '👁', { fontSize: '20px' }).setOrigin(0.5).setDepth(195).setAlpha(0);
+            this.tweens.add({ targets: [eyeL, eyeR], alpha: 1, duration: 200, delay: 300 });
+
+            // Question marks swirl around dealer
+            this.time.delayedCall(500, () => {
+                const marks = ['❓', '❓', '❓'];
+                marks.forEach((m, i) => {
+                    const angle = (i / marks.length) * Math.PI * 2;
+                    const mark = this.add.text(dx, dy - 50, m, { fontSize: '18px' }).setOrigin(0.5).setDepth(195).setAlpha(0);
+                    this.tweens.add({
+                        targets: mark,
+                        x: dx + Math.cos(angle) * 50,
+                        y: dy - 50 + Math.sin(angle) * 30,
+                        alpha: 1,
+                        duration: 300,
+                        delay: i * 80,
+                        onComplete: () => {
+                            this.tweens.add({ targets: mark, alpha: 0, duration: 300, delay: 200, onComplete: () => mark.destroy() });
+                        }
+                    });
+                });
+            });
+
+            // Reveal — light burst
+            this.time.delayedCall(900, () => {
+                this.tweens.add({ targets: [darkness, eyeL, eyeR], alpha: 0, duration: 300, onComplete: () => { darkness.destroy(); eyeL.destroy(); eyeR.destroy(); } });
+            });
+
+            this.time.delayedCall(1200, onComplete);
+
+        } else {
+            // Fallback — simple flash
+            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.5).setDepth(200);
+            this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
+            this.time.delayedCall(400, onComplete);
+        }
+    }
+
     executeTactic(tacticId, label) {
         this.tacticsContainer.setVisible(false);
         this.speakerTab.setText('SYSTEM');
 
-        // Look up tactic definition for animType
-        let animType = 'slash'; // default
-        if (TACTICS[tacticId]) animType = TACTICS[tacticId].animType;
-        else {
+        // Look up tactic definition for animType and type
+        let animType = 'slash';
+        let tacticType = null;
+        if (TACTICS[tacticId]) {
+            animType = TACTICS[tacticId].animType;
+            tacticType = TACTICS[tacticId].type;
+        } else {
             const blueOpt = BLUE_OPTIONS.find(o => o.id === tacticId);
-            if (blueOpt) animType = blueOpt.animType || 'charm';
+            if (blueOpt) {
+                animType = blueOpt.animType || 'charm';
+                tacticType = blueOpt.type;
+            }
         }
 
-        // Tactic Animation Step
-        let animDuration = 400;
-        if (animType === 'coin') {
-            // Drop a coin
-            const coin = this.add.text(this.dealer.x, this.dealer.y - 120, '💰', { fontSize: '40px' }).setOrigin(0.5);
-            this.tweens.add({ targets: coin, y: this.dealer.y, alpha: 0, duration: 400, ease: 'Bounce.easeOut', onComplete: () => coin.destroy() });
-        } else if (animType === 'shield') {
-            // Blue flash shield
-            const shield = this.add.rectangle(this.player.x, this.player.y - 50, 100, 100, 0x4488cc, 0.5).setOrigin(0.5);
-            this.tweens.add({ targets: shield, scale: 1.5, alpha: 0, duration: 400, onComplete: () => shield.destroy() });
-        } else if (animType === 'slash') {
-            // Screen flash + slash
-            const flash = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0xffffff, 0.8).setDepth(200);
-            this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
-            this.cameras.main.shake(150, 0.015);
-        } else if (animType === 'charm') {
-            // Floating hearts
-            const heart = this.add.text(this.player.x, this.player.y - 80, '💖', { fontSize: '30px' }).setOrigin(0.5);
-            this.tweens.add({ targets: heart, x: this.dealer.x, y: this.dealer.y - 50, alpha: 0, duration: 600, ease: 'Sine.easeOut', onComplete: () => heart.destroy() });
-            animDuration = 600;
-        } else if (animType === 'shadow') {
-            // Dark fade
-            const shadow = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.7).setDepth(150);
-            this.tweens.add({ targets: shadow, alpha: 0, duration: 500, onComplete: () => shadow.destroy() });
-            animDuration = 500;
-        }
-
-        this.time.delayedCall(animDuration, () => {
+        // Play the multi-step animation, then resolve the tactic
+        this.playTacticAnimation(animType, () => {
             const result = HaggleManager.executeTactic(tacticId);
 
-            // Guard: if tactic was locked or state invalid, recover gracefully
             if (!result) {
                 console.warn('[HaggleScene] executeTactic returned null for:', tacticId);
                 this.renderTactics();
                 return;
             }
 
-            // Animate dealer reaction based on success
-            if (result.success) {
-                this.cameras.main.shake(200, 0.01);
-                this.tweens.add({ targets: this.dealer, x: this.dealer.x + 15, duration: 50, yoyo: true, repeat: 3 });
-                if (this.dealer.setTint) { this.dealer.setTint(0xff8888); this.time.delayedCall(300, () => this.dealer.clearTint()); }
-            } else {
-                // Dealer resists
-                this.tweens.add({ targets: this.dealer, y: this.dealer.y - 10, duration: 100, yoyo: true });
+            // Type effectiveness check
+            const isSuperEffective = result.effectivenessMessage?.toLowerCase().includes('super effective');
+            const isNotEffective = result.effectivenessMessage?.toLowerCase().includes('not very effective');
+
+            // Show effectiveness flash
+            if (isSuperEffective) {
+                this.showEffectivenessFlash('SUPER EFFECTIVE!', '#ffcc00');
+            } else if (isNotEffective) {
+                this.showEffectivenessFlash('Not very effective...', '#666688');
+            } else if (result.success) {
+                this.showEffectivenessFlash('Effective!', '#88cc88');
             }
+
+            // Dealer reaction
+            this.dealerHitReaction(result.success, isSuperEffective);
+
+            // Animate bars smoothly
+            this.updateBars(true);
 
             // Use real dealer dialogue from haggle_config instead of generic text
             const dealerDialogue = result.dialogue ? result.dialogue.replace(/"/g, '') : (result.success ? 'Interesting...' : 'I don\'t think so.');
@@ -380,16 +784,16 @@ export class HaggleScene extends BaseScene {
                 effectText = `✦ ${result.effectivenessMessage}`;
             }
 
-            this.playDialogue(`> ${effectText}${priceInfo}`, () => {
-                this.updateBars();
-                this.time.delayedCall(800, () => {
-                    this.speakerTab.setText(this.state.dealerName?.toUpperCase() || 'DEALER');
-                    // Check if game over
-                    if (result.dealReached || result.dealFailed) {
-                        this.playDialogue(result.finalDialogue ? result.finalDialogue.replace(/"/g, '') : 'We\'re done here.', () => this.renderResult());
-                    } else {
-                        this.playDialogue(dealerDialogue, () => this.renderTactics());
-                    }
+            this.time.delayedCall(400, () => {
+                this.playDialogue(`> ${effectText}${priceInfo}`, () => {
+                    this.time.delayedCall(800, () => {
+                        this.speakerTab.setText(this.state.dealerName?.toUpperCase() || 'DEALER');
+                        if (result.dealReached || result.dealFailed) {
+                            this.playDialogue(result.finalDialogue ? result.finalDialogue.replace(/"/g, '') : 'We\'re done here.', () => this.renderResult());
+                        } else {
+                            this.playDialogue(dealerDialogue, () => this.renderTactics());
+                        }
+                    });
                 });
             });
         });
@@ -421,7 +825,7 @@ export class HaggleScene extends BaseScene {
             this.cameras.main.shake(300, 0.02);
 
             // Art piece title
-            const titleText = this.add.text(width / 2, height / 2 - 80, '🎨  ACQUIRED', {
+            const titleText = this.add.text(width / 2, height / 2 - 80, '🤝  DEAL CLOSED', {
                 fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#c9a84c', align: 'center'
             }).setOrigin(0.5).setDepth(202).setAlpha(0);
             this.tweens.add({ targets: titleText, alpha: 1, y: height / 2 - 90, duration: 800, delay: 500, ease: 'Power2' });
@@ -477,7 +881,7 @@ export class HaggleScene extends BaseScene {
                 this.tweens.add({ targets: this.dealer, x: width + 200, alpha: 0, duration: 1000, ease: 'Power2' });
             }
 
-            const failHeader = this.add.text(width / 2, height / 2 - 60, '💨  WALKED AWAY', {
+            const failHeader = this.add.text(width / 2, height / 2 - 60, '💨  NO DEAL', {
                 fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#c94040', align: 'center'
             }).setOrigin(0.5).setDepth(202).setAlpha(0);
             this.tweens.add({ targets: failHeader, alpha: 1, duration: 600, delay: 400 });
@@ -524,6 +928,7 @@ export class HaggleScene extends BaseScene {
             try { HaggleManager.applyResult(); } catch (e) { /* no active haggle to apply */ }
             GameEventBus.emit(GameEvents.HAGGLE_END, { dealerType: this.state?.dealerTypeKey, result: 'force_exit', round: this.state?.round });
             this.showTerminalUI();
+            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
             if (this.ui) {
                 this.ui.popScreen();
             }
@@ -551,6 +956,7 @@ export class HaggleScene extends BaseScene {
             } else {
                 // Fall back to terminal dashboard
                 this.showTerminalUI();
+                GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                 if (this.ui) {
                     const { dashboardScreen } = await import('../terminal/screens/dashboard.js');
                     this.ui.replaceScreen(dashboardScreen(this.ui));

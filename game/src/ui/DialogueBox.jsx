@@ -4,23 +4,20 @@ import { useUIStore } from '../stores/uiStore.js';
 /**
  * DialogueBox — React overlay for MacDialogueScene.
  *
- * Subscribes to the Zustand store via useState + useEffect rather than the
- * Zustand hook wrapper (useUIStore(selector)), which internally calls
- * useCallback as an argument to useSyncExternalStore. In Vite's CJS-interop
- * bundle that causes "Cannot read properties of null (reading 'useCallback')"
- * because import_react.default resolves to null at hook-dispatch time.
- * Using direct store subscription sidesteps that entirely.
+ * Pokemon-style dialogue with dual portraits, typewriter text,
+ * speaker name labels, and space-to-advance.
+ *
+ * Uses inline styles (no Tailwind dependency).
  */
 export default function DialogueBox() {
     const [dialog, setDialog] = useState(() => useUIStore.getState().dialog);
 
-    // Subscribe to store changes for the lifetime of this component
     useEffect(() => {
         const unsub = useUIStore.subscribe((state) => setDialog(state.dialog));
         return unsub;
     }, []);
 
-    const [displayedText, setDisplayedText] = useState("");
+    const [displayedText, setDisplayedText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
 
     const currentStep = dialog.steps?.[dialog.currentStepIndex];
@@ -28,10 +25,10 @@ export default function DialogueBox() {
     // Typewriter effect
     useEffect(() => {
         if (!currentStep) return;
-        setDisplayedText("");
+        setDisplayedText('');
         setIsTyping(true);
 
-        const fullText = currentStep.text || "";
+        const fullText = currentStep.text || '';
         let i = 0;
         const interval = setInterval(() => {
             setDisplayedText(fullText.slice(0, i + 1));
@@ -40,15 +37,15 @@ export default function DialogueBox() {
                 setIsTyping(false);
                 clearInterval(interval);
             }
-        }, 30);
+        }, 25);
 
         return () => clearInterval(interval);
     }, [currentStep]);
 
-    // Keyboard listener for Spacebar to advance
+    // Keyboard: Space/Enter to advance or skip typewriter
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.code === 'Space') {
+            if (e.code === 'Space' || e.code === 'Enter') {
                 e.preventDefault();
                 if (isTyping) {
                     setIsTyping(false);
@@ -62,57 +59,168 @@ export default function DialogueBox() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isTyping, currentStep]);
 
-    // Determine layout based on speaker side
+    // Click/tap to advance
+    const handleClick = () => {
+        if (isTyping) {
+            setIsTyping(false);
+            setDisplayedText(currentStep.text);
+        } else {
+            useUIStore.getState().advanceDialogue();
+        }
+    };
+
     const isLeft = currentStep?.speakerSide === 'left';
 
-    // Render nothing when dialog is closed (all hooks above must be unconditional)
     if (!dialog.isOpen) return null;
 
     return (
-        <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-8 z-50">
-            {/* Dark overlay backdrop for readability */}
-            <div className="absolute inset-0 bg-black/30 w-full h-full -z-10 absolute pointer-events-none" />
+        <div style={styles.overlay} onClick={handleClick}>
+            {/* Dark backdrop */}
+            <div style={styles.backdrop} />
 
-            <div className="w-full max-w-4xl mx-auto flex gap-6 items-end relative pointer-events-auto">
+            {/* Bottom dialogue area */}
+            <div style={styles.dialogueArea}>
                 {/* Left Portrait */}
-                {dialog.leftSprite && isLeft && (
-                    <div className="w-32 h-32 bg-gray-900 border-2 border-white rounded shrink-0 flex items-center justify-center overflow-hidden">
-                        <img src={`/sprites/${dialog.leftSprite}`} className="h-full object-contain pixelated" alt="Left Speaker" />
-                    </div>
-                )}
-                {/* Empty spacer if right is speaking */}
-                {dialog.leftSprite && !isLeft && <div className="w-32 shrink-0 opacity-0" />}
+                <div style={{
+                    ...styles.portraitSlot,
+                    opacity: isLeft ? 1 : 0.3,
+                    transform: isLeft ? 'scale(1)' : 'scale(0.9)',
+                }}>
+                    {dialog.leftSprite && (
+                        <img
+                            src={`/sprites/${dialog.leftSprite}`}
+                            alt="Player"
+                            style={styles.portraitImg}
+                        />
+                    )}
+                </div>
 
                 {/* Text Box */}
-                <div className="flex-1 bg-black border-4 border-white p-6 relative rounded-lg shadow-[8px_8px_0_0_#fff]">
-                    {/* Name Tag */}
-                    <div className="absolute -top-5 left-4 bg-white text-black px-4 py-1 font-bold border-2 border-black">
-                        {currentStep?.name || "???"}
+                <div style={styles.textBox}>
+                    {/* Speaker Name Tag */}
+                    <div style={{
+                        ...styles.nameTag,
+                        left: isLeft ? 16 : 'auto',
+                        right: isLeft ? 'auto' : 16,
+                    }}>
+                        {currentStep?.name || '???'}
                     </div>
 
-                    {/* The Text */}
-                    <div className="font-mono text-xl text-white min-h-[5rem] leading-relaxed">
+                    {/* Dialogue Text */}
+                    <div style={styles.textContent}>
                         {displayedText}
-                        {isTyping && <span className="animate-pulse">_</span>}
+                        {isTyping && <span style={styles.cursor}>_</span>}
                     </div>
 
-                    {/* Next Indicator */}
+                    {/* Advance indicator */}
                     {!isTyping && (
-                        <div className="absolute bottom-4 right-4 animate-bounce text-white">
-                            ▼
-                        </div>
+                        <div style={styles.advanceIndicator}>▼</div>
                     )}
                 </div>
 
                 {/* Right Portrait */}
-                {dialog.rightSprite && !isLeft && (
-                    <div className="w-32 h-32 bg-gray-900 border-2 border-white rounded shrink-0 flex items-center justify-center overflow-hidden">
-                        <img src={`/sprites/${dialog.rightSprite}`} className="h-full object-contain pixelated" alt="Right Speaker" />
-                    </div>
-                )}
-                {/* Empty spacer if left is speaking */}
-                {dialog.rightSprite && isLeft && <div className="w-32 shrink-0 opacity-0" />}
+                <div style={{
+                    ...styles.portraitSlot,
+                    opacity: !isLeft ? 1 : 0.3,
+                    transform: !isLeft ? 'scale(1)' : 'scale(0.9)',
+                }}>
+                    {dialog.rightSprite && (
+                        <img
+                            src={`/sprites/${dialog.rightSprite}`}
+                            alt="NPC"
+                            style={styles.portraitImg}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );
 }
+
+const styles = {
+    overlay: {
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-end',
+        padding: '24px',
+        zIndex: 50,
+        pointerEvents: 'auto',
+        cursor: 'pointer',
+    },
+    backdrop: {
+        position: 'absolute',
+        inset: 0,
+        background: 'rgba(0,0,0,0.35)',
+        pointerEvents: 'none',
+    },
+    dialogueArea: {
+        position: 'relative',
+        width: '100%',
+        maxWidth: '900px',
+        margin: '0 auto',
+        display: 'flex',
+        gap: '16px',
+        alignItems: 'flex-end',
+    },
+    portraitSlot: {
+        width: 120,
+        height: 120,
+        flexShrink: 0,
+        background: '#0a0a14',
+        border: '3px solid #fff',
+        borderRadius: 6,
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'opacity 0.3s, transform 0.3s',
+    },
+    portraitImg: {
+        height: '100%',
+        objectFit: 'contain',
+        imageRendering: 'pixelated',
+    },
+    textBox: {
+        flex: 1,
+        position: 'relative',
+        background: '#0a0a14',
+        border: '4px solid #fff',
+        borderRadius: 8,
+        padding: '28px 20px 20px 20px',
+        boxShadow: '6px 6px 0 0 rgba(255,255,255,0.15)',
+        minHeight: 100,
+    },
+    nameTag: {
+        position: 'absolute',
+        top: -14,
+        background: '#fff',
+        color: '#0a0a14',
+        padding: '2px 12px',
+        fontFamily: '"Chicago", "Courier New", monospace',
+        fontSize: 13,
+        fontWeight: 700,
+        letterSpacing: 1,
+        border: '2px solid #0a0a14',
+    },
+    textContent: {
+        fontFamily: '"Chicago", "Courier New", monospace',
+        fontSize: 17,
+        color: '#fff',
+        lineHeight: 1.6,
+        minHeight: 60,
+    },
+    cursor: {
+        animation: 'dlg-blink 0.8s infinite',
+        color: '#c9a84c',
+    },
+    advanceIndicator: {
+        position: 'absolute',
+        bottom: 8,
+        right: 12,
+        color: '#fff',
+        fontSize: 14,
+        animation: 'dlg-bounce 1s infinite',
+    },
+};

@@ -459,14 +459,312 @@ Register `RoomScene` in `main.js` scene list.
 3. **Multi-Character Party** — Bring an NPC ally to a venue for different interaction options
 4. **Progressive Verb Reveal** — Start with LOOK + GO, unlock EXAMINE + TALK as reputation grows
 
-### From Roadmap Phases 3-5
+---
 
-- 15-20 artists (from current 8)
-- Additional character classes
-- Perk system (unlockable abilities)
-- Multi-location travel (5 cities)
-- Advanced auction mechanics (English, sealed bid, one-offer)
-- 2-3 actions per turn
-- Save/load persistence
-- Sound design + visual polish
-- itch.io release
+## V2: Production-Grade System Blueprints
+
+> **Context:** Everything above covers the V1 room/dialogue system. This section covers the V2 architecture overhaul: new state management, a professional narrative engine, the content management studio, and the market simulation engine. These are all documented in their respective `_Spec.md` files; this section provides **implementation-ready code patterns and error handling** for ClaudeCode.
+
+### Critical-Path Build Order
+
+> [!CAUTION]
+> Systems MUST be built in this dependency order. Building out of sequence creates phantom dependencies.
+
+```
+1. Zustand Stores (foundation — everything reads from these)
+   ↓
+2. inkjs SceneEngine (narrative core — renders all dialogue/events)
+   ↓  
+3. CalendarStore (time system — triggers events on week advance)
+   ↓
+4. PhoneStore (notifications — interrupts from NPCs)
+   ↓
+5. EventRegistry (triggers + consequences — reads from Calendar, fires Scenes)
+   ↓
+6. NPCRegistry (memory + schedule — reads from Events, writes to Phone)
+   ↓
+7. MarketEngine (price recalc — reads era modifiers from Events)
+   ↓
+8. InventoryStore (item values — reads from Market)
+   ↓
+9. Content Management Studio (dev tooling — reads from ALL stores)
+```
+
+---
+
+### V2.1 — Zustand Store Architecture
+
+**Package:** `zustand@5`, `immer@10`
+
+All V2 game state lives in modular Zustand stores communicating via a central `GameTick` function (never via direct cross-store subscriptions, which cause circular dependency bugs).
+
+**Critical Pattern: The `immer` middleware**
+```javascript
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+
+export const useGameStore = create(
+    immer((set, get) => ({
+        currentWeek: 1,
+        currentYear: 1980,
+        capital: 50000,
+        stats: { hyp: 50, tst: 50, aud: 50, acc: 50 },
+        
+        advanceWeek: () => set((state) => {
+            state.currentWeek += 1;
+            if (state.currentWeek > 52) {
+                state.currentWeek = 1;
+                state.currentYear += 1;
+            }
+        }),
+        
+        setCapital: (val) => set((state) => { state.capital = val; }),
+        getTime: () => ({ week: get().currentWeek, year: get().currentYear }),
+    }))
+);
+```
+
+**Error Handling:**
+| Risk | Mitigation |
+|---|---|
+| Store accessed before hydration | Default values always present. `persist` middleware for save/load. |
+| Circular subscriptions | **Rule:** Stores never `subscribe()` to each other. The `GameTick` function calls them in sequence. |
+| localStorage quota exceeded | Wrap `persist` in try/catch. Disable autosave, warn user. |
+| State corruption from rapid mutations | Immer makes all mutations produce new immutable objects. Race conditions impossible. |
+
+---
+
+### V2.2 — Scene Engine (inkjs Integration)
+
+**Package:** `inkjs@2.3`
+
+**Why inkjs replaces our custom JSON branching parser:**
+- `.ink` scripts read like screenplays — dramatically faster for Seb to author than nested JSON
+- Handles branching, variables, conditionals, loops, and functions natively
+- Variable observation enables bidirectional sync with Zustand
+- Used by *80 Days*, *Heaven's Vault* — battle-tested in shipping games
+- The compiler can be excluded from production builds (build-time only)
+
+**The Core Loop (pulled from actual inkjs API):**
+
+```javascript
+// src/engines/SceneEngine.js
+import { Story } from 'inkjs';
+
+export class SceneEngine {
+    constructor(compiledInkJson) {
+        this.story = new Story(compiledInkJson);
+        this._bindGameVariables();
+    }
+
+    // Advance story to next choice point. Returns renderable state.
+    continue() {
+        const paragraphs = [];
+        const allTags = [];
+        while (this.story.canContinue) {
+            const line = this.story.Continue();
+            if (line.trim()) paragraphs.push(line.trim());
+            allTags.push(...(this.story.currentTags || []));
+        }
+        return {
+            text: paragraphs,
+            choices: this.story.currentChoices.map((c, i) => ({
+                index: i, text: c.text, tags: c.tags || []
+            })),
+            tags: allTags,
+            isEnd: !this.story.canContinue && this.story.currentChoices.length === 0
+        };
+    }
+
+    // Player makes a choice. Validates input.
+    choose(index) {
+        if (index < 0 || index >= this.story.currentChoices.length) {
+            console.error(`[SceneEngine] Bad choice: ${index}`);
+            return this.continue(); // Re-render current state as fallback
+        }
+        this.story.ChooseChoiceIndex(index);
+        return this.continue();
+    }
+
+    // Jump to a named section (knot). Used by EventRegistry routing.
+    goToKnot(name) {
+        try {
+            this.story.ChoosePathString(name);
+        } catch (e) {
+            console.error(`[SceneEngine] Knot "${name}" missing, falling back to start`);
+            this.story.ChoosePathString('start');
+        }
+        return this.continue();
+    }
+
+    // Sync game stats INTO ink before scene starts
+    _bindGameVariables() {
+        const gs = useGameStore.getState();
+        const vars = this.story.variablesState;
+        vars['player_capital'] = gs.capital || 0;
+        vars['player_aud'] = gs.stats?.aud || 0;
+        vars['player_tst'] = gs.stats?.tst || 0;
+        vars['player_acc'] = gs.stats?.acc || 0;
+        
+        // Observe ink → Zustand (bidirectional)
+        this.story.ObserveVariable('player_capital', (_, val) => {
+            useGameStore.getState().setCapital(val);
+        });
+    }
+
+    // Save/load for save games
+    saveState()      { return this.story.state.toJson(); }
+    loadState(json)  {
+        try { this.story.state.LoadJson(json); }
+        catch (e) { console.error('[SceneEngine] Corrupt save, restarting scene'); }
+    }
+
+    destroy() { this.story = null; }
+}
+```
+
+**What `.ink` scripts look like (author-friendly format):**
+```ink
+// scenes/boom_room.ink
+VAR player_aud = 0
+
+=== start ===
+The bass is rattling your molars. Margaux slides a folder across the table.
+# background: club_vip_01.jpg
+# npc: npc_margaux
+
++ [Open the folder.]
+    -> reveal_forgery
++ {player_aud >= 50} [Refuse to look.]
+    -> margaux_angry
+
+=== reveal_forgery ===
+Inside: certificates for three Basquiat sketches. They look... almost real.
+# trigger: MINIGAME_HAGGLE
+# target: npc_margaux
+-> END
+```
+
+**How tags drive the game (the IPC system):**
+When inkjs outputs `# trigger: MINIGAME_HAGGLE`, the React render layer parses the tag and mounts the Haggle Battle component instead of continuing dialogue. Tags are the communication protocol between the narrative engine and the game systems:
+
+| Tag Pattern | System Triggered |
+|---|---|
+| `# background: <file>` | React renders new background image |
+| `# npc: <npcId>` | React renders NPC portrait from registry |
+| `# trigger: MINIGAME_HAGGLE` | Mounts HaggleBattle component |
+| `# consequence: <effectId>` | Pushes to ConsequenceScheduler |
+| `# phone_message: <msgId>` | Pushes message to PhoneStore |
+| `# market_shift: <tag>:<mult>` | Injects modifier into MarketEngine |
+| `# unlock_event: <eventId>` | Adds event to CalendarStore |
+
+**Error Handling:**
+| Risk | Mitigation |
+|---|---|
+| `.ink.json` fails to load | try/catch in fetch. Show "Scene Unavailable" fallback with "Return to Dashboard" button. |
+| Choice index out of bounds | `choose()` validates and falls back to re-render. |
+| Ink variable not found | Optional chaining + default to 0. Log warning, don't throw. |
+| Story reaches END unexpectedly | Return `{ isEnd: true }`. React routes back to Calendar. |
+| Tags contain malformed data | Defensive `parseTag()` helper: split on `:`, validate both sides. |
+| Corrupted save state | try/catch on `LoadJson()`. On failure, restart scene from beginning. |
+
+---
+
+### V2.3 — The Master Game Tick
+
+> [!IMPORTANT]
+> This is the single most critical function. If it breaks, the entire game freezes.
+
+```javascript
+// src/engines/GameTick.js
+export function executeWeekTick() {
+    const time = useGameStore.getState().getTime();
+    useGameStore.getState().advanceWeek();
+    const newTime = useGameStore.getState().getTime();
+
+    // Each step wrapped in try/catch — one system crash must NOT break the tick
+    let triggeredEvents = [];
+    
+    try { triggeredEvents = useCalendarStore.getState().getTriggeredEvents(newTime.week, newTime.year); }
+    catch (e) { console.error('[Tick] Calendar failed:', e); }
+    
+    try { useConsequenceStore.getState().fire(newTime.week, newTime.year); }
+    catch (e) { console.error('[Tick] Consequences failed:', e); }
+    
+    try { useMarketStore.getState().recalculate(newTime); }
+    catch (e) { console.error('[Tick] Market failed:', e); }
+    
+    try { useNPCStore.getState().tickAutonomous(newTime); }
+    catch (e) { console.error('[Tick] NPC tick failed:', e); }
+    
+    try { useInventoryStore.getState().revalueAll(); }
+    catch (e) { console.error('[Tick] Inventory revalue failed:', e); }
+
+    return triggeredEvents;
+}
+```
+
+**Error Handling:**
+| Risk | Mitigation |
+|---|---|
+| Any sub-system throws | Each step in its own try/catch. Skip the broken system, continue the tick, log the error. |
+| Double-tick from rapid clicks | `tickLock` boolean. Second call is queued, not ignored. |
+| NPC tick takes too long (100+ NPCs) | Only tick NPCs the player interacted with in last 10 weeks. Dormant NPCs are frozen. |
+| Week 52 → Week 1 year rollover | Handled explicitly in `advanceWeek()`. Tested with `week === 52` assertion. |
+
+---
+
+### V2.4 — CMS: React Flow Wiring Inspector
+
+**Package:** `@xyflow/react@12`
+
+**Pulled from actual React Flow README:**
+
+```jsx
+import { ReactFlow, MiniMap, Controls, Background, 
+         useNodesState, useEdgesState, addEdge } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+// Each entity category gets a custom node type
+const nodeTypes = { npc: NPCNode, event: EventNode, item: ItemNode, scene: SceneNode };
+
+function WiringInspector({ entities }) {
+    const initialNodes = entities.map((e, i) => ({
+        id: e.id, type: e.entityType,
+        position: { x: (i % 5) * 250, y: Math.floor(i / 5) * 150 },
+        data: e
+    }));
+    const initialEdges = extractRelationshipEdges(entities);
+
+    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    const onConnect = useCallback(
+        (params) => setEdges((eds) => addEdge(params, eds)), [setEdges]
+    );
+
+    return (
+        <ReactFlow nodes={nodes} edges={edges}
+            onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+            onConnect={onConnect} nodeTypes={nodeTypes} fitView>
+            <MiniMap />
+            <Controls />
+            <Background variant="dots" gap={12} size={1} />
+        </ReactFlow>
+    );
+}
+```
+
+---
+
+### V2 Dependencies
+
+```bash
+npm install zustand immer inkjs @xyflow/react
+```
+
+| Package | Size | Purpose |
+|---|---|---|
+| `zustand@5` | ~2KB | All state management |
+| `immer@10` | ~16KB | Immutable mutations |
+| `inkjs@2.3` | ~200KB | Narrative engine (replaces thousands of lines of custom branching) |
+| `@xyflow/react@12` | ~150KB | CMS visual node editor |

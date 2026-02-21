@@ -200,14 +200,24 @@ export function configureGameDebugAPI(ui) {
             return { started: true, round: state.round, maxRounds: state.maxRounds };
         },
 
-        /** Start a dialogue scene directly */
+        /** Start a dialogue scene directly — uses a real multi-line conversation */
         startDialogue: (opts = {}) => {
             const defaults = {
                 bgKey: 'bg_gallery_main_1bit_1771587911969.png',
                 leftSpriteKey: 'test_legacy_bayer.png',
                 rightSpriteKey: 'portrait_it_girl_1bit.png',
                 dialogueSequence: [
-                    { name: 'Test', speakerSide: 'right', text: 'Hello from the test API.' }
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'Welcome to Ross Gallery. I\'m Elena.' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'She says it with practised warmth, but her eyes do a quick scan — shoes, watch, posture. She\'s already categorising you.' },
+                    { name: 'You', speakerSide: 'left', text: 'I\'m interested in the new exhibition. What can you tell me?' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'This is Yuki\'s strongest body of work yet. She spent three months in Kyoto, and you can feel it — the restraint, the negative space.' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'Every piece is a conversation between what\'s there and what isn\'t.' },
+                    { name: 'You', speakerSide: 'left', text: 'Tell me about Yuki\'s trajectory.' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'She\'s got a show at Palais de Tokyo next spring. A collector in Basel bought four pieces last year. The Hammer Museum is circling.' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'Honestly? If you\'re going to buy Yuki, buy now. In eighteen months, these prices will look like a joke.' },
+                    { name: 'You', speakerSide: 'left', text: 'I\'d like to see a price list.' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'Two small Tanakas — $12K and $18K. Last works from this body. Next show prices will be higher.' },
+                    { name: 'Elena Ross', speakerSide: 'right', text: 'It was lovely meeting you. Don\'t be a stranger — openings are every six weeks.' },
                 ],
             };
             const data = { ui, ...defaults, ...opts };

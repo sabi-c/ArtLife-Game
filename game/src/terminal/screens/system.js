@@ -56,41 +56,45 @@ export function saveLoadScreen(ui, mode = 'save') {
             DIV(),
         ];
 
-        if (!isSave && slots.length === 0) {
+        const filledSlots = slots.filter(s => s !== null);
+        if (!isSave && filledSlots.length === 0) {
             lines.push(DIM('No saved games found.'));
         }
 
         const options = [];
 
-        // Always show 3 slots for saving, or just the filled slots for loading
-        const displayCount = isSave ? 3 : Math.max(slots.length, 1);
+        // Show all 5 slots for saving, or just filled slots for loading
+        const maxSlots = 5;
 
-        for (let i = 0; i < displayCount; i++) {
-            const slot = slots.find(s => s.slot === i);
+        for (let i = 0; i < maxSlots; i++) {
+            const slot = slots[i]; // null if empty, { meta, slotIndex } if filled
 
-            if (slot) {
-                const date = new Date(slot.timestamp).toLocaleString();
-                const weekStr = `Week ${slot.week}`;
-                const nameStr = slot.characterName || 'Unknown';
-                const label = `Slot ${i + 1}: ${nameStr} — ${weekStr} (${date})`;
+            if (slot && slot.meta) {
+                const date = new Date(slot.meta.savedAt).toLocaleString();
+                const weekStr = `Week ${slot.meta.week}`;
+                const nameStr = slot.meta.characterName || 'Unknown';
+                const cashStr = `$${(slot.meta.cash || 0).toLocaleString()}`;
+                const label = `Slot ${i + 1}: ${nameStr} — ${weekStr} — ${cashStr} (${date})`;
+                const capturedIdx = i;
 
                 options.push({
                     label,
                     action: () => {
                         if (isSave) {
-                            ui.pushScreen(saveConfirmScreen(ui, i, slot));
+                            ui.pushScreen(saveConfirmScreen(ui, capturedIdx, slot.meta));
                         } else {
-                            TerminalAPI.initGame.loadGame(i);
+                            TerminalAPI.initGame.loadGame(capturedIdx);
                             ui.popScreen(); // close load screen
                             ui.popScreen(); // close pause menu if there
                         }
                     }
                 });
             } else if (isSave) {
+                const capturedIdx = i;
                 options.push({
                     label: `Slot ${i + 1}: [ Empty ]`,
                     action: () => {
-                        TerminalAPI.initGame.saveGame(i);
+                        TerminalAPI.initGame.saveGame(capturedIdx);
                         ui.showNotification('Game saved successfully!', '💾');
                         ui.popScreen();
                     }
@@ -98,7 +102,7 @@ export function saveLoadScreen(ui, mode = 'save') {
             }
         }
 
-        if (isSave && slots.length > 0) {
+        if (isSave && filledSlots.length > 0) {
             options.push({
                 label: '🗑️ Delete a save',
                 action: () => ui.pushScreen(deleteSlotScreen(ui))
@@ -120,8 +124,8 @@ function saveConfirmScreen(ui, slotIndex, existingMeta) {
             H('OVERWRITE SAVE?'),
             DIV(),
             RED(`This will overwrite Slot ${slotIndex + 1}:`),
-            DIM(`${existingMeta.characterName} — Week ${existingMeta.week}`),
-            DIM(`Saved: ${new Date(existingMeta.timestamp).toLocaleString()}`),
+            DIM(`${existingMeta.characterName || 'Unknown'} — Week ${existingMeta.week}`),
+            DIM(`Saved: ${new Date(existingMeta.savedAt).toLocaleString()}`),
             BLANK(),
             'Are you sure?'
         ];
@@ -156,17 +160,18 @@ function deleteSlotScreen(ui) {
             DIV()
         ];
 
-        if (slots.length === 0) {
+        const filledSlots = slots.filter(s => s !== null);
+        if (filledSlots.length === 0) {
             lines.push(DIM('No saves to delete.'));
         }
 
-        const options = slots.map(slot => {
-            const date = new Date(slot.timestamp).toLocaleString();
+        const options = slots.filter(s => s !== null).map(slot => {
+            const date = new Date(slot.meta.savedAt).toLocaleString();
             return {
-                label: `🗑️ Delete Slot ${slot.slot + 1}: ${slot.characterName || 'Unknown'} (Week ${slot.week})`,
+                label: `Delete Slot ${slot.slotIndex + 1}: ${slot.meta.characterName || 'Unknown'} (Week ${slot.meta.week})`,
                 action: () => {
-                    if (TerminalAPI.initGame.deleteSave) TerminalAPI.initGame.deleteSave(slot.slot);
-                    ui.showNotification(`Slot ${slot.slot + 1} deleted.`, '🗑️');
+                    if (TerminalAPI.initGame.deleteSave) TerminalAPI.initGame.deleteSave(slot.slotIndex);
+                    ui.showNotification(`Slot ${slot.slotIndex + 1} deleted.`, '');
                     ui.replaceScreen(deleteSlotScreen(ui));
                 }
             };

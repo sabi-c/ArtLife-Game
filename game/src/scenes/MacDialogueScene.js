@@ -1,5 +1,6 @@
 import { BaseScene } from './BaseScene.js';
 import { useUIStore } from '../stores/uiStore.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 export class MacDialogueScene extends BaseScene {
     constructor() {
@@ -54,6 +55,17 @@ export class MacDialogueScene extends BaseScene {
                 rightSprite: this.dialogueData.rightSpriteKey,
                 callback: () => { this.endDialogue(); }
             });
+
+            // ── ESC key force-exit (safety hatch) ──
+            this.input.keyboard.on('keydown-ESC', this.forceExit, this);
+
+            // Visible back button (top-right)
+            const backBtn = this.add.text(camW - 16, 12, '[ ESC: BACK ]', {
+                fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#7a7a8a'
+            }).setOrigin(1, 0).setDepth(102).setInteractive({ useHandCursor: true });
+            backBtn.on('pointerover', () => backBtn.setColor('#c9a84c'));
+            backBtn.on('pointerout', () => backBtn.setColor('#7a7a8a'));
+            backBtn.on('pointerdown', () => this.forceExit());
         } catch (err) {
             window.ArtLife?.recordSceneError('MacDialogueScene', err);
             this.endDialogue(true); // Bail out gracefully
@@ -76,6 +88,7 @@ export class MacDialogueScene extends BaseScene {
         this.cameras.main.fadeOut(800, 0, 0, 0);
         this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
             this.showTerminalUI();
+            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
 
             if (!isForceExit && this.dialogueData.onComplete) {
                 this.dialogueData.onComplete();
@@ -127,9 +140,14 @@ export class MacDialogueScene extends BaseScene {
             this.input.off('pointerdown');
 
             // Re-apply state consequences for reward
-            import('../managers/GameState.js').then(({ GameState }) => {
-                if (GameState.state && this.dialogueData.rewardItem) {
-                    GameState.state.portfolio.push(this.dialogueData.rewardItem);
+            import('../stores/inventoryStore.js').then(({ useInventoryStore }) => {
+                if (this.dialogueData.rewardItem) {
+                    useInventoryStore.getState().addItem({
+                        id: this.dialogueData.rewardItem.name.replace(/\s+/g, '_').toLowerCase(),
+                        name: this.dialogueData.rewardItem.name,
+                        type: this.dialogueData.rewardItem.type || 'Dialogue Reward',
+                        acquiredAt: Date.now()
+                    });
                 }
             });
 

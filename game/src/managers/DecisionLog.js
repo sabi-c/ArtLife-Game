@@ -1,5 +1,6 @@
 import { GameState } from './GameState.js';
 import { MarketManager } from './MarketManager.js';
+import { generateId } from '../utils/id.js';
 
 /**
  * DecisionLog — Sir Brante-style decision journal
@@ -31,7 +32,7 @@ export class DecisionLog {
         const state = GameState.state;
 
         DecisionLog.entries.push({
-            id: `dec_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            id: generateId('dec'),
             week: state.week,
             eventId: decision.eventId,
             eventTitle: decision.eventTitle,

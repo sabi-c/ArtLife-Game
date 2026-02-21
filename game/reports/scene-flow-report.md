@@ -1,6 +1,6 @@
 # ArtLife — Scene Flow Test Report
 
-**Date:** 2026-02-21T06:37:34.966Z
+**Date:** 2026-02-21T09:41:28.295Z
 **Result:** ✅ ALL PASS  (53/53)
 
 ## Check Results
@@ -12,7 +12,7 @@
 | 3 | Terminal is hidden during TitleScene | ✅ |  |
 | 4 | CharacterSelectScene activated after clicking title | ✅ |  |
 | 5 | CharacterSelectScene is accessible via Phaser API | ✅ |  |
-| 6 | 3 character cards rendered (got 3) | ✅ |  |
+| 6 | 4 character cards rendered (got 4) | ✅ |  |
 | 7 | Arrow right: index moved to 1 (got 1) | ✅ |  |
 | 8 | Arrow left: index back to 0 (got 0) | ✅ |  |
 | 9 | Space key missed JustDown frame — using direct API fallback (confirmSelection) | ⚠️ |  |
@@ -21,19 +21,19 @@
 | 12 | GameState initialised — week 1 | ✅ |  |
 | 13 | Starting cash: $250,000 | ✅ |  |
 | 14 | Starting city: new-york | ✅ |  |
-| 15 | Dashboard has 13 menu options | ✅ |  |
+| 15 | Dashboard has 14 menu options | ✅ |  |
 | 16 | "Visit Venue" in dashboard menu | ✅ |  |
 | 17 | "Advance Week" in dashboard menu | ✅ |  |
-| 18 | Terminal rendered content (855 chars) | ✅ |  |
+| 18 | Terminal rendered content (2105 chars) | ✅ |  |
 | 19 | Advance returned: "Advanced 1 week(s). Now week 2" | ✅ |  |
 | 20 | GameState.week is now 2 (got 2) | ✅ |  |
-| 21 | game.start(0): "Started as THE RICH KID" | ✅ |  |
+| 21 | game.start(0): "Started as THE NEPO BABY" | ✅ |  |
 | 22 | GameState initialised via API — week 1 | ✅ |  |
 | 23 | Cash: $250,000 | ✅ |  |
 | 24 | startHaggle() returned started=true | ✅ |  |
 | 25 | HaggleScene became active | ✅ |  |
 | 26 | Haggle maxRounds: 5 | ✅ |  |
-| 27 | Dealer type: hustler | ✅ |  |
+| 27 | Dealer type: collector | ✅ |  |
 | 28 | Phase is "opening" (got "opening") | ✅ |  |
 | 29 | Canvas visible during HaggleScene | ✅ |  |
 | 30 | Terminal restored after HaggleScene exit | ✅ |  |

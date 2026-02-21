@@ -1,5 +1,7 @@
 import { ARTISTS } from '../data/artists.js';
 import { GameState } from './GameState.js';
+import { shuffle } from '../utils/shuffle.js';
+import { generateId } from '../utils/id.js';
 
 /**
  * Market simulation engine
@@ -64,14 +66,8 @@ export class MarketManager {
             MarketManager.addNewWorkToMarket();
         }
 
-        // Natural marketHeat decay — cools 1 point per turn
-        if (state.marketHeat > 0) {
-            state.marketHeat = Math.max(0, state.marketHeat - 1);
-        }
-        // Natural suspicion decay — cools 0.5 per turn
-        if (state.suspicion > 0) {
-            state.suspicion = Math.max(0, state.suspicion - 0.5);
-        }
+        // NOTE: marketHeat and suspicion decay moved to WeekEngine._decayAntiResources()
+        // MarketManager should only manage the market, not GameState anti-resources.
     }
 
     static calculatePrice(work) {
@@ -108,7 +104,7 @@ export class MarketManager {
     static getAvailableWorks() {
         // Show 4 works on the market each turn
         const onMarket = MarketManager.works.filter((w) => w.onMarket);
-        const shuffled = onMarket.sort(() => Math.random() - 0.5);
+        const shuffled = shuffle(onMarket);
         return shuffled.slice(0, 4);
     }
 
@@ -122,7 +118,7 @@ export class MarketManager {
         const title = `${titles[Math.floor(Math.random() * titles.length)]} #${Math.floor(Math.random() * 999)}`;
 
         MarketManager.works.push({
-            id: `work_gen_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            id: generateId('work_gen'),
             title: title,
             artistId: artist.id,
             artist: artist.name,

@@ -44,7 +44,7 @@ export class IntroScene extends Phaser.Scene {
             "Every week, you have three actions. Spend them carefully.",
             "Buy low. Build reputation. Know when to walk away.",
             "The market rewards patience — and punishes hesitation.",
-            "Now. Tell me who you are.",
+            "Now. Let's open your file.",
         ];
 
         // ── Main text ──
@@ -79,7 +79,7 @@ export class IntroScene extends Phaser.Scene {
         }).setOrigin(1, 0).setDepth(5);
 
         // ── ESC hint ──
-        this.add.text(16, height - 20, 'ESC — skip', {
+        this.add.text(16, height - 20, 'ESC — skip briefing', {
             fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#333344',
         }).setOrigin(0, 1).setDepth(5);
 
@@ -172,9 +172,27 @@ export class IntroScene extends Phaser.Scene {
         this.input.keyboard.removeAllKeys();
         this.input.removeAllListeners();
 
-        this.cameras.main.fadeOut(700, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('CharacterSelectScene', { ui: this.ui });
+        // "ACCESS GRANTED" flash
+        const { width, height } = this.scale;
+        const flash = this.add.text(width / 2, height / 2, 'ACCESS GRANTED', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '18px',
+            color: '#ffffff',
+            align: 'center',
+        }).setOrigin(0.5).setAlpha(0).setDepth(20);
+
+        this.tweens.add({
+            targets: flash,
+            alpha: 1,
+            duration: 150,
+            yoyo: true,
+            hold: 300,
+            onComplete: () => {
+                this.cameras.main.fadeOut(500, 0, 0, 0);
+                this.cameras.main.once('camerafadeoutcomplete', () => {
+                    this.scene.start('CharacterSelectScene', { ui: this.ui });
+                });
+            }
         });
     }
 

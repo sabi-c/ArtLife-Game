@@ -1,14 +1,40 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Phaser from 'phaser';
 
 import { createPhaserGame } from './phaserInit.js';
 import DialogueBox from './ui/DialogueBox.jsx';
 import PlayerDashboard from './ui/PlayerDashboard.jsx';
 import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
+import { GameEventBus, GameEvents } from './managers/GameEventBus.js';
+import ScenePlayer from './ui/ScenePlayer.jsx';
+import InventoryDashboard from './ui/InventoryDashboard.jsx';
+import TerminalLogin from './ui/TerminalLogin.jsx';
+import AdminDashboard from './ui/AdminDashboard.jsx';
+import { VIEW } from './constants/views.js';
+import { GameState } from './managers/GameState.js';
 
 export default function App() {
     const [game, setGame] = useState(null);
     const [phaserError, setPhaserError] = useState(null);
+    const [activeView, setActiveView] = useState(() => {
+        // E2E Test Backdoor: skip straight to Phaser
+        const params = new URLSearchParams(window.location.search);
+        return params.get('skipBoot') ? VIEW.PHASER : VIEW.BOOT;
+    });
+    const [viewPayload, setViewPayload] = useState(null);
+    const [showAdmin, setShowAdmin] = useState(false);
+    const autoResumedRef = useRef(false);
+
+    // Global hotkey for Admin Dashboard (Backtick)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === '`' || e.key === '~') {
+                setShowAdmin(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     useEffect(() => {
         let phaserInstance;
@@ -18,6 +44,45 @@ export default function App() {
         } catch (err) {
             console.error('[App] Phaser init failed:', err);
             setPhaserError(err.message || 'Phaser failed to initialise.');
+            return () => {};
+        }
+
+        // ── Session Persistence / Test Backdoor ──
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('skipBoot')) {
+            // Test runner wants to boot directly into TitleScene
+            if (window.startPhaserGame) window.startPhaserGame('new');
+            setActiveView(VIEW.PHASER);
+        } else {
+            // Auto-resume from most recent save slot
+            try {
+                const slot = GameState.getMostRecentSlot();
+                if (slot !== null && !autoResumedRef.current) {
+                    const loaded = GameState.load(slot);
+                    if (loaded) {
+                        autoResumedRef.current = true;
+                        const ui = window.TerminalUIInstance;
+                        if (ui?.container) {
+                            ui.container.style.display = '';
+                            import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
+                                ui.pushScreen(dashboardScreen(ui));
+                            }).catch(err => {
+                                console.error('[App] Failed to load dashboard:', err);
+                                setActiveView(VIEW.BOOT); // Fallback to login
+                            });
+                            // Hide canvas — terminal only
+                            if (phaserInstance?.canvas) {
+                                phaserInstance.canvas.style.display = 'none';
+                            }
+                            setActiveView(VIEW.TERMINAL);
+                        }
+                        // If UI wasn't available, fall through to BOOT (default)
+                    }
+                }
+            } catch (err) {
+                console.error('[App] Auto-resume failed:', err);
+                // Fall through to BOOT view (default)
+            }
         }
 
         return () => {
@@ -25,17 +90,63 @@ export default function App() {
         };
     }, []);
 
-    const [showDashboard, setShowDashboard] = useState(false);
+    // When Terminal Login finishes, we start the game pipeline
+    const handleLoginComplete = ({ action }) => {
+        if (action === 'load') {
+            // Load path: show terminal dashboard (not React PlayerDashboard)
+            const ui = window.TerminalUIInstance;
+            if (ui?.container) {
+                ui.container.style.display = '';
+                import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
+                    ui.pushScreen(dashboardScreen(ui));
+                });
+            }
+            setActiveView(VIEW.TERMINAL);
+        } else {
+            // New game: launch Phaser intro sequence
+            if (window.startPhaserGame) {
+                window.startPhaserGame(action);
+            }
+            setActiveView(VIEW.PHASER);
+        }
+    };
 
+    // Central UI Router Listener
     useEffect(() => {
-        // Expose a global hook so TerminalAPI (non-React) can open the dashboard
-        window.toggleEgoDashboard = (state) => {
-            setShowDashboard(state !== undefined ? state : true);
+        const handler = (viewKey, payload = null) => {
+            setActiveView(viewKey);
+            setViewPayload(payload);
         };
+        GameEventBus.on(GameEvents.UI_ROUTE, handler);
+
+        // Also map legacy TOGGLE_DASHBOARD to UI_ROUTE for now just in case
+        const legacyHandler = (data) => {
+            setActiveView(data?.state ? VIEW.DASHBOARD : VIEW.PHASER);
+        };
+        GameEventBus.on(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
+
         return () => {
-            delete window.toggleEgoDashboard;
+            GameEventBus.off(GameEvents.UI_ROUTE, handler);
+            GameEventBus.off(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
         };
     }, []);
+
+    // Engine Suspend logic: hide Phaser canvas if a solid UI is open
+    useEffect(() => {
+        const container = document.getElementById('phaser-game-container');
+        if (container) {
+            // Canvas visible only when a Phaser scene is active
+            container.style.display = (activeView === VIEW.PHASER) ? 'block' : 'none';
+        }
+        // Terminal visibility: show when in TERMINAL view, hide when Phaser takes over
+        const termContainer = document.getElementById('terminal');
+        if (termContainer) {
+            if (activeView === VIEW.TERMINAL) {
+                termContainer.style.display = '';
+            }
+            // Don't hide terminal here — Phaser scenes manage it via showTerminalUI/hideUI
+        }
+    }, [activeView]);
 
     if (phaserError) {
         return (
@@ -57,11 +168,29 @@ export default function App() {
 
     return (
         <ErrorBoundary>
-            {/* The React UI Layer sits on top */}
+            {/* ── CENTRAL UI ROUTER ── */}
+            {activeView === VIEW.BOOT && (
+                <TerminalLogin onComplete={handleLoginComplete} />
+            )}
+
+            {/* The DialogueLayer overlays the Phase Canvas, so it sits outside the router bounds */}
             <DialogueBox />
 
-            {showDashboard && (
-                <PlayerDashboard onClose={() => setShowDashboard(false)} />
+            {activeView === VIEW.DASHBOARD && (
+                <PlayerDashboard onClose={() => setActiveView(VIEW.PHASER)} />
+            )}
+
+            {activeView === VIEW.SCENE_ENGINE && (
+                <ScenePlayer onClose={() => setActiveView(VIEW.PHASER)} payload={viewPayload} />
+            )}
+
+            {activeView === VIEW.INVENTORY && (
+                <InventoryDashboard onClose={() => setActiveView(VIEW.PHASER)} />
+            )}
+
+            {/* ── GOD MODE OVERLAYS ── */}
+            {showAdmin && (
+                <AdminDashboard onClose={() => setShowAdmin(false)} />
             )}
 
             {/* The Phaser Canvas Layer sets up in this div */}

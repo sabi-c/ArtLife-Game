@@ -26,7 +26,7 @@ function assert(condition, label) {
     page.on('console', msg => console.log('BROWSER CONSOLE:', msg.text()));
     page.on('pageerror', err => console.log('BROWSER ERROR:', err.message));
 
-    await page.goto('http://localhost:5175', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5175?skipBoot=true', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // ── 1. Boot Verification ──
@@ -153,7 +153,7 @@ function assert(condition, label) {
 
     // ── 5. Haggle Scene (via direct API) ──
     console.log(`\n${INFO} Test 5: Haggle Scene`);
-    await page.goto('http://localhost:5175', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5175?skipBoot=true', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // Use direct API to bypass async import chain
@@ -189,7 +189,7 @@ function assert(condition, label) {
 
     // ── 7. Venue Picker ──
     console.log(`\n${INFO} Test 7: Venue Picker`);
-    await page.goto('http://localhost:5175', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:5175?skipBoot=true', { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // Start a game first
@@ -265,9 +265,9 @@ function assert(condition, label) {
             const { StateMachine } = await import('/src/utils/StateMachine.js');
             const log = [];
             const sm = new StateMachine('test');
-            sm.addState('idle',     { onEnter() { log.push('enter:idle'); }, onExit() { log.push('exit:idle'); } })
-              .addState('attack',   { onEnter() { log.push('enter:attack'); } })
-              .addState('resolve',  { onUpdate() { log.push('update:resolve'); } });
+            sm.addState('idle', { onEnter() { log.push('enter:idle'); }, onExit() { log.push('exit:idle'); } })
+                .addState('attack', { onEnter() { log.push('enter:attack'); } })
+                .addState('resolve', { onUpdate() { log.push('update:resolve'); } });
 
             // Initial update with no state set — should do nothing
             sm.update();

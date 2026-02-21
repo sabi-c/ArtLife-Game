@@ -6,6 +6,8 @@ import { DecisionLog } from './DecisionLog.js';
 import { CONTACTS } from '../data/contacts.js';
 import { BACKGROUND_TRAITS } from '../data/backgrounds.js';
 import { GameEventBus, GameEvents } from './GameEventBus.js';
+import { shuffle } from '../utils/shuffle.js';
+import { generateId } from '../utils/id.js';
 
 /**
  * Central game state manager for ArtLife
@@ -22,12 +24,12 @@ export class GameState {
         DecisionLog.reset();
 
         // Calculate initial stats starting from character base
-        let initialCash       = character.startingCash;
+        let initialCash = character.startingCash;
         let initialReputation = character.startingStats?.reputation ?? 50;
-        let initialTaste      = character.startingStats?.taste      ?? 50;
-        let initialAudacity   = character.startingStats?.audacity   ?? 30;
-        let initialAccess     = character.startingStats?.access     ?? 50;
-        let initialIntel      = character.startingStats?.intel      ?? 0;
+        let initialTaste = character.startingStats?.taste ?? 50;
+        let initialAudacity = character.startingStats?.audacity ?? 30;
+        let initialAccess = character.startingStats?.access ?? 50;
+        let initialIntel = character.startingStats?.intel ?? 0;
 
         // Apply background trait modifiers
         const traitsList = [];
@@ -38,12 +40,12 @@ export class GameState {
                 if (traitData) {
                     traitsList.push(traitData.trait);
                     if (traitData.effects) {
-                        if (traitData.effects.cash)       initialCash       += traitData.effects.cash;
-                        if (traitData.effects.access)     initialAccess     += traitData.effects.access;
-                        if (traitData.effects.taste)      initialTaste      += traitData.effects.taste;
-                        if (traitData.effects.audacity)   initialAudacity   = Math.min(100, initialAudacity + traitData.effects.audacity);
+                        if (traitData.effects.cash) initialCash += traitData.effects.cash;
+                        if (traitData.effects.access) initialAccess += traitData.effects.access;
+                        if (traitData.effects.taste) initialTaste += traitData.effects.taste;
+                        if (traitData.effects.audacity) initialAudacity = Math.min(100, initialAudacity + traitData.effects.audacity);
                         if (traitData.effects.reputation) initialReputation += traitData.effects.reputation;
-                        if (traitData.effects.intel)      initialIntel      += traitData.effects.intel;
+                        if (traitData.effects.intel) initialIntel += traitData.effects.intel;
                     }
                 }
             });
@@ -53,40 +55,40 @@ export class GameState {
         if (character.selectedTrait?.effects) {
             const fx = character.selectedTrait.effects;
             if (fx.reputation) initialReputation = Math.min(100, initialReputation + fx.reputation);
-            if (fx.taste)      initialTaste      = Math.min(100, initialTaste + fx.taste);
-            if (fx.audacity)   initialAudacity   = Math.min(100, initialAudacity + fx.audacity);
-            if (fx.access)     initialAccess     = Math.min(100, initialAccess + fx.access);
-            if (fx.intel)      initialIntel      = Math.min(100, initialIntel + fx.intel);
-            if (fx.cash)       initialCash       += fx.cash;
+            if (fx.taste) initialTaste = Math.min(100, initialTaste + fx.taste);
+            if (fx.audacity) initialAudacity = Math.min(100, initialAudacity + fx.audacity);
+            if (fx.access) initialAccess = Math.min(100, initialAccess + fx.access);
+            if (fx.intel) initialIntel = Math.min(100, initialIntel + fx.intel);
+            if (fx.cash) initialCash += fx.cash;
         }
 
         // Apply drip aesthetic bonuses (Phase 4)
         if (character.selectedDrip?.effects) {
             const fx = character.selectedDrip.effects;
             if (fx.reputation) initialReputation = Math.min(100, initialReputation + fx.reputation);
-            if (fx.taste)      initialTaste      = Math.min(100, initialTaste + fx.taste);
-            if (fx.audacity)   initialAudacity   = Math.min(100, initialAudacity + fx.audacity);
-            if (fx.access)     initialAccess     = Math.min(100, initialAccess + fx.access);
-            if (fx.intel)      initialIntel      = Math.min(100, initialIntel + fx.intel);
-            if (fx.cash)       initialCash       += fx.cash;
+            if (fx.taste) initialTaste = Math.min(100, initialTaste + fx.taste);
+            if (fx.audacity) initialAudacity = Math.min(100, initialAudacity + fx.audacity);
+            if (fx.access) initialAccess = Math.min(100, initialAccess + fx.access);
+            if (fx.intel) initialIntel = Math.min(100, initialIntel + fx.intel);
+            if (fx.cash) initialCash += fx.cash;
         }
 
         // Apply vice bonuses (Phase 5, optional)
         if (character.selectedVice?.effects) {
             const fx = character.selectedVice.effects;
             if (fx.reputation) initialReputation = Math.min(100, initialReputation + fx.reputation);
-            if (fx.taste)      initialTaste      = Math.min(100, initialTaste + fx.taste);
-            if (fx.audacity)   initialAudacity   = Math.min(100, initialAudacity + fx.audacity);
-            if (fx.access)     initialAccess     = Math.min(100, initialAccess + fx.access);
-            if (fx.intel)      initialIntel      = Math.min(100, initialIntel + fx.intel);
-            if (fx.cash)       initialCash       += fx.cash;
+            if (fx.taste) initialTaste = Math.min(100, initialTaste + fx.taste);
+            if (fx.audacity) initialAudacity = Math.min(100, initialAudacity + fx.audacity);
+            if (fx.access) initialAccess = Math.min(100, initialAccess + fx.access);
+            if (fx.intel) initialIntel = Math.min(100, initialIntel + fx.intel);
+            if (fx.cash) initialCash += fx.cash;
         }
 
         // Build starting portfolio for characters with starting works
         const startingPortfolio = [];
         if (character.startingWorks > 0) {
             const availableWorks = works.filter((w) => w.onMarket);
-            const shuffled = availableWorks.sort(() => Math.random() - 0.5);
+            const shuffled = shuffle(availableWorks);
             for (let i = 0; i < character.startingWorks && i < shuffled.length; i++) {
                 const work = shuffled[i];
                 work.onMarket = false;
@@ -107,8 +109,8 @@ export class GameState {
             character: character,
             playerName: character.playerName || 'The Dealer',
             selectedTrait: character.selectedTrait ?? null,
-            selectedDrip:  character.selectedDrip  ?? null,
-            selectedVice:  character.selectedVice  ?? null,
+            selectedDrip: character.selectedDrip ?? null,
+            selectedVice: character.selectedVice ?? null,
             traits: traitsList,
             cash: initialCash,
             portfolio: startingPortfolio,
@@ -153,191 +155,25 @@ export class GameState {
         window._artLifeState = GameState.state;
     }
 
+    /**
+     * Advance the game by one week.
+     * Delegates to WeekEngine for isolated subsystem processing.
+     * WeekEngine is registered at import time to avoid circular deps.
+     */
     static advanceWeek() {
-        const state = GameState.state;
-        state.week++;
-        state.actionsThisWeek = 0;  // Reset action budget
-        // ── Forced rest check (burnout) ──
-        if (state.forcedRest) {
-            state.forcedRest = false;
-            state.burnout = Math.max(0, state.burnout - 3);
-            GameState.addNews('😴 You took a forced rest week. Burnout easing.');
-            return; // Skip normal processing
-        }
-
-        // ── Pipeline / Active Deals Resolution ──
-        // Filter out deals that resolve this week
-        const resolvedDeals = [];
-        state.activeDeals = state.activeDeals.filter(deal => {
-            if (state.week >= deal.resolutionWeek) {
-                resolvedDeals.push(deal);
-                return false; // remove from active
-            }
-            return true; // keep in active
-        });
-
-        // Process resolved deals
-        resolvedDeals.forEach(deal => {
-            if (deal.type === 'sale') {
-                const finalValue = MarketManager.getWorkValue(deal.work);
-                // Apply a modifier based on strategy and randomness
-                let modifier = 1.0;
-                if (deal.strategy === 'auction') {
-                    // Auctions are highly variable (0.8x to 1.5x) but take longer
-                    modifier = 0.8 + (Math.random() * 0.7);
-                } else if (deal.strategy === 'contact') {
-                    // Contact sales are stable but rely on network (access)
-                    const accessBonus = (state.access - 50) * 0.002; // -10% to +10% based on access
-                    modifier = 0.9 + accessBonus + (Math.random() * 0.1);
-                } else {
-                    // Public listing
-                    modifier = 0.95 + (Math.random() * 0.1);
-                }
-
-                const finalPrice = Math.floor(finalValue * modifier);
-                state.cash += finalPrice;
-                state.totalWorksSold++;
-
-                // Track flip stat
-                const holdTime = state.week - deal.work.purchaseWeek;
-                if (holdTime < 4) state.marketHeat += 8;
-                else if (holdTime < 8) state.marketHeat += 3;
-
-                // Record transaction for Ego Dashboard ledger
-                (state.transactions = state.transactions || []).unshift({
-                    id: `sell_${Date.now()}_${deal.work.id}`,
-                    action: 'SELL',
-                    title: deal.work.title,
-                    artist: deal.work.artist,
-                    price: finalPrice,
-                    week: state.week,
-                    strategy: deal.strategy,
-                });
-                if (state.transactions.length > 50) state.transactions.pop();
-
-                GameState.addNews(`🤝 SALE COMPLETE: "${deal.work.title}" sold via ${deal.strategy} for $${finalPrice.toLocaleString()}`);
-            }
-        });
-
-        // Generate phone messages for this turn
-        PhoneManager.generateTurnMessages();
-
-        // ── NPC autonomous tick ──
-        PhoneManager.npcAutonomousTick();
-
-        // ── Fire scheduled consequences ──
-        ConsequenceScheduler.tick(state.week);
-
-        // ── Resolve pending offers ──
-        if (state.pendingOffers && state.pendingOffers.length > 0) {
-            state.pendingOffers = state.pendingOffers.filter(offer => {
-                if (state.week >= offer.resolveWeek) {
-                    if (offer.accepted && offer.work) {
-                        // Auto-purchase at the offered price
-                        const w = offer.work;
-                        if (state.cash >= w.price) {
-                            GameState.buyWork(w);
-                            GameState.addNews(`🤝 OFFER ACCEPTED: "${w.title}" purchased for $${w.price.toLocaleString()}!`);
-                            PhoneManager.addMessage({
-                                from: 'Gallery',
-                                subject: `Offer Accepted — ${w.title}`,
-                                body: `Good news! Your ${offer.offerPrice ? 'offer of $' + offer.offerPrice.toLocaleString() : 'offer'} on "${w.title}" has been accepted. The work has been added to your collection.`,
-                            });
-                        } else {
-                            GameState.addNews(`⚠️ Offer on "${w.title}" accepted but you can't afford it anymore!`);
-                            PhoneManager.addMessage({
-                                from: 'Gallery',
-                                subject: `Offer Accepted — ${w.title}`,
-                                body: `Your offer was accepted, but unfortunately your available funds are insufficient. The offer has lapsed.`,
-                            });
-                        }
-                    } else {
-                        // Rejected
-                        GameState.addNews(`❌ Offer on "${offer.work?.title || 'unknown'}" was rejected.`);
-                        PhoneManager.addMessage({
-                            from: 'Gallery',
-                            subject: `Offer Update — ${offer.work?.title || 'Artwork'}`,
-                            body: `We appreciate your interest, but after careful consideration, we've decided to decline your offer at this time. The consignor was firm on the asking price.`,
-                        });
-                        state.marketHeat = Math.min(100, (state.marketHeat || 0) + 2);
-                    }
-                    return false; // remove from pending
-                }
-                return true; // keep pending
-            });
-        }
-
-        // ── Freeport storage costs (deducted monthly = every 4 weeks) ──
-        if (state.week % 4 === 0) {
-            const freeportPieces = state.portfolio.filter(w => w.storage === 'freeport');
-            const storageCost = freeportPieces.length * 200;
-            if (storageCost > 0) {
-                state.cash -= storageCost;
-                GameState.addNews(`🔒 Freeport storage fees: -$${storageCost.toLocaleString()} (${freeportPieces.length} pieces)`);
-            }
-        }
-
-        // ── Insurance / Theft risk (home-stored uninsured works) ──
-        // Collect stolen works first, then remove — avoids index-shift bugs from splice-inside-forEach
-        const stolen = [];
-        state.portfolio = state.portfolio.filter(work => {
-            if (work.storage === 'home' && !work.insured && Math.random() < 0.01) {
-                stolen.push(work);
-                return false;
-            }
-            return true;
-        });
-        stolen.forEach(work => {
-            const val = MarketManager.getWorkValue(work);
-            GameState.addNews(`🚨 THEFT: "${work.title}" by ${work.artist} ($${val.toLocaleString()}) was stolen from your home! Uninsured.`);
-        });
-
-        // ── Burnout tracking ──
-        // Burnout rises from high marketHeat or consecutive event weeks
-        if (state.marketHeat > 30) {
-            state.burnout = Math.min(10, state.burnout + 0.5);
-        }
-        // Natural burnout recovery (slow)
-        if (state.burnout > 0 && state.marketHeat < 15) {
-            state.burnout = Math.max(0, state.burnout - 0.3);
-        }
-        // Forced rest at burnout >= 8
-        if (state.burnout >= 8) {
-            state.forcedRest = true;
-            GameState.addNews('🔥 Burnout critical. You need to rest next week.');
-        }
-
-        // Check market state transition
-        state.marketStateTurnsRemaining--;
-        if (state.marketStateTurnsRemaining <= 0) {
-            const states = ['bull', 'bear', 'flat'];
-            const current = state.marketState;
-            const next = states.filter((s) => s !== current)[Math.floor(Math.random() * 2)];
-            state.marketState = next;
-            state.marketStateTurnsRemaining = 20 + Math.floor(Math.random() * 40);
-
-            const newsText = next === 'bull'
-                ? '📈 The market is turning bullish. Prices are climbing.'
-                : next === 'bear'
-                    ? '📉 Bear market signals. Collectors are cautious.'
-                    : '➡️ Market stabilising. Flat conditions ahead.';
-            GameState.addNews(newsText);
-        }
-
-        // ── Wealth snapshot (for Ego Dashboard graph) ──
-        const portfolioVal = GameState.getPortfolioValue();
-        (state.wealthHistory = state.wealthHistory || []).push({
-            week: state.week,
-            cash: state.cash,
-            assets: portfolioVal,
-        });
-        if (state.wealthHistory.length > 52) state.wealthHistory.shift(); // keep 1 year
-
-        // ── Game-Over check ──
-        if (GameState.isBankrupt()) {
-            GameEventBus.emit(GameEvents.GAME_OVER, { reason: 'bankrupt', week: state.week });
+        if (GameState._weekEngine) {
+            GameState._weekEngine.advanceWeek();
+        } else {
+            console.error('[GameState] WeekEngine not registered. Call GameState.registerWeekEngine() first.');
         }
     }
+
+    /** Called by WeekEngine at import time to register itself */
+    static registerWeekEngine(engine) {
+        GameState._weekEngine = engine;
+    }
+
+    static _weekEngine = null;
 
     static changeCity(newCity) {
         if (GameState.state.currentCity === newCity) return false;
@@ -414,7 +250,7 @@ export class GameState {
 
         // Record transaction for Ego Dashboard ledger
         (GameState.state.transactions = GameState.state.transactions || []).unshift({
-            id: `buy_${Date.now()}`,
+            id: generateId('buy'),
             action: 'BUY',
             title: work.title,
             artist: work.artist,
@@ -491,7 +327,7 @@ export class GameState {
                 const titles = ['Untitled', 'Study', 'Composition', 'Fragment', 'Series', 'Nocturne', 'Portrait'];
                 const title = `${titles[Math.floor(Math.random() * titles.length)]} #${Math.floor(Math.random() * 999)}`;
                 const work = {
-                    id: `work_evt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                    id: generateId('work_evt'),
                     title,
                     artistId: artist.id,
                     artist: artist.name,
@@ -699,12 +535,20 @@ export class GameState {
 
         try {
             const saveData = JSON.parse(raw);
+
+            // Validate save data has required structure
+            if (!saveData?.state || typeof saveData.state.week !== 'number') {
+                console.error('Corrupt save data in slot', slotIndex);
+                return false;
+            }
+
             GameState.state = saveData.state;
             GameState.activeSlot = slotIndex;
 
+            // Keep global reference in sync for React components
+            window._artLifeState = GameState.state;
+
             // Re-initialise market with fresh works so price calculations work.
-            // Artist heat values from the save would be more accurate, but works
-            // list is not serialised — reinit gives a correct-enough market.
             MarketManager.init(generateInitialWorks());
 
             // Restore phone manager so NPC inboxes are ready
@@ -749,8 +593,16 @@ export class GameState {
      * Get the most recently used save slot index.
      */
     static getMostRecentSlot() {
-        const val = localStorage.getItem('artlife_last_slot');
-        return val !== null ? parseInt(val) : null;
+        try {
+            const val = localStorage.getItem('artlife_last_slot');
+            if (val === null || val === '') return null;
+            const parsed = parseInt(val, 10);
+            if (isNaN(parsed) || parsed < 0 || parsed >= GameState.MAX_SLOTS) return null;
+            return parsed;
+        } catch (e) {
+            // localStorage may be blocked (private browsing, security policy)
+            return null;
+        }
     }
 
     /**
@@ -782,6 +634,110 @@ export class GameState {
     /**
      * Migrate old single-slot save to new multi-slot format.
      */
+    /**
+     * Seed a demo save into slot 0 if no saves exist.
+     * Called from TitleScene so there's always a profile to load for testing.
+     */
+    static seedDemoSave() {
+        if (GameState.hasSave()) return; // don't overwrite real saves
+
+        const demoState = {
+            character: {
+                id: 'hedge_fund',
+                name: 'THE HEDGE FUND',
+                icon: '📊',
+                tagline: 'Art is just another asset class.',
+                startingCash: 750000,
+                startingWorks: 0,
+                perk: 'Market Analytics',
+                difficulty: 'MEDIUM',
+            },
+            playerName: 'Seb',
+            selectedTrait: { id: 'quant_eye', label: 'Quant Eye', effects: { taste: 8 } },
+            selectedDrip: { id: 'power_suit', label: 'Power Suit', effects: { reputation: 5, access: 5 } },
+            selectedVice: null,
+            traits: ['Quant Eye'],
+            cash: 680000,
+            portfolio: [
+                {
+                    id: 'demo_work_1', title: 'Void Study #7', artist: 'Yuki Tanaka',
+                    price: 42000, purchasePrice: 38000, purchaseWeek: 1,
+                    purchaseCity: 'new-york', owner: 'player', storage: 'home',
+                    onMarket: false, era: 'contemporary', medium: 'Oil on canvas',
+                    provenance: [{ type: 'acquired', week: 1, city: 'new-york', price: 38000, source: 'Market' }],
+                },
+                {
+                    id: 'demo_work_2', title: 'Red Squares on White', artist: 'Marcus Aldridge',
+                    price: 15000, purchasePrice: 12000, purchaseWeek: 2,
+                    purchaseCity: 'new-york', owner: 'player', storage: 'home',
+                    onMarket: false, era: 'emerging', medium: 'Acrylic on panel',
+                    provenance: [{ type: 'acquired', week: 2, city: 'new-york', price: 12000, source: 'Market' }],
+                },
+            ],
+            week: 3,
+            currentCity: 'new-york',
+            marketState: 'bull',
+            marketStateTurnsRemaining: 12,
+            reputation: 55,
+            taste: 58,
+            audacity: 35,
+            access: 55,
+            intel: 5,
+            wealthHistory: [
+                { week: 1, cash: 750000, assets: 0 },
+                { week: 2, cash: 712000, assets: 38000 },
+                { week: 3, cash: 680000, assets: 57000 },
+            ],
+            transactions: [
+                { type: 'buy', title: 'Void Study #7', price: 38000, week: 1 },
+                { type: 'buy', title: 'Red Squares on White', price: 12000, week: 2 },
+            ],
+            newsFeed: [
+                'Bull market continues — collectors scrambling for contemporary.',
+                'Yuki Tanaka shortlisted for Turner Prize.',
+            ],
+            decisions: [],
+            activeDeals: [],
+            totalWorksBought: 2,
+            totalWorksSold: 0,
+            eventsTriggered: [],
+            marketHeat: 0,
+            suspicion: 0,
+            burnout: 0,
+            flipHistory: [],
+            dealerBlacklisted: false,
+            consecutiveEventWeeks: 0,
+            forcedRest: false,
+            actionsThisWeek: 0,
+            playerLocation: {
+                locationId: 'player_apartment',
+                cityX: 5, cityY: 14,
+                insideVenue: false,
+            },
+            hoursUsedToday: 0,
+        };
+
+        const saveData = {
+            state: demoState,
+            meta: {
+                playerName: 'Seb',
+                characterName: 'THE HEDGE FUND',
+                characterIcon: '📊',
+                week: 3,
+                cash: 680000,
+                portfolioCount: 2,
+                netWorth: 737000,
+                city: 'new-york',
+                reputation: 55,
+                savedAt: new Date().toISOString(),
+                version: 'demo-seed',
+            }
+        };
+
+        localStorage.setItem('artlife_slot_0', JSON.stringify(saveData));
+        localStorage.setItem('artlife_last_slot', '0');
+    }
+
     static _migrateOldSave() {
         const old = localStorage.getItem('artlife_save');
         if (old && !localStorage.getItem('artlife_slot_0')) {

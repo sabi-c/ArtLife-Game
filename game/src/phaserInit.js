@@ -145,6 +145,24 @@ GameEventBus.on(GameEvents.GAME_OVER, () => {
     }
 });
 
+// Admin Dashboard overrides
+GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
+    if (window.phaserGame) {
+        if (container) container.style.display = 'none';
+        if (window.phaserGame.canvas) window.phaserGame.canvas.style.display = 'block';
+
+        // Stop all ACTIVE scenes first so we don't have overlapped updates
+        window.phaserGame.scene.scenes.forEach(scene => {
+            if (scene.sys.isActive() && scene.sys.settings.key !== 'BootScene') {
+                window.phaserGame.scene.stop(scene.sys.settings.key);
+            }
+        });
+
+        // Launch the requested scene
+        window.phaserGame.scene.start(sceneKey, { ui, ...data });
+    }
+});
+
 // ──────────────────────────────────────────────────────────────────────────────
 // PWA: Register Service Worker
 // ──────────────────────────────────────────────────────────────────────────────

@@ -42,6 +42,7 @@ export const GameEvents = {
     UI_SHOW: 'ui:show',
     UI_HIDE: 'ui:hide',
     UI_NOTIFICATION: 'ui:notification',
+    UI_ROUTE: 'ui:route',
 
     // Player state
     PLAYER_POSITION_CHANGED: 'player:position:changed',
@@ -52,6 +53,12 @@ export const GameEvents = {
     AUDIO_BGM_PLAY: 'audio:bgm:play',
     AUDIO_BGM_STOP: 'audio:bgm:stop',
 
+    // UI toggles
+    TOGGLE_DASHBOARD: 'ui:toggle:dashboard',
+
     // Game lifecycle
     GAME_OVER: 'game:over',
+
+    // Debug & Admin
+    DEBUG_LAUNCH_SCENE: 'debug:launch:scene',
 };

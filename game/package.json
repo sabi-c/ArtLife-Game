@@ -18,7 +18,9 @@
     "expose": "npx localtunnel --port 5173 --subdomain artlife"
   },
   "dependencies": {
+    "@xyflow/react": "^12.10.1",
     "grid-engine": "^2.48.2",
+    "immer": "^11.1.4",
     "inkjs": "^2.3.0",
     "lucide-react": "^0.575.0",
     "phaser": "^3.87.0",

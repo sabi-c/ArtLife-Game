@@ -44,11 +44,11 @@
 
 | # | Question | Answer |
 |---|---|---|
-| 4.1 | **Characters at MVP?** | ✅ **2–3 classes** to ship faster. |
-| 4.2 | **Player name/avatar?** | ⬜ TBD. |
-| 4.3 | **How many dialogue events?** | ⬜ As many as possible — template-driven, AI-generated at scale. |
-| 4.4 | **Named or procedural NPCs?** | ⬜ Likely hybrid — key NPCs named, background NPCs procedural. |
-| 4.5 | **Events repeat or unique?** | ⬜ Mix — core events repeat with variation, rare events are unique. |
+| 4.1 | **Characters at MVP?** | ✅ **3 classes** (Rich Kid, Hedge Fund, Insider) to ship faster. |
+| 4.2 | **Player name/avatar?** | ✅ **Handled via CharacterSelectScene.** Player chooses background, vice, and drip which dictate starting stats. |
+| 4.3 | **How many dialogue events?** | ✅ **Template-driven scale.** Powered by `inkjs` scripts and JSON event definitions. Target is 100+ events and 50+ scenes. |
+| 4.4 | **Named or procedural NPCs?** | ✅ **Hybrid.** Key NPCs are named and tracked via `NPCRegistry`. Procedural NPCs fill out auctions and parties. |
+| 4.5 | **Events repeat or unique?** | ✅ **Mix.** Core events repeat with variation based on current era/week. High-priority narrative events are unique. |
 
 ---
 
@@ -56,10 +56,10 @@
 
 | # | Question | Answer |
 |---|---|---|
-| 5.1 | **Locations at MVP?** | ⬜ Start small, expand. |
-| 5.2 | **Travel cost?** | ⬜ TBD. |
-| 5.3 | **Auction style?** | ⬜ TBD. |
-| 5.4 | **Gallery tiers?** | ⬜ TBD — but likely yes, they add strategic depth. |
+| 5.1 | **Locations at MVP?** | ✅ **Chelsea gallery district + Airport.** Fast travel unlocks other global hubs (Basel, London) later. |
+| 5.2 | **Travel cost?** | ✅ **Cash + Actions.** Traveling costs money and consumes actions from the weekly budget. |
+| 5.3 | **Auction style?** | ✅ **Iterative bidding minigame.** Handled via dedicated `AuctionScene` using the `HaggleManager` core. |
+| 5.4 | **Gallery tiers?** | ✅ **Yes.** Galleries have prestige levels that act as Quality Gates for player access. |
 
 ---
 
@@ -67,11 +67,11 @@
 
 | # | Question | Answer |
 |---|---|---|
-| 6.1 | **Browser-only?** | ⬜ Browser first, expand later. |
+| 6.1 | **Browser-only?** | ✅ **Browser first.** Built with React + Phaser, bundled via Vite. |
 | 6.2 | **Single-player at MVP?** | ✅ **Yes.** |
-| 6.3 | **Save/Load?** | ✅ **Yes — essential** for multi-day play. |
-| 6.4 | **Build it yourself or collaborator?** | ✅ **Collaborative.** Build together, learn as we go. |
-| 6.5 | **JS/HTML/CSS comfort?** | ⬜ Learning curve — needs scaffolding and guidance. |
+| 6.3 | **Save/Load?** | ✅ **Yes — essential.** GameState serialization natively managed via Zustand stores (in V2) to `localStorage`. |
+| 6.4 | **Build it yourself or collaborator?** | ✅ **Collaborative.** Seb + Antigravity + ClaudeCode as a dedicated trio. |
+| 6.5 | **JS/HTML/CSS comfort?** | ✅ **Agent-assisted scaffolding.** React/Phaser bridges handled by architectural blueprints. |
 
 ---
 
@@ -81,8 +81,8 @@
 |---|---|---|
 | 7.1 | **Passion project or commercial?** | ⬜ TBD — building it first. |
 | 7.2 | **Target audience?** | ⬜ Art world insiders + strategy gamers. |
-| 7.3 | **Distribution?** | ⬜ TBD. |
-| 7.4 | **Timeline?** | ✅ **ASAP.** Get mechanics working fast, iterate from there. |
+| 7.3 | **Distribution?** | ✅ **Web/PWA.** Service worker already checked in `phaserInit.js` for progressive web app capabilities. |
+| 7.4 | **Timeline?** | ✅ **ASAP.** V2 foundational architecture actively being built to support rapid content authoring via the CMS. |
 
 ---
 

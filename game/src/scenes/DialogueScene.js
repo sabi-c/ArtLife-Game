@@ -957,6 +957,8 @@ export class DialogueScene extends BaseScene {
                 } else if (this.ui) {
                     this.ui.popScreen(); // pop the blank trap screen
                     this.ui.render();
+                    // Hide canvas when returning to terminal-only UI
+                    this.sys.game.canvas.style.display = 'none';
                 }
 
                 this.scene.stop();

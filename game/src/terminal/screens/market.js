@@ -11,10 +11,22 @@ import { dashboardScreen, hasActions, useAction } from './dashboard.js';
 // ════════════════════════════════════════════
 export function marketScreen(ui) {
     return () => {
-        const works = TerminalAPI.market.getAvailableWorks().slice(0, 8);
+        const s = TerminalAPI.state();
+        const acc = s.access ?? 0;
+        const allWorks = TerminalAPI.market.getAvailableWorks();
+
+        // ACC Velvet Rope — gate how many works are visible
+        let visibleCount;
+        if (acc >= 70) visibleCount = 8;
+        else if (acc >= 50) visibleCount = 7;
+        else if (acc >= 30) visibleCount = 5;
+        else visibleCount = 3;
+
+        const works = allWorks.slice(0, visibleCount);
+
         const lines = [
-            H('MARKET'),
-            DIM('Works available for purchase'),
+            H('ONLINE VIEWING ROOM'),
+            DIM('Private appointments available by request.'),
             DIV(),
         ];
 
@@ -27,6 +39,16 @@ export function marketScreen(ui) {
 
         if (works.length === 0) {
             lines.push(DIM('No works available right now.'));
+        }
+
+        // Tease locked works
+        if (acc < 70 && allWorks.length > visibleCount) {
+            lines.push(BLANK());
+            lines.push(DIM(`  🔒 Private Collection — ACC ${acc < 30 ? '30' : acc < 50 ? '50' : acc < 70 ? '70' : '85'}+ required`));
+        }
+        if (acc >= 70 && allWorks.length > 8) {
+            lines.push(BLANK());
+            lines.push(DIM(`  🔒 Private Collection — ACC 85+ required`));
         }
 
         const options = works.map(work => ({
@@ -55,18 +77,48 @@ export function inspectScreen(ui, work) {
         const artist = TerminalAPI.market.getArtist(work.artistId);
         const heat = artist ? Math.round(artist.heat) : '?';
         const s = TerminalAPI.state();
+        const tst = s.taste ?? 0;
         const canAfford = s.cash >= work.price;
         const alreadyOwn = s.portfolio.some(w => w.id === work.id);
 
+        // TST Fog-of-War — gate info visibility by Taste stat
+        let displayTitle = work.title;
+        let displayArtist, displayPrice, displayMedium;
+
+        if (tst < 20) {
+            displayArtist = '???';
+            displayPrice = '$???,???';
+            displayMedium = '???';
+        } else if (tst < 40) {
+            displayArtist = `${work.artist} (${work.yearCreated})`;
+            displayPrice = `~$${(Math.round(work.price / 10000) * 10000).toLocaleString()}`;
+            displayMedium = work.medium || 'Mixed Media';
+        } else if (tst < 60) {
+            displayArtist = `${work.artist} (${work.yearCreated})`;
+            displayPrice = `~$${(Math.round(work.price / 1000) * 1000).toLocaleString()}`;
+            displayMedium = work.medium || 'Mixed Media';
+        } else {
+            displayArtist = `${work.artist} (${work.yearCreated})`;
+            displayPrice = `$${work.price.toLocaleString()}`;
+            displayMedium = work.medium || 'Mixed Media';
+        }
+
         const lines = [
-            H(work.title),
-            `${work.artist} (${work.yearCreated})`,
-            DIM(work.medium || 'Mixed Media'),
-            DIV(),
-            STAT('PRICE', `$${work.price.toLocaleString()}`, 'gold'),
-            STAT('ARTIST HEAT', `${heat} / 100`, heat > 60 ? 'green' : heat < 25 ? 'red' : ''),
-            STAT('MARKET', s.marketState.toUpperCase(), s.marketState === 'bull' ? 'green' : s.marketState === 'bear' ? 'red' : ''),
+            H(displayTitle),
         ];
+
+        if (tst < 20) {
+            lines.push(DIM('You lack the eye to evaluate this.'));
+            lines.push(DIV());
+            lines.push(STAT('PRICE', displayPrice, 'gold'));
+        } else {
+            lines.push(displayArtist);
+            lines.push(DIM(displayMedium));
+            lines.push(DIV());
+            lines.push(STAT('PRICE', displayPrice, 'gold'));
+            lines.push(STAT('ARTIST HEAT', `${heat} / 100`, heat > 60 ? 'green' : heat < 25 ? 'red' : ''));
+            lines.push(STAT('MARKET', s.marketState.toUpperCase(), s.marketState === 'bull' ? 'green' : s.marketState === 'bear' ? 'red' : ''));
+        }
 
         if (alreadyOwn) {
             lines.push(DIV());

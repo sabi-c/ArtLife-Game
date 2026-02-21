@@ -20,6 +20,9 @@ import { CHARACTERS } from '../data/characters.js';
 import { CONTACTS } from '../data/contacts.js';
 import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
 import { PhoneManager } from '../managers/PhoneManager.js';
+import { NPCMemory } from '../managers/NPCMemory.js';
+// Import WeekEngine to trigger self-registration with GameState
+import { WeekEngine } from '../managers/WeekEngine.js';
 
 export const TerminalAPI = {
     // ── State & Managers ──
@@ -31,6 +34,7 @@ export const TerminalAPI = {
     log: DecisionLog,
     dialogue: DialogueTreeManager,
     network: PhoneManager,
+    npcMemory: NPCMemory,
     ticker: TickerSystem,
     settings: window.SettingsManager || {},
     gate: QualityGate,
@@ -54,12 +58,20 @@ export const TerminalAPI = {
         MarketManager.tick();
         GameState.autoSave();
     },
+    getLastWeekReport: () => WeekEngine.lastReport,
 
     initGame: {
         init: (characterData) => GameState.init(characterData),
         changeCity: (city) => GameState.changeCity(city),
         autoSave: () => GameState.autoSave(),
         applyEffects: (effects) => GameState.applyEffects(effects),
+        // ── Save/Load ──
+        hasSave: () => GameState.hasSave(),
+        getSaveSlots: () => GameState.getSaveSlots(),
+        saveGame: (slotIndex) => GameState.save(slotIndex),
+        loadGame: (slotIndex) => GameState.load(slotIndex),
+        deleteSave: (slotIndex) => GameState.deleteSave(slotIndex),
+        getMostRecentSlot: () => GameState.getMostRecentSlot(),
         buyWork: (work) => {
             const s = GameState.state;
             s.cash -= work.price;

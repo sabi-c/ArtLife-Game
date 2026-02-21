@@ -74,12 +74,19 @@ export class BootScene extends Phaser.Scene {
             });
         }
 
-        // We assume 'ui' is passed to BootScene or handled elsewhere if it's strictly needed
-        // For now, launch TitleScene without it if it's undefined, or pass from window scope if needed.
-        // Actually, in the old phaserInit, 'ui' was enclosed from the toplevel scope.
-        // Let's pass the terminal UI instance from the window object or expect it to be handled slightly differently.
-        // We will expose ui via window.game.ui mostly, but for now we'll fetch it from the registry or global.
         const ui = window.game?.ui;
-        this.scene.launch('TitleScene', { ui });
+        // The React `TerminalLogin` is now the true title screen.
+        // Expose a method so React can command Phaser to start the game loop when ready.
+        window.startPhaserGame = (mode = 'new') => {
+            if (mode === 'new') {
+                this.scene.launch('TitleScene', { ui });
+            } else {
+                // If loading a save, we can skip the Intro and go straight to the Overworld or Menu.
+                // Assuming GameState is already populated by React.
+                this.scene.launch('OverworldScene', { ui });
+            }
+            // Hide the boot scene
+            this.scene.stop();
+        };
     }
 }

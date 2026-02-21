@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { CHARACTERS, DRIP_OPTIONS, VICE_OPTIONS } from '../data/characters.js';
 import { GameState } from '../managers/GameState.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 // ─── Stat definitions — S.P.E.C.I.A.L. for snobs ────────────────────────────
 // intel is earned in-game, not chosen at creation — excluded from the builder.
@@ -121,11 +122,11 @@ export class CharacterSelectScene extends BaseScene {
         const { W, H } = this;
 
         // ── Header ────────────────────────────────────────────────────────────
-        c.add(this.add.text(W / 2, 34, 'CHOOSE YOUR BACKGROUND', {
+        c.add(this.add.text(W / 2, 34, 'APPLICANT PROFILE', {
             fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#e8e4df',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(W / 2, 56, 'STEP 1 OF 6', {
+        c.add(this.add.text(W / 2, 56, 'SECTION 1 OF 6', {
             fontFamily: 'Courier', fontSize: '11px', color: '#333355',
         }).setOrigin(0.5));
 
@@ -276,11 +277,11 @@ export class CharacterSelectScene extends BaseScene {
         this._statRowRefs = [];
 
         // ── Header ───────────────────────────────────────────────────────────
-        c.add(this.add.text(W / 2, 28, 'CUSTOMIZE YOUR BUILD', {
+        c.add(this.add.text(W / 2, 28, 'RISK ASSESSMENT', {
             fontFamily: '"Press Start 2P"', fontSize: '13px', color: '#e8e4df',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(W / 2, 50, 'STEP 2 OF 6', {
+        c.add(this.add.text(W / 2, 50, 'SECTION 2 OF 6', {
             fontFamily: 'Courier', fontSize: '11px', color: '#333355',
         }).setOrigin(0.5));
 
@@ -521,11 +522,11 @@ export class CharacterSelectScene extends BaseScene {
         const traits = char.traits ?? [];
 
         // ── Header ───────────────────────────────────────────────────────────
-        c.add(this.add.text(cx, 28, 'CHOOSE YOUR EDGE', {
+        c.add(this.add.text(cx, 28, 'COMPETITIVE ADVANTAGE', {
             fontFamily: '"Press Start 2P"', fontSize: '13px', color: '#ffd700',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(cx, 50, 'STEP 3 OF 6', {
+        c.add(this.add.text(cx, 50, 'SECTION 3 OF 6', {
             fontFamily: 'Courier', fontSize: '11px', color: '#333355',
         }).setOrigin(0.5));
 
@@ -656,11 +657,11 @@ export class CharacterSelectScene extends BaseScene {
         const cx = W / 2;
 
         // ── Header ───────────────────────────────────────────────────────────
-        c.add(this.add.text(cx, 28, 'HOW DO YOU SHOW UP?', {
+        c.add(this.add.text(cx, 28, 'PRESENTATION PROFILE', {
             fontFamily: '"Press Start 2P"', fontSize: '13px', color: '#aa88ff',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(cx, 50, 'STEP 4 OF 6', {
+        c.add(this.add.text(cx, 50, 'SECTION 4 OF 6', {
             fontFamily: 'Courier', fontSize: '11px', color: '#333355',
         }).setOrigin(0.5));
 
@@ -790,15 +791,15 @@ export class CharacterSelectScene extends BaseScene {
         ];
 
         // ── Header ───────────────────────────────────────────────────────────
-        c.add(this.add.text(cx, 28, 'DO YOU HAVE A VICE?', {
+        c.add(this.add.text(cx, 28, 'COMPLIANCE DISCLOSURE', {
             fontFamily: '"Press Start 2P"', fontSize: '13px', color: '#ee6644',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(cx, 50, 'STEP 5 OF 6', {
+        c.add(this.add.text(cx, 50, 'SECTION 5 OF 6', {
             fontFamily: 'Courier', fontSize: '11px', color: '#333355',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(cx, 68, 'Every edge has a curse. Or skip it — no shame in that.', {
+        c.add(this.add.text(cx, 68, 'Any liabilities we should know about?', {
             fontFamily: 'Courier', fontSize: '10px', color: '#2a2a44',
         }).setOrigin(0.5));
 
@@ -934,11 +935,11 @@ export class CharacterSelectScene extends BaseScene {
         this._enteredName = '';
 
         // ── Header ───────────────────────────────────────────────────────────
-        c.add(this.add.text(cx, 30, 'WHAT DO THEY CALL YOU?', {
+        c.add(this.add.text(cx, 30, 'IDENTITY VERIFICATION', {
             fontFamily: '"Press Start 2P"', fontSize: '13px', color: '#ffd700',
         }).setOrigin(0.5));
 
-        c.add(this.add.text(cx, 52, 'STEP 6 OF 6', {
+        c.add(this.add.text(cx, 52, 'SECTION 6 OF 6', {
             fontFamily: 'Courier', fontSize: '11px', color: '#333355',
         }).setOrigin(0.5));
 
@@ -1077,15 +1078,49 @@ export class CharacterSelectScene extends BaseScene {
             selectedVice:  (this._selectedVice?.id !== 'none') ? (this._selectedVice ?? null) : null,
         };
 
-        this.cameras.main.flash(700, 255, 255, 255);
-        this.time.delayedCall(700, () => {
-            GameState.init(finalChar);
-            this.showTerminalUI();
-            import('../terminal/screens/index.js').then(({ dashboardScreen }) => {
-                if (this.ui) this.ui.pushScreen(dashboardScreen(this.ui));
-                this.sys.game.canvas.style.display = 'none';
-                this.scene.stop();
-            });
+        // "APPLICATION APPROVED" → "WELCOME TO ARTLIFE" → dashboard
+        const { W, H } = this;
+        const cx = W / 2;
+
+        const approvedText = this.add.text(cx, H / 2, 'APPLICATION APPROVED', {
+            fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#c9a84c',
+            align: 'center',
+        }).setOrigin(0.5).setAlpha(0).setDepth(20);
+
+        const welcomeText = this.add.text(cx, H / 2, 'WELCOME TO ARTLIFE', {
+            fontFamily: '"Press Start 2P"', fontSize: '18px', color: '#ffffff',
+            align: 'center',
+        }).setOrigin(0.5).setAlpha(0).setDepth(20);
+
+        // Phase 1: "APPLICATION APPROVED" in gold for 0.8s
+        this.tweens.add({
+            targets: approvedText, alpha: 1, duration: 200,
+            onComplete: () => {
+                this.time.delayedCall(800, () => {
+                    approvedText.setAlpha(0);
+                    // Phase 2: "WELCOME TO ARTLIFE" in white for 0.6s
+                    this.tweens.add({
+                        targets: welcomeText, alpha: 1, duration: 150,
+                        onComplete: () => {
+                            this.time.delayedCall(600, () => {
+                                this.cameras.main.flash(500, 255, 255, 255);
+                                this.time.delayedCall(500, () => {
+                                    GameState.init(finalChar);
+                                    GameState.autoSave();
+                                    this.showTerminalUI();
+                                    import('../terminal/screens/index.js').then(({ dashboardScreen }) => {
+                                        if (this.ui) this.ui.pushScreen(dashboardScreen(this.ui));
+                                        this.sys.game.canvas.style.display = 'none';
+                                        // Tell React to switch to TERMINAL view
+                                        GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+                                        this.scene.stop();
+                                    });
+                                });
+                            });
+                        }
+                    });
+                });
+            }
         });
     }
 

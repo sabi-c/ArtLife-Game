@@ -147,6 +147,10 @@ export class QualityGate {
             return `Attended event`;
         }
 
+        if (key.startsWith('flags.')) {
+            return `Intel: ${key.split('.')[1].replace(/_/g, ' ')}`;
+        }
+
         return labels[key] || key;
     }
 }

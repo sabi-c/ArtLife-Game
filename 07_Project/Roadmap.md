@@ -1,181 +1,305 @@
-# 🗺️ Development Roadmap
+# ArtLife — Development Roadmap & Task Tracker
 
-> Phased plan from prototype to full game.
-
----
-
-## Overview
-
-```mermaid
-gantt
-    title ArtLife Development Phases
-    dateFormat  YYYY-MM-DD
-    axisFormat  %b
-
-    section Phase 0 ✅
-    Setup & Scaffolding          :done, p0, 2026-02-18, 1d
-
-    section Phase 1a ✅
-    Core Loop + Hub + Phone      :done, p1a, after p0, 1d
-
-    section Phase 1b ✅
-    Art World Database Integration :done, p1b, after p1a, 1d
-
-    section Phase 2 🔴
-    Deep Systems (RPG Mechanics) :active, p2, 2026-02-20, 7d
-
-    section Phase 3
-    Content & Characters         :p3, after p2, 14d
-
-    section Phase 4
-    World & Systems              :p4, after p3, 21d
-
-    section Phase 5
-    Polish & Release             :p5, after p4, 14d
-```
+> **Source of truth for what's built, what's next, and what's planned.**
+> Agents: read this before starting any work. Update your section when you start AND complete tasks.
 
 ---
 
-## ✅ Phase 0 — Setup & Scaffolding (Done)
+## Current State (2026-02-21)
 
-- [x] Vite + Phaser 3 project initialized
-- [x] Scenes: Boot, Menu, CharacterSelect, Game, Dialogue, End
-- [x] Managers: GameState, MarketManager, EventManager, PhoneManager
-- [x] Data: events (34), contacts (11), artists (8), calendar (16)
-- [x] Noir background art (7 category images generated)
-- [x] Git repo, working skeleton
+**Tests:** 36/36 unit, 53/53 flow — all green
+**Build:** Clean (no new warnings)
+**Branch:** `main`
+**Deployed:** Cloudflare Pages
 
----
-
-## ✅ Phase 1a — Core Loop + Hub + Phone (Done)
-
-- [x] Hub layout redesign (3-panel: portfolio, center tabs, Nokia phone)
-- [x] Phone UI with messages, NPC contacts, unread counts
-- [x] Message modal with urgency styling and action buttons
-- [x] Center tabs: Market, Calendar, Intel
-- [x] Oregon Trail-style event pacing (~75% event/turn)
-- [x] Category-based dialogue backgrounds with typewriter text
-- [x] Character class system (3 starter classes)
-- [x] Buy/sell works, portfolio tracking, market states
-
----
-
-## ✅ Phase 1b — Art World Database Integration (Done)
-
-- [x] 15 new scandal events (forgery, fraud, shill bidding, freeport, provenance…)
-- [x] 5 new NPC archetypes (mega-dealer, speculator, hustler, advisor, institutional)
-- [x] Anti-resource system: marketHeat, suspicion, flipHistory, dealerBlacklisted
-- [x] Gallery buyback simulation + flipper price penalties in MarketManager
-- [x] Calendar enriched to 22 events with costs, NPC presence, deal opportunities
-- [x] Anti-resource display in top bar + Intel tab
+### Recently Completed
+- **Session Persistence** — Auto-resume from most recent save on page reload. Skips TerminalLogin, loads GameState, pushes dashboardScreen. `VIEW.TERMINAL` state in App.jsx router. All Phaser scene exits emit `UI_ROUTE: TERMINAL`.
+- **Haggle Battle Polish** — Multi-step tactic animations (coin rain, hex-shield, slash lines, heart cascade, shadow bluff), player lunge, dealer hit reactions, type effectiveness flashes, smooth bar tweening
+- **Dialogue Scene Visual Upgrade** — DialogueBox.jsx rewritten with inline styles (was broken Tailwind), back buttons added to HaggleScene + MacDialogueScene
+- **Weekly Report Screen** — `weekReportScreen()` shows financial deltas, market shifts, headlines, messages, and anti-resource warnings after each week advance
+- **4 New NPC Dialogue Trees** — Lorenzo Gallo (mega-dealer gatekeeper), Charles Vandermeer (speculator), Kwame Asante (deep artist trust tree with item rewards), Marcus Price (data-driven advisor)
+- **Artwork Pool Expanded** — 16 → 28 works. Added Richter, Fontana, Soulages (classic), Okafor, Dao, Voss, Asante (mid-career), Molina×2, Herrera, Zhang, Reyes (speculative). Artworks tie into dialogue tree narratives.
+- **Phase 2.7 Code Audit** — all 8 refactoring tasks complete (GameState split, PhoneManager→NPCMemory, GameEventBus, events split, shuffle/id utils)
+- **Venue Flow System** — venue picker, room exploration with time budget, NPC talk with dialogue trees, eavesdrops, stat-gated exits
+- **Dev Test Toolbar** — bottom-left buttons to jump directly into Haggle Battle, Dialogue Scene, or SceneEngine test
+- **Phase 3D JSON Data Layer** — PhoneStore, CalendarStore, SceneEngine completed (by ClaudeCode agent)
+- Save/Load fully wired: TitleScene save slot picker, auto-save after character creation, demo seed profile
+- Ego Terminal v2 dashboard (sparklines, stat bars, market intelligence, pipeline)
 
 ---
 
-## 🔴 Phase 2 — Deep Systems / RPG Mechanics (Current Sprint)
+## What's Built (Completed Phases)
 
-**Goal:** Transform from "event loop" to "strategic narrative RPG" using the 12 stealable mechanics from the Text RPG Research.
+### Phase 0 — Setup & Scaffolding ✅
+- Vite 5 + Phaser 3.87 + React 19 + Zustand 5 + GridEngine 2.48
+- 12 Phaser scenes, 7 managers, 15 data files
+- Git repo, Cloudflare Pages deployment, PWA
 
-### Quality Gates + Blue Options (from FTL + Fallen London)
-| Task | Details |
+### Phase 1a — Core Loop ✅
+- Terminal UI (30+ screens, keyboard + touch, screen stack)
+- Phone UI with messages, NPC contacts, unread counts
+- Buy/sell works, portfolio tracking, market states (bull/bear/flat)
+- Oregon Trail event pacing (~75% event/turn)
+- 4 character classes (Nepo Baby, Hedge Fund, Flipper, Insider)
+
+### Phase 1b — Art World Database ✅
+- 49+ events across 7 categories
+- 16 NPC contacts with phone/favor system
+- Anti-resource system: marketHeat, suspicion, burnout, flipHistory, dealerBlacklisted
+- Gallery buyback simulation + flipper price penalties
+
+### Phase 2 — Deep Systems / RPG Mechanics ✅
+- `QualityGate.js` — stat-gating with blue options
+- `ConsequenceScheduler.js` — delayed effect queue with conditional triggers
+- `DecisionLog.js` — rich decision journal with tags/NPC links
+- NPC memory + autonomous tick (favor decay, memory-aware messages)
+- Burnout anti-resource with forced rest at threshold
+- S.P.E.C.I.A.L. stat system (HYP/TST/AUD/ACC + intel)
+- 6-phase character creator (archetype→stats→traits→drip→vice→name)
+
+### Phase 2.5 — V2 Architecture & UI Overhaul ✅
+- Terminal refactored into modular screen files (`screens/*.js`)
+- `TerminalAPI.js` facade for all data access
+- React ErrorBoundary wrapping entire tree
+- `window.ArtLife` global error registry
+- `window.game.debug()` full debug snapshot API
+- Scene transition system (iris wipe via geometry mask)
+- `StateMachine.js` — queued FSM for scene phases
+- `Controls.js` — null-safe keyboard with lockInput
+- `scene-keys.js` — frozen scene key constants
+- Ego Terminal v2 dashboard with:
+  - Financials panel (sparkline, market dot indicator)
+  - Stats panel (2x2 progress bars: HYP/TST/AUD/ACC)
+  - Market Intelligence (procedural flavor news + real newsFeed)
+  - Pipeline, World Map, ticker bar
+- Haggle Battle v3 (Pokemon-style visual, type attributes, DOM overlay)
+- 1-bit Macintosh dialogue scene
+- LocationScene (room navigation with items/NPCs/eavesdrops)
+- OverworldScene (top-down GridEngine movement)
+- CityScene + FastTravelScene (taxi system)
+- 16 artworks (5 classic, 5 mid-career, 6 speculative)
+- Dialogue trees for Elena Ross + Philippe Noir
+- Save/Load (5 slots, auto-save, migration)
+- Barbara Kruger ticker system
+
+---
+
+## ✅ Phase 2.7 — Code Audit Refactoring (COMPLETE)
+
+> **Goal:** Execute the refactoring priorities from `Code_Audit.md` before building V2 systems. This clears the path for the Zustand migration and prevents architectural debt from compounding.
+> **Completed:** 2026-02-21 — all 8 tasks done, build clean, tests passing.
+
+| # | Task | Status | Priority |
+|---|---|---|---|
+| 1 | Split `GameState.js` → `GameState.js` + `DealResolver.js` + `WeekEngine.js` | ✅ Done | 🔴 Critical |
+| 2 | Split `PhoneManager.js` → `PhoneManager.js` + `NPCMemory.js` | ✅ Done | 🔴 Critical |
+| 3 | Add try/catch isolation to `WeekEngine.advanceWeek()` | ✅ Done | 🔴 Critical |
+| 4 | Fix cross-manager mutation in `MarketManager.tick()` | ✅ Done | 🟡 Moderate |
+| 5 | Replace `window.toggleEgoDashboard` with `GameEventBus` | ✅ Done | 🟡 Moderate |
+| 6 | Fix shuffle bias (`utils/shuffle.js`) | ✅ Done | 🟢 Minor |
+| 7 | Create shared ID generator (`utils/id.js`) | ✅ Done | 🟢 Minor |
+| 8 | Split `events.js` by category → `data/events/*.js` | ✅ Done | 🟢 Minor |
+
+> [!NOTE]
+> **All tasks verified.** Build clean (`npx vite build`), no regressions. New files: `NPCMemory.js`, `DealResolver.js`, `WeekEngine.js`, `utils/shuffle.js`, `utils/id.js`, `data/events/{social,market,drama,personal,travel,opportunity,scandal,chain,index}.js`.
+
+> [!TIP]
+> **Research Audit Complete.** See `Reference_Tools_Research.md` for full findings. Two critical integrations identified for Phase 3+:
+> - **`inkjs`** (npm) — Industry-standard narrative scripting engine for `.ink` scripts.
+> - **`react-flow`** (npm) — Node-based visual editor for the CMS.
+
+---
+
+## User Testing Notes (2026-02-21)
+
+> Feedback from manual playtesting session after Phase 3A venue flow + dev toolbar.
+
+| Observation | Priority | Where to Fix |
+|---|---|---|
+| **Week advance needs a notification/report** — clicking "Advance Week" should show a summary of what happened (deals resolved, NPC messages, market shifts, events triggered). Should pull from real data and look polished. | 🔴 High | `dashboard.js` → new `weekReportScreen`, `WeekEngine.js` → collect report data |
+| **Time/calendar/week system needs buildout** — the current week counter is too minimal. Need a proper calendar that shows upcoming events, scheduled consequences, art fair dates. | 🟡 Medium | Phase 3D CalendarStore (done), needs UI integration |
+| **Venue flow foundation is solid** — Gallery Opening walkthrough with rooms, NPCs, items, eavesdrops works well. Good base to build on. | ✅ Positive | — |
+| **Haggle battle looks good** — Pokemon-style negotiation is working and fun. | ✅ Positive | — |
+| **Haggle battle needs action animations** — when an action is called, sprites should animate (items thrown across, shake effects, visual feedback). Needs sprite animation system + thrown-item assets. | 🟡 Medium | `HaggleScene.js` — add tween/particle effects per tactic, sprite sheet animations |
+| **Dialogue trees need depth** — multiple branching parts, real options with consequences, item rewards. Build one comprehensive tree as the gold standard. | ✅ Done | Kwame Asante tree (20+ nodes, 3 item rewards). Template in `07_Project/Dialogue_Tree_Template.md` |
+| **Dialogue presentation needs Pokemon-style upgrade** — typewriter text, dual portrait layout (player left, NPC right), speaker differentiation, visual novel feel. Should look similar to haggle battle UI but for conversation. | 🔴 High | `MacDialogueScene.js` — add dual portrait zones, name labels, typewriter pacing |
+| **Weekly report needs richer content** — show decisions made, inventory changes, dialogue outcomes, event results, not just financials. Make it feel like a real weekly debrief. | 🟡 Medium | `weekReportScreen` in `dashboard.js` — integrate `DecisionLog`, inventory, more `WeekEngine` data |
+| **Session persistence (page reload)** — reloading the page should restore the player to their last screen (dashboard, venue, etc.), not restart from title. Need scene-level state tracking. | 🟡 Medium | `GameState.state.currentScreen` + auto-restore on boot |
+| **Dev test buttons need better mapping** — Dialogue button should trigger a real dialogue tree scene. All Phaser scenes should have clear back/ESC to return to terminal. | ✅ Done | Dialogue button now launches multi-line Elena Ross conversation. ESC exits all scenes. |
+
+---
+
+## 🔴 Phase 3 — Foundation & Infrastructure (CURRENT)
+
+> **Goal:** Harden the foundation systems that everything else depends on. Make the game loop robust enough that content can be dropped in without rewiring.
+> **Prerequisite:** Phase 2.7 code audit refactoring complete ✅.
+
+### 3A. Scene Flow & Navigation Hardening
+| Task | Status | Notes |
+|---|---|---|
+| Wire `dialogue_trees.js` into full venue flow (B4) | ✅ Done | NPC talk screen shows dialogue tree topics, launches DialogueScene or fallback terminal renderer. Topic-based small talk with favor gain. NPC met tracking. |
+| Wire rooms into EventManager + GameState (C1) | ✅ Done | Time budget system: venues have `timeLimit`, rooms have `timeCost`, time bar displayed in header. Action cost on venue entry. onEnter effects, eavesdrop unlocks, flags all wired. |
+| Full venue flow test (Dashboard→Venue→Dialogue→Haggle→Dashboard) (C2) | IN PROGRESS | Venue picker → venue detail → room explore → NPC talk → dialogue tree all working. Manual testing ready. |
+| **Weekly Report Screen** — show summary after advancing week | ✅ Done | `weekReportScreen()` in dashboard.js. Shows financial deltas, market shifts, headlines, new messages, anti-resource warnings. Powered by `WeekEngine.lastReport`. |
+| Overworld refactor: extract `Player.js`, `NPC.js`, `MapManager.js` | TODO | Phase 40.5 plan exists in README |
+| Doorway warps (OverworldScene → LocationScene interiors) | TODO | |
+| Persistent spawn tracking across scene transitions | TODO | `GameState.state.playerLocation` exists but underused |
+
+### 3B. Developer Tools
+| Task | Status | Notes |
+|---|---|---|
+| Dev Test Toolbar (bottom-left quick-launch buttons) | ✅ Done | `[ SceneEngine ]` `[ Haggle Battle ]` `[ Dialogue ]` — jump to any Phaser scene from anywhere |
+| Admin Narrative Dashboard (God Mode via `~` key) | TODO | Spec: `Admin_Narrative_Tracker_Spec.md` |
+| Consequence Queue visualizer | TODO | Read from `ConsequenceScheduler` |
+| NPC Memory Matrix panel | TODO | Show hidden grudges/favors/witnessed |
+| State Importer (JSON dropzone for late-game testing) | TODO | |
+| Global Flags / Decision viewer | TODO | Read from `DecisionLog` |
+| **Content Management Studio (CMS)** | TODO | Spec: `Content_Management_Studio_Spec.md` |
+| CMS: Content Library panel (searchable entity tree) | TODO | NPCs, Events, Items, Scenes, Artists |
+| CMS: Timeline panel (drag events onto 40-year calendar) | TODO | Visual scheduling with zoom |
+| CMS: Wiring Inspector (entity connection editor) | TODO | Add/remove NPCs from scenes, set gates |
+| CMS: Consequence Chain Previewer | TODO | Simulate downstream effects of any event |
+| CMS: File Loader (auto-import from `data/` directory) | TODO | Vite HMR hot-reload support |
+
+### 3C. Core System Gaps
+| Task | Status | Notes |
+|---|---|---|
+| Tone system for NPC dialogues (5 tones from Roadwarden) | TODO | Spec in `Implementation_Plan.md` A2 |
+| Week 20 character specialization (dominant tone → perk) | TODO | |
+| Progressive disclosure (UI reveals through gameplay) | TODO | Early/mid/late game phases |
+| Inventory system | TODO | Items beyond artworks |
+| **Dialogue Scene Visual Upgrade** | ✅ Done | Pokemon-style dual portrait layout (player L, NPC R), typewriter text, speaker name labels. DialogueBox.jsx rewritten with inline styles. Back buttons on both HaggleScene and MacDialogueScene. |
+| **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
+| **Haggle Battle Animations** | ✅ Done | Multi-step tactic animations per type: coin rain (financial), hex-shield (logical), slash lines + sparks (aggressive), heart cascade (emotional), shadow eyes (bluff). Player lunge, dealer hit reactions, type effectiveness flashes ("SUPER EFFECTIVE!"), smooth bar tweening. |
+| **Juice & Sound Design** | TODO | `use-sound` for UI blips, `react-powerglitch` for Market Crash |
+| **Systemic Lattice Triggers** | TODO | Wire `subscribeWithSelector` for Fail States (Informant/Auteur arcs) |
+| **NPC Memory Modules** | TODO | Log interactions per NPC for `inkjs` narrative branching |
+
+### 3D. JSON Data Layer (Content Authoring Foundation)
+> See `Core_Loop_Systems_Spec.md` for full JSON schemas.
+
+| Task | Status | Notes |
+|---|---|---|
+| Build `PhoneStore.js` | COMPLETE | Notification engine with urgency levels and interruption mechanics |
+| Build `CalendarStore.js` | COMPLETE | Timeline engine that fires `ScheduledEvents` on week advance |
+| Build `SceneEngine.js` | COMPLETE | Generic React component rendering JSON narratives (bg, npcs, choices) |
+| Build `NPCRegistry.js` | TODO | Zustand store for NPC objects with memory, schedule, and stats |
+| Build `EventRegistry.js` | TODO | Event trigger conditions, consequences, and follow-up scheduling |
+| Build `InventoryStore.js` | TODO | Tracks owned items (artworks, documents, contraband) with provenance |
+| Build `MarketEngine.js` | TODO | Weekly price recalculation: artist heat × era modifiers × economic state |
+
+---
+
+## Phase 4 — Content & Narrative Depth
+
+> **Goal:** Fill the skeleton with real stories. Use `01_Overview` through `06_Economy` docs as source material.
+> **Multi-Agent Orders:** See `Phase_4_Multi_Agent_Orders.md` for parallelized execution plan.
+> - **Agent 1 (Negotiator):** Haggle Battle expansion — SceneEngine bridge, state resolution, juice
+> - **Agent 2 (Director):** Scene Engine visuals — background/NPC rendering, narrative rewards, toast UI
+> - **Agent 3 (Architect):** Dialogue & Inventory UI — InventoryDashboard, DialogueBox refactor, phone interrupts
+
+### 4A. Characters & Classes
+| Task | Status | Source Doc |
+|---|---|---|
+| Expand artist pool to 15-20 | ✅ Done | 28 artworks across 3 tiers. New artists: Richter, Fontana, Soulages, Okafor, Dao, Voss, Molina, Zhang, Reyes. |
+| Add provenance & rarity to valuation formula | TODO | `06_Economy/Art_Valuation.md` |
+| Implement perk system (unlockable abilities) | TODO | `03_Characters/Perks_and_Bonuses.md` |
+| Character-specific event arcs | TODO | `03_Characters/Character_Classes.md` |
+| Gallery Insider + Speculator + Curator classes | TODO | `03_Characters/Character_Classes.md` |
+
+### 4B. Events & Narrative
+| Task | Status | Source Doc |
+|---|---|---|
+| Convert 10+ events to deep branching (3+ layers) | TODO | `04_Events/Event_Types.md`, `Scenarios.md` |
+| Write 10 venue encounters (scripted room+condition triggers) | TODO | `04_Events/Venue_Encounters.md` |
+| Multi-turn event chains (Breakout Artist, Market Crash, Rival) | TODO | `04_Events/Scenarios.md` |
+| Dialogue trees for remaining key NPCs | TODO | `04_Events/Dialogue_Trees_V2.md` |
+| Elena Ross conflict tree (if player flipped her artist) | TODO | |
+| Philippe Noir dinner + collaboration trees | TODO | |
+| Lorenzo Gallo, Charles Vandermeer, Kwame Asante, Marcus Price trees | ✅ Done | 4 deep trees with item rewards, scheduled messages, cross-NPC references. Kwame tree is gold standard (15+ nodes, 3 item rewards, trial period mechanic). |
+
+### 4C. World Building
+| Task | Status | Source Doc |
+|---|---|---|
+| Remaining venue data files → JS (Auction House, Art Fair, Studio, Freeport) | PARTIAL | `05_World/Rooms/` — markdown exists, partial JS |
+| Freeport mechanics (store, defer tax, freeport-to-freeport) | TODO | `05_World/Free_Ports.md` |
+| Advanced auction system (English, Sealed Bid, One-Offer) | TODO | `02_Mechanics/Market_System.md` |
+| City-specific content per location | TODO | `05_World/Locations.md` |
+
+---
+
+## Phase 5 — The 40-Year Career (Historical Eras)
+
+> **Goal:** Transform the game from a single-year sprint into a multi-decade career simulation.
+
+| Task | Status | Source Doc |
+|---|---|---|
+| Build `EventEngine.js` (time-based trigger system) | TODO | `UI_and_Dynamic_Systems_Spec.md` §3 |
+| Draft era events: 70s Minimalism, 80s Neo-Expressionism, YBA 90s, 2008 crash | TODO | |
+| Connect era events to market modifiers (artist tags × multipliers) | TODO | |
+| Diegetic Desk UI (visual desk evolution based on stats/era) | TODO | `UI_and_Dynamic_Systems_Spec.md` §2 |
+| ThemeProvider for swappable UI shells | TODO | `UI_and_Dynamic_Systems_Spec.md` §1 |
+
+---
+
+## Phase 6 — Polish & Release
+
+| Task | Status |
 |---|---|
-| Build `QualityGate` engine | Requirements checker: min/max/equals/dotted paths |
-| Add requirements to events | Gate 10+ events behind player progress |
-| Blue Options on event choices | Choices gated by stats, shown as 🔵 with gold border |
-| Locked choice hints | Dimmed choices show "[Requires: Rep 60]" |
-
-### Consequence Scheduler (from King of Dragon Pass)
-| Task | Details |
-|---|---|
-| Build `ConsequenceScheduler` | Queue + tick system for delayed effects |
-| Schedule from event choices | `schedules: [...]` on 10+ events |
-| Support types | phone_message, event, stat_change, news |
-| Conditional triggers | Runtime checks (e.g., only fire if rep > 40) |
-
-### Decision Journal (from Sir Brante)
-| Task | Details |
-|---|---|
-| Build `DecisionLog` manager | Rich logging with context, tags, NPC links |
-| Add Journal tab to GameScene | 4th center tab showing visual timeline |
-| Query methods | getByTag, getByNPC, getByWeekRange |
-
-### NPC Memory + Autonomy (from Overboard!)
-| Task | Details |
-|---|---|
-| Expand contact state with `memory` | witnessed, grudges, favors, lastContact |
-| NPC autonomous tick | Favor decay, pending offer expiry, memory references |
-| Memory-aware message generation | NPCs reference past decisions in messages |
-
-### Burnout Anti-Resource (from Sunless Sea)
-| Task | Details |
-|---|---|
-| Add `burnout` to GameState | Rises from consecutive events, high heat, scandal clusters |
-| Forced rest at threshold | Skip player actions for 1 turn + notification |
+| Full pixel art pass (portraits, backgrounds, UI) | TODO |
+| 8-bit noir visual effects (CRT overlay, scanlines, grain) | TODO |
+| **Comprehensive UI & Data Audit (Anti-Cheat / Security)** | TODO | Conduct deep research into securing state against DOM manipulation/cheating |
+| Sound design (chiptune/ambient + SFX) | TODO |
+| Tutorial / onboarding (guided first week) | TODO |
+| Playtesting & balance (market math, event frequency) | TODO |
+| Endgame reckoning (Week 26+: museum retrospective, SEC investigation, legacy) | TODO |
+| Publish on itch.io | TODO |
 
 ---
 
-## Phase 3 — Content & Characters (~2 weeks)
+## Stretch Goals
 
-**Goal:** Expand from prototype to a game with real depth.
-
-| Task | Details |
-|---|---|
-| Add remaining character classes | Gallery Insider, Speculator, Curator |
-| Expand artist pool to 15–20 | Mix of emerging/mid-career/blue-chip |
-| Write 20+ additional events | Including multi-turn scenarios + character-specific arcs |
-| Implement perk system | Unlockable perks from Perks_and_Bonuses.md |
-| Add provenance & rarity to valuation | Full valuation formula |
-| Character-specific events | Rich Kid inheritance, Hedge Fund bonus, etc. |
-| Increase turn count to 52+ | Full in-game year |
-| Stat evolution | Character specialization at Week 20 milestone |
-| Attitude dial | Tone selector for NPC interactions (5 tones) |
-
----
-
-## Phase 4 — World & Systems (~3 weeks)
-
-**Goal:** Add the strategic depth that makes the game truly strategic.
-
-| Task | Details |
-|---|---|
-| Multi-location system | New York, Basel, London, Miami, Venice |
-| City Hub Overworld | Walk between locations via `CityScene` and fast-travel Taxis |
-| Freeport mechanics | Store, defer tax, freeport-to-freeport sales |
-| **Advanced Auction System** | Variable rules: English, Sealed Bid, One-Offer, Double Auction |
-| **Economic Warfare** | Short selling, rumor mill, "Poorest Loses" crash events |
-| Multi-turn event chains | Breakout Artist, Market Crash, Rival Collector arcs |
-| 2–3 actions per turn | Meaningful trade-offs between actions |
-| Save/load system | localStorage-based persistence |
-| Progressive disclosure | Phase UI reveals into early/mid/late game |
-| Board seats & art fund management | Late-game institutional mechanics |
-
----
-
-## Phase 5 — Polish & Release (~2 weeks)
-
-| Task | Details |
-|---|---|
-| Full pixel art pass | Character portraits, scene backgrounds, UI polish |
-| 8-bit noir visual effects | CRT overlay, scanlines, vignette, grain |
-| Sound design | Chiptune/ambient soundtrack, event SFX |
-| Typewriter text enhancements | Variable speed, dramatic pauses |
-| Tutorial / onboarding | First-time player guidance |
-| Playtesting & balance | Tune market math, event frequency, difficulty |
-| Publish on itch.io | Package, page, screenshots |
-
----
-
-## Stretch Goals (Post-Release)
-
-| Feature | Description |
+| Feature | Notes |
 |---|---|
 | Multiplayer auction mode | Competitive bidding against other players |
 | Procedural artist generation | Infinite content from templates |
-| Mobile-responsive UI | Play on phone/tablet |
-| Full 5-location world | Venice, Hong Kong, São Paulo |
-| Seasonal content events | Real-world art market calendar tie-ins |
-| Steam release | Desktop packaging via Electron or Tauri |
+| Full 5-location world | Venice, Hong Kong, Sao Paulo |
+| Economic warfare | Short selling, rumor mill, crash events |
+| Board seats & art fund management | Late-game institutional mechanics |
+| Steam release | Electron or Tauri packaging |
 
 ---
 
-## Tags
+## Source Document Index
+
+| Folder | Files | Use For |
+|---|---|---|
+| `01_Overview/` | Game_Concept, Vision_Statement | High-level design intent |
+| `02_Mechanics/` | Market_System, Phone_Contacts, Time_System, Turn_Engine | System design reference |
+| `03_Characters/` | Character_Classes, Perks_and_Bonuses | Character content |
+| `04_Events/` | Event_Types, Scenarios, Venue_Encounters, Dialogue_Trees(_V2) | Narrative content |
+| `05_World/` | Locations, Free_Ports, Room_Schema, Rooms/ | World building |
+| `06_Economy/` | Art_Valuation | Economic model |
+| `07_Project/` | **This file**, README, Implementation_Plan, MVP_Definition, UI_and_Dynamic_Systems_Spec, Admin_Narrative_Tracker_Spec, **Dialogue_Tree_Template**, Phase_4_Multi_Agent_Orders, Content_Templates, Brainstorm_Notes | Project management |
+
+---
+
+## Agent Notes
+
+### Workflow
+1. Check this Roadmap for your next task
+2. Mark task as IN PROGRESS in the table above
+3. Read relevant source docs from the index
+4. Implement, test (`npm test` + `npm run test:flow`)
+5. Mark task as DONE, note any follow-ups
+6. If you spec something new, create a file in `07_Project/` and link it here
+
+### Key Conventions
+- All CSS classes for new features use a consistent prefix (e.g., `db-` for dashboard, `haggle-` for battle)
+- Terminal screens return `{ lines, options, footerHtml }` — use `type: 'raw'` for HTML injection
+- `TerminalAPI` is the data facade — screens should never import managers directly
+- Tests must stay green: 36/36 unit + 53/53 flow
+
+---
+
 #project #roadmap #planning #game-design

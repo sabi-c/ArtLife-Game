@@ -13,7 +13,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const BASE = 'http://localhost:5175';
+const BASE = 'http://localhost:5175?skipBoot=true';
 const SS = path.join(__dirname, 'reports', 'screenshots');
 
 let passed = 0, failed = 0;

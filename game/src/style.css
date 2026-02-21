@@ -1916,3 +1916,174 @@ button {
     font-size: 1.4em;
   }
 }
+
+/* ═══════════════════════════════════════════
+   Dashboard Panels (Ego Terminal v2)
+   ═══════════════════════════════════════════ */
+
+.db-panel {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 6px 0;
+}
+
+.db-panel-header {
+  color: var(--gold);
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+/* Financials grid */
+.db-fin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 16px;
+}
+
+.db-fin-label {
+  color: var(--dim);
+  font-size: 0.85em;
+}
+
+.db-fin-value {
+  color: var(--fg);
+  font-weight: 700;
+  font-size: 0.9em;
+  text-align: right;
+}
+
+.db-fin-value.green { color: var(--green); }
+.db-fin-value.gold { color: var(--gold); }
+
+.db-sparkline {
+  color: var(--green);
+  font-size: 0.9em;
+  letter-spacing: 1px;
+}
+
+/* Stat bars */
+.db-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 16px;
+}
+
+.db-stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.db-stat-label {
+  color: var(--dim);
+  font-size: 0.8em;
+  min-width: 28px;
+}
+
+.db-stat-track {
+  flex: 1;
+  height: 6px;
+  background: #1a1a2e;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.db-stat-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s;
+}
+
+.db-stat-val {
+  color: var(--fg);
+  font-size: 0.8em;
+  font-weight: 700;
+  min-width: 24px;
+  text-align: right;
+}
+
+/* News items */
+.db-news-item {
+  color: var(--dim);
+  font-size: 0.85em;
+  padding: 3px 0 3px 10px;
+  border-left: 2px solid var(--border);
+  margin: 2px 0;
+}
+
+.db-news-marker {
+  color: var(--gold);
+}
+
+/* Market indicator dot */
+.db-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.db-dot.bull {
+  background: var(--green);
+  box-shadow: 0 0 4px var(--green);
+}
+
+.db-dot.bear {
+  background: var(--red);
+  box-shadow: 0 0 4px var(--red);
+}
+
+.db-dot.stable {
+  background: var(--dim);
+}
+
+/* Secondary stat indicators */
+.db-secondary {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.db-secondary-item {
+  color: var(--dim);
+  font-size: 0.8em;
+}
+
+.db-secondary-item.warn {
+  color: var(--red);
+}
+
+/* Mobile: collapse grids to single column */
+@media (max-width: 480px) {
+  .db-fin-grid,
+  .db-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .db-fin-value {
+    text-align: left;
+  }
+
+  .db-panel {
+    padding: 8px 10px;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Dialogue Box (React overlay — dlg- prefix)
+   ═══════════════════════════════════════════ */
+
+@keyframes dlg-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes dlg-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}

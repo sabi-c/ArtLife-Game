@@ -139,7 +139,7 @@ export class TerminalUI {
     render() {
         if (!this.onScreen) return;
 
-        const { lines, options, animated } = this.onScreen();
+        const { lines, options, animated, footerHtml } = this.onScreen();
         this.options = options || [];
 
         // Build HTML
@@ -302,6 +302,11 @@ export class TerminalUI {
                 html += `<div class="${cls}${dimClass}${blueClass} t-anim-option" style="--oi:${i}" data-index="${i}">${prefix}${this.escapeHtml(opt.label)}</div>`;
             });
             html += `</div>`;
+        }
+
+        // Footer HTML (e.g. ticker bar)
+        if (footerHtml) {
+            html += footerHtml;
         }
 
         this.container.innerHTML = html;

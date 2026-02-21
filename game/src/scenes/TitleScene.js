@@ -1,95 +1,303 @@
 import Phaser from 'phaser';
 import { SceneTransition } from '../utils/SceneTransition.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
+import { GameState } from '../managers/GameState.js';
 
-/**
- * TitleScene.js — The graphical Phaser entry point for ArtLife.
- * Bypasses TerminalUI and uses a pulsing "Press SPACE" to transition
- * to the CharacterSelectScene.
- */
 export class TitleScene extends Phaser.Scene {
     constructor() {
         super({ key: 'TitleScene' });
     }
 
     init(data) {
-        this.ui = data.ui; // TerminalUI instance passed from main.js
+        this.ui = data.ui;
+        this.selectedIndex = 0;
+        GameState.seedDemoSave(); // ensure at least one profile exists for testing
+        this.hasSave = GameState.hasSave();
+        this.showingSlots = false;
+        this.slotItems = [];
     }
 
     preload() {
-        // We'll load a noir gallery background generated in Phase 41
-        if (!this.textures.exists('bg_gallery')) {
-            this.load.image('bg_gallery', '/backgrounds/gallery_opening.webp');
-        }
+        // No background image — pure terminal aesthetic
     }
 
     create() {
         const { width, height } = this.scale;
 
         // ── Background ──
-        this.cameras.main.setBackgroundColor('#0a0a0f'); // Fallback colour if image missing
-        if (this.textures.exists('bg_gallery') && this.textures.get('bg_gallery').source[0].width > 1) {
-            const bg = this.add.image(width / 2, height / 2, 'bg_gallery');
-            const scaleX = width / bg.width;
-            const scaleY = height / bg.height;
-            bg.setScale(Math.max(scaleX, scaleY));
+        this.cameras.main.setBackgroundColor('#060608');
+
+        // ── Scanlines ──
+        const scanlineGfx = this.add.graphics();
+        scanlineGfx.lineStyle(1, 0xffffff, 0.03);
+        for (let y = 0; y < height; y += 4) {
+            scanlineGfx.moveTo(0, y);
+            scanlineGfx.lineTo(width, y);
         }
+        scanlineGfx.strokePath();
 
-        // Add a dark semi-transparent overlay to make text pop
-        this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a0f, 0.85);
-
-        // ── Logo Text ──
-        this.add.text(width / 2, height * 0.35, 'ARTLIFE', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '64px',
-            color: '#e8e4df',
-            align: 'center',
-            letterSpacing: 10
-        }).setOrigin(0.5);
-
-        this.add.text(width / 2, height * 0.45, 'A game of taste, capital, and reputation.', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '12px',
-            color: '#ffd700', // Gold
-            align: 'center'
-        }).setOrigin(0.5);
-
-        // ── Pulsing Start Text ──
-        const startText = this.add.text(width / 2, height * 0.75, 'Press SPACE to Start', {
+        // ── Institutional Header ──
+        this.add.text(width / 2, height * 0.25, 'ARTLIFE SECURE TERMINAL', {
             fontFamily: '"Press Start 2P"',
             fontSize: '16px',
-            color: '#c94040', // Red accent
+            color: '#c9a84c',
+            align: 'center',
+            letterSpacing: 3
+        }).setOrigin(0.5);
+
+        this.add.text(width / 2, height * 0.31, '── MEMBERSHIP PORTAL ──', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '16px',
+            color: '#c9a84c',
+            align: 'center',
+            letterSpacing: 3
+        }).setOrigin(0.5);
+
+        // ── Subtitle ──
+        this.add.text(width / 2, height * 0.39, 'Authenticated access for registered members.', {
+            fontFamily: 'Courier, monospace',
+            fontSize: '11px',
+            color: '#444455',
             align: 'center'
         }).setOrigin(0.5);
 
-        // Pulse animation
+        // ── Menu Options ──
+        const menuY = height * 0.55;
+        const gap = 36;
+
+        this.menuItems = [];
+
+        // Option 1: New Application
+        const opt1 = this.add.text(width / 2, menuY, '[1] SUBMIT NEW APPLICATION', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '11px',
+            color: '#e8e4df',
+            align: 'center'
+        }).setOrigin(0.5);
+        this.menuItems.push({ text: opt1, action: () => this.startNewGame(), enabled: true });
+
+        // Option 2: Load (Authenticate Dossier)
+        const loadColor = this.hasSave ? '#e8e4df' : '#333344';
+        const opt2 = this.add.text(width / 2, menuY + gap, '[2] AUTHENTICATE DOSSIER', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '11px',
+            color: loadColor,
+            align: 'center'
+        }).setOrigin(0.5);
+        this.menuItems.push({ text: opt2, action: () => this.showSaveSlots(), enabled: this.hasSave });
+
+        // ── Save slot display area (initially hidden) ──
+        this.slotContainer = this.add.container(0, 0).setVisible(false);
+
+        // ── Blinking Cursor ──
+        this.cursor = this.add.text(0, 0, '_', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '11px',
+            color: '#c9a84c'
+        });
         this.tweens.add({
-            targets: startText,
-            alpha: 0.1,
-            duration: 800,
+            targets: this.cursor,
+            alpha: 0,
+            duration: 500,
             yoyo: true,
             repeat: -1,
-            ease: 'Sine.easeInOut'
+            ease: 'Stepped',
+            easeParams: [1]
         });
+        this.updateCursorPosition();
 
-        // ── Input Handling ──
+        // ── Footer ──
+        this.add.text(width / 2, height * 0.92, '© 2024 ArtLife Capital Holdings. All rights reserved.', {
+            fontFamily: 'Courier, monospace',
+            fontSize: '8px',
+            color: '#222233',
+            align: 'center'
+        }).setOrigin(0.5);
+
+        // ── Input ──
+        this.upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+        this.downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
-        this.input.on('pointerdown', () => this.startGame()); // Mobile support
+        this.oneKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE);
+        this.twoKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO);
+        this.threeKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE);
+        this.fourKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR);
+        this.fiveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FIVE);
+        this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+        this.input.on('pointerdown', () => this.confirmSelection());
+    }
+
+    updateCursorPosition() {
+        const items = this.showingSlots ? this.slotItems : this.menuItems;
+        if (items.length === 0) return;
+        const item = items[this.selectedIndex];
+        if (!item) return;
+        const t = item.text;
+        this.cursor.setPosition(t.x + t.width / 2 + 8, t.y - t.height / 2);
+
+        items.forEach((mi, i) => {
+            if (!mi.enabled) {
+                mi.text.setColor('#333344');
+            } else {
+                mi.text.setColor(i === this.selectedIndex ? '#e8e4df' : '#888899');
+            }
+        });
     }
 
     update() {
-        if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) {
-            this.startGame();
+        const items = this.showingSlots ? this.slotItems : this.menuItems;
+        const maxIdx = items.length - 1;
+
+        if (Phaser.Input.Keyboard.JustDown(this.escKey) && this.showingSlots) {
+            this.hideSaveSlots();
+            return;
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.upKey)) {
+            this.selectedIndex = Math.max(0, this.selectedIndex - 1);
+            this.updateCursorPosition();
+        } else if (Phaser.Input.Keyboard.JustDown(this.downKey)) {
+            this.selectedIndex = Math.min(maxIdx, this.selectedIndex + 1);
+            this.updateCursorPosition();
+        } else if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || Phaser.Input.Keyboard.JustDown(this.enterKey)) {
+            this.confirmSelection();
+        }
+
+        // Number keys
+        if (!this.showingSlots) {
+            if (Phaser.Input.Keyboard.JustDown(this.oneKey)) {
+                this.selectedIndex = 0;
+                this.updateCursorPosition();
+                this.confirmSelection();
+            } else if (Phaser.Input.Keyboard.JustDown(this.twoKey)) {
+                this.selectedIndex = 1;
+                this.updateCursorPosition();
+                this.confirmSelection();
+            }
+        } else {
+            // Slot number keys (1-5)
+            const slotKeys = [this.oneKey, this.twoKey, this.threeKey, this.fourKey, this.fiveKey];
+            slotKeys.forEach((key, i) => {
+                if (Phaser.Input.Keyboard.JustDown(key) && i < items.length && items[i].enabled) {
+                    this.selectedIndex = i;
+                    this.updateCursorPosition();
+                    this.confirmSelection();
+                }
+            });
         }
     }
 
-    startGame() {
-        // Prevent multiple triggers
+    confirmSelection() {
+        const items = this.showingSlots ? this.slotItems : this.menuItems;
+        const item = items[this.selectedIndex];
+        if (item && item.enabled) {
+            item.action();
+        }
+    }
+
+    showSaveSlots() {
+        const { width, height } = this.scale;
+        const slots = GameState.getSaveSlots();
+
+        // Hide main menu items
+        this.menuItems.forEach(mi => mi.text.setVisible(false));
+
+        // Build slot list
+        this.slotContainer.removeAll(true);
+        this.slotItems = [];
+
+        const headerText = this.add.text(width / 2, height * 0.48, 'SELECT DOSSIER', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '12px',
+            color: '#c9a84c',
+            align: 'center'
+        }).setOrigin(0.5);
+        this.slotContainer.add(headerText);
+
+        const startY = height * 0.55;
+        const gap = 32;
+        let slotIdx = 0;
+
+        for (let i = 0; i < GameState.MAX_SLOTS; i++) {
+            const slotData = slots[i];
+            if (!slotData) continue;
+
+            const meta = slotData.meta;
+            const charName = meta.characterName || 'Unknown';
+            const playerName = meta.playerName || charName;
+            const weekStr = `Wk ${meta.week}`;
+            const cashStr = `$${(meta.cash || 0).toLocaleString()}`;
+            const label = `[${i + 1}] ${playerName} · ${charName} · ${weekStr} · ${cashStr}`;
+
+            const slotText = this.add.text(width / 2, startY + slotIdx * gap, label, {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '9px',
+                color: '#e8e4df',
+                align: 'center'
+            }).setOrigin(0.5);
+
+            this.slotContainer.add(slotText);
+            const capturedSlotIndex = i;
+            this.slotItems.push({
+                text: slotText,
+                action: () => this.loadSlot(capturedSlotIndex),
+                enabled: true
+            });
+            slotIdx++;
+        }
+
+        // Back option
+        const backText = this.add.text(width / 2, startY + slotIdx * gap + 12, '[ESC] BACK', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '9px',
+            color: '#888899',
+            align: 'center'
+        }).setOrigin(0.5);
+        this.slotContainer.add(backText);
+        this.slotItems.push({
+            text: backText,
+            action: () => this.hideSaveSlots(),
+            enabled: true
+        });
+
+        this.slotContainer.setVisible(true);
+        this.showingSlots = true;
+        this.selectedIndex = 0;
+        this.updateCursorPosition();
+    }
+
+    hideSaveSlots() {
+        this.slotContainer.setVisible(false);
+        this.slotItems = [];
+        this.menuItems.forEach(mi => mi.text.setVisible(true));
+        this.showingSlots = false;
+        this.selectedIndex = 0;
+        this.updateCursorPosition();
+    }
+
+    startNewGame() {
+        this.input.keyboard.removeAllKeys();
+        this.input.off('pointerdown');
+        SceneTransition.irisWipeToScene(this, SCENE_KEYS.INTRO, { ui: this.ui }, 600);
+    }
+
+    loadSlot(slotIndex) {
+        const success = GameState.load(slotIndex);
+        if (!success) return;
+
         this.input.keyboard.removeAllKeys();
         this.input.off('pointerdown');
 
-        // Iris wipe → IntroScene → CharacterSelectScene
-        SceneTransition.irisWipeToScene(this, SCENE_KEYS.INTRO, { ui: this.ui }, 600);
+        // Show terminal UI and push dashboard
+        if (this.ui) {
+            this.ui.container.style.display = '';
+        }
+
+        import('../terminal/screens/index.js').then(({ dashboardScreen }) => {
+            if (this.ui) this.ui.pushScreen(dashboardScreen(this.ui));
+            this.sys.game.canvas.style.display = 'none';
+            this.scene.stop();
+        });
     }
 }

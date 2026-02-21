@@ -24,9 +24,11 @@ export class DialogueTreeManager {
             let text = node.text;
             if (!text && node.variants && node.variants.length > 0) {
                 // Find first variant whose conditions are satisfied
+                // Tree data uses `check` for variant conditions (topics use `requires`)
                 const passing = node.variants.find(v => {
-                    if (!v.requires) return true;
-                    return QualityGate.check(v.requires);
+                    const cond = v.check || v.requires;
+                    if (!cond) return true;
+                    return QualityGate.check(cond);
                 });
                 text = passing ? passing.text : node.variants[0].text;
             }

@@ -40,38 +40,103 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 | Agent | Current Task | Files Being Touched | Status |
 |---|---|---|---|
-| — | — | — | — |
+| **Antigravity** | Phase 4 Active. Building Agent 2 (Scene Visuals/Rewards) & Agent 3 (Inventory UI/Dialogue). | `SceneEngine.js`, `ScenePlayer.jsx`, `inventoryStore.js`, `InventoryDashboard.jsx`, `App.jsx` | 🟢 Active |
+| **ClaudeCode** | Weekly report, dialogue trees, artwork expansion, content pipeline. | `dashboard.js`, `dialogue_trees.js`, `artworks.js`, `GameDebugAPI.js` | 🟢 Active |
+
+---
+
+### 🔧 ClaudeCode: Code Audit Execution Orders
+
+> [!CAUTION]
+> **ClaudeCode:** Read `Code_Audit.md` in this folder FIRST. It contains 15 specific issues with exact code fixes. Execute them in the priority order below. After each refactoring step, run `cd game && npx vite build --mode development` to verify zero errors.
+
+**Phase 2.7 — Code Audit Refactoring (execute in this order):**
+
+| # | Task | Files | What To Do |
+|---|---|---|---|
+| 1 | **Split GameState.js** | `managers/GameState.js` → `managers/GameState.js` + `managers/DealResolver.js` + `managers/WeekEngine.js` | Extract `advanceWeek()` into `WeekEngine.js`. Extract deal resolution (lines 168-220) into `DealResolver.js`. Keep core state, `init()`, `save()`, `load()`, `buyWork()`, `sellWork()` in GameState. |
+| 2 | **Split PhoneManager.js** | `managers/PhoneManager.js` → `managers/PhoneManager.js` + `managers/NPCMemory.js` | Extract `addWitnessed()`, `addGrudge()`, `addFavor()`, `npcAutonomousTick()` into `NPCMemory.js`. Keep messaging functions in PhoneManager. |
+| 3 | **Add try/catch to WeekEngine** | `managers/WeekEngine.js` | Each system call in the tick sequence gets its own try/catch (see `Code_Audit.md` issue #1 for exact pattern). |
+| 4 | **Fix cross-manager mutation** | `managers/MarketManager.js` | Move `suspicion` and `marketHeat` decay out of `MarketManager.tick()`. Return effects from `tick()`, let `WeekEngine` apply them. |
+| 5 | **Replace window globals** | `phaserInit.js`, `App.jsx` | Replace `window.toggleEgoDashboard` with `GameEventBus.emit(GameEvents.TOGGLE_DASHBOARD)`. Add listener in App.jsx useEffect. |
+| 6 | **Fix shuffle bias** | `managers/MarketManager.js` | Replace `sort(() => Math.random() - 0.5)` with Fisher-Yates shuffle. Create `utils/shuffle.js`. |
+| 7 | **Shared ID generator** | Create `utils/id.js` | Extract the `Date.now() + Math.random()` pattern into a shared `generateId(prefix)` function. Update ConsequenceScheduler, MarketManager, GameState. |
+| 8 | **Split events.js** | `data/events.js` → `data/events/index.js` + category files | Split by event category. Barrel re-export from `index.js`. |
+
+---
+
+### 🔁 Crossover Verification Protocol
+
+> [!WARNING]
+> **Both agents MUST follow this protocol.** After every refactoring task, the OTHER agent verifies.
+
+**After ClaudeCode completes each task:**
+1. ClaudeCode runs `cd game && npx vite build --mode development` — must be **0 errors**
+2. ClaudeCode runs existing tests: `cd game && npm test` (if test runner exists)
+3. ClaudeCode updates the task table above with ✅ status
+4. **Antigravity verifies:** Reads the changed files, confirms the refactoring matches the `Code_Audit.md` specification, and checks that no other manager's imports broke
+
+**Verification Checklist (run after EVERY file split):**
+- [ ] All imports updated across the codebase (`grep -r "from.*GameState" game/src/`)
+- [ ] `npx vite build --mode development` produces 0 errors
+- [ ] Existing functionality preserved (game still boots to TitleScene)
+- [ ] No circular imports introduced
+- [ ] New file follows the established pattern (static class with JSDoc)
 
 ### Rules
 1. **Register** your task in the table above before starting
 2. **Don't touch files** another agent is touching
 3. **Run `cd game && npx vite build --mode development`** before marking code tasks complete
 4. **Be proactive** — if you see something that would make the game better, do it
+5. **Cross-check** — after completing a refactoring task, the other agent reviews the changes
+
+---
+
+## 📚 Master Documentation Index
+
+> [!IMPORTANT]
+> **To all Agents:** If you are building a specific feature, you MUST read the associated spec document in the `07_Project` folder BEFORE writing code.
+
+| System / Feature | Architectural Specification | Description |
+|---|---|---|
+| **World Building & Narrative** | `Art_World_Database.md` | The core lore, NPC profiles, and market mechanics. |
+| **V2 UI & Era Engine** | `UI_and_Dynamic_Systems_Spec.md` | React ThemeProvider (`Desk` vs `Terminal`) & the 40-Year Era progression framework. |
+| **Narrative Tracking & Debugging** | `Admin_Narrative_Tracker_Spec.md` | The "God Mode" dashboard for tracking hidden flags and the consequence queue. |
+| **Content Management Studio** | `Content_Management_Studio_Spec.md` | Visual authoring workspace: drag-and-drop event scheduling, NPC wiring, consequence chain previewer. |
+| **Core Loop (7 Systems)** | `Core_Loop_Systems_Spec.md` | Phone, Calendar, Scene Engine, NPC Registry, Event Registry, Inventory, Art Pricing & Economics. |
+| **Open-Source Research** | `Reference_Tools_Research.md` | Audit of narrative engines, CMS tools, and market sims with INTEGRATE vs REFERENCE recommendations. |
+| **Implementation Blueprints** | `Implementation_Plan.md` | Production-grade code patterns, error handling tables, and critical-path build order for all V2 systems. |
+| **Dialogue Tree Template** | `Dialogue_Tree_Template.md` | AI content pipeline: JSON schema, field docs, stat/NPC/venue reference, design guidelines, minimal + complex examples. Give to AI to generate new scenes. |
+| **Code Audit** | `Code_Audit.md` | 15 issues found (4 critical), refactoring priorities, and educational explanations for each fix. |
+| **Game Design Philosophy** | `Fundamentals_of_Play.md` | Core psychological tenets and mechanics ensuring the game remains fun and unpredictable. |
+| **Project Scheduling** | `Roadmap.md` | The current phase timeline. |
+| **Historical Logs** | `README_ARCHIVE.md` | Completed work from V1 Prototype. |
 
 ---
 
 ## 🔥 Highest-Impact Tasks
 
-1. **Phase 40.5 — Overworld Refactor** — Extract `Player.js`, `NPC.js`, `MapManager.js` from monolithic scenes
-2. **Wire rooms into game loop** — `rooms.js` and `dialogue_trees.js` exist but aren't connected via B4/C1
-3. **Convert 5+ events to deep branching** — use `collector_dinner` as template
-4. **NPC reputation consequences** — wire `npcEffects` into `resolveEventChoice()`
-5. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API)
-6. **Tutorial / first-time experience** — guided first week for new players
+> **See [Roadmap.md](Roadmap.md) for the full task tracker with status columns.**
+
+1. **Dialogue Scene Visual Upgrade** — Pokemon-style dual portraits, typewriter text, speaker names. Make conversations look as good as the haggle battle.
+2. **Haggle Battle Animations** — sprite reactions per tactic (items thrown, shake, flash). Tween/particle system.
+3. **Session Persistence** — page reload should restore last screen, not restart from title.
+4. **Weekly Report Enhancement** — richer content: decisions, inventory, dialogue outcomes, events.
+5. **Admin Narrative Dashboard** — God Mode overlay for hidden flags, consequence queue, NPC memory
+6. **Comprehensive UI & Data Audit (Anti-Cheat)** — Deep research and implementation of state protection so players cannot manipulate the DOM or local storage to cheat.
+7. **Tone system for NPC dialogues** — 5 tones from Roadwarden research
+8. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API)
 
 ---
 
-## 🏗️ Phase 7: React UI Integration (Current Focus)
+## 🏗️ Current Phase: Foundation & Infrastructure
 
-**Goal:** Merge ArtLife's core gameplay loop (NPC dialogues, Haggle Battles) into the robust React/Zustand UI architecture demonstrated by `pokemon-react-phaser`. 
+> **See [Roadmap.md](Roadmap.md) for detailed task tracking.**
 
-### The Migration Strategy
-We will perform a **vertical slice integration** to prove the pipeline before a full rewrite. We will port ONE specific interaction (e.g. the NPC Dialogue "Backroom Deal" test) into a new React overlay.
-
-1. **Environment Setup:** Refactor `index.html` and `main.js` into an `index.html` + `src/main.jsx` structure. Install `react`, `react-dom`, and `zustand`. Wrap the Phaser Game boot inside a top-level React Component (`<App />`).
-2. **State Bridge (`Zustand`):** Create `src/stores/uiStore.js`. This acts as the global state manager bridging React and Phaser, replacing the need for our old `TerminalUI` rendering loop for this slice.
-3. **Phaser Refactor:** Update `MacDialogueScene.js` so that instead of using Phaser's WebGL text renderer, it calls `uiStore.getState().openDialogue(payload)`.
-4. **React Overlays:** Create `src/ui/DialogueBox.jsx`. The component listens to `uiStore`, renders elegantly on top of the `<canvas>` via CSS, and uses callbacks to resume the Phaser gameplay sequence upon completion.
+**Phase 3** focuses on hardening the foundation so content can be dropped in without rewiring:
+- Scene flow & navigation (B4/C1/C2 from Implementation_Plan)
+- Developer tools (Admin Dashboard, State Importer)
+- Core system gaps (tone system, progressive disclosure, sound)
 
 ## 📋 Code Health Audit
 
@@ -81,9 +146,10 @@ We will perform a **vertical slice integration** to prove the pipeline before a 
 | Layer | Files | Total Size | Notes |
 |---|---|---|---|
 | `scenes/` | 12 | ~175KB | Largest: `GameScene.js` (44KB), `DialogueScene.js` (36KB) |
-| `managers/` | 13 | ~132KB | Largest: `GameState.js` (31KB). New: `GameEventBus.js` |
-| `data/` | 15 + 1 dir | ~320KB | Largest: `events.js` (150KB), `rooms.js` (76KB) |
+| `managers/` | 15 | ~140KB | Split: `GameState`+`DealResolver`+`WeekEngine`+`NPCMemory`+`GameEventBus` |
+| `data/` | 8 + `events/` (9) + `maps/` | ~380KB | `events.js` split into 8 categories. `dialogue_trees.js` expanded to ~60KB (9 trees). 28 artworks. Largest: `rooms.js` (76KB) |
 | `terminal/` | 2 | ~165KB | `screens.js` = 140KB — candidate for splitting |
+| `utils/` | 4 | ~5KB | `shuffle.js`, `id.js`, `ErrorRegistry.js`, `GameDebugAPI.js` |
 | `sprites/` | 2 | ~5KB | `Player.js`, `NPC.js` (decoupled entity classes) |
 | `anims/` | 1 | ~1.5KB | `CharacterAnims.js` (centralized animation registry) |
 | `ui/` | 1 | TBD | New UI component directory |
@@ -132,7 +198,8 @@ game/
 │   │   ├── cities.js               # 5 cities with travel costs
 │   │   ├── contacts.js             # 16 NPC contacts across 10 roles
 │   │   ├── dialogue_trees.js       # V2 dialogue trees (39KB)
-│   │   ├── events.js               # 49+ events (150KB)
+│   │   ├── events.js               # Re-export barrel → events/*.js
+│   │   ├── events/                 # 49+ events split by category (8 files)
 │   │   ├── haggle_config.js        # Haggle types, tactics, dealer types, dialogue
 │   │   ├── rooms.js                # Room/venue data (76KB)
 │   │   ├── scenes.js               # Dialogue scene content data
@@ -142,14 +209,18 @@ game/
 │   │
 │   ├── managers/                   # ── ENGINE LAYER ──
 │   │   ├── GameState.js            # Central state singleton (31KB)
+│   │   ├── WeekEngine.js           # Weekly advance orchestrator (try/catch isolated)
+│   │   ├── DealResolver.js         # Deal/offer resolution logic
+│   │   ├── NPCMemory.js            # NPC memory system (witnessed, grudges, favors, gossip)
 │   │   ├── MarketManager.js        # Art market simulation
-│   │   ├── PhoneManager.js         # NPC communication hub (22KB)
+│   │   ├── PhoneManager.js         # NPC messaging hub (slimmed)
 │   │   ├── EventManager.js         # Event selection + pacing
 │   │   ├── HaggleManager.js        # Haggle battle state machine (17KB)
 │   │   ├── ConsequenceScheduler.js # Delayed effect queue
 │   │   ├── DecisionLog.js          # Player decision journal
 │   │   ├── DialogueEngine.js       # Branching narrative parser
 │   │   ├── DialogueTreeManager.js  # V2 dialogue tree manager
+│   │   ├── GameEventBus.js         # Singleton Phaser↔UI event bridge
 │   │   ├── OverworldHelper.js      # Map/physics helper (12KB)
 │   │   ├── QualityGate.js          # Stat-gating system
 │   │   └── SettingsManager.js      # Game settings persistence
@@ -208,13 +279,19 @@ game/
 | Haggle Battle v3 (type attributes, Phaser visual) | ✅ |
 | 1-bit Macintosh dialogue scene | ✅ |
 | Scene system (12 Phaser scenes) | ✅ |
-| Rooms + dialogue trees (data files) | ✅ |
+| Rooms + dialogue trees (9 trees, 4 NPCs deep) | ✅ |
+| Weekly report screen (post-advance notification) | ✅ |
+| 28 artworks across 3 tiers | ✅ |
+| Dialogue tree content pipeline template | ✅ |
 | LocationScene (room navigation) | ✅ |
 | OverworldScene (top-down movement) | ✅ |
 | CityScene + FastTravel | ✅ |
 | Settings system | ✅ |
 | News ticker phrase bank | ✅ |
+| Ego Terminal v2 (sparklines, stat bars, market intel) | ✅ |
 | Rooms wired into game loop (full B4/C1) | ❌ TODO |
+| Tone system for dialogues | ❌ TODO |
+| Admin Narrative Dashboard | ❌ TODO |
 | Inventory system | ❌ TODO |
 | Sound design | ❌ TODO |
 | Endgame reckoning (Week 26) | ❌ TODO |
@@ -223,15 +300,21 @@ game/
 
 ## Active Roadmap
 
+> **Full tracker: [Roadmap.md](Roadmap.md)**
+
 ```
-  NOW    Phase 40.5: Overworld Refactor (Player.js, NPC.js, MapManager.js)
-  ↓     B4 (wire dialogue trees) → C1-C2 (room integration)
-  ↓     Phase 14 (convert 10+ events to deep branching)
-  ↓     Phase 15 (NPC depth — personalityTraits, rivalries, quest lines)
-  ↓     Phase 29 (Visual Gallery — Canvas-rendered artworks)
-  ↓     Phase 41 (City Hub & World Expansion)
-  ↓     Phase 42 (UX Polish & Robustness Test Hub)
-  ↓     Endgame reckoning + sound design
+  NOW    Phase 3: Foundation & Infrastructure
+  ├──── 3A: Wire dialogue trees + rooms into game loop (B4/C1/C2)
+  ├──── 3B: Admin Narrative Dashboard (God Mode)
+  └──── 3C: Tone system, progressive disclosure, sound
+  ↓
+  NEXT   Phase 4: Content & Narrative Depth
+  ├──── 4A: Expand artists, perks, character arcs
+  ├──── 4B: Deep branching events, venue encounters, NPC trees
+  └──── 4C: Freeport, auctions, city content
+  ↓
+  LATER  Phase 5: 40-Year Career (Historical Eras)
+  ↓      Phase 6: Polish & Release
 ```
 
 ---
