@@ -33,9 +33,9 @@ jobs:
     - name: Verify Build
       run: npm run build
 
-    - name: Start preview server and run tests
+    - name: Start dev server and run tests
       run: |
-        npx vite preview --port 5175 &
-        sleep 3
+        npx vite --port 5175 &
+        sleep 5
         npm test
         kill %1 || true
