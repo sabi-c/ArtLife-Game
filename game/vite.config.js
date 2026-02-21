@@ -11,7 +11,15 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         assetsDir: 'assets',
-        emptyOutDir: true
+        emptyOutDir: true,
+        rollupOptions: {
+            output: {
+                // Keep Phaser in its own chunk so tree-shaking doesn't break class hierarchy
+                manualChunks: {
+                    phaser: ['phaser'],
+                },
+            },
+        },
     },
     plugins: [
         react(),

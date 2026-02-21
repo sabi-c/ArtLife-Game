@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { GameState } from '../managers/GameState';
+import { WebAudioService } from '../managers/WebAudioService.js';
 
 // ─── Variable-speed typewriter hook ──────────────────────────────────────────
 const useTypewriter = (linesArray, active, onComplete) => {
@@ -51,6 +52,7 @@ const useTypewriter = (linesArray, active, onComplete) => {
                     delay += 60 + Math.random() * 100;
                 }
                 setTimeout(type, delay);
+                WebAudioService.type(); // Play retro typing blip
             } else {
                 lineIdx++;
                 charIdx = 0;
@@ -120,9 +122,11 @@ export default function TerminalLogin({ onComplete }) {
             } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 if (dossiers.length > 0) {
                     setPrimaryIndex(prev => prev === 0 ? 1 : 0);
+                    WebAudioService.hover();
                 }
                 e.preventDefault();
             } else if (e.key === 'Enter') {
+                WebAudioService.select();
                 if (primaryIndex === 0) {
                     // Start New Game (Bypass further steps, tell App to command Phaser to launch IntroScene)
                     setStep('AUTH');
@@ -142,11 +146,14 @@ export default function TerminalLogin({ onComplete }) {
 
             if (e.key === 'ArrowUp') {
                 setDossierIndex(prev => (prev - 1 + maxOptions) % maxOptions);
+                WebAudioService.hover();
                 e.preventDefault();
             } else if (e.key === 'ArrowDown') {
                 setDossierIndex(prev => (prev + 1) % maxOptions);
+                WebAudioService.hover();
                 e.preventDefault();
             } else if (e.key === 'Enter') {
+                WebAudioService.select();
                 if (dossierIndex < dossiers.length) {
                     // Selected an actual dossier
                     setSelectedDossier(dossiers[dossierIndex]);
@@ -169,8 +176,10 @@ export default function TerminalLogin({ onComplete }) {
         else if (step === 'CONFIRM') {
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 setConfirmIndex(prev => prev === 0 ? 1 : 0);
+                WebAudioService.hover();
                 e.preventDefault();
             } else if (e.key === 'Enter') {
+                WebAudioService.select();
                 if (confirmIndex === 0) {
                     // Load into GameState
                     const trueSlotIndex = GameState.getSaveSlots().findIndex(s => s && s.meta.savedAt === selectedDossier.savedAt);
@@ -221,6 +230,7 @@ export default function TerminalLogin({ onComplete }) {
     }, [selectedDossier]);
 
     const authTypewriter = useTypewriter(authLines, step === 'AUTH', () => {
+        WebAudioService.success();
         setTimeout(() => {
             setVisible(false);
             if (selectedDossier) {

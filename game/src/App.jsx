@@ -12,6 +12,7 @@ import TerminalLogin from './ui/TerminalLogin.jsx';
 import AdminDashboard from './ui/AdminDashboard.jsx';
 import { VIEW } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
+import { WebAudioService } from './managers/WebAudioService.js';
 
 export default function App() {
     const [game, setGame] = useState(null);
@@ -29,7 +30,11 @@ export default function App() {
     useEffect(() => {
         const handleKeyDown = (e) => {
             if (e.key === '`' || e.key === '~') {
-                setShowAdmin(prev => !prev);
+                setShowAdmin(prev => {
+                    if (!prev) WebAudioService.hover();
+                    else WebAudioService.select();
+                    return !prev;
+                });
             }
         };
         window.addEventListener('keydown', handleKeyDown);
@@ -44,7 +49,7 @@ export default function App() {
         } catch (err) {
             console.error('[App] Phaser init failed:', err);
             setPhaserError(err.message || 'Phaser failed to initialise.');
-            return () => {};
+            return () => { };
         }
 
         // ── Session Persistence / Test Backdoor ──
