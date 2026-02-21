@@ -2319,3 +2319,138 @@ button {
     gap: 6px;
   }
 }
+
+/* ═══════════════════════════════════════════
+   Dashboard Header Panel (db-header-*)
+   ═══════════════════════════════════════════ */
+
+.db-header-panel {
+  border-top: 2px solid var(--gold);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.db-header-name {
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.db-header-meta {
+  color: var(--dim);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.db-header-worth {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.db-header-worth.down {
+  color: var(--red);
+}
+
+/* ═══════════════════════════════════════════
+   HUD Row (side-by-side on desktop)
+   ═══════════════════════════════════════════ */
+
+.db-hud-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .db-hud-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Warning Bar (anti-resources)
+   ═══════════════════════════════════════════ */
+
+.db-warning-bar {
+  display: flex;
+  gap: 16px;
+  padding: 6px 12px;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  border: 1px solid rgba(201, 64, 64, 0.2);
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+/* ═══════════════════════════════════════════
+   Pipeline Rows
+   ═══════════════════════════════════════════ */
+
+.db-pipeline-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--fg);
+}
+
+.db-pipeline-row span:last-child {
+  color: var(--dim);
+}
+
+/* ═══════════════════════════════════════════
+   World Map Interactivity
+   ═══════════════════════════════════════════ */
+
+.wm-city-link {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.wm-city-link:hover {
+  color: var(--gold);
+  text-decoration: underline;
+}
+
+.wm-event-marker {
+  color: var(--gold);
+  margin-left: 4px;
+}
+
+/* ═══════════════════════════════════════════
+   Profile Login Inputs (tl-*)
+   ═══════════════════════════════════════════ */
+
+.tl-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--dim);
+  color: #eaeaea;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 4px;
+  width: 100%;
+  max-width: 300px;
+  outline: none;
+}
+
+.tl-input:focus {
+  border-color: var(--gold);
+}
+
+.tl-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 4px;
+  animation: tl-shake 0.3s;
+}
+
+@keyframes tl-shake {
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

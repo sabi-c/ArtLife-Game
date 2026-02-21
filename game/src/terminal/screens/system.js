@@ -5,6 +5,7 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { GameState } from '../../managers/GameState.js';
+import { ProfileManager } from '../../managers/ProfileManager.js';
 import { PhoneManager } from '../../managers/PhoneManager.js';
 import { ConsequenceScheduler } from '../../managers/ConsequenceScheduler.js';
 import { DecisionLog } from '../../managers/DecisionLog.js';
@@ -187,6 +188,17 @@ export function pauseMenuScreen(ui) {
                 label: '🏠 Return to Title Screen',
                 action: () => ui.pushScreen(returnToTitleConfirmScreen(ui))
             },
+            {
+                label: '🔄 Switch Agent',
+                action: () => {
+                    GameState.autoSave();
+                    window.location.reload();
+                }
+            },
+            {
+                label: '🗑️ Delete Agent Profile',
+                action: () => ui.pushScreen(deleteProfileScreen(ui))
+            },
             { label: '← Resume Game', action: () => ui.popScreen() }
         ];
 
@@ -303,6 +315,40 @@ function returnToTitleConfirmScreen(ui) {
                 }
             },
             { label: 'Cancel', action: () => ui.popScreen() }
+        ];
+
+        return { lines, options };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: Delete Agent Profile
+// ════════════════════════════════════════════
+function deleteProfileScreen(ui) {
+    return () => {
+        const activeProfile = ProfileManager.getActiveProfile();
+        const lines = [
+            H('DELETE AGENT PROFILE'),
+            DIV(),
+            RED('This will permanently delete your agent profile and ALL save data.'),
+            BLANK(),
+            activeProfile ? DIM(`Active profile: ${activeProfile.username}${activeProfile.isGuest ? ' (Guest)' : ''}`) : DIM('No active profile'),
+            BLANK(),
+            'Are you sure?'
+        ];
+
+        const options = [
+            {
+                label: 'Yes, delete my profile',
+                action: () => {
+                    if (activeProfile) {
+                        ProfileManager.deleteProfile(activeProfile.id);
+                        GameState.state = null;
+                        window.location.reload();
+                    }
+                }
+            },
+            { label: 'Cancel — keep profile', action: () => ui.popScreen() }
         ];
 
         return { lines, options };

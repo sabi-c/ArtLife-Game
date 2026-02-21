@@ -13,6 +13,7 @@
 **Deployed:** GitHub Pages (https://sabi-c.github.io/ArtLife-Game/)
 
 ### Recently Completed
+- **Dashboard HUD Upgrade + World Map + User Profiles & Auth** — Rich header panel (character info, city, week, net worth trend), side-by-side Financials+Stats on desktop, warning bar for elevated anti-resources, styled pipeline panel, clickable world map cities with event markers (◈ fair, ◆ auction, ● event), travel-from-map with AP confirmation, PBKDF2 password-protected user profiles (`ProfileManager.js`), profile-scoped save slots, profile create/login/guest flows in `TerminalLogin.jsx`, Switch Agent + Delete Agent in system menu, ~100 lines new CSS
 - **Calendar & Time UI + Variable Action Costs** — Action budget panel with gold pip bar (4 AP), calendar strip showing upcoming art world events, variable AP costs (1 AP cheap / 2 AP expensive actions), `[AP]` labels on all options, priority "WEEK COMPLETE" CTA when exhausted, ~90 lines new CSS
 - **Screen Audit Bug Fixes (7)** — Fixed initGame reference in character.js, ConsequenceScheduler imports in events.js + journal.js, dead code in phone.js, market.js inspect guard, dashboard.js sparkline null safety, system.js restart/return-to-title
 - **MVP Sprint: Quick Wins** — Fix restart option, add "Return to Title", auto-checkpoint saves after every action and week advance, terminal sound effects (hover/select/typewriter via WebAudioService), Quick Start demo option on title screen, cloudflare tunnel script for mobile testing
@@ -174,7 +175,7 @@
 | Tone system for NPC dialogues (5 tones from Roadwarden) | TODO | Spec in `Implementation_Plan.md` A2 |
 | Week 20 character specialization (dominant tone → perk) | TODO | |
 | Progressive disclosure (UI reveals through gameplay) | TODO | Early/mid/late game phases |
-| Inventory system | TODO | Items beyond artworks |
+| Inventory system | ✅ Done | Items beyond artworks |
 | **Dialogue Scene Visual Upgrade** | ✅ Done | Pokemon-style dual portrait layout (player L, NPC R), typewriter text, speaker name labels. DialogueBox.jsx rewritten with inline styles. Back buttons on both HaggleScene and MacDialogueScene. |
 | **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
 | **Haggle Battle Animations** | ✅ Done | Multi-step tactic animations per type: coin rain (financial), hex-shield (logical), slash lines + sparks (aggressive), heart cascade (emotional), shadow eyes (bluff). Player lunge, dealer hit reactions, type effectiveness flashes ("SUPER EFFECTIVE!"), smooth bar tweening. |
@@ -190,9 +191,9 @@
 | Build `PhoneStore.js` | COMPLETE | Notification engine with urgency levels and interruption mechanics |
 | Build `CalendarStore.js` | COMPLETE | Timeline engine that fires `ScheduledEvents` on week advance |
 | Build `SceneEngine.js` | COMPLETE | Generic React component rendering JSON narratives (bg, npcs, choices) |
-| Build `NPCRegistry.js` | TODO | Zustand store for NPC objects with memory, schedule, and stats |
+| Build `NPCRegistry.js` | ✅ Done | Expanded into `npcStore.js` (Zustand), subsuming `NPCMemory.js` & `PhoneManager` contacts |
 | Build `EventRegistry.js` | TODO | Event trigger conditions, consequences, and follow-up scheduling |
-| Build `InventoryStore.js` | TODO | Tracks owned items (artworks, documents, contraband) with provenance |
+| Build `InventoryStore.js` | ✅ Done | Tracks owned items (artworks, documents, contraband) with provenance |
 | Build `MarketEngine.js` | TODO | Weekly price recalculation: artist heat × era modifiers × economic state |
 
 ---
