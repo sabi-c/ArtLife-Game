@@ -9,10 +9,11 @@
 import { GameState } from './GameState.js';
 import { DealResolver } from './DealResolver.js';
 import { PhoneManager } from './PhoneManager.js';
-import { NPCMemory } from './NPCMemory.js';
+import { useNPCStore } from '../stores/npcStore.js';
 import { ConsequenceScheduler } from './ConsequenceScheduler.js';
 import { MarketManager } from './MarketManager.js';
 import { GameEventBus, GameEvents } from './GameEventBus.js';
+import { EventRegistry } from './EventRegistry.js';
 
 export class WeekEngine {
     /** Last week's advance report — set after each advanceWeek() call. */
@@ -63,12 +64,23 @@ export class WeekEngine {
         catch (e) { console.error('[WeekEngine] Phone messages failed:', e); }
 
         // ── NPC Autonomous Tick ──
-        try { NPCMemory.autonomousTick(); }
+        try { useNPCStore.getState().autonomousTick(state.week); }
         catch (e) { console.error('[WeekEngine] NPC tick failed:', e); }
 
         // ── Scheduled Consequences ──
         try { ConsequenceScheduler.tick(state.week); }
         catch (e) { console.error('[WeekEngine] Consequences failed:', e); }
+
+        // ── Random / Narrative Events ──
+        try {
+            const ev = EventRegistry.checkForEvent();
+            if (ev) {
+                // The EventRegistry recorded it, but we can also log a headline
+                GameState.addNews(`Something happened: ${ev.title}`);
+                useEventStore.getState().setPendingEvent(ev);
+            }
+        }
+        catch (e) { console.error('[WeekEngine] EventRegistry failed:', e); }
 
         // ── Pending Offers ──
         try { DealResolver.resolvePendingOffers(state); }

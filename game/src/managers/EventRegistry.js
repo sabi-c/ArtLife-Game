@@ -1,34 +1,29 @@
-import { EVENTS } from '../data/events.js';
+import { useEventStore } from '../stores/eventStore.js';
 import { GameState } from './GameState.js';
 import { QualityGate } from './QualityGate.js';
 
 /**
- * Event manager — Oregon Trail-style pacing + Quality Gate filtering
- * Events fire almost every turn. The game IS the events.
+ * EventRegistry — Oregon Trail-style pacing + Quality Gate filtering.
+ * Connects the Zustand eventStore to the active GameState and Scenes.
+ * Replaces EventManager (Phase 2.7+ Update).
  */
-export class EventManager {
-    static pendingEvent = null;
-    static lastEventWeek = 0;
-    static recentEventIds = []; // Track last N events to avoid repeats
-    static priorityQueue = [];  // Events forced by ConsequenceScheduler
-
+export class EventRegistry {
     static checkForEvent() {
         const state = GameState.state;
+        const store = useEventStore.getState();
 
         // ── Priority queue: consequence-scheduled events fire first ──
-        if (EventManager.priorityQueue.length > 0) {
-            const eventId = EventManager.priorityQueue.shift();
-            const event = EVENTS.find(e => e.id === eventId);
+        const priorityEventId = store.popPriorityEvent();
+        if (priorityEventId) {
+            const event = store.getEvent(priorityEventId);
             if (event) {
                 state.eventsTriggered.push(event.id);
-                EventManager.lastEventWeek = state.week;
-                EventManager.recentEventIds.push(event.id);
-                if (EventManager.recentEventIds.length > 5) EventManager.recentEventIds.shift();
+                store.recordEventTriggered(event.id, state.week);
                 return event;
             }
         }
 
-        const weeksSinceLastEvent = state.week - EventManager.lastEventWeek;
+        const weeksSinceLastEvent = state.week - store.lastEventWeek;
 
         // Oregon Trail pacing: ~75% chance of an event every turn
         let probability;
@@ -45,14 +40,14 @@ export class EventManager {
         if (Math.random() > probability) return null;
 
         // Pick eligible events
-        const eligible = EVENTS.filter((event) => {
+        const eligible = store.eventPool.filter((event) => {
             // Class restriction check
             if (event.classRestriction && event.classRestriction !== state.character.id) {
                 return false;
             }
 
             // Don't repeat the last 5 events
-            if (EventManager.recentEventIds.includes(event.id)) {
+            if (store.recentEventIds.includes(event.id)) {
                 return false;
             }
 
@@ -87,21 +82,12 @@ export class EventManager {
 
         // Record it
         state.eventsTriggered.push(selected.id);
-        EventManager.lastEventWeek = state.week;
-
-        // Track recent events (keep last 5)
-        EventManager.recentEventIds.push(selected.id);
-        if (EventManager.recentEventIds.length > 5) {
-            EventManager.recentEventIds.shift();
-        }
+        store.recordEventTriggered(selected.id, state.week);
 
         return selected;
     }
 
     static getPendingEvent() {
-        const event = EventManager.pendingEvent;
-        EventManager.pendingEvent = null;
-        return event;
+        return useEventStore.getState().consumePendingEvent();
     }
 }
-

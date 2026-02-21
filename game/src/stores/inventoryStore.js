@@ -11,8 +11,17 @@ export const useInventoryStore = create(
                 // To be implemented: value updates based on market Store
             }),
 
+            hasItem: (itemId) => {
+                return get().items.some(i => i.id === itemId);
+            },
+
             addItem: (item) => set((state) => {
-                state.items.push(item);
+                if (!state.items.some(i => i.id === item.id)) {
+                    state.items.push({
+                        ...item,
+                        acquiredAt: item.acquiredAt || Date.now()
+                    });
+                }
             }),
 
             removeItem: (itemId) => set((state) => {

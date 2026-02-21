@@ -3,29 +3,29 @@ import { GameState } from './GameState.js';
 import { ConsequenceScheduler } from './ConsequenceScheduler.js';
 import { generateId } from '../utils/id.js';
 
+import { useNPCStore } from '../stores/npcStore.js';
+
 /**
  * PhoneManager — the Nokia flip phone communication hub
  *
  * Manages:
  * - Incoming messages (from NPCs, events, system)
  * - Message queue and urgency
- * - Contact book state (favor, met status, history)
  * - Unread count and notification state
  */
 export class PhoneManager {
     static messages = [];
-    static contacts = [];
     static initialized = false;
 
     static init() {
         if (PhoneManager.initialized) return;
-        PhoneManager.contacts = initializeContacts();
+        useNPCStore.getState().init();
         PhoneManager.messages = [];
         PhoneManager.initialized = true;
     }
 
     static reset() {
-        PhoneManager.contacts = initializeContacts();
+        useNPCStore.getState().reset();
         PhoneManager.messages = [];
         PhoneManager.initialized = true;
     }
@@ -68,10 +68,7 @@ export class PhoneManager {
         PhoneManager.messages.unshift(msg); // newest first
 
         // Mark NPC as met
-        const contact = PhoneManager.getContact(from);
-        if (contact && !contact.met) {
-            contact.met = true;
-        }
+        useNPCStore.getState().meetContact(from);
 
         return msg;
     }
@@ -86,7 +83,8 @@ export class PhoneManager {
 
         // 1. NPC-driven messages (1-3 per turn)
         const messageCount = 1 + Math.floor(Math.random() * 2); // 1-2 messages
-        const availableNPCs = PhoneManager.contacts.filter((c) => {
+        const contacts = useNPCStore.getState().contacts;
+        const availableNPCs = contacts.filter((c) => {
             // Don't spam from the same NPC too frequently
             const recentFromNPC = PhoneManager.messages.filter(
                 (m) => m.from === c.id && m.week >= week - 2
@@ -105,8 +103,7 @@ export class PhoneManager {
             const msg = PhoneManager.generateNPCMessage(npcData, npc, state);
             if (msg) {
                 PhoneManager.sendMessage(msg);
-                npc.lastContact = week;
-                npc.interactions++;
+                useNPCStore.getState().setLastContactStatus(npc.id, week);
             }
         }
 
@@ -257,7 +254,7 @@ export class PhoneManager {
     // ── Contact Management ──
 
     static getContact(id) {
-        return PhoneManager.contacts.find((c) => c.id === id);
+        return useNPCStore.getState().getContact(id);
     }
 
     static getContactData(id) {
@@ -265,10 +262,7 @@ export class PhoneManager {
     }
 
     static adjustFavor(npcId, amount) {
-        const contact = PhoneManager.getContact(npcId);
-        if (contact) {
-            contact.favor = Math.max(-100, Math.min(100, contact.favor + amount));
-        }
+        useNPCStore.getState().adjustFavor(npcId, amount);
     }
 
     // ── Queries ──
@@ -291,21 +285,24 @@ export class PhoneManager {
     }
 
     static getContactsByRole(role) {
-        return PhoneManager.contacts.filter((c) => c.role === role);
+        return useNPCStore.getState().contacts.filter((c) => c.role === role);
     }
 
     static getMetContacts() {
-        return PhoneManager.contacts.filter((c) => c.met);
+        return useNPCStore.getState().contacts.filter((c) => c.met);
     }
 
     static meetRandomContact() {
         // Pick a random unmet NPC and introduce them
-        const unmet = PhoneManager.contacts.filter(c => !c.met);
+        const contacts = useNPCStore.getState().contacts;
+        const unmet = contacts.filter(c => !c.met);
         if (unmet.length === 0) return null;
         const npc = unmet[Math.floor(Math.random() * unmet.length)];
-        npc.met = true;
-        npc.favor = (npc.favor || 0) + 5;
-        npc.lastContactWeek = GameState.state.week;
+
+        const store = useNPCStore.getState();
+        store.meetContact(npc.id);
+        store.adjustFavor(npc.id, 5);
+        store.setLastContactStatus(npc.id, GameState.state.week);
         const npcData = CONTACTS.find(cd => cd.id === npc.id);
         if (npcData) {
             GameState.addNews(`🤝 Met ${npcData.name} (${npcData.role}) at the fair.`);
@@ -437,7 +434,4 @@ export class PhoneManager {
         return action;
     }
 
-    // NOTE: NPC Memory methods (addWitnessed, addGrudge, addFavor, npcAutonomousTick)
-    // have been extracted to NPCMemory.js during Code Audit Phase 2.7 (Task #2).
 }
-

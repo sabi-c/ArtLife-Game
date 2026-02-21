@@ -8,6 +8,7 @@ import { BACKGROUND_TRAITS } from '../data/backgrounds.js';
 import { GameEventBus, GameEvents } from './GameEventBus.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
+import { ProfileManager } from './ProfileManager.js';
 
 /**
  * Central game state manager for ArtLife
@@ -408,6 +409,24 @@ export class GameState {
             }
         }
 
+        // ─── Inventory Storage effects (Items, Contraband, Documents) ───
+        if (effects.inventoryAdd) {
+            const item = effects.inventoryAdd;
+            import('../stores/inventoryStore.js').then(({ useInventoryStore }) => {
+                useInventoryStore.getState().addItem({ ...item, week: state.week });
+            });
+            summary.push(`Acquired item: ${item.name}`);
+            GameState.addNews(`🧰 Acquired artifact: ${item.name}`);
+        }
+        if (effects.inventoryRemove) {
+            const itemId = effects.inventoryRemove;
+            import('../stores/inventoryStore.js').then(({ useInventoryStore }) => {
+                useInventoryStore.getState().removeItem(itemId);
+            });
+            summary.push(`Lost artifact from inventory`);
+            GameState.addNews(`🧰 An artifact was removed from your inventory.`);
+        }
+
         if (effects.cash) {
             state.cash += effects.cash;
             summary.push(effects.cash > 0 ? `+$${effects.cash.toLocaleString()}` : `-$${Math.abs(effects.cash).toLocaleString()}`);
@@ -518,10 +537,23 @@ export class GameState {
     // ════════════════════════════════════════
 
     // ══════════════════════════════════════════
-    // Save / Load — Multi-Slot System
+    // Save / Load — Profile-Scoped Multi-Slot System
     // ══════════════════════════════════════════
     static MAX_SLOTS = 5;
     static activeSlot = 0;
+
+    /**
+     * Profile-scoped slot key.
+     */
+    static _slotKey(slotIndex) {
+        const profileId = ProfileManager.getActiveProfile()?.id || 'guest';
+        return `artlife_profile_${profileId}_slot_${slotIndex}`;
+    }
+
+    static _lastSlotKey() {
+        const profileId = ProfileManager.getActiveProfile()?.id || 'guest';
+        return `artlife_profile_${profileId}_last_slot`;
+    }
 
     /**
      * Save to a specific slot (0-4). Stores both full state and lightweight metadata.
@@ -543,8 +575,8 @@ export class GameState {
                 version: '0.3.0',
             }
         };
-        localStorage.setItem(`artlife_slot_${slotIndex}`, JSON.stringify(saveData));
-        localStorage.setItem('artlife_last_slot', String(slotIndex));
+        localStorage.setItem(GameState._slotKey(slotIndex), JSON.stringify(saveData));
+        localStorage.setItem(GameState._lastSlotKey(), String(slotIndex));
         GameState.activeSlot = slotIndex;
     }
 
@@ -557,7 +589,7 @@ export class GameState {
         // Migrate old save format if needed
         GameState._migrateOldSave();
 
-        const raw = localStorage.getItem(`artlife_slot_${slotIndex}`);
+        const raw = localStorage.getItem(GameState._slotKey(slotIndex));
         if (!raw) return false;
 
         try {
@@ -601,7 +633,7 @@ export class GameState {
 
         const slots = [];
         for (let i = 0; i < GameState.MAX_SLOTS; i++) {
-            const raw = localStorage.getItem(`artlife_slot_${i}`);
+            const raw = localStorage.getItem(GameState._slotKey(i));
             if (raw) {
                 try {
                     const data = JSON.parse(raw);
@@ -621,7 +653,7 @@ export class GameState {
      */
     static getMostRecentSlot() {
         try {
-            const val = localStorage.getItem('artlife_last_slot');
+            const val = localStorage.getItem(GameState._lastSlotKey());
             if (val === null || val === '') return null;
             const parsed = parseInt(val, 10);
             if (isNaN(parsed) || parsed < 0 || parsed >= GameState.MAX_SLOTS) return null;
@@ -636,7 +668,7 @@ export class GameState {
      * Delete a specific save slot.
      */
     static deleteSave(slotIndex) {
-        localStorage.removeItem(`artlife_slot_${slotIndex}`);
+        localStorage.removeItem(GameState._slotKey(slotIndex));
     }
 
     /**
@@ -644,7 +676,7 @@ export class GameState {
      */
     static hasSave() {
         for (let i = 0; i < GameState.MAX_SLOTS; i++) {
-            if (localStorage.getItem(`artlife_slot_${i}`)) return true;
+            if (localStorage.getItem(GameState._slotKey(i))) return true;
         }
         return false;
     }
@@ -761,37 +793,67 @@ export class GameState {
             }
         };
 
-        localStorage.setItem('artlife_slot_0', JSON.stringify(saveData));
-        localStorage.setItem('artlife_last_slot', '0');
+        ProfileManager.ensureGuestProfile();
+        localStorage.setItem(GameState._slotKey(0), JSON.stringify(saveData));
+        localStorage.setItem(GameState._lastSlotKey(), '0');
     }
 
     static _migrateOldSave() {
+        // Migrate from old single-save format
         const old = localStorage.getItem('artlife_save');
-        if (old && !localStorage.getItem('artlife_slot_0')) {
-            try {
-                const state = JSON.parse(old);
-                const saveData = {
-                    state: state,
-                    meta: {
-                        playerName: state.playerName || 'The Dealer',
-                        characterName: state.character?.name || 'Unknown',
-                        characterIcon: state.character?.icon || '🎭',
-                        week: state.week || 1,
-                        cash: state.cash || 0,
-                        portfolioCount: state.portfolio?.length || 0,
-                        netWorth: state.cash || 0,
-                        city: state.currentCity || 'new-york',
-                        reputation: state.reputation || 50,
-                        savedAt: new Date().toISOString(),
-                        version: 'migrated',
-                    }
-                };
-                localStorage.setItem('artlife_slot_0', JSON.stringify(saveData));
-                localStorage.setItem('artlife_last_slot', '0');
-                localStorage.removeItem('artlife_save');
-            } catch (e) {
-                console.error('Failed to migrate old save:', e);
+        if (old) {
+            const guestId = ProfileManager.ensureGuestProfile() || ProfileManager.getActiveProfile()?.id || 'guest';
+            const newKey = `artlife_profile_${guestId}_slot_0`;
+            if (!localStorage.getItem(newKey)) {
+                try {
+                    const state = JSON.parse(old);
+                    const saveData = {
+                        state,
+                        meta: {
+                            playerName: state.playerName || 'The Dealer',
+                            characterName: state.character?.name || 'Unknown',
+                            characterIcon: state.character?.icon || '🎭',
+                            week: state.week || 1,
+                            cash: state.cash || 0,
+                            portfolioCount: state.portfolio?.length || 0,
+                            netWorth: state.cash || 0,
+                            city: state.currentCity || 'new-york',
+                            reputation: state.reputation || 50,
+                            savedAt: new Date().toISOString(),
+                            version: 'migrated',
+                        }
+                    };
+                    localStorage.setItem(newKey, JSON.stringify(saveData));
+                    localStorage.setItem(`artlife_profile_${guestId}_last_slot`, '0');
+                    localStorage.removeItem('artlife_save');
+                } catch (e) {
+                    console.error('Failed to migrate old save:', e);
+                }
             }
+        }
+
+        // Migrate from old multi-slot format (artlife_slot_N) to profile-scoped
+        for (let i = 0; i < GameState.MAX_SLOTS; i++) {
+            const oldKey = `artlife_slot_${i}`;
+            const oldData = localStorage.getItem(oldKey);
+            if (oldData) {
+                const guestId = ProfileManager.ensureGuestProfile() || ProfileManager.getActiveProfile()?.id || 'guest';
+                const newKey = `artlife_profile_${guestId}_slot_${i}`;
+                if (!localStorage.getItem(newKey)) {
+                    localStorage.setItem(newKey, oldData);
+                }
+                localStorage.removeItem(oldKey);
+            }
+        }
+        // Migrate old last_slot key
+        const oldLast = localStorage.getItem('artlife_last_slot');
+        if (oldLast !== null) {
+            const guestId = ProfileManager.getActiveProfile()?.id || 'guest';
+            const newLastKey = `artlife_profile_${guestId}_last_slot`;
+            if (!localStorage.getItem(newLastKey)) {
+                localStorage.setItem(newLastKey, oldLast);
+            }
+            localStorage.removeItem('artlife_last_slot');
         }
     }
 }

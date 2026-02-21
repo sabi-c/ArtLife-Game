@@ -228,10 +228,6 @@ export default function App() {
                 <ScenePlayer onClose={() => setActiveView(VIEW.PHASER)} payload={viewPayload} />
             )}
 
-            {activeView === VIEW.INVENTORY && (
-                <InventoryDashboard onClose={() => setActiveView(VIEW.PHASER)} />
-            )}
-
             {/* ── OVERLAY REGISTRY ── */}
             {activeOverlay === OVERLAY.ADMIN && (
                 <AdminDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
@@ -239,6 +235,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.SETTINGS && (
                 <SettingsOverlay onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.INVENTORY && (
+                <InventoryDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {/* The Phaser Canvas Layer sets up in this div */}

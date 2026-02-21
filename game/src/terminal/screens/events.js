@@ -77,7 +77,6 @@ export function eventScreen(ui, event) {
             options.push({
                 label: 'Continue',
                 action: () => {
-                    TerminalAPI.advanceWeek();
                     ui.popScreen();
                     ui.replaceScreen(dashboardScreen(ui));
                 }
@@ -119,7 +118,6 @@ export function eventStepScreen(ui, event, stepIndex) {
                     label: isLast ? 'Continue...' : 'Continue →',
                     action: () => {
                         if (isLast) {
-                            TerminalAPI.advanceWeek();
                             ui.popScreen();
                             ui.replaceScreen(dashboardScreen(ui));
                         } else {
@@ -144,7 +142,6 @@ export function eventStepScreen(ui, event, stepIndex) {
                     label: isLast ? 'Continue...' : 'Continue →',
                     action: () => {
                         if (isLast) {
-                            TerminalAPI.advanceWeek();
                             ui.popScreen();
                             ui.replaceScreen(dashboardScreen(ui));
                         } else {
@@ -204,7 +201,6 @@ export function eventStepScreen(ui, event, stepIndex) {
                 label: 'Continue →',
                 action: () => {
                     if (isLast) {
-                        TerminalAPI.advanceWeek();
                         ui.popScreen();
                         ui.replaceScreen(dashboardScreen(ui));
                     } else {
@@ -262,7 +258,6 @@ function eventOutcomeScreen(ui, event, choice) {
             options: [{
                 label: 'Continue →',
                 action: () => {
-                    TerminalAPI.advanceWeek();
                     TerminalAPI.initGame.autoSave?.();
                     ui.popScreen();
                     ui.replaceScreen(dashboardScreen(ui));

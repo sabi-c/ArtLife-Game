@@ -20,7 +20,9 @@ import { CHARACTERS } from '../data/characters.js';
 import { CONTACTS } from '../data/contacts.js';
 import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
 import { PhoneManager } from '../managers/PhoneManager.js';
-import { NPCMemory } from '../managers/NPCMemory.js';
+import { useNPCStore } from '../stores/npcStore.js';
+import { useEventStore } from '../stores/eventStore.js';
+import { EventRegistry } from '../managers/EventRegistry.js';
 // Import WeekEngine to trigger self-registration with GameState
 import { WeekEngine } from '../managers/WeekEngine.js';
 
@@ -34,7 +36,7 @@ export const TerminalAPI = {
     log: DecisionLog,
     dialogue: DialogueTreeManager,
     network: PhoneManager,
-    npcMemory: NPCMemory,
+    npcStore: useNPCStore,
     ticker: TickerSystem,
     settings: window.SettingsManager || {},
     gate: QualityGate,
@@ -59,6 +61,7 @@ export const TerminalAPI = {
         GameState.autoSave();
     },
     getLastWeekReport: () => WeekEngine.lastReport,
+    getPendingEvent: () => EventRegistry.getPendingEvent(),
 
     initGame: {
         init: (characterData) => GameState.init(characterData),

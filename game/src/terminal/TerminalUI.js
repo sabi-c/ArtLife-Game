@@ -364,6 +364,20 @@ export class TerminalUI {
                 }
             });
         });
+
+        // City links on world map — click to travel
+        this.container.querySelectorAll('.wm-city-link').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const cityId = el.dataset.city;
+                if (!cityId) return;
+                // Emit a custom event the dashboard can listen for
+                if (this._onCityClick) {
+                    WebAudioService.select();
+                    this._onCityClick(cityId);
+                }
+            });
+        });
     }
 
     // ── Scene Transition ──

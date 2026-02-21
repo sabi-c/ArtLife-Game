@@ -99,7 +99,7 @@ export class MacDialogueScene extends BaseScene {
                     this.ui.popScreen();
                 }
             }
-            this.scene.stop();
+            if (this.scene) this.scene.stop();
         };
         if (this.cameras && this.cameras.main) {
             this.cameras.main.fadeOut(800, 0, 0, 0);
@@ -112,6 +112,10 @@ export class MacDialogueScene extends BaseScene {
     }
 
     showReward() {
+        if (!this.cameras || !this.cameras.main) {
+            this.endDialogue(true);
+            return;
+        }
         const camW = this.cameras.main.width;
         const camH = this.cameras.main.height;
 

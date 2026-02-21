@@ -11,6 +11,7 @@ import { characterSelectScreen } from './character.js';
 import { marketScreen, portfolioScreen } from './market.js';
 import { phoneScreen } from './phone.js';
 import { cityScreen, newsScreen } from './world.js';
+import { eventScreen, eventStepScreen } from './events.js';
 import { journalScreen, legacyEndScreen } from './journal.js';
 import { pauseMenuScreen } from './system.js';
 import { SettingsManager } from '../../managers/SettingsManager.js';
@@ -643,16 +644,40 @@ const CITY_NAMES = {
     'los-angeles': 'Los Angeles', 'miami': 'Miami', 'berlin': 'Berlin'
 };
 
+// Map event locations to city IDs
+const LOCATION_TO_CITY = {
+    'New York': 'new-york', 'London': 'london', 'Paris': 'paris',
+    'Berlin': 'berlin', 'Hong Kong': 'hong-kong', 'Miami': 'miami',
+    'Los Angeles': 'los-angeles', 'Basel': 'switzerland', 'Maastricht': 'switzerland',
+    'Venice': 'paris', 'Dubai': 'hong-kong', 'São Paulo': 'miami',
+    'Madrid': 'paris', 'Hamptons': 'new-york', 'St. Barts': 'miami',
+};
+const EVENT_ICONS = { fair: '◈', auction: '◆', biennale: '★', market: '▸', social: '●', exhibition: '○' };
+
 function generateWorldMap(currentWeek) {
     const s = TerminalAPI.state();
     const currentCity = s.currentCity || 'new-york';
     const currentCityName = CITY_NAMES[currentCity] || currentCity;
 
+    // Gather events and group by city
+    const events = getUpcomingEvents(currentWeek, 4);
+    const eventsByCity = {};
+    events.forEach(e => {
+        const cityId = LOCATION_TO_CITY[e.location];
+        if (cityId) {
+            if (!eventsByCity[cityId]) eventsByCity[cityId] = [];
+            eventsByCity[cityId].push(e);
+        }
+    });
+
     const cityMarker = (cityId, name) => {
+        const eventIcons = (eventsByCity[cityId] || [])
+            .map(e => `<span class="wm-event-marker">${EVENT_ICONS[e.type] || '▸'}</span>`)
+            .join('');
         if (cityId === currentCity) {
-            return `<span class="wm-current">★ ${name}</span>`;
+            return `<span class="wm-city-link wm-current" data-city="${cityId}">★ ${name}</span>${eventIcons}`;
         } else {
-            return `<span class="wm-city">○ ${name}</span>`;
+            return `<span class="wm-city-link wm-city" data-city="${cityId}">○ ${name}</span>${eventIcons}`;
         }
     };
 
@@ -668,7 +693,7 @@ function generateWorldMap(currentWeek) {
     return WORLDMAP(
         `WORLD MAP · ${currentCityName.toUpperCase()}`,
         rows,
-        '★ You are here  ○ Reachable city'
+        '★ You are here  ○ City  ◈ Fair  ◆ Auction  ● Event'
     );
 }
 
@@ -888,9 +913,56 @@ function calendarEventScreen(ui, event, apCost) {
 // SCREEN: Main Dashboard (Ego Terminal v2)
 // ════════════════════════════════════════════
 export function dashboardScreen(ui) {
+    // Wire up city click handler for world map
+    ui._onCityClick = (cityId) => {
+        const s = TerminalAPI.state();
+        if (!s) return;
+        if (cityId === s.currentCity) {
+            ui.showNotification('You are already here.', '📍');
+            return;
+        }
+        if (!hasActions(1)) {
+            ui.showNotification('Not enough AP to travel.', '⚠️');
+            return;
+        }
+        // Show travel confirmation
+        ui.pushScreen(() => {
+            const cityName = CITY_NAMES[cityId] || cityId;
+            return {
+                lines: [
+                    H('TRAVEL'),
+                    DIM(`Travel to ${cityName}?`),
+                    DIM('This will cost 1 AP and advance the week.'),
+                ],
+                options: [
+                    {
+                        label: `✈️ Travel to ${cityName} [1 AP]`,
+                        action: () => {
+                            useAction(`Traveled to ${cityName}`);
+                            TerminalAPI.initGame.changeCity(cityId);
+                            ui.popScreen();
+                            ui.replaceScreen(dashboardScreen(ui));
+                        }
+                    },
+                    { label: '← Cancel', action: () => ui.popScreen() }
+                ]
+            };
+        });
+    };
+
     return () => {
         const s = TerminalAPI.state();
         if (!s) return { lines: [H('NO STATE FOUND')], options: [{ label: 'Back', action: () => ui.popScreen() }] };
+
+        // ── Intercept pending events ──
+        const pendingEvent = TerminalAPI.getPendingEvent();
+        if (pendingEvent) {
+            if (pendingEvent.steps && pendingEvent.steps.length > 0) {
+                return eventStepScreen(ui, pendingEvent, 0)();
+            } else {
+                return eventScreen(ui, pendingEvent)();
+            }
+        }
 
         const month = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][Math.floor((s.week - 1) / 4) % 12];
         const year = 2024 + Math.floor((s.week - 1) / 52);
@@ -912,8 +984,18 @@ export function dashboardScreen(ui) {
 
         const lines = [];
 
-        // ── Header ──
-        lines.push(H('EGO TERMINAL'));
+        // ── Rich Header Panel ──
+        const charName = s.character?.name || 'UNKNOWN';
+        const playerName = s.playerName || 'Agent';
+        const currentCityDisplay = CITY_NAMES[s.currentCity] || s.currentCity || 'New York';
+        const worthTrend = trend === '↑' ? 'up' : trend === '↓' ? 'down' : '';
+        lines.push({
+            type: 'raw', text: `<div class="db-header-panel">`
+                + `<div class="db-header-name">EGO TERMINAL &nbsp; ★ ${charName.toUpperCase()}</div>`
+                + `<div class="db-header-meta">${playerName} · ${currentCityDisplay} · Week ${s.week} · ${month} ${year}</div>`
+                + `<div class="db-header-worth${worthTrend ? ' ' + worthTrend : ''}">Net Worth: $${netWorth.toLocaleString()} ${trend}</div>`
+                + `</div>`
+        });
 
         // ── Action Budget Panel ──
         lines.push({ type: 'raw', text: actionBudgetPanelHtml(actionsLeft, MAX_ACTIONS, weekLabel) });
@@ -921,32 +1003,38 @@ export function dashboardScreen(ui) {
         // ── Calendar Strip ──
         lines.push({ type: 'raw', text: calendarStripHtml(s.week, month, year) });
 
-        // ── Financials Panel ──
-        lines.push({
-            type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">FINANCIALS</div>`
-                + `<div class="db-fin-grid">`
-                + `<span class="db-fin-label">Cash</span><span class="db-fin-value green">$${s.cash.toLocaleString()}</span>`
-                + `<span class="db-fin-label">Portfolio</span><span class="db-fin-value">$${portfolioValue.toLocaleString()}  (${s.portfolio.length} works)</span>`
-                + `<span class="db-fin-label">Net Worth</span><span class="db-fin-value gold">$${netWorth.toLocaleString()}  <span class="db-sparkline">${spark} ${trend}</span></span>`
-                + `<span class="db-fin-label">Market</span><span class="db-fin-value"><span class="db-dot ${dotClass}"></span>${s.marketState.toUpperCase()}</span>`
-                + `</div></div>`
-        });
+        // ── Warning Bar (only when anti-resources elevated) ──
+        const showHeat = s.marketHeat >= 10;
+        const showBurnout = s.burnout >= 3;
+        const showSuspicion = (s.suspicion || 0) >= 3;
+        if (showHeat || showBurnout || showSuspicion) {
+            let warningItems = [];
+            if (showHeat) warningItems.push(`HEAT ${s.marketHeat}`);
+            if (showBurnout) warningItems.push(`BURNOUT ${Math.round(s.burnout)}`);
+            if (showSuspicion) warningItems.push(`SUSPICION ${Math.round(s.suspicion)}`);
+            lines.push({
+                type: 'raw', text: `<div class="db-warning-bar">⚠ ${warningItems.join('  ·  ')}</div>`
+            });
+        }
 
-        // ── Stats Panel ──
-        lines.push({
-            type: 'raw', text: `<div class="db-panel"><div class="db-panel-header">STATS</div>`
-                + `<div class="db-stats-grid">`
-                + statBarHtml('HYP', s.reputation, 100, 'var(--gold)')
-                + statBarHtml('AUD', s.audacity ?? 0, 100, 'var(--red)')
-                + statBarHtml('TST', s.taste, 100, 'var(--blue)')
-                + statBarHtml('ACC', s.access, 100, 'var(--green)')
-                + `</div>`
-                + `<div class="db-secondary">`
-                + `<span class="db-secondary-item${s.marketHeat > 30 ? ' warn' : ''}">Heat ${s.marketHeat}</span>`
-                + `<span class="db-secondary-item${s.burnout > 5 ? ' warn' : ''}">Burnout ${Math.round(s.burnout)}</span>`
-                + `</div>`
-                + `</div>`
-        });
+        // ── HUD Row: Financials + Stats side-by-side on desktop ──
+        const financialsHtml = `<div class="db-panel"><div class="db-panel-header">FINANCIALS</div>`
+            + `<div class="db-fin-grid">`
+            + `<span class="db-fin-label">Cash</span><span class="db-fin-value green">$${s.cash.toLocaleString()}</span>`
+            + `<span class="db-fin-label">Portfolio</span><span class="db-fin-value">$${portfolioValue.toLocaleString()}  (${s.portfolio.length} works)</span>`
+            + `<span class="db-fin-label">Net Worth</span><span class="db-fin-value gold">$${netWorth.toLocaleString()}  <span class="db-sparkline">${spark} ${trend}</span></span>`
+            + `<span class="db-fin-label">Market</span><span class="db-fin-value"><span class="db-dot ${dotClass}"></span>${s.marketState.toUpperCase()}</span>`
+            + `</div></div>`;
+
+        const statsHtml = `<div class="db-panel"><div class="db-panel-header">STATS</div>`
+            + `<div class="db-stats-grid">`
+            + statBarHtml('HYP', s.reputation, 100, 'var(--gold)')
+            + statBarHtml('AUD', s.audacity ?? 0, 100, 'var(--red)')
+            + statBarHtml('TST', s.taste, 100, 'var(--blue)')
+            + statBarHtml('ACC', s.access, 100, 'var(--green)')
+            + `</div></div>`;
+
+        lines.push({ type: 'raw', text: `<div class="db-hud-row">${financialsHtml}${statsHtml}</div>` });
 
         // ── Market Intelligence Panel ──
         const newsItems = generateFlavorNews(s);
@@ -957,14 +1045,15 @@ export function dashboardScreen(ui) {
         newsHtml += `</div>`;
         lines.push({ type: 'raw', text: newsHtml });
 
-        // ── Pipeline ──
+        // ── Pipeline Panel ──
         if (s.activeDeals.length > 0) {
-            lines.push(DIV());
-            lines.push(SUB(`PIPELINE (${s.activeDeals.length} active)`));
+            let pipeHtml = `<div class="db-panel"><div class="db-panel-header">PIPELINE (${s.activeDeals.length} active)</div>`;
             s.activeDeals.forEach(deal => {
                 const weeksLeft = deal.resolutionWeek - s.week;
-                lines.push(DIM(`  "${deal.work.title}" → ${deal.strategy} (${weeksLeft}w)`));
+                pipeHtml += `<div class="db-pipeline-row"><span>"${deal.work.title}"</span><span>${deal.strategy} · ${weeksLeft}w</span></div>`;
             });
+            pipeHtml += `</div>`;
+            lines.push({ type: 'raw', text: pipeHtml });
         }
 
         // ── World Map (unlocks at week 5) ──
@@ -1119,6 +1208,13 @@ export function dashboardScreen(ui) {
                 action: () => safePush(journalScreen)
             });
         }
+
+        // --- VENUE CUTSCENES TEST ---
+        options.push({
+            label: '🎬  Test Venue Cutscenes',
+            action: () => safePush(testVenueCutscenesScreen)
+        });
+
         options.push({
             label: '⚙️  System & Settings',
             action: () => safePush(pauseMenuScreen)
@@ -1151,5 +1247,119 @@ export function dashboardScreen(ui) {
         const footerHtml = TickerSystem.generate('single');
 
         return { lines, options, footerHtml };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: Test Venue Cutscenes (Dev Feature)
+// ════════════════════════════════════════════
+function testVenueCutscenesScreen(ui) {
+    return () => {
+        const lines = [
+            H('TEST VENUE CUTSCENES'),
+            DIM('Preview dialogue scenes for the various global venues.'),
+            DIV(),
+        ];
+
+        const options = [];
+
+        const cutscenes = [
+            {
+                label: 'Gallery Opening (Chelsea)',
+                params: {
+                    bgKey: 'bg_gallery_main_1bit_1771587911969.png',
+                    leftSpriteKey: 'player_back.png',
+                    rightSpriteKey: 'portrait_it_girl_dealer_1bit_1771587978725.png',
+                    dialogueSequence: [
+                        { name: 'You', speakerSide: 'left', text: 'Good crowd tonight. The lighting feels almost forensic, though.' },
+                        { name: 'Gallerist', speakerSide: 'right', text: 'We lit it for the cameras, not the eyes. Has anyone offered you prosecco?' },
+                        { name: 'You', speakerSide: 'left', text: 'I am not here for prosecco. Check your ledger. I want the piece in the back.' }
+                    ]
+                }
+            },
+            {
+                label: 'Cocktail Party (Upper East Side)',
+                params: {
+                    // fallback to a drama background or something appropriate
+                    bgKey: 'bg_social.png',
+                    leftSpriteKey: 'player_back.png',
+                    rightSpriteKey: 'portrait_legacy_gallerist_1bit_1771587958185.png',
+                    dialogueSequence: [
+                        { name: 'Collector', speakerSide: 'right', text: 'These floor-to-ceiling windows... one feels so exposed, don\'t you agree?' },
+                        { name: 'You', speakerSide: 'left', text: 'Only if you have something to hide. That Rothko, for instance.' },
+                        { name: 'Collector', speakerSide: 'right', text: 'Ah. You noticed. Let us speak quietly, away from the waiters.' }
+                    ]
+                }
+            },
+            {
+                label: 'Auction House (Rockefeller Plaza)',
+                params: {
+                    bgKey: 'bg_auction.png',
+                    leftSpriteKey: 'player_back.png',
+                    rightSpriteKey: 'portrait_auctioneer.png',
+                    dialogueSequence: [
+                        { name: 'Auctioneer', speakerSide: 'right', text: 'Lot 47. We open the bidding at two million. Do I see two million?' },
+                        { name: 'You', speakerSide: 'left', text: '(You raise your paddle precisely an inch.)' },
+                        { name: 'Auctioneer', speakerSide: 'right', text: 'Two million on the aisle. Two million. Looking for two point two.' }
+                    ]
+                }
+            },
+            {
+                label: 'Artist Studio (Bushwick)',
+                params: {
+                    bgKey: 'bg_personal.png',
+                    leftSpriteKey: 'player_back.png',
+                    rightSpriteKey: 'portrait_scene_queen.png', // Or an artist portrait
+                    dialogueSequence: [
+                        { name: 'Artist', speakerSide: 'right', text: 'Watch your step. The cobalt blue is still wet on the floor.' },
+                        { name: 'You', speakerSide: 'left', text: 'I didn\'t come to inspect the floorboards. Show me the new series.' },
+                        { name: 'Artist', speakerSide: 'right', text: 'You\'re the only one who gets to see it before the gallery. Don\'t ruin it.' }
+                    ]
+                }
+            },
+            {
+                label: 'Art Basel (Switzerland)',
+                params: {
+                    bgKey: 'bg_fair.png',
+                    leftSpriteKey: 'player_back.png',
+                    rightSpriteKey: 'portrait_underground_connector_1bit_1771587994565.png',
+                    dialogueSequence: [
+                        { name: 'Advisor', speakerSide: 'right', text: 'The entire VIP lounge is whispering about the provenance on that Richter.' },
+                        { name: 'You', speakerSide: 'left', text: 'Let them whisper. It distracts them from the real acquisitions.' },
+                        { name: 'Advisor', speakerSide: 'right', text: 'Precisely. Now, follow me to booth 114. The VIP preview ends in ten minutes.' }
+                    ]
+                }
+            },
+            {
+                label: 'Geneva Freeport',
+                params: {
+                    bgKey: 'bg_gallery_backroom_1bit_1771587929810.png',
+                    leftSpriteKey: 'player_back.png',
+                    rightSpriteKey: 'portrait_old_money_gallerist.png',
+                    dialogueSequence: [
+                        { name: 'Handler', speakerSide: 'right', text: 'Vault 1147. Please verify your biometric scan to proceed.' },
+                        { name: 'You', speakerSide: 'left', text: '(Presses thumb to the glass reader)' },
+                        { name: 'Handler', speakerSide: 'right', text: 'Identity confirmed. The climate control is at 65 degrees. You have twenty minutes.' }
+                    ]
+                }
+            }
+        ];
+
+        cutscenes.forEach(scene => {
+            options.push({
+                label: `► ${scene.label}`,
+                action: () => {
+                    if (window.game && window.game.startTestScene) {
+                        window.game.startTestScene('MacDialogueScene', scene.params);
+                    } else {
+                        ui.showNotification('Visual engine not loaded.', '⚠️');
+                    }
+                }
+            });
+        });
+
+        options.push({ label: '← Back', action: () => ui.popScreen() });
+
+        return { lines, options };
     };
 }

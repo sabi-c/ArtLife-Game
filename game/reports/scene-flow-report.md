@@ -1,6 +1,6 @@
 # ArtLife — Scene Flow Test Report
 
-**Date:** 2026-02-21T13:12:10.183Z
+**Date:** 2026-02-21T18:36:47.996Z
 **Result:** ❌ 2 FAILED  (36/38)
 
 ## Check Results
@@ -19,7 +19,7 @@
 | 10 | startHaggle() returned started=true | ✅ |  |
 | 11 | HaggleScene became active | ✅ |  |
 | 12 | Haggle maxRounds: 5 | ✅ |  |
-| 13 | Dealer type: hustler | ✅ |  |
+| 13 | Dealer type: collector | ✅ |  |
 | 14 | Phase is "opening" (got "opening") | ✅ |  |
 | 15 | Canvas visible during HaggleScene | ✅ |  |
 | 16 | Terminal restored after HaggleScene exit | ✅ |  |

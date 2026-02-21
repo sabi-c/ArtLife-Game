@@ -12,8 +12,7 @@ export const VIEW = {
     PHASER: 'PHASER',               // The raw game canvas (overworld, haggle, etc.)
     TERMINAL: 'TERMINAL',           // DOM terminal only (no React overlays, no canvas)
     DASHBOARD: 'DASHBOARD',         // The main Player Dashboard stats/ledger
-    SCENE_ENGINE: 'SCENE_ENGINE',   // The text-based event visual novel engine
-    INVENTORY: 'INVENTORY'          // The neo-noir inventory grid
+    SCENE_ENGINE: 'SCENE_ENGINE'    // The text-based event visual novel engine
 };
 
 /**
@@ -22,5 +21,6 @@ export const VIEW = {
 export const OVERLAY = {
     NONE: null,
     ADMIN: 'ADMIN',
-    SETTINGS: 'SETTINGS'
+    SETTINGS: 'SETTINGS',
+    INVENTORY: 'INVENTORY'
 };

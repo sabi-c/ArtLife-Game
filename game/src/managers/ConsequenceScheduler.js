@@ -1,6 +1,6 @@
 import { GameState } from './GameState.js';
 import { PhoneManager } from './PhoneManager.js';
-import { EventManager } from './EventManager.js';
+import { useEventStore } from '../stores/eventStore.js';
 import { generateId } from '../utils/id.js';
 
 /**
@@ -120,10 +120,10 @@ export class ConsequenceScheduler {
                 break;
 
             case 'event_unlock':
-                // payload is { eventId } — adds event ID to a "priority queue"
-                // that EventManager checks first on the next turn
-                if (!EventManager.priorityQueue) EventManager.priorityQueue = [];
-                EventManager.priorityQueue.push(payload.eventId);
+                // Push an event ID into the EventStore's priority queue
+                // that EventRegistry checks first on the next turn
+                useEventStore.getState().addPriorityEvent(payload.eventId);
+                GameState.addNews(`System: Scheduled event ${payload.eventId} prioritized.`);
                 break;
 
             default:
