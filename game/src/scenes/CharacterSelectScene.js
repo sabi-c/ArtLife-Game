@@ -200,6 +200,20 @@ export class CharacterSelectScene extends BaseScene {
                 fontFamily: '"Press Start 2P"', fontSize: '7px', color: dc,
             }).setOrigin(0.5));
 
+            // Make card tappable
+            bg.setInteractive({ useHandCursor: true });
+            const capturedIdx = i;
+            bg.on('pointerdown', () => {
+                if (this._archIdx === capturedIdx) {
+                    // Double-tap = confirm
+                    this._char = CHARACTERS[capturedIdx];
+                    this._enterStats();
+                } else {
+                    this._archIdx = capturedIdx;
+                    this._refreshArchetype();
+                }
+            });
+
             this._archPortraits.push({ cont, bg, nameObj });
         });
 
@@ -218,6 +232,12 @@ export class CharacterSelectScene extends BaseScene {
             align: 'center', wordWrap: { width: panW - 40 },
         }).setOrigin(0.5, 0);
         c.add(this._archDesc);
+
+        // ── Touch: CONFIRM button ───────────────────────────────────────────
+        this._addTouchBtn(c, W / 2, H - 46, 'CONFIRM ▸', () => {
+            this._char = CHARACTERS[this._archIdx];
+            this._enterStats();
+        });
 
         // ── Instructions ─────────────────────────────────────────────────────
         c.add(this.add.text(W / 2, H - 18, '← → select   SPACE confirm', {
@@ -328,16 +348,21 @@ export class CharacterSelectScene extends BaseScene {
             }).setOrigin(0, 0.5).setAlpha(0);
             c.add(descTxt);
 
-            // [◄] / [►] arrows
+            // [◄] / [►] arrows — interactive for touch
             const arL = this.add.text(barOX - 22, ry, '◄', {
                 fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#333355',
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setPadding(12, 10, 12, 10)
+                .setInteractive({ useHandCursor: true });
             c.add(arL);
+            const capturedRow = i;
+            arL.on('pointerdown', () => { this._selRow = capturedRow; this._adjustStat(-1); });
 
             const arR = this.add.text(barOX + barW + 22, ry, '►', {
                 fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#333355',
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setPadding(12, 10, 12, 10)
+                .setInteractive({ useHandCursor: true });
             c.add(arR);
+            arR.on('pointerdown', () => { this._selRow = capturedRow; this._adjustStat(+1); });
 
             // Bar track
             const track = this.add.graphics();
@@ -374,6 +399,10 @@ export class CharacterSelectScene extends BaseScene {
         c.add(this.add.text(W / 2, H - 18, '↑↓ select row   ←→ adjust   SPACE confirm', {
             fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#333355',
         }).setOrigin(0.5, 1));
+
+        // ── Touch: CONFIRM / BACK buttons ──────────────────────────────────
+        this._addTouchBtn(c, W / 2 + 90, H - 46, 'CONFIRM ▸', () => this._enterTraits());
+        this._addTouchBtn(c, W / 2 - 90, H - 46, '◂ BACK', () => this._enterArchetype(), { color: '#888899' });
 
         // Reset key
         this._k.r = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
@@ -571,6 +600,19 @@ export class CharacterSelectScene extends BaseScene {
             }).setOrigin(0.5);
             cont.add(descTxt);
 
+            // Make card tappable
+            bg.setInteractive({ useHandCursor: true });
+            const capturedTraitIdx = i;
+            bg.on('pointerdown', () => {
+                if (this._traitIdx === capturedTraitIdx) {
+                    this._selectedTrait = traits[capturedTraitIdx] ?? null;
+                    this._enterDrip();
+                } else {
+                    this._traitIdx = capturedTraitIdx;
+                    this._refreshTraits();
+                }
+            });
+
             this._traitCardRefs.push({ cont, bg, lbl, descTxt });
         });
 
@@ -584,6 +626,13 @@ export class CharacterSelectScene extends BaseScene {
             align: 'center', wordWrap: { width: panW - 40 },
         }).setOrigin(0.5);
         c.add(this._traitDescFull);
+
+        // ── Touch: CONFIRM / BACK buttons ─────────────────────────────────
+        this._addTouchBtn(c, cx + 90, H - 46, 'CONFIRM ▸', () => {
+            this._selectedTrait = traits[this._traitIdx] ?? null;
+            this._enterDrip();
+        });
+        this._addTouchBtn(c, cx - 90, H - 46, '◂ BACK', () => this._enterStats(), { color: '#888899' });
 
         // ── Instructions ─────────────────────────────────────────────────
         c.add(this.add.text(16, H - 18, 'ESC — back to stats', {
@@ -702,6 +751,19 @@ export class CharacterSelectScene extends BaseScene {
             }).setOrigin(0.5);
             cont.add(flavorTxt);
 
+            // Make card tappable
+            bg.setInteractive({ useHandCursor: true });
+            const capturedDripIdx = i;
+            bg.on('pointerdown', () => {
+                if (this._dripIdx === capturedDripIdx) {
+                    this._selectedDrip = DRIP_OPTIONS[capturedDripIdx] ?? null;
+                    this._enterVice();
+                } else {
+                    this._dripIdx = capturedDripIdx;
+                    this._refreshDrip();
+                }
+            });
+
             this._dripCardRefs.push({ cont, bg, lbl, flavorTxt });
         });
 
@@ -715,6 +777,13 @@ export class CharacterSelectScene extends BaseScene {
             align: 'center', wordWrap: { width: panW - 40 },
         }).setOrigin(0.5);
         c.add(this._dripDescFull);
+
+        // ── Touch: CONFIRM / BACK buttons ──────────────────────────────────
+        this._addTouchBtn(c, cx + 90, H - 46, 'CONFIRM ▸', () => {
+            this._selectedDrip = DRIP_OPTIONS[this._dripIdx] ?? null;
+            this._enterVice();
+        });
+        this._addTouchBtn(c, cx - 90, H - 46, '◂ BACK', () => this._enterTraits(), { color: '#888899' });
 
         // ── Instructions ──────────────────────────────────────────────────────
         c.add(this.add.text(16, H - 18, 'ESC — back', {
@@ -840,6 +909,19 @@ export class CharacterSelectScene extends BaseScene {
                 cont.add(buffTxt);
             }
 
+            // Make card tappable
+            bg.setInteractive({ useHandCursor: true });
+            const capturedViceIdx = i;
+            bg.on('pointerdown', () => {
+                if (this._viceIdx === capturedViceIdx) {
+                    this._selectedVice = VICE_ALL[capturedViceIdx] ?? null;
+                    this._enterName();
+                } else {
+                    this._viceIdx = capturedViceIdx;
+                    this._refreshVice();
+                }
+            });
+
             this._viceCardRefs.push({ cont, bg, lbl, vice });
         });
 
@@ -853,6 +935,13 @@ export class CharacterSelectScene extends BaseScene {
             align: 'center', wordWrap: { width: panW - 40 },
         }).setOrigin(0.5);
         c.add(this._viceDescFull);
+
+        // ── Touch: CONFIRM / BACK buttons ──────────────────────────────────
+        this._addTouchBtn(c, cx + 90, H - 46, 'CONFIRM ▸', () => {
+            this._selectedVice = VICE_ALL[this._viceIdx] ?? null;
+            this._enterName();
+        });
+        this._addTouchBtn(c, cx - 90, H - 46, '◂ BACK', () => this._enterDrip(), { color: '#888899' });
 
         // ── Instructions ──────────────────────────────────────────────────────
         c.add(this.add.text(16, H - 18, 'ESC — back', {
@@ -1009,9 +1098,68 @@ export class CharacterSelectScene extends BaseScene {
 
         this._updateNameDisplay();
 
-        // ── Raw keyboard handler ──────────────────────────────────────────────
+        // ── Touch: CONFIRM / BACK buttons ──────────────────────────────────
+        this._addTouchBtn(c, cx + 90, H - 46, 'CONFIRM ▸', () => {
+            if (this._enteredName.trim().length > 0) this._finishCreation();
+        });
+        this._addTouchBtn(c, cx - 90, H - 46, '◂ BACK', () => this._cancelName(), { color: '#888899' });
+
+        // ── HTML Input Overlay (triggers mobile soft keyboard) ─────────────
+        const canvas = this.sys.game.canvas;
+        const canvasRect = canvas.getBoundingClientRect();
+        const inputEl = document.createElement('input');
+        inputEl.type = 'text';
+        inputEl.maxLength = 18;
+        inputEl.autocomplete = 'off';
+        inputEl.autocapitalize = 'words';
+        inputEl.placeholder = 'Enter your name...';
+        inputEl.style.cssText = `
+            position: fixed;
+            left: ${canvasRect.left + canvasRect.width * 0.2}px;
+            top: ${canvasRect.top + canvasRect.height * 0.55}px;
+            width: ${canvasRect.width * 0.6}px;
+            height: 52px;
+            font-family: "Press Start 2P", "Courier New", monospace;
+            font-size: 15px;
+            color: #e8e4df;
+            background: rgba(8, 8, 22, 0.95);
+            border: 1px solid #5555aa;
+            text-align: center;
+            outline: none;
+            z-index: 10001;
+            padding: 0 12px;
+            caret-color: #ffd700;
+        `;
+        document.body.appendChild(inputEl);
+        this._htmlInput = inputEl;
+
+        // Sync HTML input → Phaser display
+        inputEl.addEventListener('input', () => {
+            // Filter to allowed chars only
+            const filtered = inputEl.value.replace(/[^a-zA-Z0-9 '\-.&]/g, '').substring(0, 18);
+            inputEl.value = filtered;
+            this._enteredName = filtered;
+            this._updateNameDisplay();
+        });
+
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (this._enteredName.trim().length > 0) this._finishCreation();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                this._cancelName();
+            }
+        });
+
+        // Focus the input to trigger mobile keyboard
+        this.time.delayedCall(100, () => inputEl.focus());
+
+        // ── Raw keyboard handler (for desktop users) ──────────────────────────
         this._nameKeyHandler = (e) => {
             if (this._phase !== 'name') return;
+            // If the HTML input is focused, let it handle input naturally
+            if (document.activeElement === this._htmlInput) return;
 
             switch (e.key) {
                 case 'Enter':
@@ -1020,9 +1168,10 @@ export class CharacterSelectScene extends BaseScene {
                     return;
 
                 case 'Backspace':
-                    e.preventDefault(); // block browser back-navigation
+                    e.preventDefault();
                     this._enteredName = this._enteredName.slice(0, -1);
                     this._updateNameDisplay();
+                    if (this._htmlInput) this._htmlInput.value = this._enteredName;
                     return;
 
                 case 'Escape':
@@ -1034,17 +1183,16 @@ export class CharacterSelectScene extends BaseScene {
                     break;
             }
 
-            // Printable chars only, max 18, alphanumeric + punctuation
             if (
                 e.key.length === 1 &&
                 this._enteredName.length < 18 &&
                 /[a-zA-Z0-9 '\-.&]/.test(e.key)
             ) {
-                e.preventDefault(); // prevent space from scrolling
-                // Auto-capitalise first character
+                e.preventDefault();
                 const ch = this._enteredName.length === 0 ? e.key.toUpperCase() : e.key;
                 this._enteredName += ch;
                 this._updateNameDisplay();
+                if (this._htmlInput) this._htmlInput.value = this._enteredName;
             }
         };
 
@@ -1166,6 +1314,11 @@ export class CharacterSelectScene extends BaseScene {
     _destroyPhase() {
         // Clean up name entry listeners before destroying the container
         this._cleanupNameEntry();
+        // Remove any HTML input overlay from name phase
+        if (this._htmlInput) {
+            this._htmlInput.remove();
+            this._htmlInput = null;
+        }
         if (this._phaseCont) {
             this._phaseCont.destroy(true);
             this._phaseCont = null;
@@ -1175,5 +1328,29 @@ export class CharacterSelectScene extends BaseScene {
             this.input.keyboard.removeKey(this._k.r);
             this._k.r = null;
         }
+    }
+
+    /** Create a tappable button in a Phaser container */
+    _addTouchBtn(container, x, y, label, callback, opts = {}) {
+        const color = opts.color || '#c9a84c';
+        const bgColor = opts.bgColor || 0x1a1a2e;
+        const w = opts.width || 160;
+        const h = opts.height || 40;
+
+        const bg = this.add.rectangle(x, y, w, h, bgColor)
+            .setStrokeStyle(1, parseInt(color.replace('#', ''), 16))
+            .setInteractive({ useHandCursor: true });
+        container.add(bg);
+
+        const txt = this.add.text(x, y, label, {
+            fontFamily: '"Press Start 2P"', fontSize: opts.fontSize || '8px', color,
+        }).setOrigin(0.5);
+        container.add(txt);
+
+        bg.on('pointerdown', () => callback());
+        bg.on('pointerover', () => bg.setFillStyle(0x252544));
+        bg.on('pointerout', () => bg.setFillStyle(bgColor));
+
+        return { bg, txt };
     }
 }

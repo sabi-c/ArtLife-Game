@@ -251,9 +251,13 @@ export default function TerminalLogin({ onComplete }) {
     return (
         <div
             className={`pd-overlay ${visible ? 'visible' : ''}`}
+            onClick={() => {
+                // Tap during BOOT to skip to menu
+                if (step === 'BOOT') setStep('PRIMARY_MENU');
+            }}
             style={{
                 zIndex: 100000,
-                background: '#060608', // Dark terminal BG
+                background: '#060608',
                 transition: 'opacity 0.5s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 overflowY: 'auto', padding: '40px 20px',
@@ -290,26 +294,52 @@ export default function TerminalLogin({ onComplete }) {
                 </div>
 
                 {/* ── PRIMARY MENU ── */}
-                {step !== 'BOOT' && (
+                {step !== 'BOOT' && step !== 'AUTH' && (
                     <div style={{ paddingLeft: '10%', paddingRight: '10%', animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
-                        <div style={{
-                            color: primaryIndex === 0 ? '#eaeaea' : '#888',
-                            background: primaryIndex === 0 ? 'rgba(255,255,255,0.05)' : 'transparent',
-                            padding: '8px 12px',
-                            transition: 'all 0.1s',
-                            fontSize: 13,
-                            display: 'flex'
-                        }}>
+                        <div
+                            onClick={() => {
+                                if (step !== 'PRIMARY_MENU') return;
+                                WebAudioService.select();
+                                setPrimaryIndex(0);
+                                setStep('AUTH');
+                                setTimeout(() => onComplete({ action: 'new' }), 500);
+                            }}
+                            style={{
+                                color: primaryIndex === 0 ? '#eaeaea' : '#888',
+                                background: primaryIndex === 0 ? 'rgba(255,255,255,0.05)' : 'transparent',
+                                padding: '12px 12px',
+                                transition: 'all 0.1s',
+                                fontSize: 13,
+                                display: 'flex',
+                                cursor: 'pointer',
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent',
+                                minHeight: 44,
+                                alignItems: 'center'
+                            }}>
                             <span style={{ width: 20 }}>{primaryIndex === 0 ? '>' : ' '}</span> [1] SUBMIT NEW APPLICATION
                         </div>
-                        <div style={{
-                            color: dossiers.length === 0 ? '#444' : (primaryIndex === 1 ? '#eaeaea' : '#888'),
-                            background: primaryIndex === 1 ? 'rgba(255,255,255,0.05)' : 'transparent',
-                            padding: '8px 12px',
-                            transition: 'all 0.1s',
-                            fontSize: 13,
-                            display: 'flex'
-                        }}>
+                        <div
+                            onClick={() => {
+                                if (step !== 'PRIMARY_MENU' || dossiers.length === 0) return;
+                                WebAudioService.select();
+                                setPrimaryIndex(1);
+                                setStep('DOSSIER_SELECT');
+                                setDossierIndex(0);
+                            }}
+                            style={{
+                                color: dossiers.length === 0 ? '#444' : (primaryIndex === 1 ? '#eaeaea' : '#888'),
+                                background: primaryIndex === 1 ? 'rgba(255,255,255,0.05)' : 'transparent',
+                                padding: '12px 12px',
+                                transition: 'all 0.1s',
+                                fontSize: 13,
+                                display: 'flex',
+                                cursor: dossiers.length > 0 ? 'pointer' : 'default',
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent',
+                                minHeight: 44,
+                                alignItems: 'center'
+                            }}>
                             <span style={{ width: 20 }}>{primaryIndex === 1 ? '>' : ' '}</span> [2] AUTHORIZE DOSSIER
                         </div>
                     </div>
@@ -326,12 +356,24 @@ export default function TerminalLogin({ onComplete }) {
                                 return (
                                     <div
                                         key={`slot_${index}`}
+                                        onClick={() => {
+                                            if (step !== 'DOSSIER_SELECT') return;
+                                            WebAudioService.select();
+                                            setSelectedDossier(d);
+                                            setDossierIndex(index);
+                                            setConfirmIndex(0);
+                                            setStep('CONFIRM');
+                                        }}
                                         style={{
                                             color: isTarget ? '#c9a84c' : '#888',
                                             background: isTarget ? 'rgba(201,168,76,0.05)' : 'transparent',
-                                            padding: '8px 12px',
+                                            padding: '12px 12px',
                                             fontSize: 13,
-                                            display: 'flex', alignItems: 'center'
+                                            display: 'flex', alignItems: 'center',
+                                            cursor: 'pointer',
+                                            touchAction: 'manipulation',
+                                            WebkitTapHighlightColor: 'transparent',
+                                            minHeight: 44
                                         }}
                                     >
                                         <span style={{ width: 20 }}>{isTarget ? '>' : ' '}</span>
@@ -341,11 +383,17 @@ export default function TerminalLogin({ onComplete }) {
                                 )
                             })}
 
-                            <div style={{ color: dossierIndex === dossiers.length ? '#eaeaea' : '#555', padding: '8px 12px', fontSize: 13, display: 'flex' }}>
+                            <div
+                                onClick={() => { if (step === 'DOSSIER_SELECT') fileInputRef.current?.click(); }}
+                                style={{ color: dossierIndex === dossiers.length ? '#eaeaea' : '#555', padding: '12px 12px', fontSize: 13, display: 'flex', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', minHeight: 44, alignItems: 'center' }}
+                            >
                                 <span style={{ width: 20 }}>{dossierIndex === dossiers.length ? '>' : ' '}</span>
                                 <span style={{ textDecoration: 'underline' }}>[+] IMPORT SYNC DATA</span>
                             </div>
-                            <div style={{ color: dossierIndex === dossiers.length + 1 ? '#eaeaea' : '#555', padding: '8px 12px', fontSize: 13, display: 'flex' }}>
+                            <div
+                                onClick={() => { if (step === 'DOSSIER_SELECT') { WebAudioService.select(); setStep('PRIMARY_MENU'); } }}
+                                style={{ color: dossierIndex === dossiers.length + 1 ? '#eaeaea' : '#555', padding: '12px 12px', fontSize: 13, display: 'flex', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', minHeight: 44, alignItems: 'center' }}
+                            >
                                 <span style={{ width: 20 }}>{dossierIndex === dossiers.length + 1 ? '>' : ' '}</span>
                                 [ESC] BACK
                             </div>
@@ -360,18 +408,41 @@ export default function TerminalLogin({ onComplete }) {
                             &gt; VERIFY PARAMETERS FOR [{selectedDossier.playerName?.toUpperCase()}]
                         </div>
                         <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
-                            <div style={{
-                                color: confirmIndex === 0 ? '#000' : '#c9a84c',
-                                background: confirmIndex === 0 ? '#c9a84c' : 'transparent',
-                                padding: '6px 15px', border: '1px solid #c9a84c'
-                            }}>
+                            <div
+                                onClick={() => {
+                                    if (step !== 'CONFIRM') return;
+                                    WebAudioService.select();
+                                    const trueSlotIndex = GameState.getSaveSlots().findIndex(s => s && s.meta.savedAt === selectedDossier.savedAt);
+                                    if (trueSlotIndex !== -1) {
+                                        GameState.load(trueSlotIndex);
+                                        setStep('AUTH');
+                                    }
+                                }}
+                                style={{
+                                    color: confirmIndex === 0 ? '#000' : '#c9a84c',
+                                    background: confirmIndex === 0 ? '#c9a84c' : 'transparent',
+                                    padding: '10px 20px', border: '1px solid #c9a84c',
+                                    cursor: 'pointer', touchAction: 'manipulation',
+                                    WebkitTapHighlightColor: 'transparent', minHeight: 44,
+                                    display: 'flex', alignItems: 'center'
+                                }}>
                                 [AUTHORIZE]
                             </div>
-                            <div style={{
-                                color: confirmIndex === 1 ? '#eaeaea' : '#555',
-                                background: confirmIndex === 1 ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                padding: '6px 15px', border: '1px solid #555'
-                            }}>
+                            <div
+                                onClick={() => {
+                                    if (step !== 'CONFIRM') return;
+                                    WebAudioService.select();
+                                    setStep('DOSSIER_SELECT');
+                                    setSelectedDossier(null);
+                                }}
+                                style={{
+                                    color: confirmIndex === 1 ? '#eaeaea' : '#555',
+                                    background: confirmIndex === 1 ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                    padding: '10px 20px', border: '1px solid #555',
+                                    cursor: 'pointer', touchAction: 'manipulation',
+                                    WebkitTapHighlightColor: 'transparent', minHeight: 44,
+                                    display: 'flex', alignItems: 'center'
+                                }}>
                                 [ABORT]
                             </div>
                         </div>

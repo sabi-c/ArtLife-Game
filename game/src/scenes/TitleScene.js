@@ -73,7 +73,9 @@ export class TitleScene extends Phaser.Scene {
             fontSize: '11px',
             color: '#e8e4df',
             align: 'center'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+            .setPadding(10, 8, 10, 8);
+        opt1.on('pointerdown', () => { this.selectedIndex = 0; this.updateCursorPosition(); this.confirmSelection(); });
         this.menuItems.push({ text: opt1, action: () => this.startNewGame(), enabled: true });
 
         // Option 2: Load (Authenticate Dossier)
@@ -83,7 +85,9 @@ export class TitleScene extends Phaser.Scene {
             fontSize: '11px',
             color: loadColor,
             align: 'center'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+            .setPadding(10, 8, 10, 8);
+        opt2.on('pointerdown', () => { this.selectedIndex = 1; this.updateCursorPosition(); this.confirmSelection(); });
         this.menuItems.push({ text: opt2, action: () => this.showSaveSlots(), enabled: this.hasSave });
 
         // Option 3: Quick Start (skip character creator, load demo profile)
@@ -92,7 +96,9 @@ export class TitleScene extends Phaser.Scene {
             fontSize: '11px',
             color: '#888899',
             align: 'center'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+            .setPadding(10, 8, 10, 8);
+        opt3.on('pointerdown', () => { this.selectedIndex = 2; this.updateCursorPosition(); this.confirmSelection(); });
         this.menuItems.push({ text: opt3, action: () => this.quickStart(), enabled: true });
 
         // ── Save slot display area (initially hidden) ──
@@ -134,7 +140,6 @@ export class TitleScene extends Phaser.Scene {
         this.fourKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR);
         this.fiveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.FIVE);
         this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
-        this.input.on('pointerdown', () => this.confirmSelection());
     }
 
     updateCursorPosition() {
@@ -248,10 +253,14 @@ export class TitleScene extends Phaser.Scene {
                 fontSize: '9px',
                 color: '#e8e4df',
                 align: 'center'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+                .setPadding(10, 6, 10, 6);
+
+            const capturedSlotIndex = i;
+            const capturedSlotIdx = slotIdx;
+            slotText.on('pointerdown', () => { this.selectedIndex = capturedSlotIdx; this.updateCursorPosition(); this.confirmSelection(); });
 
             this.slotContainer.add(slotText);
-            const capturedSlotIndex = i;
             this.slotItems.push({
                 text: slotText,
                 action: () => this.loadSlot(capturedSlotIndex),
@@ -266,7 +275,9 @@ export class TitleScene extends Phaser.Scene {
             fontSize: '9px',
             color: '#888899',
             align: 'center'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true })
+            .setPadding(10, 6, 10, 6);
+        backText.on('pointerdown', () => { this.selectedIndex = slotIdx; this.updateCursorPosition(); this.confirmSelection(); });
         this.slotContainer.add(backText);
         this.slotItems.push({
             text: backText,
@@ -291,7 +302,7 @@ export class TitleScene extends Phaser.Scene {
 
     startNewGame() {
         this.input.keyboard.removeAllKeys();
-        this.input.off('pointerdown');
+        this.input.removeAllListeners('pointerdown');
         SceneTransition.irisWipeToScene(this, SCENE_KEYS.INTRO, { ui: this.ui }, 600);
     }
 
@@ -312,7 +323,7 @@ export class TitleScene extends Phaser.Scene {
         if (!success) return;
 
         this.input.keyboard.removeAllKeys();
-        this.input.off('pointerdown');
+        this.input.removeAllListeners('pointerdown');
 
         // Show terminal UI and push dashboard
         if (this.ui) {
