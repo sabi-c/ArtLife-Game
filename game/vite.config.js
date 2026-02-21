@@ -14,12 +14,15 @@ export default defineConfig({
         emptyOutDir: true,
         rollupOptions: {
             output: {
-                // Keep Phaser in its own chunk so tree-shaking doesn't break class hierarchy
                 manualChunks: {
                     phaser: ['phaser'],
                 },
             },
         },
+    },
+    // Prevent Vite from pre-bundling inkjs (internal circular deps break the build)
+    optimizeDeps: {
+        exclude: ['inkjs'],
     },
     plugins: [
         react(),

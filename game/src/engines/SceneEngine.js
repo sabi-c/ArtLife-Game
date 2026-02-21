@@ -1,4 +1,4 @@
-import { Story } from 'inkjs/engine/Story';
+import { Story } from 'inkjs';
 import { useGameStore } from '../stores/gameStore';
 import { useInventoryStore } from '../stores/inventoryStore.js';
 

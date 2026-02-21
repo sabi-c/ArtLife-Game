@@ -306,6 +306,33 @@ export class GameState {
         }, 0);
     }
 
+    // ── Macro Game Loop: Time & Actions ──
+
+    /**
+     * Consumes 1 Weekly Action. Max actions per week is 3.
+     * Automatically triggers WeekEngine if the budget is hit.
+     * @returns {boolean} true if the week actually advanced
+     */
+    static consumeAction() {
+        if (!GameState.state) return false;
+
+        GameState.state.actionsThisWeek += 1;
+
+        if (GameState.state.actionsThisWeek >= 3) {
+            import('./WeekEngine.js').then(({ WeekEngine }) => {
+                WeekEngine.advanceWeek();
+
+                // Fire an event so React/Phaser UI can render an alert
+                import('./GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
+                    GameEventBus.emit(GameEvents.HUD_MESSAGE, "Week advanced! Action budget refreshed.");
+                });
+            });
+            return true;
+        }
+
+        return false;
+    }
+
     static isBankrupt() {
         return GameState.state.cash < 0 && GameState.state.portfolio.length === 0;
     }
