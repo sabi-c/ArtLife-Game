@@ -13,6 +13,7 @@
 **Deployed:** Cloudflare Pages
 
 ### Recently Completed
+- **Sprint: WorldScene + MobileJoypad Integration** — Pokemon-style grid walking with Tiled maps (pallet_town.json, 26x27, 48px tiles), 4 tilesets, proper layer depth ordering, GridEngine collision from tile properties, spawn from Tiled objects, door/dialog interactions, ESC exit. MobileJoypad D-pad overlay with 56px touch targets, action button, exit button. Admin Dashboard + late-game terminal launch. Systemic Lattice Triggers (4 fail-state arcs). Haggle + stat change sound effects.
 - **Sprint 0.5: QA & Testing Pipeline** — Wrote `TestReporter.js` for Playwright, ensuring headless tests cleanly isolate blocks, trap browser/network `console.error` anomalies, generate state-dump JSON artifacts upon failure, and instantly capture visual `page.screenshot()` proof. Fixed cross-contamination across async `page.evaluate` runs. Test suite is robust 5/5.
 - **Sprint: Module Hardening & Architecture** — Full DialogueEngine rewrite with 5-tone system (Friendly/Schmoozing/Direct/Generous/Ruthless), tone tracking, condition evaluation, effect application (75→370 LOC). MarketManager.tick() wired into WeekEngine pipeline (prices now actually fluctuate weekly). MarketStore fleshed out with price history, artist snapshots, weekly news generation. InventoryStore expanded with provenance tracking. ConsequenceStore made persistent with full queue management. TerminalAPI updated with all store references. Fixed missing useEventStore import in WeekEngine.
 - **Mobile Admin Dashboard** — AdminFAB floating button for touch devices, responsive full-screen layout on mobile, 44px touch targets, Phaser Plugin Inspector for dev-only debugging.
@@ -221,10 +222,10 @@
 ### 4B. The Grid Walking Prototype (Sprint 1.5)
 | Task | Status | Notes |
 |---|---|---|
-| Asset Porting | TODO | Extract `pallet-town` tilemaps and player sprites from the `pokemon-react-phaser` archive. |
-| The WorldScene Rebuild | TODO | Rebuild `WorldScene.js` natively loading Tilemap layers via GridEngine parameters. |
-| React MobileJoypad Overlay | TODO | D-pad and Action button dispatching events directly to the Phaser engine. |
-| Admin Test Trigger & Exit UI | TODO | Dev-only launch button via the Admin Dashboard and an instant `GameDebugAPI.exitScene()` teardown button. |
+| Asset Porting | ✅ Done | Tiled `pallet_town.json` (26x27, 48px tiles), 4 tilesets (grounds/world/world2/grounds2), player spritesheet (72x96, 12 frames). |
+| The WorldScene Rebuild | ✅ Done | Extends BaseScene, proper layer depth ordering, GridEngine with Tiled collision props, spawn point from objects, opaque bg, ESC exit, error recovery, door/dialog interaction from Tiled objects. |
+| React MobileJoypad Overlay | ✅ Done | D-pad with arrow symbols (56px touch targets), action button (A), exit button. Gold highlight on active direction. Pointer events with global touch failsafe. |
+| Admin Test Trigger & Exit UI | ✅ Done | Admin Dashboard "Launch: World Map (Pokemon)" button. Terminal "Walk the Neighborhood" in late-game. Both use GameEventBus.DEBUG_LAUNCH_SCENE. MobileJoypad EXIT calls scene.exitScene(). |
 
 ### 4C. The Content Asset Pipeline
 | Task | Status | Notes |

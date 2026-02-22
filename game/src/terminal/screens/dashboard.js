@@ -1210,15 +1210,9 @@ export function dashboardScreen(ui) {
             });
             if (phase === 'late') {
                 options.push({
-                    label: `🗺️  Walk the Neighborhood (Pokemon Mode)`,
+                    label: `🗺️  Walk the Neighborhood`,
                     action: () => {
-                        if (window.game?.startTestScene) {
-                            window.game.startTestScene('OverworldScene', { ui });
-                            ui.container.style.display = 'none';
-                            ui.pushScreen(() => ({ lines: [], options: [] })); // trap terminal
-                        } else {
-                            ui.showNotification('Visual engine not loaded.', '⚠️');
-                        }
+                        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui });
                     }
                 });
             }

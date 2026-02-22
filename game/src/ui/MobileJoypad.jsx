@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 /**
- * MobileJoypad
- * A CSS-styled floating D-pad overlay that communicates via global window variables
- * to drive GridEngine movement in WorldScene.js.
+ * MobileJoypad — floating D-pad overlay for WorldScene grid movement.
+ * Communicates via window.joypadState (read by WorldScene update loop).
+ * Shows only when WorldScene is active (controlled by App.jsx).
  */
 export function MobileJoypad() {
     const [activeDirection, setActiveDirection] = useState(null);
 
     const handleDown = (dir, e) => {
-        if (e) e.preventDefault(); // Prevent touch-scroll on mobile
+        if (e) e.preventDefault();
         window.joypadState = dir;
         setActiveDirection(dir);
     };
@@ -20,111 +21,158 @@ export function MobileJoypad() {
         setActiveDirection(null);
     };
 
-    // Failsafe: if touch is canceled/leaves the button, halt movement.
+    // Global touch/mouse release failsafe
     useEffect(() => {
-        const resetOnUp = () => handleUp();
-        window.addEventListener('mouseup', resetOnUp);
-        window.addEventListener('touchend', resetOnUp);
+        const reset = () => {
+            window.joypadState = null;
+            setActiveDirection(null);
+        };
+        window.addEventListener('mouseup', reset);
+        window.addEventListener('touchend', reset);
         return () => {
-            window.removeEventListener('mouseup', resetOnUp);
-            window.removeEventListener('touchend', resetOnUp);
+            window.removeEventListener('mouseup', reset);
+            window.removeEventListener('touchend', reset);
+            window.joypadState = null;
         };
     }, []);
 
-    // Basic retro gameboy-style styling
-    const joypadStyle = {
-        position: 'absolute',
-        bottom: '24px',
-        left: '24px',
-        zIndex: 1000,
-        display: 'grid',
-        gridTemplateColumns: '50px 50px 50px',
-        gridTemplateRows: '50px 50px 50px',
-        gap: '4px',
-        userSelect: 'none'
+    const exitScene = () => {
+        window.joypadState = null;
+        // Try scene's own exit, then fall back to debug API
+        if (window.phaserGame) {
+            const scene = window.phaserGame.scene.getScene('WorldScene');
+            if (scene?.exitScene) {
+                scene.exitScene();
+                return;
+            }
+        }
+        if (window.game?.exitScene) window.game.exitScene();
     };
 
-    const btnStyle = (dir) => ({
-        backgroundColor: activeDirection === dir ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.5)',
-        border: '2px solid rgba(255, 255, 255, 0.2)',
-        color: '#fff',
-        borderRadius: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 'bold',
-        fontSize: '18px',
-        cursor: 'pointer',
-        touchAction: 'none' // Critical for preventing default browser pan/zoom
+    const btnProps = (dir) => ({
+        style: btnStyle(dir, activeDirection),
+        onPointerDown: (e) => handleDown(dir, e),
+        onPointerUp: handleUp,
+        onPointerCancel: handleUp,
+        onPointerLeave: handleUp,
     });
 
-    const exitBtnStyle = {
-        position: 'absolute',
-        top: '24px',
-        right: '24px',
-        zIndex: 1000,
-        backgroundColor: 'rgba(200, 0, 0, 0.8)',
-        color: 'white',
-        border: 'none',
-        padding: '12px 24px',
-        borderRadius: '8px',
-        fontWeight: 'bold',
-        fontSize: '16px',
-        cursor: 'pointer',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-        fontFamily: 'monospace'
-    };
-
     return (
-        <>
-            <div style={joypadStyle}>
+        <div style={overlayStyle}>
+            {/* D-pad — 3x3 grid, arrows in cross pattern */}
+            <div style={padStyle}>
                 <div />
-                <button
-                    style={btnStyle('UP')}
-                    onPointerDown={(e) => handleDown('UP', e)}
-                    onPointerUp={handleUp}
-                    onPointerCancel={handleUp}
-                    onPointerLeave={handleUp}>
-                    W
-                </button>
+                <button {...btnProps('UP')}>&#9650;</button>
                 <div />
-                <button
-                    style={btnStyle('LEFT')}
-                    onPointerDown={(e) => handleDown('LEFT', e)}
-                    onPointerUp={handleUp}
-                    onPointerCancel={handleUp}
-                    onPointerLeave={handleUp}>
-                    A
-                </button>
-                <button
-                    style={{ ...btnStyle('DOWN'), gridRow: 3, gridColumn: 2 }}
-                    onPointerDown={(e) => handleDown('DOWN', e)}
-                    onPointerUp={handleUp}
-                    onPointerCancel={handleUp}
-                    onPointerLeave={handleUp}>
-                    S
-                </button>
-                <button
-                    style={btnStyle('RIGHT')}
-                    onPointerDown={(e) => handleDown('RIGHT', e)}
-                    onPointerUp={handleUp}
-                    onPointerCancel={handleUp}
-                    onPointerLeave={handleUp}>
-                    D
-                </button>
+                <button {...btnProps('LEFT')}>&#9664;</button>
+                <div style={centerStyle} />
+                <button {...btnProps('RIGHT')}>&#9654;</button>
+                <div />
+                <button {...btnProps('DOWN')}>&#9660;</button>
+                <div />
             </div>
 
+            {/* Action button (SPACE / interact) */}
             <button
-                style={exitBtnStyle}
-                onClick={() => {
-                    if (window.game && window.game.exitScene) {
-                        window.game.exitScene();
-                    }
-                }}>
-                [X] EXIT SIMULATION
+                style={actionBtnStyle}
+                onPointerDown={(e) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32 }));
+                }}
+                onPointerUp={(e) => {
+                    e.preventDefault();
+                    window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32 }));
+                }}
+            >
+                A
             </button>
-        </>
+
+            {/* Exit button */}
+            <button style={exitBtnStyle} onClick={exitScene}>
+                EXIT
+            </button>
+        </div>
     );
 }
+
+// ── Styles ──
+
+const overlayStyle = {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 999,
+    pointerEvents: 'none',
+};
+
+const padStyle = {
+    position: 'absolute',
+    bottom: '28px',
+    left: '20px',
+    display: 'grid',
+    gridTemplateColumns: '56px 56px 56px',
+    gridTemplateRows: '56px 56px 56px',
+    gap: '3px',
+    pointerEvents: 'auto',
+    userSelect: 'none',
+};
+
+const centerStyle = {
+    background: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: '4px',
+};
+
+const btnStyle = (dir, active) => ({
+    background: active === dir ? 'rgba(255, 215, 0, 0.4)' : 'rgba(10, 10, 15, 0.7)',
+    border: active === dir ? '2px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255, 255, 255, 0.15)',
+    color: active === dir ? '#ffd700' : '#cccccc',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '20px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    touchAction: 'none',
+    WebkitTapHighlightColor: 'transparent',
+    transition: 'background 0.1s, border-color 0.1s',
+});
+
+const actionBtnStyle = {
+    position: 'absolute',
+    bottom: '48px',
+    right: '28px',
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    background: 'rgba(10, 10, 15, 0.7)',
+    border: '2px solid rgba(255, 215, 0, 0.3)',
+    color: '#ffd700',
+    fontSize: '20px',
+    fontFamily: '"Press Start 2P", monospace',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    touchAction: 'none',
+    pointerEvents: 'auto',
+    WebkitTapHighlightColor: 'transparent',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+};
+
+const exitBtnStyle = {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    padding: '10px 20px',
+    borderRadius: '6px',
+    background: 'rgba(180, 40, 40, 0.85)',
+    border: '1px solid rgba(255, 100, 100, 0.3)',
+    color: '#ffffff',
+    fontSize: '11px',
+    fontFamily: '"Press Start 2P", monospace',
+    letterSpacing: '1px',
+    cursor: 'pointer',
+    pointerEvents: 'auto',
+    WebkitTapHighlightColor: 'transparent',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+};
 
 export default MobileJoypad;
