@@ -239,6 +239,13 @@ export default function App() {
             // bleeding through when the transparent Phaser canvas is active.
             container.style.background = showPhaser ? '#0a0a0f' : '';
 
+            // Also sync canvas visibility — auto-resume and other flows may hide
+            // the canvas directly, so always reconcile it here.
+            if (game?.canvas) {
+                game.canvas.style.visibility = showPhaser ? 'visible' : 'hidden';
+                game.canvas.style.pointerEvents = showPhaser ? 'auto' : 'none';
+            }
+
             // On mobile with WorldScene active, shrink canvas to top portion
             // so the Game Boy control panel fits below.
             // Defer resize slightly to avoid racing with scene camera setup.
@@ -269,8 +276,9 @@ export default function App() {
         if (termContainer) {
             if (activeView === VIEW.TERMINAL) {
                 termContainer.style.display = '';
+            } else if (activeView === VIEW.PHASER) {
+                termContainer.style.display = 'none';
             }
-            // Don't hide terminal here — Phaser scenes manage it via showTerminalUI/hideUI
         }
     }, [activeView, isWorldSceneActive]);
 

@@ -213,10 +213,11 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
             window.phaserGame.canvas.style.pointerEvents = 'auto';
         }
 
-        // Stop all ACTIVE scenes first so we don't have overlapped updates
+        // Stop ALL active scenes so we don't have overlapped updates
+        // (including BootScene — its preloaded assets stay in the global cache)
         const activeScenes = [];
         window.phaserGame.scene.scenes.forEach(scene => {
-            if (scene.sys.isActive() && scene.sys.settings.key !== 'BootScene') {
+            if (scene.sys.isActive()) {
                 activeScenes.push(scene.sys.settings.key);
                 window.phaserGame.scene.stop(scene.sys.settings.key);
             }
@@ -224,6 +225,7 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
 
         // Sync React state FIRST so overlays mount before scene starts
         GameEventBus.emit(GameEvents.UI_ROUTE, 'PHASER');
+        console.log(`[DEBUG_LAUNCH_SCENE] Stopped scenes: [${activeScenes.join(', ')}], routing to PHASER, starting ${sceneKey} in ${activeScenes.length > 0 ? 100 : 50}ms`);
 
         // Delay scene start to let stopped scenes clean up and React overlays mount
         const startDelay = activeScenes.length > 0 ? 100 : 50;

@@ -75,6 +75,12 @@ export default class WorldScene extends BaseScene {
     }
 
     preload() {
+        // Catch asset-load errors so we get diagnostics instead of silent black screens
+        this.load.on('loaderror', (file) => {
+            console.error(`[WorldScene] Asset failed to load: ${file.key} (${file.url})`);
+            window.ArtLife?.recordMissingAsset?.(file.key, file.url);
+        });
+
         // Tiled JSON map — always queue load; Phaser deduplicates internally
         this.load.tilemapTiledJSON('pallet_town', 'content/maps/pallet_town.json');
 
