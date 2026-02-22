@@ -6,6 +6,7 @@ import { DecisionLog } from '../managers/DecisionLog.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
 import { useUIStore } from '../stores/uiStore.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 /**
  * Dialogue / Event scene — Multi-step engine
@@ -79,6 +80,24 @@ export class DialogueScene extends BaseScene {
         }
 
         this.cameras.main.fadeIn(600, 0, 0, 0);
+
+        // ── ESC key force-exit (safety hatch) ──
+        this.input.keyboard.on('keydown-ESC', () => {
+            useUIStore.getState().closeDialogue();
+            this.exitToHub();
+        });
+
+        // Visible back button (top-right, tappable for mobile)
+        const { width: bw } = this.scale;
+        const backBtn = this.add.text(bw - 16, 12, '[ ESC: BACK ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#7a7a8a'
+        }).setOrigin(1, 0).setDepth(102).setInteractive({ useHandCursor: true });
+        backBtn.on('pointerover', () => backBtn.setColor('#c9a84c'));
+        backBtn.on('pointerout', () => backBtn.setColor('#7a7a8a'));
+        backBtn.on('pointerdown', () => {
+            useUIStore.getState().closeDialogue();
+            this.exitToHub();
+        });
     }
 
     // ═══════════════════════════════════════════
@@ -758,6 +777,8 @@ export class DialogueScene extends BaseScene {
             if (this.returnScene) {
                 this.scene.start(this.returnScene, { ...this.returnArgs, ui: this.ui });
             } else {
+                GameEventBus.emit(GameEvents.SCENE_EXIT, 'DialogueScene');
+                GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                 this.showTerminalUI();
                 if (this.onExitCallback) {
                     this.onExitCallback();

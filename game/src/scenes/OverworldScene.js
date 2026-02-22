@@ -253,6 +253,8 @@ export class OverworldScene extends BaseScene {
 
     leaveLocation() {
         GameEventBus.emit(GameEvents.OVERWORLD_EXIT, { venueId: this.venueId });
+        GameEventBus.emit(GameEvents.SCENE_EXIT, 'OverworldScene');
+        GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
             this.showTerminalUI();

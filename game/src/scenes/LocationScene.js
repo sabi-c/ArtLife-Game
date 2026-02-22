@@ -5,6 +5,7 @@ import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
 import { DialogueTreeManager } from '../managers/DialogueTreeManager.js';
 import { QualityGate } from '../managers/QualityGate.js';
 import { GameState } from '../managers/GameState.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 /**
  * LocationScene — Top-Down Exploration Engine
@@ -401,6 +402,8 @@ export class LocationScene extends BaseScene {
                 });
             } else {
                 // Return to DOM Dashboard
+                GameEventBus.emit(GameEvents.SCENE_EXIT, 'LocationScene');
+                GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                 this.showTerminalUI();
                 if (this.ui) {
                     this.ui.popScreen(); // Remove empty trap screen

@@ -149,6 +149,9 @@ export class CityScene extends BaseScene {
             }
         });
         lineGfx.setDepth(-1);
+
+        // ── ESC key force-exit (safety hatch) ──
+        this.input.keyboard.on('keydown-ESC', () => this.returnToDashboard());
     }
 
     enterBuilding(loc) {

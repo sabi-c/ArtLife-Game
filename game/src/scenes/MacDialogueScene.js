@@ -89,6 +89,7 @@ export class MacDialogueScene extends BaseScene {
             if (cleaned) return;
             cleaned = true;
             this.showTerminalUI();
+            GameEventBus.emit(GameEvents.SCENE_EXIT, 'MacDialogueScene');
             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
 
             if (!isForceExit && this.dialogueData.onComplete) {

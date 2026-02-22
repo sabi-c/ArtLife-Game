@@ -335,9 +335,15 @@ async function safeEval(page, fn, fallback = null) {
         await page.waitForTimeout(250);
     }
     await page.waitForTimeout(2500);
-    // Dismiss reward overlay by clicking anywhere on the body (canvas might be hidden by TerminalUI return)
-    await page.click('body');
-    await page.keyboard.press('Space');
+    // Dismiss reward overlay via Phaser keyboard event (body may be hidden by canvas)
+    await safeEval(page, () => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32 }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32 }));
+    });
+    await page.waitForTimeout(500);
+    // Also try clicking the canvas directly as fallback
+    const canvas = await page.$('canvas');
+    if (canvas) await canvas.click().catch(() => {});
     await page.waitForTimeout(2000);
     const termAfterReward = await safeEval(page, () => window.game?.uiState()?.visible);
     assert(termAfterReward === true, 'Terminal restored after reward overlay');
