@@ -236,6 +236,28 @@ export default function App() {
             // Opaque background prevents body color (e.g. Pantone Blue theme) from
             // bleeding through when the transparent Phaser canvas is active.
             container.style.background = showPhaser ? '#0a0a0f' : '';
+
+            // On mobile with WorldScene active, shrink canvas to top portion
+            // so the Game Boy control panel fits below
+            const isMobile = window.innerWidth < 769;
+            if (showPhaser && isWorldSceneActive && isMobile) {
+                const topH = Math.floor(window.innerHeight * 0.54);
+                container.style.height = topH + 'px';
+                container.style.bottom = 'auto';
+                if (game?.canvas) {
+                    game.canvas.style.height = topH + 'px';
+                }
+                game?.scale?.resize(window.innerWidth, topH);
+            } else {
+                container.style.height = '';
+                container.style.bottom = '';
+                if (game?.canvas) {
+                    game.canvas.style.height = '';
+                }
+                if (showPhaser && game) {
+                    game.scale?.resize(window.innerWidth, window.innerHeight);
+                }
+            }
         }
         // Terminal visibility: show when in TERMINAL view, hide when Phaser takes over
         const termContainer = document.getElementById('terminal');
@@ -245,7 +267,7 @@ export default function App() {
             }
             // Don't hide terminal here — Phaser scenes manage it via showTerminalUI/hideUI
         }
-    }, [activeView]);
+    }, [activeView, isWorldSceneActive]);
 
     if (phaserError) {
         return (
