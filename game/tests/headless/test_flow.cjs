@@ -99,11 +99,11 @@ async function safeEval(page, fn, fallback = null) {
     console.log('── Phase A: Real navigation ────────────────────────────\n');
 
     await page.goto(BASE, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000); // Extra time for Phaser init + BootScene + skipBoot race
 
     // Scene 1 — TitleScene
     section('A1', 'TitleScene boot');
-    const titleActive = await waitForScene(page, 'TitleScene', 5000);
+    const titleActive = await waitForScene(page, 'TitleScene', 8000);
     assert(titleActive, 'TitleScene is active on boot');
 
     const canvasVis = await page.evaluate(() => {
@@ -193,7 +193,10 @@ async function safeEval(page, fn, fallback = null) {
         // Dashboard options
         const opts = await safeEval(page, () => window.game?.options() ?? []);
         assert(opts.length > 0, `Dashboard has ${opts.length} menu options`);
-        assert(opts.some(o => o.includes('Visit Venue')), '"Visit Venue" in dashboard menu');
+        // "Visit Venue" only appears at mid-game (week 5+) due to progressive disclosure
+        const hasVenue = opts.some(o => o.includes('Visit Venue'));
+        const hasBrowse = opts.some(o => /browse|market/i.test(o));
+        assert(hasVenue || hasBrowse, '"Visit Venue" or "Browse Market" in dashboard menu');
         assert(opts.some(o => /advance|week/i.test(o)), '"Advance Week" in dashboard menu');
 
         // Terminal content

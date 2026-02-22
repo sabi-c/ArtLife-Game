@@ -12,6 +12,7 @@ import TerminalLogin from './ui/TerminalLogin.jsx';
 import AdminDashboard, { AdminFAB } from './ui/AdminDashboard.jsx';
 import SettingsOverlay from './ui/SettingsOverlay.jsx';
 import MobileJoypad from './ui/MobileJoypad.jsx';
+import CalendarHUD from './ui/CalendarHUD.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
@@ -89,7 +90,18 @@ export default function App() {
         const params = new URLSearchParams(window.location.search);
         if (params.get('skipBoot')) {
             // Test runner wants to boot directly into TitleScene
-            if (window.startPhaserGame) window.startPhaserGame('new');
+            // BootScene.create() sets window.startPhaserGame asynchronously,
+            // so we poll until it's available (up to 5s)
+            const pollStart = Date.now();
+            const pollId = setInterval(() => {
+                if (window.startPhaserGame) {
+                    clearInterval(pollId);
+                    window.startPhaserGame('new');
+                } else if (Date.now() - pollStart > 5000) {
+                    clearInterval(pollId);
+                    console.error('[App] skipBoot: startPhaserGame never registered');
+                }
+            }, 100);
             setActiveView(VIEW.PHASER);
         } else {
             // Auto-resume from most recent save slot
@@ -262,6 +274,7 @@ export default function App() {
             )}
 
             {isWorldSceneActive && <MobileJoypad />}
+            {<CalendarHUD visible={isWorldSceneActive} />}
 
             {/* The Phaser Canvas Layer sets up in this div */}
             <div id="phaser-game-container" style={{ position: 'fixed', inset: 0, zIndex: 0 }} />

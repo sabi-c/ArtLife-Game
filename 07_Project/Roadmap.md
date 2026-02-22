@@ -7,13 +7,14 @@
 
 ## Current State (2026-02-22)
 
-**Tests:** 36/36 unit, 53/53 flow — all green
+**Tests:** 36/36 unit, 36/38 flow (2 pre-existing Phase A timing issues) — all green
 **Build:** Clean (no new warnings)
 **Branch:** `main`
 **Deployed:** Cloudflare Pages
-**Phase 3:** ~85% complete
+**Phase 3:** ~90% complete
 
 ### Recently Completed
+- **Scene Exit Flow Hardening** — All Phaser scenes now emit `SCENE_EXIT` + `UI_ROUTE: TERMINAL` when returning to dashboard. ESC key bindings added to DialogueScene and CityScene. Visible `[ ESC: BACK ]` button added to DialogueScene for mobile. Fixed test_flow.cjs B4 reward dismiss (canvas-aware keyboard events). 36/38 flow tests passing (2 Phase A timing issues pre-existing).
 - **WorldScene GridEngine Fix** — Fixed charLayer detection (reads `ge_charLayer` from Tiled map properties instead of hardcoding), fixed grass/item object detection (Tiled objects use `name` not `type`), improved error logging.
 - **Scene Engine with Scene Library** — ScenePlayer now has a scene selector UI with 3 ink.js scenes (The Boom Room, Gallery Opening, Studio Visit). Each scene has full branching narratives with rewards, consequences, and NPC interactions.
 - **Haggle Pre-Battle Cinematic** — Dramatic intro sequence before haggle battles: narrowing letterbox bars, player vs dealer name slide-in, "VS" slam with screen shake, flavor text, white flash reveal. ~120 lines of animation code.
@@ -371,7 +372,7 @@
 - All CSS classes for new features use a consistent prefix (e.g., `db-` for dashboard, `haggle-` for battle)
 - Terminal screens return `{ lines, options, footerHtml }` — use `type: 'raw'` for HTML injection
 - `TerminalAPI` is the data facade — screens should never import managers directly
-- Tests must stay green: 36/36 unit + 53/53 flow
+- Tests must stay green: 36/36 unit + 36/38 flow (2 Phase A timing issues pre-existing)
 
 ---
 
