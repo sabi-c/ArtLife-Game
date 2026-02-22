@@ -11,13 +11,13 @@ export default function StorylineEditor() {
     const [jsonEdit, setJsonEdit] = useState('');
     const [notification, setNotification] = useState(null);
 
-    const active = useStorylineStore((s) => s.active);
-    const completed = useStorylineStore((s) => s.completed);
+    const active = useStorylineStore((s) => s.activeStorylines);
+    const completed = useStorylineStore((s) => s.completedStorylines);
     const storeStatus = {
-        totalActive: active.length,
-        totalCompleted: completed.length,
-        active,
-        completed
+        totalActive: (active || []).length,
+        totalCompleted: (completed || []).length,
+        active: active || [],
+        completed: completed || []
     };
 
     const forceActivate = useStorylineStore((s) => s.forceActivate);

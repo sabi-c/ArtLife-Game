@@ -56,17 +56,13 @@ export default function DataIngestion() {
 
             } else if (domain === 'npcs') {
                 useNPCStore.setState(state => {
-                    const newDict = { ...state.npcsByTier };
+                    const contacts = [...(state.contacts || [])];
                     incoming.forEach(npc => {
-                        const tier = npc.tier || 1;
-                        if (!newDict[tier]) newDict[tier] = [];
-                        const list = [...newDict[tier]];
-                        const idx = list.findIndex(existing => existing.id === npc.id);
-                        if (idx >= 0) { list[idx] = npc; updatedCount++; }
-                        else { list.push(npc); insertedCount++; }
-                        newDict[tier] = list;
+                        const idx = contacts.findIndex(existing => existing.id === npc.id);
+                        if (idx >= 0) { contacts[idx] = { ...contacts[idx], ...npc }; updatedCount++; }
+                        else { contacts.push(npc); insertedCount++; }
                     });
-                    return { npcsByTier: newDict };
+                    return { contacts };
                 });
 
             } else if (domain === 'market') {

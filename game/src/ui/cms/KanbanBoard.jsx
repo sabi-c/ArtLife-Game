@@ -62,7 +62,7 @@ const CARD_COLORS = {
 // ── Main Component ──
 
 export default function KanbanBoard() {
-    const { entities, load, loaded, loading, error, updateEntityCategory } = useContentStore();
+    const { entities, load, loaded, loading, error } = useContentStore();
     const [columns, setColumns] = useState({});
 
     // Load CMS Content on Mount
@@ -127,10 +127,13 @@ export default function KanbanBoard() {
                 [destination.droppableId]: destCol,
             });
 
-            // Persist the logic update to the game engines
-            updateEntityCategory(movedItem.id, destination.droppableId);
+            // Update the entity's category in the content store
+            useContentStore.setState(state => {
+                const entity = state.entities.find(e => e.id === movedItem.id);
+                if (entity) entity.category = destination.droppableId;
+            });
         }
-    }, [columns, updateEntityCategory]);
+    }, [columns]);
 
     if (loading) return <div style={{ color: '#888', padding: 20 }}>Loading Project Board...</div>;
     if (error) return <div style={{ color: '#c94040', padding: 20 }}>Error: {error}</div>;

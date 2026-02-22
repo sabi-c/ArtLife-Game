@@ -95,7 +95,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function MarketDashboard({ onClose }) {
     const { priceHistory, artistSnapshots } = useMarketStore();
-    const marketState = useMarketStore(s => s.marketState) || GameState.state?.marketState || 'neutral';
+    const marketState = useMarketStore(s => s.marketCycle) || GameState.state?.marketState || 'neutral';
     const [selectedId, setSelectedId] = useState(null);
 
     // Get list of active artists sorted by heat

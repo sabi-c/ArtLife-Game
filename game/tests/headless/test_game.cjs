@@ -15,7 +15,8 @@ const { TestReporter } = require('./reporter.cjs');
     console.log('  ArtLife — Headless Test Runner (V2)');
     console.log('═══════════════════════════════════════\n');
 
-    await page.goto('http://localhost:5173?skipBoot=true', { waitUntil: 'networkidle' });
+    const testPort = process.env.TEST_PORT || '5175';
+    await page.goto(`http://localhost:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // ── 1. Boot Verification ──
@@ -82,7 +83,8 @@ const { TestReporter } = require('./reporter.cjs');
 
     // ── 4. Haggle Scene ──
     await reporter.runTest('Haggle Scene Initialization', async (assert) => {
-        await page.goto('http://localhost:5173?skipBoot=true', { waitUntil: 'networkidle' });
+        const testPort = process.env.TEST_PORT || '5175';
+    await page.goto(`http://localhost:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
         await page.waitForTimeout(1500);
 
         const haggleResult = await page.evaluate(() => window.game.startHaggle());
