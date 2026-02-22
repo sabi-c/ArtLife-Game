@@ -367,6 +367,7 @@ export default class WorldScene extends BaseScene {
 
         // Handle orientation/resize changes
         this.scale.on('resize', (gameSize) => {
+            if (!this.cameras?.main) return;
             const w = gameSize.width;
             const newZoom = w < 500 ? 2.5 : w < 800 ? 2 : 2;
             this.cameras.main.setZoom(newZoom);
@@ -399,7 +400,17 @@ export default class WorldScene extends BaseScene {
         this.escKey.on('down', () => this.exitScene());
 
         this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this._lastInteractTime = 0;
         this.interactKey.on('down', () => this._onInteractPress());
+
+        // Window-level SPACE fallback — Phaser keyboard requires canvas focus
+        this._windowKeyHandler = (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                this._onInteractPress();
+            }
+        };
+        window.addEventListener('keydown', this._windowKeyHandler);
 
         this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
@@ -409,12 +420,23 @@ export default class WorldScene extends BaseScene {
         // ── Location name toast ──
         this._showLocationToast('PALLET TOWN');
 
+        // ── Interaction hint (floats above player head) ──
+        this._interactHint = this.add.text(0, 0, '', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '7px',
+            color: '#ffd700',
+            stroke: '#000000',
+            strokeThickness: 3,
+            align: 'center',
+        }).setOrigin(0.5, 1).setDepth(DEPTH.HUD).setAlpha(0);
+
         // ── Scene entry sound ──
         WebAudioService.sceneEnter();
 
         // Mark scene as ready — SCENE_READY event deferred to first update() frame
         // so React overlays have time to mount before we signal readiness
         this._sceneReady = true;
+        this._moveLogTimer = 0;
         console.log('[WorldScene] Built successfully.',
             'charLayer:', charLayer || '(implicit)',
             'NPCs:', this.npcData.length,
@@ -423,6 +445,10 @@ export default class WorldScene extends BaseScene {
             'Doors:', this.doors.length,
             'Dialogs:', this.dialogs.length,
         );
+        // Log all door positions for debugging
+        for (const d of this.doors) {
+            console.log(`[WorldScene] Door at (${d.x},${d.y}) → ${d.nextMap || '(none)'}${d.label ? ' "' + d.label + '"' : ''}`);
+        }
     }
 
     // ════════════════════════════════════════════════════
@@ -537,6 +563,23 @@ export default class WorldScene extends BaseScene {
             this._syncNPCs();
         }
 
+        // ── Interaction hint ──
+        this._updateInteractHint();
+
+        // ── Movement logger (every 2s) ──
+        this._moveLogTimer = (this._moveLogTimer || 0) + delta;
+        if (this._moveLogTimer > 2000) {
+            this._moveLogTimer = 0;
+            const p = this.gridEngine.getPosition('player');
+            const f = this.gridEngine.getFacingDirection('player');
+            const nearDoor = this.doors.find(d =>
+                Math.abs(d.x - p.x) <= 1 && Math.abs(d.y - p.y) <= 1
+            );
+            if (nearDoor) {
+                console.log(`[WorldScene] Player (${p.x},${p.y}) facing ${f} — NEAR DOOR at (${nearDoor.x},${nearDoor.y}) → ${nearDoor.nextMap}`);
+            }
+        }
+
         // Grass cooldown
         if (this.grassCooldown > 0) this.grassCooldown -= delta;
     }
@@ -617,10 +660,79 @@ export default class WorldScene extends BaseScene {
     }
 
     // ════════════════════════════════════════════════════
+    // Interaction Hint
+    // ════════════════════════════════════════════════════
+
+    _updateInteractHint() {
+        if (!this._interactHint || !this.gridEngine || this.dialogActive) {
+            if (this._interactHint) this._interactHint.setAlpha(0);
+            return;
+        }
+
+        const pos = this.gridEngine.getPosition('player');
+        const target = this.gridEngine.getFacingPosition('player');
+
+        // Check what's at the target tile
+        let hintText = '';
+
+        // Door? (check facing tile AND standing on)
+        const door = this.doors.find(d => d.x === target.x && d.y === target.y)
+            || this.doors.find(d => d.x === pos.x && d.y === pos.y);
+        if (door) {
+            hintText = '[SPACE] Enter';
+        }
+
+        // NPC?
+        if (!hintText) {
+            const npc = this.npcData.find(n => {
+                try {
+                    const npcPos = this.gridEngine.getPosition(n.id);
+                    return npcPos.x === target.x && npcPos.y === target.y;
+                } catch (e) { return false; }
+            });
+            if (npc) hintText = '[SPACE] Talk';
+        }
+
+        // Dialog sign? (check facing tile AND standing on)
+        if (!hintText) {
+            const dialog = this.dialogs.find(d => d.x === target.x && d.y === target.y)
+                || this.dialogs.find(d => d.x === pos.x && d.y === pos.y);
+            if (dialog) hintText = '[SPACE] Read';
+        }
+
+        // Item?
+        if (!hintText) {
+            const item = this.itemSprites.find(i => i.tileX === target.x && i.tileY === target.y);
+            if (item) hintText = '[SPACE] Pick up';
+        }
+
+        if (hintText) {
+            // Position above the player sprite
+            const tileW = this.map.tileWidth;
+            const tileH = this.map.tileHeight;
+            const px = pos.x * tileW + tileW / 2;
+            const py = pos.y * tileH - 8;
+            this._interactHint.setText(hintText);
+            this._interactHint.setPosition(px, py);
+            this._interactHint.setAlpha(1);
+        } else {
+            this._interactHint.setAlpha(0);
+        }
+    }
+
+    // ════════════════════════════════════════════════════
     // Interaction System
     // ════════════════════════════════════════════════════
 
     _onInteractPress() {
+        // Debounce — prevent double-fire from Phaser key + window listener
+        const now = Date.now();
+        if (now - this._lastInteractTime < 200) return;
+        this._lastInteractTime = now;
+
+        // Already transitioning through a door
+        if (this._doorTransitioning) return;
+
         // If dialog is showing, advance/dismiss it
         if (this.dialogActive) {
             this._dismissDialog();
@@ -630,13 +742,9 @@ export default class WorldScene extends BaseScene {
         if (!this.gridEngine) return;
         const pos = this.gridEngine.getPosition('player');
         const facing = this.gridEngine.getFacingDirection('player');
+        const target = this.gridEngine.getFacingPosition('player');
 
-        // Calculate target tile
-        const target = { x: pos.x, y: pos.y };
-        if (facing === 'left') target.x--;
-        else if (facing === 'right') target.x++;
-        else if (facing === 'up') target.y--;
-        else if (facing === 'down') target.y++;
+        console.log(`[WorldScene] INTERACT pos=(${pos.x},${pos.y}) facing=${facing} target=(${target.x},${target.y}) doors=${this.doors.length}`);
 
         // ── Check NPC interaction ──
         const npcAtTarget = this.npcData.find(n => {
@@ -670,21 +778,26 @@ export default class WorldScene extends BaseScene {
             return;
         }
 
-        // ── Check door interaction ──
-        const door = this.doors.find(d => d.x === target.x && d.y === target.y);
+        // ── Check door interaction (facing tile OR standing on) ──
+        const door = this.doors.find(d => d.x === target.x && d.y === target.y)
+            || this.doors.find(d => d.x === pos.x && d.y === pos.y);
         if (door) {
+            console.log(`[WorldScene] DOOR FOUND at (${door.x},${door.y}) → ${door.nextMap}`);
             WebAudioService.doorEnter();
             this._enterDoor(door);
             return;
         }
 
-        // ── Check sign/dialog interaction ──
-        const dialog = this.dialogs.find(d => d.x === target.x && d.y === target.y);
+        // ── Check sign/dialog interaction (facing tile OR standing on) ──
+        const dialog = this.dialogs.find(d => d.x === target.x && d.y === target.y)
+            || this.dialogs.find(d => d.x === pos.x && d.y === pos.y);
         if (dialog) {
             WebAudioService.select();
             this._showDialog('Sign', dialog.content);
             return;
         }
+
+        console.log(`[WorldScene] Nothing found at target (${target.x},${target.y}) or pos (${pos.x},${pos.y})`);
     }
 
     // ════════════════════════════════════════════════════
@@ -796,29 +909,55 @@ export default class WorldScene extends BaseScene {
     // ════════════════════════════════════════════════════
 
     _enterDoor(door) {
-        if (door.nextMap) {
-            this.cameras.main.fadeOut(300, 0, 0, 0);
-            this.cameras.main.once('camerafadeoutcomplete', () => {
-                const pos = this.gridEngine.getPosition('player');
-                GameState.state.overworldPosition = { x: pos.x, y: pos.y };
-
-                GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
-                this.scene.stop();
-
-                // Launch LocationScene with venue data
-                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'LocationScene', {
-                    venueId: door.nextMap,
-                    roomId: door.nextMapRoom || null,
-                    returnScene: 'WorldScene',
-                    returnArgs: {
-                        spawnX: pos.x,
-                        spawnY: pos.y + 1, // spawn below the door
-                    },
-                });
-            });
-        } else {
+        if (!door.nextMap) {
             this._showDialog('Door', 'This door appears to be locked.');
+            return;
         }
+
+        // Prevent double-trigger
+        if (this._doorTransitioning) return;
+        this._doorTransitioning = true;
+
+        console.log(`[WorldScene] Entering door → ${door.nextMap} (room: ${door.nextMapRoom || 'default'})`);
+
+        // Freeze player movement and save position immediately
+        this.gridEngine.stopMovement('player');
+        const pos = this.gridEngine.getPosition('player');
+        GameState.state.overworldPosition = { x: pos.x, y: pos.y };
+
+        const launchData = {
+            venueId: door.nextMap,
+            roomId: door.nextMapRoom || null,
+            returnScene: 'WorldScene',
+            returnArgs: { spawnX: pos.x, spawnY: pos.y + 1 },
+        };
+
+        const { width, height } = this.cameras.main;
+
+        // Black overlay + location name (Pokemon-style building enter)
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0)
+            .setDepth(999).setScrollFactor(0);
+
+        const label = door.label || door.nextMap.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const locationText = this.add.text(width / 2, height / 2, label, {
+            fontFamily: '"Press Start 2P", monospace', fontSize: '14px',
+            color: '#f0d060', align: 'center',
+        }).setOrigin(0.5).setDepth(1000).setScrollFactor(0).setAlpha(0);
+
+        // Animate: fade to black → show location name → launch scene
+        this.tweens.add({
+            targets: overlay, alpha: 1, duration: 400, ease: 'Power2',
+            onComplete: () => {
+                locationText.setAlpha(1);
+                // Brief hold to show location name, then transition
+                this.time.delayedCall(500, () => {
+                    console.log(`[WorldScene] Launching LocationScene with`, launchData);
+                    GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
+                    this.scene.stop();
+                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'LocationScene', launchData);
+                });
+            },
+        });
     }
 
     // ════════════════════════════════════════════════════
@@ -1048,6 +1187,11 @@ export default class WorldScene extends BaseScene {
         this.npcData = [];
         this.dialogElements = [];
         this.itemSprites = [];
+        // Remove window-level keyboard listener
+        if (this._windowKeyHandler) {
+            window.removeEventListener('keydown', this._windowKeyHandler);
+            this._windowKeyHandler = null;
+        }
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
     }
 

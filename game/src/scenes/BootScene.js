@@ -56,6 +56,22 @@ export class BootScene extends Phaser.Scene {
             frameWidth: 160, frameHeight: 160
         });
 
+        // ── Interior Tiled Maps + Tilesets ──
+        this.load.tilemapTiledJSON('map_gallery_test', 'content/maps/gallery_test.json');
+        this.load.tilemapTiledJSON('map_uptown_gallery', 'content/maps/uptown_gallery.json');
+        this.load.tilemapTiledJSON('map_artist_studio_visit', 'content/maps/artist_studio_visit.json');
+        // Multi-room venue: SoHo Gallery (lobby + exhibition + office)
+        this.load.tilemapTiledJSON('map_soho_gallery_lobby', 'content/maps/soho_gallery_lobby.json');
+        this.load.tilemapTiledJSON('map_soho_gallery_exhibition', 'content/maps/soho_gallery_exhibition.json');
+        this.load.tilemapTiledJSON('map_soho_gallery_office', 'content/maps/soho_gallery_office.json');
+        // Chelsea Gallery (showcase room)
+        this.load.tilemapTiledJSON('map_chelsea_gallery', 'content/maps/chelsea_gallery.json');
+        // Chelsea Showcase (museum gallery — 18×14, 9 paintings)
+        this.load.tilemapTiledJSON('map_chelsea_showcase', 'content/maps/chelsea_showcase.json');
+        this.load.image('gallery_tileset', 'assets/tilesets/gallery_tileset.png');
+        this.load.image('Room_Builder_free_48x48', 'assets/tilesets/Room_Builder_free_48x48.png');
+        this.load.image('Interiors_free_48x48', 'assets/tilesets/Interiors_free_48x48.png');
+
         // ── Event JSON Data ──
         this.load.json('events_json', 'content/events.json');
         this.load.json('storylines_json', 'content/storylines.json');

@@ -716,6 +716,226 @@ const FREEPORT = {
 };
 
 // ─────────────────────────────────────────────
+// VENUE 7: TEST GALLERY — SoHo (Tiled Map Demo)
+// ─────────────────────────────────────────────
+
+const GALLERY_TEST = {
+    id: 'gallery_test',
+    name: 'SoHo Contemporary',
+    desc: 'A small contemporary gallery in SoHo. White walls, polished floors, serious art.',
+    startRoom: 'gallery_test_main',
+    timeLimit: 3,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'gallery_test_main',
+            venue: 'gallery_test',
+            tiledMap: 'gallery_test',
+            name: 'Main Exhibition',
+            desc: 'Kenji Nomura & Amara Osei: New Works. The opening crowd has thinned. Good.',
+            look: 'A clean white box — 2,000 square feet of gallery perfection. Six paintings hung at exactly 57 inches center. Track lighting. Polished concrete. A dealer stands near the back wall, watching who looks at what.',
+            items: [],
+            characters: [{ id: 'elena_ross' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
+            eavesdrops: [],
+            onEnter: { firstVisitOnly: true, text: 'The gallery is quiet. Just you, the art, and a dealer pretending not to watch you.', effects: null },
+            timeCost: 0,
+            tags: ['gallery', 'tiled', 'test'],
+        }
+    ],
+};
+
+// ─────────────────────────────────────────────
+// VENUE 8: UPTOWN GALLERY (Generated)
+// ─────────────────────────────────────────────
+
+const UPTOWN_GALLERY = {
+    id: 'uptown_gallery',
+    name: 'Uptown Contemporary',
+    desc: 'A polished uptown gallery. Group show with works by emerging and mid-career artists.',
+    startRoom: 'uptown_gallery_main',
+    timeLimit: 3,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'uptown_gallery_main',
+            venue: 'uptown_gallery',
+            tiledMap: 'uptown_gallery',
+            name: 'Group Show',
+            desc: 'Uptown Contemporary — Group Show. The crowd is thin. A dealer stands near the back.',
+            look: 'High ceilings, track lighting, polished floors. The gallery feels more institutional than the downtown spaces.',
+            items: [],
+            characters: [{ id: 'philippe_noir' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
+            eavesdrops: [],
+            onEnter: { firstVisitOnly: true, text: 'The gallery is pristine. Everything here is priced to impress.', effects: null },
+            timeCost: 0,
+            tags: ['gallery', 'tiled', 'generated'],
+        }
+    ],
+};
+
+// ─────────────────────────────────────────────
+// VENUE 9: ARTIST STUDIO VISIT (Generated)
+// ─────────────────────────────────────────────
+
+const ARTIST_STUDIO_VISIT = {
+    id: 'artist_studio_visit',
+    name: 'Kwame Asante\'s Studio',
+    desc: 'A working studio in Brooklyn. Paint-splattered floors, canvases stacked against walls.',
+    startRoom: 'artist_studio_visit_main',
+    timeLimit: 3,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'artist_studio_visit_main',
+            venue: 'artist_studio_visit',
+            tiledMap: 'artist_studio_visit',
+            name: 'Main Studio',
+            desc: 'Kwame Asante\'s working studio. Unfinished canvases lean against every surface.',
+            look: 'The smell of turpentine and linseed oil. Natural light pours through skylights. This is where the work happens.',
+            items: [],
+            characters: [{ id: 'kwame_asante' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
+            eavesdrops: [],
+            onEnter: { firstVisitOnly: true, text: 'The studio is alive. Half-finished works everywhere. Kwame is at his easel.', effects: null },
+            timeCost: 0,
+            tags: ['studio', 'tiled', 'generated'],
+        }
+    ],
+};
+
+// ─────────────────────────────────────────────
+// Generated multi-room venues
+// ─────────────────────────────────────────────
+
+const SOHO_GALLERY = {
+    id: 'soho_gallery',
+    name: 'SoHo Gallery — Group Show',
+    desc: 'A three-room contemporary gallery in SoHo with lobby, exhibition hall, and private office.',
+    startRoom: 'soho_gallery_lobby_main',
+    timeLimit: 5,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'soho_gallery_lobby_main',
+            venue: 'soho_gallery',
+            tiledMap: 'soho_gallery_lobby',
+            name: 'Gallery — Lobby',
+            desc: 'Gallery — Lobby',
+            look: 'A gallery interior.',
+            items: [],
+            characters: [{ id: 'receptionist' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit' }],
+            eavesdrops: [],
+            timeCost: 0,
+            tags: ['gallery', 'tiled', 'generated'],
+        },
+        {
+            id: 'soho_gallery_exhibition_main',
+            venue: 'soho_gallery',
+            tiledMap: 'soho_gallery_exhibition',
+            name: 'Main Exhibition',
+            desc: 'Main Exhibition',
+            look: 'A gallery interior.',
+            items: [],
+            characters: [{ id: 'gallery_dealer' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit' }],
+            eavesdrops: [],
+            timeCost: 0,
+            tags: ['gallery', 'tiled', 'generated'],
+        },
+        {
+            id: 'soho_gallery_office_main',
+            venue: 'soho_gallery',
+            tiledMap: 'soho_gallery_office',
+            name: 'Back Office',
+            desc: 'Back Office',
+            look: 'An office interior.',
+            items: [],
+            characters: [{ id: 'gallery_owner' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit' }],
+            eavesdrops: [],
+            timeCost: 0,
+            tags: ['office', 'tiled', 'generated'],
+        },
+    ],
+};
+
+// ─────────────────────────────────────────────
+// VENUE 10: CHELSEA GALLERY (Showcase Room)
+// ─────────────────────────────────────────────
+
+const CHELSEA_GALLERY = {
+    id: 'chelsea_gallery',
+    name: 'Chelsea Gallery — New Works',
+    desc: 'A polished Chelsea gallery. Beige floors, gold accents, serious contemporary art.',
+    startRoom: 'chelsea_gallery_main',
+    timeLimit: 3,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'chelsea_gallery_main',
+            venue: 'chelsea_gallery',
+            tiledMap: 'chelsea_gallery',
+            name: 'Main Exhibition',
+            desc: 'A curated show of contemporary works. Nine paintings line the walls. A gold sofa faces the north wall.',
+            look: 'Warm beige floors, white walls, track lighting. A reception desk sits near the entrance. Plants soften the corners. The dealer watches from near the back.',
+            items: [],
+            characters: [{ id: 'elena_ross' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
+            eavesdrops: [],
+            onEnter: { firstVisitOnly: true, text: 'The gallery is warm and inviting. Gold accents catch the light. Nine paintings demand your attention.', effects: null },
+            timeCost: 0,
+            tags: ['gallery', 'tiled', 'showcase'],
+        }
+    ],
+};
+
+// ─────────────────────────────────────────────
+// VENUE 11: CHELSEA SHOWCASE (Museum Gallery)
+// Generated by tools/generate_room.js (museum template)
+// ─────────────────────────────────────────────
+
+const CHELSEA_SHOWCASE = {
+    id: 'chelsea_showcase',
+    name: 'Chelsea Showcase — Contemporary Masters',
+    desc: 'A museum-quality gallery in West Chelsea. Beige floors, gold accents, nine works from Basquiat to Asante.',
+    startRoom: 'chelsea_showcase_main',
+    timeLimit: 3,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'chelsea_showcase_main',
+            venue: 'chelsea_showcase',
+            tiledMap: 'chelsea_showcase',
+            name: 'Museum Gallery',
+            desc: 'Nine paintings line the walls — Basquiat, Haring, Koons, Sherman. A gold sofa faces the north wall. Elena Ross watches from near the reception desk.',
+            look: 'Warm beige floors, white walls with picture rail molding. Four large paintings dominate the north wall. A gold viewing sofa sits on a Persian rug. The reception desk has a laptop and a desk lamp. Plants soften the corners. Elena Ross stands near the east wall, drink in hand.',
+            items: [],
+            characters: [{ id: 'elena_ross' }],
+            exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
+            eavesdrops: [],
+            onEnter: { firstVisitOnly: true, text: 'The gallery is warm and hushed. Nine paintings demand your attention — Basquiat crowns, Haring babies, a Koons that catches the light. Elena Ross nods from across the room.', effects: null },
+            timeCost: 0,
+            tags: ['gallery', 'tiled', 'museum', 'showcase'],
+        }
+    ],
+};
+
+// ─────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────
 
@@ -726,6 +946,12 @@ export const VENUES = [
     ARTIST_STUDIO,
     ART_FAIR_BASEL,
     FREEPORT,
+    GALLERY_TEST,
+    UPTOWN_GALLERY,
+    ARTIST_STUDIO_VISIT,
+    SOHO_GALLERY,
+    CHELSEA_GALLERY,
+    CHELSEA_SHOWCASE,
 ];
 
 /**

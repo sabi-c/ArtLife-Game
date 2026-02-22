@@ -39,7 +39,7 @@ export default function App() {
     });
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
-    const [isWorldSceneActive, setIsWorldSceneActive] = useState(false);
+    const [isGridSceneActive, setIsGridSceneActive] = useState(false);
     const autoResumedRef = useRef(false);
 
     useEffect(() => {
@@ -233,11 +233,12 @@ export default function App() {
             setActiveView(viewKey);
             setViewPayload(payload);
         };
+        const GRID_SCENES = ['WorldScene', 'LocationScene'];
         const sceneReadyHandler = (sceneName) => {
-            if (sceneName === 'WorldScene') setIsWorldSceneActive(true);
+            if (GRID_SCENES.includes(sceneName)) setIsGridSceneActive(true);
         };
         const sceneExitHandler = (sceneName) => {
-            if (sceneName === 'WorldScene') setIsWorldSceneActive(false);
+            if (GRID_SCENES.includes(sceneName)) setIsGridSceneActive(false);
         };
 
         GameEventBus.on(GameEvents.UI_ROUTE, handler);
@@ -286,7 +287,7 @@ export default function App() {
             // On mobile with WorldScene active, shrink canvas to top portion
             // so the Game Boy control panel fits below.
             const isMobile = window.innerWidth < 769;
-            if (showPhaser && isWorldSceneActive && isMobile) {
+            if (showPhaser && isGridSceneActive && isMobile) {
                 requestAnimationFrame(() => {
                     const topH = Math.floor(window.innerHeight * 0.54);
                     container.style.height = topH + 'px';
@@ -321,7 +322,7 @@ export default function App() {
                 termContainer.style.display = 'none';
             }
         }
-    }, [activeView, isWorldSceneActive]);
+    }, [activeView, isGridSceneActive]);
 
     if (phaserError) {
         return (
@@ -408,8 +409,8 @@ export default function App() {
                 <DiagnosticsOverlay onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
-            {isWorldSceneActive && <MobileJoypad />}
-            {<CalendarHUD visible={isWorldSceneActive} />}
+            {isGridSceneActive && <MobileJoypad />}
+            {<CalendarHUD visible={isGridSceneActive} />}
 
             {/* The Phaser Canvas Layer sets up in this div */}
             <div id="phaser-game-container" style={{ position: 'fixed', inset: 0, zIndex: 0 }} />

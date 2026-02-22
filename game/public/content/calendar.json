@@ -1,0 +1,229 @@
+[
+    {
+        "id": "cal_game_start",
+        "name": "Game Start — Welcome to Art Life",
+        "month": 1,
+        "week": 1,
+        "type": "MILESTONE",
+        "description": "Your character arrives in the art world. First steps in building your collection.",
+        "location": "New York",
+        "tier": "Core"
+    },
+    {
+        "id": "cal_chelsea_opening",
+        "name": "Chelsea Gallery Opening Night",
+        "month": 1,
+        "week": 3,
+        "type": "OPENING",
+        "description": "A major gallery in Chelsea hosts its winter opening. Great networking opportunity.",
+        "location": "Chelsea, NYC",
+        "tier": "Tier 2",
+        "eventId": "event_gallery_opening_chelsea",
+        "cost": 0,
+        "rewards": {
+            "reputation": 3,
+            "intel": 2
+        }
+    },
+    {
+        "id": "cal_art_basel_miami",
+        "name": "Art Basel Miami Beach",
+        "month": 2,
+        "week": 8,
+        "type": "ART_FAIR",
+        "description": "The biggest art fair in the Americas. Mega-collectors, galleries, and celebrities collide.",
+        "location": "Miami Beach, FL",
+        "tier": "Tier 1",
+        "eventId": "event_art_basel_miami",
+        "cost": 12000,
+        "rewards": {
+            "reputation": 8,
+            "access": 5,
+            "intel": 4
+        },
+        "launchScene": {
+            "sceneKey": "LocationScene",
+            "data": {
+                "venueId": "art_fair_booth"
+            }
+        }
+    },
+    {
+        "id": "cal_auction_season_spring",
+        "name": "Spring Auction Season",
+        "month": 3,
+        "week": 10,
+        "type": "AUCTION",
+        "description": "Christie's and Sotheby's spring sales. Watch the market shift in real time.",
+        "location": "New York",
+        "tier": "Tier 1",
+        "eventId": "event_spring_auctions",
+        "cost": 0,
+        "rewards": {
+            "intel": 6,
+            "reputation": 3
+        }
+    },
+    {
+        "id": "cal_studio_visit",
+        "name": "Artist Studio Visit — Brooklyn",
+        "month": 3,
+        "week": 12,
+        "type": "SOCIAL",
+        "description": "An emerging artist invites you to their studio. Could be the next big thing.",
+        "location": "Bushwick, Brooklyn",
+        "tier": "Tier 3",
+        "eventId": "event_studio_visit_brooklyn",
+        "cost": 0,
+        "rewards": {
+            "intel": 3
+        }
+    },
+    {
+        "id": "cal_midpoint",
+        "name": "Midpoint — Market Shift",
+        "month": 4,
+        "week": 13,
+        "type": "MILESTONE",
+        "description": "Halfway through the year. The market landscape may change dramatically.",
+        "location": "Global",
+        "tier": "Core"
+    },
+    {
+        "id": "cal_frieze_new_york",
+        "name": "Frieze New York",
+        "month": 4,
+        "week": 14,
+        "type": "ART_FAIR",
+        "description": "Frieze's prestigious New York edition. Top galleries showcase cutting-edge contemporary art.",
+        "location": "The Shed, NYC",
+        "tier": "Tier 1",
+        "eventId": "event_frieze_new_york",
+        "cost": 8000,
+        "rewards": {
+            "reputation": 6,
+            "access": 4,
+            "intel": 3
+        },
+        "launchScene": {
+            "sceneKey": "LocationScene",
+            "data": {
+                "venueId": "art_fair_booth"
+            }
+        }
+    },
+    {
+        "id": "cal_milan_fashion_week",
+        "name": "Milan Fashion Week",
+        "month": 5,
+        "week": 16,
+        "type": "SOCIAL",
+        "description": "Art meets fashion in Milan. Attend runway shows, meet collectors, and schmooze at after-parties. A $16,000 extravagance.",
+        "location": "Milan, Italy",
+        "tier": "Tier 1",
+        "eventId": "event_milan_fashion_week",
+        "cost": 16000,
+        "rewards": {
+            "reputation": 10,
+            "audacity": 4,
+            "access": 6,
+            "intel": 3
+        },
+        "launchScene": {
+            "sceneKey": "LocationScene",
+            "data": {
+                "venueId": "fashion_week_venue"
+            }
+        }
+    },
+    {
+        "id": "cal_venice_biennale",
+        "name": "Venice Biennale",
+        "month": 6,
+        "week": 20,
+        "type": "BIENNALE",
+        "description": "The Olympics of the art world. National pavilions, Giardini, Arsenale. If you're serious about art, you go to Venice.",
+        "location": "Venice, Italy",
+        "tier": "Tier 1",
+        "eventId": "event_venice_biennale",
+        "cost": 14000,
+        "rewards": {
+            "reputation": 12,
+            "intel": 8,
+            "access": 7
+        },
+        "launchScene": {
+            "sceneKey": "LocationScene",
+            "data": {
+                "venueId": "art_fair_booth"
+            }
+        }
+    },
+    {
+        "id": "cal_art_basel_switzerland",
+        "name": "Art Basel (Switzerland)",
+        "month": 7,
+        "week": 22,
+        "type": "ART_FAIR",
+        "description": "The original Art Basel. The most prestigious art fair in the world. Impossible-to-get VIP passes and billionaire collectors.",
+        "location": "Basel, Switzerland",
+        "tier": "Tier 1",
+        "eventId": "event_art_basel_switzerland",
+        "cost": 20000,
+        "rewards": {
+            "reputation": 15,
+            "access": 10,
+            "intel": 6,
+            "audacity": 3
+        },
+        "launchScene": {
+            "sceneKey": "LocationScene",
+            "data": {
+                "venueId": "art_fair_booth"
+            }
+        }
+    },
+    {
+        "id": "cal_collectors_dinner",
+        "name": "Collector's Private Dinner",
+        "month": 7,
+        "week": 23,
+        "type": "SOCIAL",
+        "description": "An invitation-only dinner at a mega-collector's penthouse. The guest list is legendary.",
+        "location": "Upper East Side, NYC",
+        "tier": "Tier 2",
+        "eventId": "event_collectors_dinner",
+        "cost": 2000,
+        "rewards": {
+            "access": 5,
+            "reputation": 4,
+            "intel": 2
+        }
+    },
+    {
+        "id": "cal_autumn_auctions",
+        "name": "Autumn Auction Season",
+        "month": 8,
+        "week": 24,
+        "type": "AUCTION",
+        "description": "The fall auction season begins. Record-breaking sales and market-defining moments.",
+        "location": "New York / London",
+        "tier": "Tier 1",
+        "eventId": "event_autumn_auctions",
+        "cost": 0,
+        "rewards": {
+            "intel": 5,
+            "reputation": 2
+        }
+    },
+    {
+        "id": "cal_endgame",
+        "name": "The Reckoning",
+        "month": 9,
+        "week": 26,
+        "type": "MILESTONE",
+        "description": "Your final week. All deals close, reputation is tallied, and your legacy is determined.",
+        "location": "New York",
+        "tier": "Core"
+    }
+]

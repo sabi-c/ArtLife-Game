@@ -1,0 +1,1952 @@
+{
+  "meta": {
+    "tileset": "Interiors_free_48x48.png",
+    "tileWidth": 48,
+    "tileHeight": 48,
+    "columns": 16,
+    "rows": 89,
+    "totalTiles": 1424,
+    "idScheme": "0-indexed (row * 16 + col). For Tiled JSON with firstgid=1, add 1 to every ID.",
+    "note": "Visually verified 2026-02-22 from LimeZu Modern Interiors free pack"
+  },
+  "floors": {
+    "green_carpet_3x3": {
+      "desc": "Green carpet, 3x3 tileable (rows 1-3, cols 0-2)",
+      "top_left": 16,
+      "top": 17,
+      "top_right": 18,
+      "left": 32,
+      "center": 49,
+      "right": 34,
+      "bottom_left": 48,
+      "bottom": 49,
+      "bottom_right": 50
+    },
+    "green_carpet_alt_3x3": {
+      "desc": "Darker green carpet variant (rows 1-3, cols 3-4 + row4 col3-4)",
+      "top_left": 19,
+      "center": 67,
+      "fill": 68
+    },
+    "teal_carpet_3x3": {
+      "desc": "Teal/cyan carpet (rows 1-3, cols 6-8)",
+      "top_left": 22,
+      "top": 23,
+      "top_right": 24,
+      "left": 38,
+      "center": 39,
+      "right": 40,
+      "bottom_left": 54,
+      "bottom": 55,
+      "bottom_right": 56
+    },
+    "teal_carpet_light_3x3": {
+      "desc": "Lighter teal carpet (rows 1-3, cols 9-13)",
+      "top_left": 25,
+      "top": 27,
+      "top_right": 28,
+      "left": 42,
+      "center": 59,
+      "right": 44,
+      "bottom_left": 58,
+      "bottom": 59,
+      "bottom_right": 60,
+      "single_fill": 41
+    },
+    "beige_floor_3x3": {
+      "desc": "Beige/cream floor (rows 3-6, cols 6-9)",
+      "top_left": 70,
+      "top": 71,
+      "top_right": 72,
+      "left": 89,
+      "center": 90,
+      "right": 94,
+      "bottom_left": 105,
+      "bottom": 106,
+      "bottom_right": 110,
+      "single_fill": 73
+    },
+    "white_floor_3x3": {
+      "desc": "White/light grey floor (rows 6-8, cols 0-2)",
+      "top_left": 96,
+      "top": 97,
+      "top_right": 98,
+      "left": 112,
+      "center": 129,
+      "right": 114,
+      "bottom_left": 128,
+      "bottom": 129,
+      "bottom_right": 130
+    },
+    "grey_floor": {
+      "desc": "Medium grey floor fills",
+      "center_a": 83,
+      "center_b": 99,
+      "center_c": 147
+    }
+  },
+  "walls": {
+    "wall_top_edge_green": {
+      "desc": "Green wall top edge pieces (row 0)",
+      "tiles": [
+        1,
+        2,
+        4,
+        10,
+        11,
+        12
+      ]
+    },
+    "wall_base_molding": {
+      "desc": "Thin horizontal wall/floor transition strips",
+      "tiles": [
+        33,
+        43,
+        64,
+        65,
+        66,
+        74,
+        75,
+        76,
+        113,
+        144,
+        145,
+        146
+      ]
+    },
+    "brick_wall": {
+      "desc": "Brick texture wall (row 42)",
+      "tiles": [
+        672,
+        673,
+        674,
+        675,
+        676,
+        677
+      ]
+    },
+    "wood_panel_wall": {
+      "desc": "Vertical wood grain wall panels (row 43)",
+      "tiles": [
+        688,
+        689,
+        690,
+        691,
+        692,
+        693
+      ]
+    },
+    "white_tile_wall": {
+      "desc": "White bathroom/kitchen tile wall (row 46)",
+      "tiles": [
+        736,
+        737,
+        738,
+        739,
+        740
+      ]
+    },
+    "purple_wall": {
+      "desc": "Purple/lavender wall fill (rows 45-47, cols 7-9)",
+      "tiles": [
+        743,
+        744,
+        745,
+        759,
+        760,
+        761
+      ]
+    },
+    "staircase": {
+      "desc": "Diagonal staircase tiles (rows 15-18)",
+      "tiles": [
+        242,
+        243,
+        274,
+        275,
+        290,
+        291,
+        292,
+        293
+      ]
+    }
+  },
+  "tables": {
+    "dark_wood_table_4x3": {
+      "desc": "Large dark brown dining table, 4w x 3h (rows 10-12, cols 0-3)",
+      "size": [
+        4,
+        3
+      ],
+      "tiles": [
+        [
+          160,
+          161,
+          162,
+          163
+        ],
+        [
+          176,
+          177,
+          178,
+          179
+        ],
+        [
+          192,
+          193,
+          194,
+          195
+        ]
+      ],
+      "extension_mid": 164,
+      "extension_body": 180,
+      "extension_leg": 196
+    },
+    "light_wood_table_4x3": {
+      "desc": "Large golden/honey wood dining table, 4w x 3h (rows 10-12, cols 5-8)",
+      "size": [
+        4,
+        3
+      ],
+      "tiles": [
+        [
+          165,
+          166,
+          167,
+          168
+        ],
+        [
+          181,
+          182,
+          183,
+          184
+        ],
+        [
+          197,
+          198,
+          199,
+          200
+        ]
+      ],
+      "extension_mid": 169,
+      "extension_body": 185,
+      "extension_leg": 201
+    },
+    "round_table_1x1": {
+      "desc": "Small round wooden table top (row 13, col 6)",
+      "size": [
+        1,
+        1
+      ],
+      "tiles": [
+        [
+          214
+        ]
+      ]
+    },
+    "small_desk_3x2": {
+      "desc": "Small brown desk with legs (rows 13-14, cols 7-9)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          215,
+          216,
+          217
+        ],
+        [
+          231,
+          232,
+          233
+        ]
+      ]
+    },
+    "coffee_table_dark_3x2": {
+      "desc": "Dark brown coffee table (rows 15-16, cols 7-9)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          247,
+          248,
+          249
+        ],
+        [
+          263,
+          264,
+          265
+        ]
+      ],
+      "note": "Brown with red/maroon stripe detail"
+    },
+    "coffee_table_dark_alt_3x2": {
+      "desc": "Coffee table variant (rows 17-16, cols 7-9)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          279,
+          280,
+          281
+        ],
+        [
+          269,
+          270,
+          271
+        ]
+      ]
+    },
+    "large_square_table_4x4": {
+      "desc": "Large brown square table, 4w x 4h (rows 15-18, cols 7-10)",
+      "size": [
+        4,
+        4
+      ],
+      "tiles": [
+        [
+          247,
+          248,
+          249,
+          250
+        ],
+        [
+          263,
+          264,
+          265,
+          266
+        ],
+        [
+          279,
+          280,
+          281,
+          282
+        ],
+        [
+          269,
+          270,
+          271,
+          282
+        ]
+      ],
+      "note": "Composed from coffee table pieces"
+    },
+    "nightstand_2x2": {
+      "desc": "Small bedside nightstand (rows 20-21, cols 8-9)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          328,
+          329
+        ],
+        [
+          344,
+          345
+        ]
+      ]
+    }
+  },
+  "chairs": {
+    "wood_chair_front_2x1": {
+      "desc": "Pair of wooden chairs, front view (row 13, cols 0-1)",
+      "tiles": [
+        208,
+        209
+      ],
+      "note": "Brown wood frame with blue-grey cushion"
+    },
+    "wood_chair_back_2x1": {
+      "desc": "Pair of wooden chairs, back view (row 14, cols 0-1)",
+      "tiles": [
+        224,
+        225
+      ]
+    },
+    "upholstered_chair_front_2x1": {
+      "desc": "Padded/upholstered chairs, front view (row 13, cols 3-4)",
+      "tiles": [
+        211,
+        212
+      ],
+      "note": "Larger chairs with orange frame and blue cushion"
+    },
+    "upholstered_chair_back_2x1": {
+      "desc": "Padded chairs, back view (row 14, cols 3-4)",
+      "tiles": [
+        227,
+        228
+      ]
+    },
+    "stool_1x1": {
+      "desc": "Small wooden stool (row 21, col 5)",
+      "tiles": [
+        341
+      ]
+    },
+    "chair_side_left_1x1": {
+      "desc": "Chair profile facing left (row 21, col 6)",
+      "tiles": [
+        342
+      ]
+    },
+    "chair_side_right_1x1": {
+      "desc": "Chair profile facing right (row 21, col 7)",
+      "tiles": [
+        343
+      ]
+    }
+  },
+  "sofas": {
+    "red_sofa_3x2": {
+      "desc": "Red/maroon upholstered sofa, horizontal (rows 18-19, cols 8-10)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          296,
+          297,
+          298
+        ],
+        [
+          312,
+          313,
+          314
+        ]
+      ],
+      "note": "Distinctive quilted red fabric"
+    },
+    "blue_sofa_3x2": {
+      "desc": "Blue/navy upholstered sofa (rows 44-45, cols 0-2)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          704,
+          705,
+          706
+        ],
+        [
+          720,
+          721,
+          722
+        ]
+      ]
+    },
+    "gold_sofa_3x2": {
+      "desc": "Gold/yellow sofa with ornate frame (rows 44-45, cols 3-5)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          707,
+          708,
+          709
+        ],
+        [
+          723,
+          724,
+          725
+        ]
+      ],
+      "note": "Gold upholstery with yellow/ornate frame"
+    },
+    "sectional_pieces": {
+      "desc": "Modular sofa/sectional pieces for building L-shapes",
+      "back_left": 306,
+      "back_center1": 307,
+      "back_center2": 308,
+      "back_right": 309,
+      "corner_tl": 322,
+      "corner_tr": 323,
+      "seat_a": 324,
+      "seat_b": 325,
+      "arm_left": 326,
+      "arm_right": 327,
+      "corner_bl": 336,
+      "corner_br": 337
+    }
+  },
+  "beds": {
+    "single_bed_2x2": {
+      "desc": "Single bed, brown frame (rows 21-22, cols 2-3)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          338,
+          339
+        ],
+        [
+          354,
+          355
+        ]
+      ],
+      "note": "Brown frame, 354 has brown blanket, 355 has blue/patterned top"
+    },
+    "double_bed_2x2": {
+      "desc": "Double/wider bed (rows 21-22, cols 4-5)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          340,
+          357
+        ],
+        [
+          356,
+          357
+        ]
+      ]
+    },
+    "bed_brown_headboard_2x3": {
+      "desc": "Bed with visible headboard, 2w x 3h (rows 10-13)",
+      "size": [
+        2,
+        3
+      ],
+      "tiles": [
+        [
+          171,
+          188
+        ],
+        [
+          187,
+          203
+        ],
+        [
+          219,
+          220
+        ]
+      ],
+      "note": "Brown frame, white sheets, headboard at top"
+    },
+    "fancy_bed_3x3": {
+      "desc": "Large ornate bed, 3w x 3h (rows 48-50, cols 7-9)",
+      "size": [
+        3,
+        3
+      ],
+      "tiles": [
+        [
+          775,
+          776,
+          777
+        ],
+        [
+          791,
+          792,
+          793
+        ],
+        [
+          807,
+          808,
+          809
+        ]
+      ],
+      "note": "Wooden frame headboard, striped bedding"
+    }
+  },
+  "shelving": {
+    "bookcase_small_2x2": {
+      "desc": "Small bookcase with books (rows 24-25, cols 0-1)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          384,
+          385
+        ],
+        [
+          400,
+          401
+        ]
+      ],
+      "note": "Dark wood with teal/colored books visible"
+    },
+    "bookcase_wide_2x2": {
+      "desc": "Wider bookcase (rows 24-25, cols 2-3)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          386,
+          387
+        ],
+        [
+          402,
+          403
+        ]
+      ]
+    },
+    "bookcase_tall_2x2": {
+      "desc": "Tall bookcase with many books (rows 24-25, cols 4-5)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          388,
+          389
+        ],
+        [
+          404,
+          405
+        ]
+      ],
+      "note": "388 has vertical book spines, 389/405 have stacked shelves"
+    },
+    "wall_shelf_white": {
+      "desc": "Horizontal white wall-mounted shelves (row 26, cols 0-3)",
+      "tiles": [
+        416,
+        417,
+        418,
+        419
+      ],
+      "note": "Simple white horizontal bars"
+    },
+    "shelf_with_items_wood": {
+      "desc": "Wooden wall shelves with items (row 26, cols 5-8)",
+      "tiles": [
+        421,
+        422,
+        423,
+        424
+      ],
+      "note": "Brown wood shelves with brown/orange horizontal stripes"
+    },
+    "bookshelf_filled_wood": {
+      "desc": "Book-filled wooden shelves (row 27, cols 5-8)",
+      "tiles": [
+        437,
+        438,
+        439,
+        440
+      ],
+      "note": "Wooden shelves, 437-438 dark wood, 439 gold/honey, 440 lighter"
+    },
+    "large_bookshelf_3x3": {
+      "desc": "Large floor-to-ceiling bookshelf unit (rows 48-50, cols 11-13)",
+      "size": [
+        3,
+        3
+      ],
+      "tiles": [
+        [
+          779,
+          780,
+          781
+        ],
+        [
+          795,
+          796,
+          797
+        ],
+        [
+          811,
+          812,
+          813
+        ]
+      ],
+      "note": "Orange/brown with horizontal book rows, dark and light alternating"
+    },
+    "cabinet_orange_2x2": {
+      "desc": "Orange/warm wood closed cabinet (rows 24-25, cols 7-8)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          391,
+          392
+        ],
+        [
+          407,
+          408
+        ]
+      ]
+    },
+    "cabinet_with_display_2x2": {
+      "desc": "Cabinet with glass/display top (rows 24-25, cols 9-10)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          393,
+          394
+        ],
+        [
+          409,
+          410
+        ]
+      ],
+      "note": "Blue-tinted glass/display area on top half"
+    },
+    "wardrobe_tall_2x3": {
+      "desc": "Tall wardrobe/armoire (rows 24-26, cols 11-12)",
+      "size": [
+        2,
+        3
+      ],
+      "tiles": [
+        [
+          395,
+          396
+        ],
+        [
+          411,
+          412
+        ],
+        [
+          427,
+          428
+        ]
+      ],
+      "note": "Brown wood, full-height doors"
+    }
+  },
+  "plants": {
+    "potted_plant_bushy_3x2": {
+      "desc": "Large bushy green plant in planter, 3w x 2h (rows 11-12, cols 13-15)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          189,
+          190,
+          191
+        ],
+        [
+          205,
+          206,
+          207
+        ]
+      ],
+      "note": "Green foliage, blue/yellow planter \u2014 also repeated at rows 14-15 as 237-239/253-255"
+    },
+    "potted_plant_alt_3x2": {
+      "desc": "Alternate bushy plant arrangement (rows 14-15, cols 13-15)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          237,
+          238,
+          239
+        ],
+        [
+          253,
+          254,
+          255
+        ]
+      ]
+    },
+    "small_bush_green": {
+      "desc": "Small green bush/shrub on ground (row 21, cols 10-11)",
+      "tiles": [
+        346,
+        347
+      ],
+      "note": "Dark green, low profile"
+    },
+    "palm_tree_top": {
+      "desc": "Palm tree fronds (row 44, col 11)",
+      "tiles": [
+        715
+      ],
+      "note": "Green palm leaves spreading out"
+    },
+    "palm_tree_trunk": {
+      "desc": "Palm tree trunk/base (row 44, col 13)",
+      "tiles": [
+        717
+      ],
+      "note": "Brown trunk with small green at base"
+    },
+    "small_plant_pot": {
+      "desc": "Tiny potted plant, single tile (row 48, col 0)",
+      "tiles": [
+        768
+      ],
+      "note": "Green plant, looks like grass/herb in small pot"
+    },
+    "plant_medium": {
+      "desc": "Medium potted plant (row 49, col 0)",
+      "tiles": [
+        784
+      ],
+      "note": "Yellow/orange pot with green top"
+    },
+    "cactus_and_succulents": {
+      "desc": "Cacti and succulents (row 54, cols 5-6)",
+      "tiles": [
+        869,
+        870
+      ]
+    },
+    "flower_basket": {
+      "desc": "Basket of flowers/produce (rows 53-54)",
+      "tiles": [
+        848,
+        849,
+        850,
+        864,
+        865,
+        866
+      ],
+      "note": "Colorful \u2014 food/flower arrangements, green/red/purple items"
+    }
+  },
+  "decorations": {
+    "painting_small_1x1": {
+      "desc": "Small framed picture, warm tones (row 40, col 8)",
+      "tiles": [
+        648
+      ],
+      "note": "Tiny brown/beige frame"
+    },
+    "painting_medium_1x1": {
+      "desc": "Small painting in frame (row 40, col 9)",
+      "tiles": [
+        649
+      ]
+    },
+    "painting_large_2x2": {
+      "desc": "Large framed landscape painting, 2w x 2h (rows 40-41, cols 10-11)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          650,
+          651
+        ],
+        [
+          666,
+          667
+        ]
+      ],
+      "note": "Green landscape scene in frame"
+    },
+    "computer_monitor_2x2": {
+      "desc": "Desktop computer on desk (rows 40-41, cols 12-13)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          652,
+          653
+        ],
+        [
+          668,
+          669
+        ]
+      ],
+      "note": "Grey monitor with desk below"
+    },
+    "tv_screen_2x2": {
+      "desc": "Television/large screen (rows 40-41, cols 14-15)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          654,
+          655
+        ],
+        [
+          670,
+          671
+        ]
+      ],
+      "note": "TV with orange frame/stand"
+    },
+    "chalkboard_2x2": {
+      "desc": "Dark chalkboard/blackboard (rows 41-42, cols 8-9)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          664,
+          665
+        ],
+        [
+          680,
+          681
+        ]
+      ],
+      "note": "Dark green/black surface"
+    },
+    "framed_art_brown_2x2": {
+      "desc": "Framed artwork in brown frame (rows 40-41, cols 3-4)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          643,
+          644
+        ],
+        [
+          659,
+          660
+        ]
+      ],
+      "note": "Plain brown/orange framed panel \u2014 good for gallery walls"
+    },
+    "framed_art_alt_2x2": {
+      "desc": "Alternate framed art (rows 40-41, cols 5-6)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          645,
+          646
+        ],
+        [
+          661,
+          662
+        ]
+      ]
+    },
+    "mirror_blue": {
+      "desc": "Blue-tinted wall mirror (row 22, cols 14-15)",
+      "tiles": [
+        366,
+        367
+      ]
+    },
+    "trophy_red": {
+      "desc": "Red trophy/decorative object (row 14, col 11)",
+      "tiles": [
+        235
+      ],
+      "note": "Red/pink rounded shape"
+    },
+    "trophy_gold": {
+      "desc": "Gold/yellow decorative object (row 14, col 12)",
+      "tiles": [
+        236
+      ]
+    },
+    "globe_2x1": {
+      "desc": "World globe on stand (row 36, cols 13-14)",
+      "tiles": [
+        589,
+        590
+      ],
+      "note": "Green/blue globe, clearly visible"
+    },
+    "arrow_signs": {
+      "desc": "Directional arrow markers (row 47, cols 10-11)",
+      "tiles": [
+        762,
+        763
+      ]
+    },
+    "diamond_gem": {
+      "desc": "Small diamond/gem decoration (row 52, col 0)",
+      "tiles": [
+        832
+      ]
+    },
+    "mushroom_decor_red": {
+      "desc": "Red mushroom decoration, 1w x 2h (rows 53-54, col 11)",
+      "tiles": [
+        859,
+        875
+      ],
+      "note": "Red cap mushroom"
+    },
+    "mushroom_decor_blue": {
+      "desc": "Blue mushroom decoration, 1w x 2h (rows 53-54, col 12)",
+      "tiles": [
+        860,
+        876
+      ],
+      "note": "Blue cap mushroom"
+    },
+    "candle_1x1": {
+      "desc": "Candle/candlestick (row 50, col 1)",
+      "tiles": [
+        801
+      ]
+    },
+    "fountain_statue": {
+      "desc": "Decorative fountain/statue (row 52, col 11)",
+      "tiles": [
+        843
+      ],
+      "note": "Grey/white ornamental piece"
+    },
+    "colored_toadstools": {
+      "desc": "Colorful toadstool/mushroom characters (rows 52-53)",
+      "tiles": [
+        844,
+        845,
+        846,
+        847
+      ],
+      "note": "Row 52 cols 12-15, green/red/purple small decorative figures"
+    }
+  },
+  "kitchen": {
+    "counter_top_brown_3x1": {
+      "desc": "Brown kitchen counter surface, 3 tiles (row 32, cols 0-2)",
+      "tiles": [
+        512,
+        513,
+        514
+      ]
+    },
+    "counter_base_brown_3x1": {
+      "desc": "Brown counter cabinet base (row 33, cols 0-2)",
+      "tiles": [
+        528,
+        529,
+        530
+      ]
+    },
+    "counter_wood_striped_4x1": {
+      "desc": "Wooden counter with horizontal stripe detail (row 32, cols 4-7)",
+      "tiles": [
+        516,
+        517,
+        518,
+        519
+      ],
+      "note": "Warm wood with visible grain/stripes"
+    },
+    "counter_wood_base_4x1": {
+      "desc": "Wooden counter base/cabinets (row 33, cols 4-7)",
+      "tiles": [
+        532,
+        533,
+        534,
+        535
+      ],
+      "note": "Mix of wood and grey/patterned doors"
+    },
+    "stove_burners_2x1": {
+      "desc": "Stovetop with red burners (row 32, cols 10-11)",
+      "tiles": [
+        522,
+        523
+      ],
+      "note": "Visible as small red circles on surface"
+    },
+    "stove_base_2x1": {
+      "desc": "Stove/oven base (row 33, cols 10-11)",
+      "tiles": [
+        538,
+        539
+      ]
+    },
+    "sink_counter_1x1": {
+      "desc": "Kitchen sink unit variants",
+      "tiles": [
+        524,
+        525,
+        526,
+        527
+      ],
+      "note": "Row 32 cols 12-15 \u2014 various sink/appliance tops"
+    },
+    "fridge_tall_1x2": {
+      "desc": "Refrigerator, 1w x 2h",
+      "tiles": [
+        [
+          540
+        ],
+        [
+          541
+        ]
+      ],
+      "note": "Row 33 cols 12-13, tall appliance"
+    },
+    "kitchen_shelves_display": {
+      "desc": "Kitchen wall shelves with dishes (row 31, cols 5-11)",
+      "tiles": [
+        500,
+        501,
+        502,
+        503,
+        505,
+        506,
+        507,
+        508,
+        509,
+        510,
+        511
+      ],
+      "note": "Various shelf units with stacked crates/items in brown/grey tones"
+    },
+    "food_items": {
+      "desc": "Food/produce items (rows 55, cols 0-2)",
+      "tiles": [
+        880,
+        881,
+        882
+      ],
+      "note": "Green/orange items \u2014 vegetables, fruit baskets"
+    },
+    "fruit_bowls": {
+      "desc": "Decorative fruit/food displays (row 56, cols 0-2)",
+      "tiles": [
+        896,
+        897,
+        898
+      ],
+      "note": "Colorful food arrangements"
+    }
+  },
+  "rugs": {
+    "green_border_rug_3x3": {
+      "desc": "Green-bordered decorative rug, 3x3 (rows 27-29, cols 10-12)",
+      "size": [
+        3,
+        3
+      ],
+      "tiles": [
+        [
+          442,
+          443,
+          444
+        ],
+        [
+          458,
+          459,
+          460
+        ],
+        [
+          474,
+          475,
+          476
+        ]
+      ],
+      "note": "Dark olive green border, lighter center with geometric pattern"
+    },
+    "diamond_rug_2x2": {
+      "desc": "Pink/mauve diamond pattern rug (rows 28-29, cols 5-6)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          453,
+          454
+        ],
+        [
+          469,
+          470
+        ]
+      ],
+      "note": "Pinkish-grey with faint diamond shapes"
+    },
+    "striped_rug_diagonal": {
+      "desc": "Diagonal blue-white striped rug (rows 29, cols 2-4)",
+      "tiles": [
+        466,
+        467,
+        468
+      ],
+      "note": "Diagonal stripe pattern, blue-teal tones"
+    },
+    "checkered_green_2x2": {
+      "desc": "Green checkered pattern (rows 20-21, cols 13-14)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          333,
+          334
+        ],
+        [
+          349,
+          350
+        ]
+      ]
+    }
+  },
+  "lamps": {
+    "desk_lamp_pair": {
+      "desc": "Small desk/table lamps (row 55, cols 7-8)",
+      "tiles": [
+        887,
+        888
+      ],
+      "note": "887 is grey/stone lamp, 888 is similar variant. Blue base shape."
+    },
+    "floor_lamp_1x1": {
+      "desc": "Standing floor lamp with shade (row 55, col 9)",
+      "tiles": [
+        889
+      ],
+      "note": "Tall lamp, golden shade on post"
+    },
+    "ceiling_chandelier": {
+      "desc": "Hanging ceiling chandelier/light (row 55, col 11)",
+      "tiles": [
+        891
+      ],
+      "note": "Multi-arm chandelier shape, grey/silver"
+    },
+    "ceiling_pendant": {
+      "desc": "Pendant ceiling light (row 55, col 12)",
+      "tiles": [
+        892
+      ],
+      "note": "UFO/dome shaped pendant lamp"
+    },
+    "lantern_hanging": {
+      "desc": "Decorative hanging lanterns (row 55, cols 13-14)",
+      "tiles": [
+        893,
+        894
+      ],
+      "note": "Small lantern shapes"
+    },
+    "standing_sign_lamp": {
+      "desc": "Standing lamp / sign post (row 56, col 7)",
+      "tiles": [
+        907
+      ],
+      "note": "Tall post with flat top"
+    },
+    "blue_lamp": {
+      "desc": "Blue decorative lamp (row 56, col 15)",
+      "tiles": [
+        911
+      ],
+      "note": "Blue dome shape"
+    },
+    "wall_sconce_pair": {
+      "desc": "Wall-mounted light sconces",
+      "tiles": [
+        909,
+        910
+      ],
+      "note": "Row 56 cols 13-14, brown/warm wall lights"
+    }
+  },
+  "doors": {
+    "wooden_door_large_2x2": {
+      "desc": "Large wooden door, 2w x 2h (rows 49-50, cols 7-8)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          791,
+          792
+        ],
+        [
+          807,
+          808
+        ]
+      ],
+      "note": "Brown wooden door with visible panels and handle"
+    },
+    "wooden_door_single_1x2": {
+      "desc": "Single wooden door, 1w x 2h (rows 49-50, col 9)",
+      "tiles": [
+        793,
+        809
+      ],
+      "note": "Narrower single door variant"
+    },
+    "door_with_window_1x2": {
+      "desc": "Door with glass/window panel (rows 49-50, col 10)",
+      "tiles": [
+        794,
+        810
+      ],
+      "note": "Light/white glass insert"
+    },
+    "door_dark_frame_2x2": {
+      "desc": "Door in dark frame (rows 49-50, cols 5-6)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          789,
+          790
+        ],
+        [
+          805,
+          806
+        ]
+      ]
+    },
+    "door_fancy_2x2": {
+      "desc": "Ornate/fancy door (rows 49-50, cols 3-4)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          787,
+          788
+        ],
+        [
+          803,
+          804
+        ]
+      ]
+    }
+  },
+  "windows": {
+    "window_curtained_2x2": {
+      "desc": "Window with side curtains (rows 40-41, cols 3-4)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          643,
+          644
+        ],
+        [
+          659,
+          660
+        ]
+      ],
+      "note": "Orange/brown curtain drapes framing window"
+    },
+    "window_bare_2x2": {
+      "desc": "Window without curtains (rows 40-41, cols 5-6)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          645,
+          646
+        ],
+        [
+          661,
+          662
+        ]
+      ]
+    },
+    "window_small_1x1": {
+      "desc": "Small single-tile window (row 40, col 9)",
+      "tiles": [
+        649
+      ]
+    }
+  },
+  "bathroom": {
+    "bathtub_3x2": {
+      "desc": "Bathtub, 3w x 2h (rows 35-36, cols 0-2)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          560,
+          561,
+          562
+        ],
+        [
+          576,
+          577,
+          578
+        ]
+      ],
+      "note": "White bathtub with grey/blue water"
+    },
+    "toilet_1x2": {
+      "desc": "Toilet fixture (rows 35-36, col 7)",
+      "tiles": [
+        567,
+        583
+      ]
+    },
+    "sink_vanity_1x2": {
+      "desc": "Bathroom sink/vanity (rows 35-36)",
+      "tiles": [
+        571,
+        587
+      ]
+    },
+    "shower_stall_2x2": {
+      "desc": "Shower enclosure pieces",
+      "tiles": [
+        568,
+        569,
+        584,
+        585
+      ],
+      "note": "Green/teal shower area tiles"
+    }
+  },
+  "electronics": {
+    "laptop_closed": {
+      "desc": "Closed laptop/book shape (row 8, col 8)",
+      "tiles": [
+        136
+      ]
+    },
+    "monitor_small": {
+      "desc": "Small computer monitor (row 8, col 7)",
+      "tiles": [
+        135
+      ]
+    },
+    "tv_screen_dark_2x1": {
+      "desc": "Dark TV/monitor screens (row 8, cols 9-10)",
+      "tiles": [
+        137,
+        138
+      ]
+    }
+  },
+  "large_furniture": {
+    "piano_grand_3x2": {
+      "desc": "Grand piano, 3w x 2h (rows 51-52, cols 7-9)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          823,
+          824,
+          825
+        ],
+        [
+          839,
+          840,
+          841
+        ]
+      ],
+      "note": "823-825 is the keyboard/top, 839 is wooden shelf/base, 840-841 are doors/panels"
+    },
+    "dresser_wide_3x2": {
+      "desc": "Wide wooden dresser/sideboard (rows 52-53, cols 1-3)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          833,
+          834,
+          835
+        ],
+        [
+          849,
+          850,
+          851
+        ]
+      ],
+      "note": "Brown wood with visible drawers/shelves"
+    },
+    "dresser_striped_3x2": {
+      "desc": "Striped/detailed dresser (rows 52-53, cols 4-6)",
+      "size": [
+        3,
+        2
+      ],
+      "tiles": [
+        [
+          836,
+          837,
+          838
+        ],
+        [
+          852,
+          853,
+          854
+        ]
+      ]
+    },
+    "curtain_purple_3x3": {
+      "desc": "Purple/lavender curtain panels (rows 45-47, cols 7-9)",
+      "size": [
+        3,
+        3
+      ],
+      "tiles": [
+        [
+          727,
+          728,
+          729
+        ],
+        [
+          743,
+          744,
+          745
+        ],
+        [
+          759,
+          760,
+          761
+        ]
+      ]
+    },
+    "bench_wooden_3x1": {
+      "desc": "Long wooden bench seat (row 53, cols 7-9)",
+      "tiles": [
+        855,
+        856,
+        857
+      ],
+      "note": "Horizontal wooden slat bench"
+    },
+    "crate_stack_2x2": {
+      "desc": "Stacked wooden crates (rows 30-31, cols 5-6)",
+      "size": [
+        2,
+        2
+      ],
+      "tiles": [
+        [
+          485,
+          486
+        ],
+        [
+          501,
+          502
+        ]
+      ]
+    },
+    "display_shelf_tall_2x3": {
+      "desc": "Tall display shelving unit (various positions in rows 30-31)",
+      "tiles": [
+        500,
+        501,
+        502,
+        503,
+        505,
+        506,
+        507,
+        508,
+        509,
+        510,
+        511
+      ],
+      "note": "Brown wooden shelf units with stacked items \u2014 crate/shelf style"
+    }
+  },
+  "outdoor": {
+    "barrel_1x1": {
+      "desc": "Wooden barrel (row 58, cols 1-2)",
+      "tiles": [
+        929,
+        930
+      ]
+    },
+    "crate_small_1x1": {
+      "desc": "Wooden shipping crate variants (row 58, cols 3-6)",
+      "tiles": [
+        931,
+        932,
+        933,
+        934
+      ]
+    },
+    "market_awning_red_3x1": {
+      "desc": "Red market stall awning strip (row 56, cols 12-14)",
+      "tiles": [
+        908,
+        909,
+        910
+      ]
+    },
+    "market_awning_blue_3x1": {
+      "desc": "Blue market stall awning strip (row 57, cols 12-14)",
+      "tiles": [
+        924,
+        925,
+        926
+      ]
+    },
+    "fence_sections": {
+      "desc": "Fence pieces (row 58-59)",
+      "tiles": [
+        940,
+        941,
+        942,
+        943
+      ]
+    },
+    "signpost_1x2": {
+      "desc": "Standing wooden signpost",
+      "tiles": [
+        905,
+        921
+      ],
+      "note": "Sign on pole"
+    }
+  },
+  "room_presets": {
+    "art_gallery": {
+      "desc": "Art gallery / exhibition space",
+      "floor": "beige_floor_3x3",
+      "walls": "white_tile_wall",
+      "furniture": {
+        "paintings": [
+          [
+            643,
+            644
+          ],
+          [
+            645,
+            646
+          ],
+          [
+            650,
+            651
+          ]
+        ],
+        "bench": [
+          855,
+          856,
+          857
+        ],
+        "plant": [
+          768
+        ],
+        "lamp": [
+          889
+        ]
+      }
+    },
+    "living_room": {
+      "desc": "Cozy living room",
+      "floor": "green_carpet_3x3",
+      "furniture": {
+        "sofa": [
+          [
+            296,
+            297,
+            298
+          ],
+          [
+            312,
+            313,
+            314
+          ]
+        ],
+        "coffee_table": [
+          [
+            247,
+            248,
+            249
+          ],
+          [
+            263,
+            264,
+            265
+          ]
+        ],
+        "lamp": [
+          889
+        ],
+        "plant": [
+          [
+            189,
+            190,
+            191
+          ],
+          [
+            205,
+            206,
+            207
+          ]
+        ],
+        "rug": [
+          [
+            442,
+            443,
+            444
+          ],
+          [
+            458,
+            459,
+            460
+          ],
+          [
+            474,
+            475,
+            476
+          ]
+        ],
+        "painting": [
+          648
+        ]
+      }
+    },
+    "office_study": {
+      "desc": "Home office / study",
+      "floor": "white_floor_3x3",
+      "furniture": {
+        "desk": [
+          [
+            160,
+            161,
+            162,
+            163
+          ],
+          [
+            176,
+            177,
+            178,
+            179
+          ],
+          [
+            192,
+            193,
+            194,
+            195
+          ]
+        ],
+        "chair": [
+          208,
+          209
+        ],
+        "bookshelf": [
+          [
+            779,
+            780,
+            781
+          ],
+          [
+            795,
+            796,
+            797
+          ],
+          [
+            811,
+            812,
+            813
+          ]
+        ],
+        "lamp": [
+          887
+        ],
+        "laptop": [
+          136
+        ]
+      }
+    },
+    "kitchen_dining": {
+      "desc": "Kitchen with dining area",
+      "floor": "teal_carpet_3x3",
+      "furniture": {
+        "counter_top": [
+          512,
+          513,
+          514
+        ],
+        "counter_base": [
+          528,
+          529,
+          530
+        ],
+        "stove": [
+          522,
+          523,
+          538,
+          539
+        ],
+        "table": [
+          [
+            165,
+            166,
+            167,
+            168
+          ],
+          [
+            181,
+            182,
+            183,
+            184
+          ],
+          [
+            197,
+            198,
+            199,
+            200
+          ]
+        ],
+        "chairs": [
+          208,
+          209,
+          224,
+          225
+        ]
+      }
+    },
+    "bedroom": {
+      "desc": "Bedroom with bed and dresser",
+      "floor": "green_carpet_3x3",
+      "furniture": {
+        "bed": [
+          [
+            775,
+            776,
+            777
+          ],
+          [
+            791,
+            792,
+            793
+          ],
+          [
+            807,
+            808,
+            809
+          ]
+        ],
+        "dresser": [
+          [
+            833,
+            834,
+            835
+          ],
+          [
+            849,
+            850,
+            851
+          ]
+        ],
+        "lamp": [
+          889
+        ],
+        "curtains": [
+          [
+            727,
+            728,
+            729
+          ],
+          [
+            743,
+            744,
+            745
+          ],
+          [
+            759,
+            760,
+            761
+          ]
+        ],
+        "plant": [
+          768
+        ],
+        "rug": [
+          [
+            453,
+            454
+          ],
+          [
+            469,
+            470
+          ]
+        ]
+      }
+    },
+    "bathroom": {
+      "desc": "Bathroom",
+      "floor": "teal_carpet_light_3x3",
+      "walls": "white_tile_wall",
+      "furniture": {
+        "bathtub": [
+          [
+            560,
+            561,
+            562
+          ],
+          [
+            576,
+            577,
+            578
+          ]
+        ],
+        "toilet": [
+          567,
+          583
+        ],
+        "sink": [
+          571,
+          587
+        ],
+        "mirror": [
+          366
+        ]
+      }
+    }
+  },
+  "single_tile_quick_ref": {
+    "_note": "Handy single-tile decoration items for scattering in rooms",
+    "laptop": 136,
+    "monitor": 135,
+    "round_table": 214,
+    "stool": 341,
+    "candle": 801,
+    "small_plant": 768,
+    "medium_plant": 784,
+    "painting_small": 648,
+    "trophy_red": 235,
+    "trophy_gold": 236,
+    "diamond": 832,
+    "desk_lamp": 887,
+    "floor_lamp": 889,
+    "chandelier": 891,
+    "pendant_light": 892,
+    "barrel": 929,
+    "crate": 931,
+    "globe": 589
+  }
+}

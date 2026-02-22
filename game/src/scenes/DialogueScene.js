@@ -305,6 +305,43 @@ export class DialogueScene extends BaseScene {
             return;
         }
 
+        // ── Launch Scene (travel events, venue transitions) ──
+        // Allows choices to transition the player into a walkaround scene.
+        // Example: { "launchScene": { "sceneKey": "LocationScene", "data": { "venueId": "milan_fashion_week" } } }
+        if (choice.launchScene) {
+            this.clearStepObjects();
+
+            const { sceneKey, data: sceneData } = choice.launchScene;
+            const targetScene = sceneKey || 'LocationScene';
+            const launchData = {
+                ...(sceneData || {}),
+                returnScene: this.returnScene || 'MainMenuScene',
+                returnArgs: this.returnArgs || {},
+            };
+
+            console.log(`[DialogueScene] Launching scene "${targetScene}" with:`, launchData);
+            GameState.addNews(choice.outcome || `You decided to attend — traveling now...`);
+
+            // Record the decision before transitioning
+            DecisionLog.record({
+                eventId: this.eventData.id,
+                eventTitle: this.eventData.title,
+                choiceIndex: choiceIndex,
+                choiceLabel: choice.label,
+                effects: choice.effects || {},
+                tags: choice.tags || this.eventData.tags || [this.eventData.category],
+                npcInvolved: choice.npcInvolved || this.eventData.npcInvolved || null,
+                isBlueOption: choice.isBlueOption || false,
+            });
+
+            this.cameras.main.fadeOut(400, 0, 0, 0);
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.stop();
+                this.scene.start(targetScene, launchData);
+            });
+            return;
+        }
+
         // Record to Decision Log
         DecisionLog.record({
             eventId: this.eventData.id,

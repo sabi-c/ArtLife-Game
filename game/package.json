@@ -18,7 +18,14 @@
     "test:all": "node tests/headless/test_comprehensive.cjs",
     "expose": "npx localtunnel --port 5173 --subdomain artlife",
     "tunnel": "npx cloudflared tunnel --url http://localhost:5173",
-    "validate": "node scripts/validate-build.cjs"
+    "validate": "node scripts/validate-build.cjs",
+    "generate:room": "node tools/generate_room.js",
+    "room:new": "node tools/room_pipeline.js new",
+    "room:import": "node tools/room_pipeline.js import",
+    "room:list": "node tools/room_pipeline.js list",
+    "room:open": "node tools/room_pipeline.js open",
+    "room:validate": "node tools/room_pipeline.js validate",
+    "room:watch": "node tools/room_watcher.js"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

@@ -81,6 +81,7 @@ export class HaggleScene extends BaseScene {
     /** Internal scene builder — separated so create()'s try/catch can catch errors */
     _buildScene(width, height) {
         this.cameras.main.setBackgroundColor('#000000');
+        this.cameras.main.fadeIn(300, 0, 0, 0);
 
         // Emit battle start event
         GameEventBus.emit(GameEvents.HAGGLE_START, {

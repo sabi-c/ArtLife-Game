@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { VENUE_MAP } from '../data/rooms.js';
 import { CONTACTS } from '../data/contacts.js';
@@ -6,20 +7,104 @@ import { DialogueTreeManager } from '../managers/DialogueTreeManager.js';
 import { QualityGate } from '../managers/QualityGate.js';
 import { GameState } from '../managers/GameState.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { HaggleManager } from '../managers/HaggleManager.js';
+import { SCENE_KEYS } from '../data/scene-keys.js';
+
+// ── Layer depth constants (matches WorldScene) ──
+const DEPTH = {
+    BELOW_PLAYER: 0,
+    WORLD: 2,
+    ABOVE_PLAYER: 100,
+    POPUP_BG: 200,
+    POPUP_TEXT: 201,
+    HUD: 500,
+};
+
+const LAYER_DEPTHS = {
+    below_player: DEPTH.BELOW_PLAYER,
+    world: DEPTH.WORLD,
+    above_player: DEPTH.ABOVE_PLAYER,
+};
 
 /**
  * LocationScene — Top-Down Exploration Engine
- * Replaces the text menu bridge with a fully explorable tilemap.
+ * Supports two modes:
+ *   1. Classic mode: hardcoded tile array + Arcade physics (existing venues)
+ *   2. Tiled mode: Tiled JSON map + GridEngine (gallery_test, future interiors)
  */
 export class LocationScene extends BaseScene {
     constructor() {
         super('LocationScene');
     }
 
-    // Initialize values during create() instead of init()
-
     preload() {
         this.load.image('kenney_indoor', 'assets/tilesets/kenney_roguelike_indoors/Tilesheets/roguelikeIndoor_transparent.png');
+
+        // Overworld tilesets (needed for Tiled interior maps that share the outdoor tileset)
+        const overworldTilesets = ['grounds', 'world', 'world2', 'grounds2'];
+        for (const ts of overworldTilesets) {
+            if (!this.textures.exists(ts)) {
+                this.load.image(ts, `assets/tilesets/${ts}.png`);
+            }
+        }
+
+        // Gallery-specific tilesets
+        if (!this.textures.exists('gallery_tileset')) {
+            this.load.image('gallery_tileset', 'assets/tilesets/gallery_tileset.png');
+        }
+        // LimeZu Modern Interiors tilesets (professional 48x48)
+        if (!this.textures.exists('Room_Builder_free_48x48')) {
+            this.load.image('Room_Builder_free_48x48', 'assets/tilesets/Room_Builder_free_48x48.png');
+        }
+        if (!this.textures.exists('Interiors_free_48x48')) {
+            this.load.image('Interiors_free_48x48', 'assets/tilesets/Interiors_free_48x48.png');
+        }
+
+        // Gallery sprite assets (furniture, paintings, decorations)
+        const gallerySprites = [
+            'gallery_bench', 'gallery_pedestal', 'gallery_desk', 'gallery_plant',
+            'gallery_rope', 'gallery_rope_end', 'gallery_wine_table', 'gallery_sign',
+            'gallery_decorations', 'track_light', 'red_dot', 'price_list',
+            'painting_small_abstract', 'painting_medium_landscape',
+            'painting_large_portrait', 'painting_large_modern',
+            'painting_small_photo', 'painting_empty_frame',
+        ];
+        for (const key of gallerySprites) {
+            if (!this.textures.exists(key)) {
+                this.load.image(key, `sprites/gallery/${key}.png`);
+            }
+        }
+
+        // NPC dealer spritesheet (3 cols × 4 rows, 48×48 frames)
+        if (!this.textures.exists('npc_dealer')) {
+            this.load.spritesheet('npc_dealer', 'sprites/gallery/npc_dealer.png', {
+                frameWidth: 48, frameHeight: 48,
+            });
+        }
+
+        // Player sprite for Tiled mode (same as WorldScene)
+        if (!this.textures.exists('world_player')) {
+            this.load.spritesheet('world_player', 'assets/sprites/player.png', {
+                frameWidth: 72, frameHeight: 96,
+            });
+        }
+
+        // LimeZu character sprites for NPCs (16×32 frames, 24 per strip, scale 3x for 48px tiles)
+        const limeZuChars = ['adam', 'alex', 'amelia', 'bob'];
+        for (const name of limeZuChars) {
+            const runKey = `lz_${name}_run`;
+            if (!this.textures.exists(runKey)) {
+                this.load.spritesheet(runKey, `sprites/characters/${name}_run.png`, {
+                    frameWidth: 16, frameHeight: 32,
+                });
+            }
+            const idleKey = `lz_${name}_idle`;
+            if (!this.textures.exists(idleKey)) {
+                this.load.spritesheet(idleKey, `sprites/characters/${name}_idle.png`, {
+                    frameWidth: 16, frameHeight: 32,
+                });
+            }
+        }
 
         const npcKeys = [
             'walk_legacy_gallerist_walk', 'walk_auction_house_type_walk', 'walk_elena_ross_walk',
@@ -31,9 +116,6 @@ export class LocationScene extends BaseScene {
         ];
 
         npcKeys.forEach(key => {
-            // Assume 4x4 grid. The images are typically 64x64 or 128x128 total.
-            // If it's a 32x32 pixel character in a 4x4 sheet, the frame is usually 16x16, 24x24, or 32x32. 
-            // We'll assume typical RPG Maker size or generic 32x32.
             this.load.spritesheet(key, `sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
         });
 
@@ -44,41 +126,45 @@ export class LocationScene extends BaseScene {
             gfx.generateTexture('placeholder_exit', 16, 16);
             gfx.destroy();
         }
+
+        // Preload Tiled map if this room uses one
+        // The map key + tileset images are loaded in _preloadTiledAssets()
+        this._pendingTiledMap = null;
     }
 
     create(data) {
-        super.create({ ...data, hideUI: true }); // Extends from BaseScene
+        super.create({ ...data, hideUI: true });
 
         this.venueId = data?.venueId || 'gallery_opening';
-        this.roomId = data?.roomId || 'chelsea_main_floor';
         this.returnScene = data?.returnScene || null;
         this.returnArgs = data?.returnArgs || {};
+        this._popupActive = false;
+        this._lastViewedPainting = null;
 
-        // Find room data
         const venue = VENUE_MAP[this.venueId];
+        // Use provided roomId, or fall back to venue's startRoom, or legacy default
+        this.roomId = data?.roomId || (venue?.startRoom) || 'chelsea_main_floor';
         this.roomData = venue ? venue.rooms.find(r => r.id === this.roomId) : null;
 
-        // ── Venue Time Budget Logic ──
-        // If coming from another room, we inherit the remaining time. 
-        // If this is a fresh entry (startRoom), we consume 1 Weekly Action and start full venue budget.
+        console.log(`[LocationScene] venueId=${this.venueId} roomId=${this.roomId} venue=${!!venue} roomData=${!!this.roomData} tiledMap=${this.roomData?.tiledMap || 'none'}`);
+
+        // Venue time budget
         if (data && data.venueTimeRemaining !== undefined) {
             this.venueTimeRemaining = data.venueTimeRemaining;
         } else if (venue) {
             this.venueTimeRemaining = venue.timeLimit || 5;
-            // Fresh entry: Cost 1 Weekly Action
             GameState.consumeAction();
         } else {
             this.venueTimeRemaining = 5;
         }
 
-        // Resolve player sprite key from GameState character, fallback to generic
+        // Resolve player sprite key
         const charId = GameState.state?.character?.id || 'julian_vance';
         this.playerSpriteKey = `walk_${charId}_walk`;
 
-        // Setup sprite animations globally for this scene
+        // Setup sprite animations (legacy walk_ spritesheets)
         const npcKeys = Object.keys(this.textures.list).filter(k => k.startsWith('walk_'));
         npcKeys.forEach(key => {
-            // Typical 4x4 grid mappings: Down (0-3), Left (4-7), Right (8-11), Up (12-15)
             if (!this.anims.exists(`${key}_down`)) {
                 this.anims.create({ key: `${key}_down`, frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
                 this.anims.create({ key: `${key}_left`, frames: this.anims.generateFrameNumbers(key, { start: 4, end: 7 }), frameRate: 6, repeat: -1 });
@@ -87,14 +173,24 @@ export class LocationScene extends BaseScene {
             }
         });
 
+        // LimeZu character animations (16×32, 6 frames per direction: down/left/right/up)
+        const lzChars = ['adam', 'alex', 'amelia', 'bob'];
+        for (const name of lzChars) {
+            const runKey = `lz_${name}_run`;
+            if (this.textures.exists(runKey) && !this.anims.exists(`${runKey}_down`)) {
+                this.anims.create({ key: `${runKey}_down`, frames: this.anims.generateFrameNumbers(runKey, { start: 0, end: 5 }), frameRate: 8, repeat: -1 });
+                this.anims.create({ key: `${runKey}_left`, frames: this.anims.generateFrameNumbers(runKey, { start: 6, end: 11 }), frameRate: 8, repeat: -1 });
+                this.anims.create({ key: `${runKey}_right`, frames: this.anims.generateFrameNumbers(runKey, { start: 12, end: 17 }), frameRate: 8, repeat: -1 });
+                this.anims.create({ key: `${runKey}_up`, frames: this.anims.generateFrameNumbers(runKey, { start: 18, end: 23 }), frameRate: 8, repeat: -1 });
+            }
+        }
+
         const { width, height } = this.scale;
 
-        // Fade in
         this.cameras.main.fadeIn(300, 0, 0, 0);
         this.add.rectangle(width / 2, height / 2, width, height, 0x14141f).setDepth(-1);
         this.cameras.main.setBackgroundColor('#14141f');
 
-        // ── Camera Vignette PostFX (visual consistency with OverworldScene) ──
         try {
             const vignette = this.cameras.main.postFX.addVignette();
             vignette.radius = 0.85;
@@ -106,7 +202,338 @@ export class LocationScene extends BaseScene {
             return;
         }
 
-        // Draw basic dynamic map (16x16 Kenney tiles scaled by 2)
+        // ── Branch: Tiled JSON map or classic hardcoded map ──
+        if (this.roomData.tiledMap) {
+            this._createTiledScene(data);
+        } else {
+            this._createClassicScene(data);
+        }
+
+        // ── Common UI ──
+        this._createHUD(width, height);
+    }
+
+    // ════════════════════════════════════════════════════
+    // Tiled Map Mode (GridEngine + Tiled JSON)
+    // ════════════════════════════════════════════════════
+
+    _createTiledScene(data) {
+        this._isTiledMode = true;
+
+        const mapKey = `map_${this.roomData.tiledMap}`;
+
+        // Build tilemap from preloaded JSON
+        this.map = this.make.tilemap({ key: mapKey });
+
+        // Add all tilesets referenced in the map
+        const allSets = [];
+        for (const tsData of this.map.tilesets) {
+            const ts = this.map.addTilesetImage(tsData.name, tsData.name);
+            if (ts) allSets.push(ts);
+        }
+
+        if (allSets.length === 0) {
+            console.error('[LocationScene] No tilesets loaded for Tiled map');
+            this._createClassicScene(data);
+            return;
+        }
+
+        // Render tile layers
+        for (const layerData of this.map.layers) {
+            const name = layerData.name;
+            if (name === 'objects') continue;
+            const layer = this.map.createLayer(name, allSets);
+            if (layer) {
+                layer.setDepth(LAYER_DEPTHS[name] ?? DEPTH.WORLD);
+            }
+        }
+
+        // Parse objects
+        const objectLayer = this.map.getObjectLayer('objects');
+        const objects = objectLayer?.objects || [];
+        const tileW = this.map.tileWidth;
+        const tileH = this.map.tileHeight;
+
+        let spawnX = 5, spawnY = 8;
+        this._tiledDoors = [];
+        this._tiledDialogs = [];
+        this._tiledPaintings = [];
+        this._tiledNPCs = [];
+
+        for (const obj of objects) {
+            const tx = Math.floor(obj.x / tileW);
+            const ty = Math.floor(obj.y / tileH);
+            const props = {};
+            if (obj.properties) {
+                for (const p of obj.properties) props[p.name] = p.value;
+            }
+
+            const nameOrType = obj.name || obj.type || '';
+
+            if (nameOrType === 'spawn') {
+                spawnX = tx;
+                spawnY = ty;
+            } else if (nameOrType === 'door') {
+                this._tiledDoors.push({ x: tx, y: ty, ...props });
+            } else if (nameOrType === 'dialog') {
+                this._tiledDialogs.push({ x: tx, y: ty, content: props.content || obj.name, ...props });
+            } else if (nameOrType === 'painting') {
+                this._tiledPaintings.push({ x: tx, y: ty, ...props });
+            } else if (nameOrType === 'npc') {
+                this._tiledNPCs.push({ x: tx, y: ty, ...props });
+            }
+        }
+
+        // Override spawn from data if returning from another scene
+        if (data?.spawnX != null) spawnX = data.spawnX;
+        if (data?.spawnY != null) spawnY = data.spawnY;
+
+        // ── Player sprite ──
+        const spriteKey = this.textures.exists('world_player') ? 'world_player' : 'player_walk';
+        this.player = this.add.sprite(0, 0, spriteKey);
+        this.player.setDepth(4);
+
+        // Register player walk animations for this spritesheet
+        if (!this.anims.exists('loc_walk_down')) {
+            const dirs = [
+                { key: 'loc_walk_down', start: 0, end: 2 },
+                { key: 'loc_walk_left', start: 3, end: 5 },
+                { key: 'loc_walk_right', start: 6, end: 8 },
+                { key: 'loc_walk_up', start: 9, end: 11 },
+            ];
+            dirs.forEach(({ key, start, end }) => {
+                this.anims.create({
+                    key, frames: this.anims.generateFrameNumbers(spriteKey, { start, end }),
+                    frameRate: 8, repeat: -1
+                });
+            });
+        }
+
+        // NPC dealer walk animations (3 cols × 4 rows, 48×48)
+        if (this.textures.exists('npc_dealer') && !this.anims.exists('dealer_walk_down')) {
+            const dealerDirs = [
+                { key: 'dealer_walk_down', start: 0, end: 2 },
+                { key: 'dealer_walk_left', start: 3, end: 5 },
+                { key: 'dealer_walk_right', start: 6, end: 8 },
+                { key: 'dealer_walk_up', start: 9, end: 11 },
+            ];
+            dealerDirs.forEach(({ key, start, end }) => {
+                this.anims.create({
+                    key, frames: this.anims.generateFrameNumbers('npc_dealer', { start, end }),
+                    frameRate: 6, repeat: -1,
+                });
+            });
+        }
+
+        // ── Spawn NPC sprites ──
+        // LimeZu character sprite rotation for NPCs
+        const LZ_CHARS = ['adam', 'alex', 'amelia', 'bob'];
+        const npcCharacters = [];
+        this._tiledNPCs.forEach((npc, i) => {
+            const npcId = `gallery_npc_${i}`;
+
+            // Pick sprite: prefer LimeZu characters (rotated), fallback to npc_dealer/world_player
+            const lzName = LZ_CHARS[i % LZ_CHARS.length];
+            const lzRunKey = `lz_${lzName}_run`;
+            let npcSprite;
+            let npcSpriteScale = 1;
+
+            if (this.textures.exists(lzRunKey)) {
+                // LimeZu 16×32 sprite — needs 3x scale for 48px tiles
+                npcSprite = this.add.sprite(0, 0, lzRunKey, 0).setDepth(4);
+                npcSpriteScale = 3;
+                npcSprite.setScale(npcSpriteScale);
+            } else if (this.textures.exists('npc_dealer')) {
+                npcSprite = this.add.sprite(0, 0, 'npc_dealer').setDepth(4);
+            } else {
+                const fallback = this.textures.exists('world_player') ? 'world_player' : 'player_walk';
+                npcSprite = this.add.sprite(0, 0, fallback).setDepth(4);
+            }
+
+            // NPC label
+            this.add.text(npc.x * tileW + tileW / 2, npc.y * tileH - 12,
+                npc.label || npc.id || 'NPC', {
+                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#ffaaaa',
+                    stroke: '#000000', strokeThickness: 2,
+                }).setOrigin(0.5).setDepth(DEPTH.HUD);
+
+            npcCharacters.push({
+                id: npcId,
+                sprite: npcSprite,
+                startPosition: { x: npc.x, y: npc.y },
+                data: npc,
+                lzName: this.textures.exists(lzRunKey) ? lzName : null,
+                scale: npcSpriteScale,
+            });
+        });
+
+        // ── Painting sprites on map ──
+        this._tiledPaintings.forEach(p => {
+            const spriteKey = p.sprite || 'painting_small_abstract';
+            if (this.textures.exists(spriteKey)) {
+                const sprite = this.add.image(
+                    p.x * tileW + tileW / 2,
+                    p.y * tileH + tileH / 2,
+                    spriteKey
+                ).setDepth(DEPTH.WORLD + 1);
+                p._sprite = sprite;
+            } else {
+                // Fallback gold diamond marker
+                const gfx = this.add.graphics();
+                gfx.fillStyle(0xc9a84c, 0.8);
+                gfx.fillRect(-4, -4, 8, 8);
+                gfx.setPosition(p.x * tileW + tileW / 2, p.y * tileH + tileH / 2);
+                gfx.setDepth(DEPTH.WORLD + 1);
+            }
+        });
+
+        // ── Furniture sprites on map ──
+        this._tiledFurniture = [];
+        for (const obj of objects) {
+            const nameOrType = obj.name || obj.type || '';
+            if (nameOrType !== 'furniture') continue;
+            const fProps = {};
+            if (obj.properties) {
+                for (const p of obj.properties) fProps[p.name] = p.value;
+            }
+            const fx = Math.floor(obj.x / tileW);
+            const fy = Math.floor(obj.y / tileH);
+            const spriteKey = fProps.sprite;
+            if (spriteKey && this.textures.exists(spriteKey)) {
+                const sprite = this.add.image(
+                    fx * tileW + tileW / 2,
+                    fy * tileH + tileH / 2,
+                    spriteKey
+                ).setDepth(DEPTH.WORLD + 1);
+                this._tiledFurniture.push({ x: fx, y: fy, sprite, ...fProps });
+            }
+        }
+
+        // ── GridEngine setup ──
+        if (this.gridEngine) {
+            const characters = [
+                {
+                    id: 'player',
+                    sprite: this.player,
+                    startPosition: { x: spawnX, y: spawnY },
+                    speed: 3,
+                },
+                ...npcCharacters.map(npc => ({
+                    id: npc.id,
+                    sprite: npc.sprite,
+                    startPosition: npc.startPosition,
+                    speed: 1,
+                })),
+            ];
+
+            this.gridEngine.create(this.map, { characters });
+
+            // Camera follow player with smooth lerp (matching WorldScene)
+            this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+            this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+
+            // Fixed zoom like WorldScene — keeps player visible and centered
+            const { width: vw } = this.scale;
+            const zoom = vw < 500 ? 2.5 : 2;
+            this.cameras.main.setZoom(zoom);
+            this.cameras.main.roundPixels = true;
+        } else {
+            console.warn('[LocationScene] GridEngine not available, falling back to basic movement');
+            // Simple physics fallback
+            this.physics.add.existing(this.player);
+            this.player.setPosition(spawnX * tileW + tileW / 2, spawnY * tileH + tileH / 2);
+            this.player.body.setCollideWorldBounds(true);
+            this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+            this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+            this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+        }
+
+        // ── Input ──
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this._wasd = {
+            up: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+            down: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+            left: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+            right: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+        };
+        this._keys = {
+            space: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+            esc: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+            e: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E),
+        };
+
+        this._npcCharacters = npcCharacters;
+        this._lastInteractTime = 0;
+
+        // Window-level SPACE/ESC fallback — Phaser keyboard requires canvas focus
+        this._windowKeyHandler = (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                if (this._popupActive) {
+                    this._updatePopup();
+                } else {
+                    const now = Date.now();
+                    if (now - this._lastInteractTime < 200) return;
+                    this._lastInteractTime = now;
+                    this._tiledInteract();
+                }
+            } else if (e.code === 'Escape') {
+                this.leaveLocation();
+            } else if (e.code === 'KeyE' && this._popupActive) {
+                this._closePopup();
+                this._startHaggleForPainting(this._lastViewedPainting);
+            }
+        };
+        window.addEventListener('keydown', this._windowKeyHandler);
+
+        // Handle resize for responsive zoom
+        this.scale.on('resize', (gameSize) => {
+            if (!this.cameras?.main) return;
+            const w = gameSize.width;
+            const newZoom = w < 500 ? 2.5 : 2;
+            this.cameras.main.setZoom(newZoom);
+        });
+
+        // Location name toast (Pokemon-style)
+        this._showLocationToast(this.roomData.name || this.venueId);
+
+        // Signal React to show mobile controls (same pattern as WorldScene)
+        this._sceneReady = true;
+    }
+
+    _showLocationToast(name) {
+        const { width } = this.scale;
+        const barH = 36;
+
+        const bg = this.add.rectangle(width / 2, -barH / 2, width, barH, 0x000000, 0.75)
+            .setScrollFactor(0).setDepth(DEPTH.HUD);
+        const text = this.add.text(width / 2, -barH / 2, name.toUpperCase(), {
+            fontFamily: '"Press Start 2P", monospace', fontSize: '10px',
+            color: '#ffffff', letterSpacing: 3,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+
+        this.tweens.add({
+            targets: [bg, text], y: barH / 2, duration: 400, ease: 'Power2',
+            onComplete: () => {
+                this.time.delayedCall(2000, () => {
+                    this.tweens.add({
+                        targets: [bg, text], alpha: 0, duration: 600,
+                        onComplete: () => { bg.destroy(); text.destroy(); },
+                    });
+                });
+            },
+        });
+    }
+
+    // ════════════════════════════════════════════════════
+    // Classic Mode (Hardcoded tile array + Arcade physics)
+    // ════════════════════════════════════════════════════
+
+    _createClassicScene(data) {
+        this._isTiledMode = false;
+
+        const { width, height } = this.scale;
+
         const level = [
             [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
             [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
@@ -123,7 +550,6 @@ export class LocationScene extends BaseScene {
         const map = this.make.tilemap({ data: level, tileWidth: 16, tileHeight: 16 });
         const tiles = map.addTilesetImage('kenney_indoor', 'kenney_indoor', 16, 16, 0, 1);
 
-        // Center the map in the middle of the screen (approximate for now)
         const mapW = 15 * 16 * 2;
         const mapH = 10 * 16 * 2;
         const ox = (width - mapW) / 2;
@@ -132,49 +558,11 @@ export class LocationScene extends BaseScene {
         const layer = map.createLayer(0, tiles, ox, oy);
         layer.setScale(2);
 
-        // UI Layer
-        this.add.text(20, 20, `📍 ${this.roomData.name.toUpperCase()}`, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
-            color: '#c9a84c'
-        }).setScrollFactor(0).setDepth(100);
-
-        const exitBtn = this.add.text(width - 20, 20, '[ LEAVE VENUE ]', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '10px',
-            color: '#c94040'
-        }).setOrigin(1, 0).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(100);
-
-        exitBtn.on('pointerover', () => exitBtn.setColor('#ff8888'));
-        exitBtn.on('pointerout', () => exitBtn.setColor('#c94040'));
-        exitBtn.on('pointerdown', () => this.leaveLocation());
-
-        // Time Remaining HUD
-        this.timeText = this.add.text(width - 20, 40, `⏰ Time Left: ${this.venueTimeRemaining}`, {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '8px',
-            color: '#aaaaaa'
-        }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
-
-        // Narrative Description popup at start
-        if (this.roomData.desc) {
-            this.descBox = this.add.rectangle(width / 2, height - 40, width - 40, 60, 0x111118, 0.9).setScrollFactor(0).setDepth(99);
-            this.descBox.setStrokeStyle(1, 0x3a3a4e);
-            this.descText = this.add.text(width / 2, height - 40, this.roomData.desc, {
-                fontFamily: '"Playfair Display"', fontSize: '13px', color: '#d4d0cc', wordWrap: { width: width - 80 }, align: 'center'
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-
-            // Auto hide after 5 seconds
-            this.time.delayedCall(5000, () => {
-                this.tweens.add({ targets: [this.descBox, this.descText], alpha: 0, duration: 500 });
-            });
-        }
-
         // Setup Room Interactables
         this.interactables = this.physics.add.group();
         this.populateRoom(width / 2, height / 2);
 
-        // Player Setup — use character-aware sprite key, fall back gracefully
+        // Player Setup
         const spriteKey = this.textures.exists(this.playerSpriteKey) ? this.playerSpriteKey : 'walk_julian_vance_walk';
         this.player = this.physics.add.sprite(width / 2, height / 2, spriteKey);
         this.player.setScale(2);
@@ -182,21 +570,529 @@ export class LocationScene extends BaseScene {
         this.physics.world.setBounds(ox, oy, mapW, mapH);
         this.player.facing = 'down';
 
-        // Camera Setup
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         this.cameras.main.setBounds(ox, oy, mapW, mapH);
 
-        // Input Setup
+        // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         this.actionKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.walkSpeed = 120;
 
-        // Collisions
         this.physics.add.collider(this.player, this.interactables);
     }
 
+    // ════════════════════════════════════════════════════
+    // Common HUD
+    // ════════════════════════════════════════════════════
+
+    _createHUD(width, height) {
+        this.add.text(20, 20, `📍 ${this.roomData.name.toUpperCase()}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
+        }).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        const exitBtn = this.add.text(width - 20, 20, '[ LEAVE VENUE ]', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c94040'
+        }).setOrigin(1, 0).setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        exitBtn.on('pointerover', () => exitBtn.setColor('#ff8888'));
+        exitBtn.on('pointerout', () => exitBtn.setColor('#c94040'));
+        exitBtn.on('pointerdown', () => this.leaveLocation());
+
+        this.timeText = this.add.text(width - 20, 40, `⏰ Time Left: ${this.venueTimeRemaining}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#aaaaaa'
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        // Narrative description popup
+        if (this.roomData.desc) {
+            this.descBox = this.add.rectangle(width / 2, height - 40, width - 40, 60, 0x111118, 0.9)
+                .setScrollFactor(0).setDepth(DEPTH.HUD - 1);
+            this.descBox.setStrokeStyle(1, 0x3a3a4e);
+            this.descText = this.add.text(width / 2, height - 40, this.roomData.desc, {
+                fontFamily: '"Playfair Display"', fontSize: '13px', color: '#d4d0cc',
+                wordWrap: { width: width - 80 }, align: 'center'
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+            this.time.delayedCall(5000, () => {
+                this.tweens.add({ targets: [this.descBox, this.descText], alpha: 0, duration: 500 });
+            });
+        }
+
+        // Interaction hint (Tiled mode)
+        if (this._isTiledMode) {
+            this._hintText = this.add.text(width / 2, height - 16, '', {
+                fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#888888',
+                stroke: '#000000', strokeThickness: 2,
+            }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD).setAlpha(0);
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    // Update Loop
+    // ════════════════════════════════════════════════════
+
+    update(time, delta) {
+        if (!this.player) return;
+
+        // Emit SCENE_READY on first frame (enables mobile joypad in React)
+        if (this._sceneReady && !this._readyEmitted) {
+            this._readyEmitted = true;
+            GameEventBus.emit(GameEvents.SCENE_READY, 'LocationScene');
+        }
+
+        if (this._popupActive) {
+            this._updatePopup();
+            return;
+        }
+
+        if (this._isTiledMode) {
+            this._updateTiledMode(time, delta);
+        } else {
+            this._updateClassicMode(time, delta);
+        }
+    }
+
+    _updateTiledMode(time, delta) {
+        if (!this.gridEngine) return;
+
+        // ESC to leave
+        if (Phaser.Input.Keyboard.JustDown(this._keys.esc)) {
+            this.leaveLocation();
+            return;
+        }
+
+        // GridEngine movement (arrows + WASD + mobile joypad)
+        if (!this.gridEngine.isMoving('player')) {
+            const left = this.cursors.left.isDown || this._wasd.left.isDown || window.joypadState === 'LEFT';
+            const right = this.cursors.right.isDown || this._wasd.right.isDown || window.joypadState === 'RIGHT';
+            const up = this.cursors.up.isDown || this._wasd.up.isDown || window.joypadState === 'UP';
+            const down = this.cursors.down.isDown || this._wasd.down.isDown || window.joypadState === 'DOWN';
+
+            if (left) this.gridEngine.move('player', 'left');
+            else if (right) this.gridEngine.move('player', 'right');
+            else if (up) this.gridEngine.move('player', 'up');
+            else if (down) this.gridEngine.move('player', 'down');
+        }
+
+        // Walk animation
+        if (!this.player?.anims) return;
+        const facing = this.gridEngine.getFacingDirection('player');
+        const moving = this.gridEngine.isMoving('player');
+        if (moving) {
+            const animKey = `loc_walk_${facing}`;
+            if (this.anims.exists(animKey)) this.player.anims.play(animKey, true);
+        } else {
+            this.player.anims.stop();
+        }
+
+        // Auto-trigger door when player steps onto it (Pokemon-style walk-through)
+        // Skip on first few frames to prevent instant exit when spawning on/near a door
+        if (!this._doorTransitioning && this._frameCount > 10) {
+            const pos = this.gridEngine.getPosition('player');
+            const doorUnderPlayer = this._tiledDoors.find(d => d.x === pos.x && d.y === pos.y);
+            if (doorUnderPlayer) {
+                this._doorTransitioning = true;
+                if (doorUnderPlayer.nextMap === 'worldscene') {
+                    this.leaveLocation();
+                } else {
+                    this._enterTiledDoor(doorUnderPlayer);
+                }
+                return;
+            }
+        }
+        this._frameCount = (this._frameCount || 0) + 1;
+
+        // Update interaction hint
+        this._updateHint();
+
+        // SPACE to interact
+        if (Phaser.Input.Keyboard.JustDown(this._keys.space) || window.joypadAction) {
+            window.joypadAction = false;
+            this._tiledInteract();
+        }
+    }
+
+    _updateClassicMode(time, delta) {
+        if (!this.player.body) return;
+
+        this.player.body.setVelocity(0);
+
+        const sk = this.player.texture.key;
+        if (this.cursors.left.isDown) {
+            this.player.body.setVelocityX(-this.walkSpeed);
+            this.player.facing = 'left';
+            if (this.anims.exists(`${sk}_left`)) this.player.anims.play(`${sk}_left`, true);
+        } else if (this.cursors.right.isDown) {
+            this.player.body.setVelocityX(this.walkSpeed);
+            this.player.facing = 'right';
+            if (this.anims.exists(`${sk}_right`)) this.player.anims.play(`${sk}_right`, true);
+        } else if (this.cursors.up.isDown) {
+            this.player.body.setVelocityY(-this.walkSpeed);
+            this.player.facing = 'up';
+            if (this.anims.exists(`${sk}_up`)) this.player.anims.play(`${sk}_up`, true);
+        } else if (this.cursors.down.isDown) {
+            this.player.body.setVelocityY(this.walkSpeed);
+            this.player.facing = 'down';
+            if (this.anims.exists(`${sk}_down`)) this.player.anims.play(`${sk}_down`, true);
+        } else {
+            this.player.anims.stop();
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.actionKey)) {
+            this.checkForInteraction();
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    // Tiled Mode — Interaction System
+    // ════════════════════════════════════════════════════
+
+    _getTargetTile() {
+        if (!this.gridEngine) return null;
+        const pos = this.gridEngine.getPosition('player');
+        const dir = this.gridEngine.getFacingDirection('player');
+        const target = { ...pos };
+        if (dir === 'left') target.x--;
+        else if (dir === 'right') target.x++;
+        else if (dir === 'up') target.y--;
+        else if (dir === 'down') target.y++;
+        return target;
+    }
+
+    _updateHint() {
+        if (!this._hintText) return;
+        const target = this._getTargetTile();
+        if (!target) { this._hintText.setAlpha(0); return; }
+
+        const painting = this._tiledPaintings.find(p => p.x === target.x && p.y === target.y);
+        const npc = this._tiledNPCs.find(n => n.x === target.x && n.y === target.y);
+        const door = this._tiledDoors.find(d => d.x === target.x && d.y === target.y);
+        const dialog = this._tiledDialogs.find(d => d.x === target.x && d.y === target.y);
+
+        if (painting) {
+            this._hintText.setText('[SPACE] View Artwork').setAlpha(1);
+        } else if (npc) {
+            this._hintText.setText(`[SPACE] Talk to ${npc.label || 'NPC'}`).setAlpha(1);
+        } else if (door) {
+            this._hintText.setText('[SPACE] Exit').setAlpha(1);
+        } else if (dialog) {
+            this._hintText.setText('[SPACE] Read').setAlpha(1);
+        } else {
+            this._hintText.setAlpha(0);
+        }
+    }
+
+    _tiledInteract() {
+        const target = this._getTargetTile();
+        if (!target) return;
+
+        // Also check the tile the player is standing on (for doors you walk onto)
+        const playerPos = this.gridEngine ? this.gridEngine.getPosition('player') : null;
+
+        // Check paintings
+        const painting = this._tiledPaintings.find(p => p.x === target.x && p.y === target.y);
+        if (painting) {
+            this._showPaintingPopup(painting);
+            return;
+        }
+
+        // Check NPCs — check both facing tile and current position for GridEngine NPCs
+        const npc = this._tiledNPCs.find(n => {
+            if (n.x === target.x && n.y === target.y) return true;
+            // Also check GridEngine position for NPCs that may have moved
+            if (this.gridEngine) {
+                const npcIdx = this._tiledNPCs.indexOf(n);
+                try {
+                    const npcPos = this.gridEngine.getPosition(`gallery_npc_${npcIdx}`);
+                    return npcPos.x === target.x && npcPos.y === target.y;
+                } catch (e) { /* NPC not in GridEngine */ }
+            }
+            return false;
+        });
+        if (npc) {
+            this._showNPCDialogue(npc);
+            return;
+        }
+
+        // Check doors — check both facing tile AND standing-on tile
+        const door = this._tiledDoors.find(d => d.x === target.x && d.y === target.y)
+            || (playerPos && this._tiledDoors.find(d => d.x === playerPos.x && d.y === playerPos.y));
+        if (door) {
+            if (door.nextMap === 'worldscene') {
+                // Return to WorldScene
+                this.leaveLocation();
+            } else {
+                // Enter another venue
+                this._enterTiledDoor(door);
+            }
+            return;
+        }
+
+        // Check dialogs/signs
+        const dialog = this._tiledDialogs.find(d => d.x === target.x && d.y === target.y);
+        if (dialog) {
+            this._showDialogBox(dialog.content);
+            return;
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    // Painting Popup
+    // ════════════════════════════════════════════════════
+
+    _showPaintingPopup(painting) {
+        this._popupActive = true;
+        this._lastViewedPainting = painting;
+
+        const { width, height } = this.scale;
+        const pw = Math.min(440, width - 40);
+        const ph = 260;
+
+        this._popupElements = [];
+
+        // Dark overlay
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7)
+            .setScrollFactor(0).setDepth(DEPTH.POPUP_BG);
+        this._popupElements.push(overlay);
+
+        // Panel
+        const panel = this.add.rectangle(width / 2, height / 2, pw, ph, 0x1a1a2e, 0.95)
+            .setScrollFactor(0).setDepth(DEPTH.POPUP_BG + 1);
+        panel.setStrokeStyle(1, 0xc9a84c);
+        this._popupElements.push(panel);
+
+        const cx = width / 2;
+        const top = height / 2 - ph / 2 + 20;
+
+        // Title
+        const title = this.add.text(cx, top, painting.title || 'Untitled', {
+            fontFamily: '"Playfair Display", Georgia, serif',
+            fontSize: '20px', color: '#c9a84c', align: 'center',
+            wordWrap: { width: pw - 40 },
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(title);
+
+        // Artist
+        const artist = this.add.text(cx, top + 32, painting.artist || 'Unknown Artist', {
+            fontFamily: '"Playfair Display"', fontSize: '14px', color: '#d4d0cc',
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(artist);
+
+        // Description
+        const desc = this.add.text(cx, top + 60, painting.description || '', {
+            fontFamily: '"Playfair Display"', fontSize: '12px', color: '#999999',
+            wordWrap: { width: pw - 60 }, align: 'center',
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(desc);
+
+        // Price
+        const price = parseInt(painting.price) || 0;
+        const priceStr = price > 0 ? `$${price.toLocaleString()}` : 'Price on Application';
+        const priceText = this.add.text(cx, top + 120, priceStr, {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#c9a84c',
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(priceText);
+
+        // Actions
+        const actions = this.add.text(cx, top + 160, '[SPACE] Close     [E] Make an Offer', {
+            fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#666666',
+        }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(actions);
+
+        // Fade in
+        this._popupElements.forEach(el => {
+            el.setAlpha(0);
+            this.tweens.add({ targets: el, alpha: el === overlay ? 0.7 : 1, duration: 200 });
+        });
+    }
+
+    _updatePopup() {
+        if (Phaser.Input.Keyboard.JustDown(this._keys.space)) {
+            this._closePopup();
+        } else if (Phaser.Input.Keyboard.JustDown(this._keys.e)) {
+            this._closePopup();
+            this._startHaggleForPainting(this._lastViewedPainting);
+        }
+    }
+
+    _closePopup() {
+        this._popupActive = false;
+        if (this._popupElements) {
+            this._popupElements.forEach(el => el.destroy());
+            this._popupElements = null;
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    // NPC Dialogue (Tiled mode)
+    // ════════════════════════════════════════════════════
+
+    _showNPCDialogue(npc) {
+        this._popupActive = true;
+        this._currentNPC = npc;
+
+        const { width, height } = this.scale;
+        this._popupElements = [];
+
+        // Dialogue box at bottom
+        const boxH = 140;
+        const boxY = height - boxH / 2 - 10;
+
+        const overlay = this.add.rectangle(width / 2, boxY, width - 20, boxH, 0x111118, 0.95)
+            .setScrollFactor(0).setDepth(DEPTH.POPUP_BG);
+        overlay.setStrokeStyle(1, 0x3a3a4e);
+        this._popupElements.push(overlay);
+
+        // NPC name
+        const nameText = this.add.text(30, boxY - boxH / 2 + 12, npc.label || npc.id, {
+            fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#c9a84c',
+        }).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(nameText);
+
+        // Dialogue text
+        const dialogueText = this.add.text(30, boxY - boxH / 2 + 32, npc.dialogue || 'Hello.', {
+            fontFamily: '"Playfair Display"', fontSize: '14px', color: '#d4d0cc',
+            wordWrap: { width: width - 80 },
+        }).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(dialogueText);
+
+        // Options
+        const optionsY = boxY + 10;
+        const options = [];
+
+        if (this._lastViewedPainting) {
+            options.push({ text: `Make an offer on "${this._lastViewedPainting.title}"`, action: 'haggle' });
+        }
+        if (npc.canHaggle === 'true' && this._tiledPaintings.length > 0) {
+            options.push({ text: 'Tell me about the artwork', action: 'info' });
+        }
+        options.push({ text: 'Just looking.', action: 'dismiss' });
+
+        options.forEach((opt, i) => {
+            const optText = this.add.text(30, optionsY + i * 18, `▸ ${opt.text}`, {
+                fontFamily: '"Press Start 2P"', fontSize: '8px',
+                color: i === 0 ? '#ffffff' : '#888888',
+            }).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT)
+              .setInteractive({ useHandCursor: true });
+
+            optText.on('pointerover', () => optText.setColor('#c9a84c'));
+            optText.on('pointerout', () => optText.setColor(i === 0 ? '#ffffff' : '#888888'));
+            optText.on('pointerdown', () => {
+                this._closePopup();
+                if (opt.action === 'haggle') {
+                    this._startHaggleForPainting(this._lastViewedPainting);
+                } else if (opt.action === 'info') {
+                    // Show info about the first painting
+                    const firstPainting = this._tiledPaintings[0];
+                    if (firstPainting) this._showPaintingPopup(firstPainting);
+                }
+                // 'dismiss' just closes
+            });
+
+            this._popupElements.push(optText);
+        });
+
+        // Close hint
+        const closeHint = this.add.text(width - 30, boxY + boxH / 2 - 16, '[SPACE] Close', {
+            fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#555555',
+        }).setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(closeHint);
+    }
+
+    // ════════════════════════════════════════════════════
+    // Dialog Box (signs/placards)
+    // ════════════════════════════════════════════════════
+
+    _showDialogBox(content) {
+        this._popupActive = true;
+        this._popupElements = [];
+
+        const { width, height } = this.scale;
+        const boxH = 80;
+        const boxY = height - boxH / 2 - 10;
+
+        const bg = this.add.rectangle(width / 2, boxY, width - 20, boxH, 0x111118, 0.95)
+            .setScrollFactor(0).setDepth(DEPTH.POPUP_BG);
+        bg.setStrokeStyle(1, 0x3a3a4e);
+        this._popupElements.push(bg);
+
+        const text = this.add.text(width / 2, boxY, content, {
+            fontFamily: '"Playfair Display"', fontSize: '14px', color: '#d4d0cc',
+            wordWrap: { width: width - 80 }, align: 'center',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(text);
+
+        const hint = this.add.text(width / 2, boxY + boxH / 2 - 12, '[SPACE]', {
+            fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#555555',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+        this._popupElements.push(hint);
+    }
+
+    // ════════════════════════════════════════════════════
+    // Haggle Launch
+    // ════════════════════════════════════════════════════
+
+    _startHaggleForPainting(painting) {
+        if (!painting) return;
+
+        const price = parseInt(painting.price) || 10000;
+        const work = {
+            id: `gallery_${painting.title?.replace(/\s/g, '_') || 'unknown'}`,
+            title: painting.title || 'Untitled',
+            artist: painting.artist || 'Unknown',
+            medium: painting.description || '',
+            basePrice: price,
+            price: price,
+        };
+
+        // Find NPC contact data if available
+        const npcId = this._currentNPC?.id || this._tiledNPCs?.[0]?.id;
+        const npc = npcId ? CONTACTS.find(c => c.id === npcId) : null;
+
+        HaggleManager.start({
+            mode: 'buy',
+            work,
+            npc,
+            askingPrice: price,
+        });
+
+        const haggleInfo = {
+            state: HaggleManager.getState(),
+        };
+
+        this.cameras.main.fadeOut(300, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.start(SCENE_KEYS.HAGGLE, {
+                ui: this.ui,
+                haggleInfo,
+                returnScene: SCENE_KEYS.LOCATION,
+                returnArgs: {
+                    venueId: this.venueId,
+                    roomId: this.roomId,
+                    venueTimeRemaining: this.venueTimeRemaining - 1,
+                    returnScene: this.returnScene,
+                    returnArgs: this.returnArgs,
+                },
+            });
+        });
+    }
+
+    _enterTiledDoor(door) {
+        this.cameras.main.fadeOut(300, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.restart({
+                venueId: door.nextMap || this.venueId,
+                roomId: door.nextMapRoom || null,
+                venueTimeRemaining: this.venueTimeRemaining,
+                ui: this.ui,
+            });
+        });
+    }
+
+    // ════════════════════════════════════════════════════
+    // Classic Mode — Room Population & Interaction
+    // ════════════════════════════════════════════════════
+
     populateRoom(centerX, centerY) {
-        // NPCs
         if (this.roomData.characters) {
             this.roomData.characters.forEach((charData, i) => {
                 if (charData.requires && !QualityGate.check(charData.requires)) return;
@@ -220,7 +1116,6 @@ export class LocationScene extends BaseScene {
             });
         }
 
-        // Exits
         if (this.roomData.exits) {
             this.roomData.exits.forEach((ext, i) => {
                 const canEnter = !ext.requires || QualityGate.check(ext.requires);
@@ -246,52 +1141,18 @@ export class LocationScene extends BaseScene {
         }
     }
 
-    update(time, delta) {
-        if (!this.player || !this.player.body) return;
-
-        this.player.body.setVelocity(0);
-
-        // Handle 4-way Input (Classic Pokemon movement)
-        const sk = this.player.texture.key; // active sprite key
-        if (this.cursors.left.isDown) {
-            this.player.body.setVelocityX(-this.walkSpeed);
-            this.player.facing = 'left';
-            if (this.anims.exists(`${sk}_left`)) this.player.anims.play(`${sk}_left`, true);
-        } else if (this.cursors.right.isDown) {
-            this.player.body.setVelocityX(this.walkSpeed);
-            this.player.facing = 'right';
-            if (this.anims.exists(`${sk}_right`)) this.player.anims.play(`${sk}_right`, true);
-        } else if (this.cursors.up.isDown) {
-            this.player.body.setVelocityY(-this.walkSpeed);
-            this.player.facing = 'up';
-            if (this.anims.exists(`${sk}_up`)) this.player.anims.play(`${sk}_up`, true);
-        } else if (this.cursors.down.isDown) {
-            this.player.body.setVelocityY(this.walkSpeed);
-            this.player.facing = 'down';
-            if (this.anims.exists(`${sk}_down`)) this.player.anims.play(`${sk}_down`, true);
-        } else {
-            this.player.anims.stop();
-        }
-
-        // Interaction Check
-        if (Phaser.Input.Keyboard.JustDown(this.actionKey)) {
-            this.checkForInteraction();
-        }
-    }
-
     checkForInteraction() {
         const range = 40;
         let pX = this.player.x;
         let pY = this.player.y;
 
-        // Check the tile directly in front of the player
         if (this.player.facing === 'left') pX -= range;
         else if (this.player.facing === 'right') pX += range;
         else if (this.player.facing === 'up') pY -= range;
         else if (this.player.facing === 'down') pY += range;
 
         let closest = null;
-        let minDist = 30; // Max allowed distance to consider
+        let minDist = 30;
 
         this.interactables.getChildren().forEach(obj => {
             const dist = Phaser.Math.Distance.Between(pX, pY, obj.x, obj.y);
@@ -309,7 +1170,6 @@ export class LocationScene extends BaseScene {
     handleInteraction(obj) {
         if (obj.interactType === 'exit') {
             if (obj.canEnter) {
-                // Find destination room cost
                 const venue = VENUE_MAP[this.venueId];
                 const destRoom = venue ? venue.rooms.find(r => r.id === obj.interactId) : null;
                 const cost = destRoom ? (destRoom.timeCost || 0) : 0;
@@ -346,24 +1206,19 @@ export class LocationScene extends BaseScene {
             fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#ff4444'
         }).setOrigin(0.5);
         this.tweens.add({
-            targets: msg,
-            y: msg.y - 20,
-            alpha: 0,
-            duration: 1500,
+            targets: msg, y: msg.y - 20, alpha: 0, duration: 1500,
             onComplete: () => msg.destroy()
         });
     }
 
     startDialogue(characterId) {
-        // Find if this NPC has a dialogue tree in this venue
         const trees = TREES_BY_NPC[characterId];
         let targetTree = null;
 
         if (trees) {
             targetTree = trees.find(t => t.venue === this.venueId);
-            if (!targetTree) targetTree = trees[0]; // fallback
+            if (!targetTree) targetTree = trees[0];
         } else {
-            // Check DIALOGUE_TREES legacy structure (some keys might be direct character IDs instead of arrays)
             if (DIALOGUE_TREES[characterId] && !Array.isArray(DIALOGUE_TREES[characterId])) {
                 targetTree = DIALOGUE_TREES[characterId];
             }
@@ -371,19 +1226,16 @@ export class LocationScene extends BaseScene {
 
         if (!targetTree) {
             console.warn(`No dialogue tree found for ${characterId} at ${this.venueId}`);
-            // Show brief generic message overhead
             this.player.body.setVelocity(0);
             return;
         }
 
         const event = DialogueTreeManager.convertTreeToEvent(targetTree);
 
-        // Pause Overworld and launch Dialogue Overlay
         this.scene.pause();
         this.scene.launch('DialogueScene', {
             event: event,
             ui: this.ui,
-            // When DialogueScene calls exitToHub(), it checks for onExit
             onExit: () => {
                 this.scene.stop('DialogueScene');
                 this.scene.resume('LocationScene');
@@ -391,11 +1243,23 @@ export class LocationScene extends BaseScene {
         });
     }
 
+    // ════════════════════════════════════════════════════
+    // Leave Location
+    // ════════════════════════════════════════════════════
+
+    cleanup() {
+        // Remove window-level keyboard listener
+        if (this._windowKeyHandler) {
+            window.removeEventListener('keydown', this._windowKeyHandler);
+            this._windowKeyHandler = null;
+        }
+        window.joypadAction = false;
+    }
+
     leaveLocation() {
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
             if (this.returnScene === 'WorldScene') {
-                // Return to WorldScene at the door position
                 GameEventBus.emit(GameEvents.SCENE_EXIT, 'LocationScene');
                 this.scene.stop();
                 GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', {
@@ -403,13 +1267,11 @@ export class LocationScene extends BaseScene {
                     spawnY: this.returnArgs?.spawnY,
                 });
             } else if (this.returnScene) {
-                // Return to other visual scene
                 this.scene.start(this.returnScene, {
                     ...this.returnArgs,
                     ui: this.ui
                 });
             } else {
-                // Return to DOM Dashboard
                 GameEventBus.emit(GameEvents.SCENE_EXIT, 'LocationScene');
                 GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                 this.showTerminalUI();

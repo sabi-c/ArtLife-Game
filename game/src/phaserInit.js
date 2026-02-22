@@ -197,9 +197,11 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
     }
 
     // Verify the scene exists in the scene manager
-    const sceneExists = window.phaserGame.scene.keys[sceneKey];
+    const sceneExists = window.phaserGame.scene.getScene(sceneKey);
     if (!sceneExists) {
-        GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene "${sceneKey}" not found.`);
+        console.error(`[DEBUG_LAUNCH_SCENE] Scene "${sceneKey}" not found. Available:`,
+            window.phaserGame.scene.scenes.map(s => s.sys.settings.key));
+        GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene "${sceneKey}" not found. Try reloading the page.`);
         return;
     }
 

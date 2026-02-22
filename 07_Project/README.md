@@ -45,6 +45,13 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 | **Claude Code (Agent 1)** | Critical bug fixes (WorldScene render, GH Pages deploy, Admin auto-init), documentation | 🟢 Active |
 | **Claude Code (Agent 2)** | Art market economy, real-world data ingestion, MarketDashboard, ArtworkDashboard | ⏸️ Idle |
 
+### Latest Session (2026-02-22 Session 5)
+- **Boot Flow Restructured**: IntroScene → TerminalLogin → CharacterSelectScene → Dashboard
+- **Gallery Interior Test Room**: Tiled JSON map + LocationScene dual-mode (classic + Tiled) + painting interaction + NPC→haggle flow
+- **PageFlow.md**: Complete navigation flow documentation in `07_Project/PageFlow.md`
+- **Antigravity Asset Prompt**: Detailed AI art generation prompt in `07_Project/Antigravity_Gallery_Assets_Prompt.md`
+- **Tests**: 53/53 flow, 5/5 unit — all green
+
 ### Known Issues & Recent Fixes (2026-02-22)
 
 | Issue | Root Cause | Fix | Status |

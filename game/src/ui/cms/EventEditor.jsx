@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { EventRegistry } from '../../managers/EventRegistry.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
 import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge, Handle, Position, MarkerType, ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -36,6 +37,7 @@ export default function EventEditor() {
             ev[field] = value;
             setEvents(updated);
             EventRegistry.jsonEvents = updated;
+            useCmsStore.getState().markDirty('events');
             if (selectedId === eventId) setJsonEdit(JSON.stringify(ev, null, 4));
         }
     };
@@ -68,6 +70,7 @@ export default function EventEditor() {
 
             setEvents(updated);
             EventRegistry.jsonEvents = updated;
+            useCmsStore.getState().markDirty('events');
             showNotif('🔥 Hot-swapped into memory');
         } catch (err) {
             showNotif('❌ JSON Error: ' + err.message);

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { EventRegistry } from '../../managers/EventRegistry.js';
 import { useStorylineStore } from '../../stores/storylineStore.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
 import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge, Handle, Position, MarkerType, ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -54,6 +55,7 @@ export default function StorylineEditor() {
             const parsed = JSON.parse(jsonEdit);
             setStorylines(parsed);
             EventRegistry.jsonStorylines = parsed;
+            useCmsStore.getState().markDirty('storylines');
             showNotif('🔥 Hot-swapped storylines into memory');
         } catch (e) {
             showNotif('❌ Invalid JSON: ' + e.message);
@@ -67,6 +69,7 @@ export default function StorylineEditor() {
             if (sl) {
                 sl[field] = value;
                 EventRegistry.jsonStorylines = updated;
+                useCmsStore.getState().markDirty('storylines');
                 if (selectedId === storylineId) setJsonEdit(JSON.stringify(sl, null, 4));
             }
             return updated;
@@ -81,6 +84,7 @@ export default function StorylineEditor() {
             sl.steps[editingStep.stepIdx][field] = value;
             setStorylines(updated);
             EventRegistry.jsonStorylines = updated;
+            useCmsStore.getState().markDirty('storylines');
         }
     };
 
@@ -351,11 +355,11 @@ const TriggerNode = ({ data }) => {
 };
 
 const StoryStepNode = ({ data }) => {
-    const { step, isCurrent, isPast, isSelected } = data;
+    const { step, isCurrent, isPast, isSelected, eventTitle, availableEvents, onLinkEvent } = data;
     const borderColor = isCurrent ? '#4caf50' : isPast ? '#666' : '#c9a84c';
     return (
         <div style={{
-            width: 200, padding: '10px 14px',
+            width: 220, padding: '10px 14px',
             border: `${isSelected ? 'solid' : 'dashed'} 1px ${borderColor}`,
             background: '#1a1a2e',
             opacity: isPast ? 0.5 : 1,
@@ -367,12 +371,37 @@ const StoryStepNode = ({ data }) => {
             <div style={{ fontWeight: 'bold', color: '#fff', fontSize: 12 }}>
                 {isCurrent && '▶ '}{step.eventId}
             </div>
+            {eventTitle && eventTitle !== step.eventId && (
+                <div style={{ fontSize: 10, color: '#88bbdd', marginTop: 2, fontStyle: 'italic' }}>
+                    “{eventTitle}”
+                </div>
+            )}
             <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>
                 Delay: {step.delayWeeks || 0}w
                 {Object.keys(step.requirements || {}).length > 0 && (
                     <div style={{ color: '#88bbdd', marginTop: 2 }}>Req: {Object.entries(step.requirements).map(([k, v]) => `${k}≥${v}`).join(', ')}</div>
                 )}
             </div>
+            {isSelected && availableEvents && (
+                <div style={{ marginTop: 6, borderTop: '1px solid #333', paddingTop: 6 }}>
+                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 3 }}>Link Event:</div>
+                    <select
+                        value={step.eventId || ''}
+                        onChange={(e) => onLinkEvent?.(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%', padding: '3px 4px', background: '#111', color: '#c9a84c',
+                            border: '1px solid #444', fontFamily: 'inherit', fontSize: 10,
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <option value="">-- select event --</option>
+                        {availableEvents.map(ev => (
+                            <option key={ev.id} value={ev.id}>{ev.id} — {ev.title || 'untitled'}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
             <Handle type="source" position={Position.Bottom} style={{ background: '#c9a84c' }} />
         </div>
     );
@@ -385,6 +414,17 @@ const nodeTypes = {
 
 function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdateStoryline, activeInfo }) {
     if (!storyline) return null;
+
+    // Get available events for the linking dropdown
+    const availableEvents = useMemo(() => EventRegistry.jsonEvents || [], []);
+
+    const handleLinkEvent = useCallback((stepIdx, newEventId) => {
+        const updatedSteps = [...(storyline.steps || [])];
+        if (updatedSteps[stepIdx]) {
+            updatedSteps[stepIdx] = { ...updatedSteps[stepIdx], eventId: newEventId };
+            onUpdateStoryline(storyline.id, 'steps', updatedSteps);
+        }
+    }, [storyline, onUpdateStoryline]);
 
     const initialNodes = [];
     const initialEdges = [];
@@ -411,12 +451,19 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
         storyline.steps.forEach((step, idx) => {
             const isCurrent = activeInfo && activeInfo.currentStep === idx;
             const isPast = activeInfo && activeInfo.currentStep > idx;
+            const eventDef = availableEvents.find(e => e.id === step.eventId);
 
             initialNodes.push({
                 id: String(idx),
                 type: 'storyStepNode',
                 position: step.position || { x: 250, y: 180 + idx * 130 },
-                data: { step, isCurrent, isPast, isSelected: editingStepIdx === idx },
+                data: {
+                    step, isCurrent, isPast,
+                    isSelected: editingStepIdx === idx,
+                    eventTitle: eventDef?.title || null,
+                    availableEvents: editingStepIdx === idx ? availableEvents : null,
+                    onLinkEvent: (newId) => handleLinkEvent(idx, newId),
+                },
                 draggable: true,
             });
 
@@ -454,11 +501,18 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
                     const existing = nds.find(n => n.id === String(idx));
                     const isCurrent = activeInfo && activeInfo.currentStep === idx;
                     const isPast = activeInfo && activeInfo.currentStep > idx;
+                    const eventDef = availableEvents.find(e => e.id === step.eventId);
                     newNodes.push({
                         id: String(idx),
                         type: 'storyStepNode',
                         position: existing?.position || step.position || { x: 250, y: 180 + idx * 130 },
-                        data: { step, isCurrent, isPast, isSelected: editingStepIdx === idx },
+                        data: {
+                            step, isCurrent, isPast,
+                            isSelected: editingStepIdx === idx,
+                            eventTitle: eventDef?.title || null,
+                            availableEvents: editingStepIdx === idx ? availableEvents : null,
+                            onLinkEvent: (newId) => handleLinkEvent(idx, newId),
+                        },
                         draggable: true,
                     });
                 });
@@ -493,12 +547,32 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
         }
     }, [storyline, onNodesChange, onUpdateStoryline]);
 
+    // Handle new edge connections — rewire step ordering
+    const onConnect = useCallback((params) => {
+        const { source, target } = params;
+        if (source === 'trigger') return; // Can't rewire the trigger
+        const sourceIdx = parseInt(source);
+        const targetIdx = parseInt(target);
+        if (isNaN(sourceIdx) || isNaN(targetIdx)) return;
+
+        // For now, just add the visual edge — step reordering is complex
+        setEdges(eds => addEdge({
+            ...params,
+            style: { stroke: '#c9a84c', strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#c9a84c' },
+            animated: true,
+        }, eds));
+
+        console.log(`[StorylineEditor] Connected step ${sourceIdx} → step ${targetIdx}`);
+    }, [setEdges]);
+
     return (
         <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={handleNodesChange}
             onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
             nodeTypes={nodeTypes}
             onNodeClick={(_, node) => {
                 if (node.id !== 'trigger') onNodeClick(parseInt(node.id));
@@ -507,6 +581,7 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
             proOptions={{ hideAttribution: true }}
             minZoom={0.2}
             maxZoom={2}
+            defaultEdgeOptions={{ type: 'smoothstep' }}
         >
             <Background color="#333" gap={20} />
             <Controls style={{ fill: '#888', background: '#111' }} />

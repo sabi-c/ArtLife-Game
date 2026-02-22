@@ -22,6 +22,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { VIEW, OVERLAY } from '../constants/views.js';
+import RoomManager from './cms/RoomManager.jsx';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
 
@@ -1146,6 +1147,7 @@ export default function ContentStudio({ onClose }) {
                     </span>
                     <div style={{ display: 'flex', gap: 6, marginLeft: 12 }}>
                         <button onClick={() => setActiveTab('content')} style={tabStyle(activeTab === 'content')}>CONTENT</button>
+                        <button onClick={() => setActiveTab('rooms')} style={tabStyle(activeTab === 'rooms')}>ROOMS</button>
                         <button onClick={() => setActiveTab('flowmap')} style={tabStyle(activeTab === 'flowmap')}>FLOW MAP</button>
                     </div>
                 </div>
@@ -1176,6 +1178,10 @@ export default function ContentStudio({ onClose }) {
                         <WiringInspector />
                     </div>
                 </div>
+            )}
+
+            {activeTab === 'rooms' && (
+                <RoomManager onClose={onClose} />
             )}
 
             {activeTab === 'flowmap' && (

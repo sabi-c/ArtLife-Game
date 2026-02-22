@@ -285,7 +285,12 @@
             {
               "name": "nextMap",
               "type": "string",
-              "value": "gallery_opening"
+              "value": "gallery_test"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "gallery_test_main"
             }
           ],
           "rotation": 0,
@@ -304,7 +309,12 @@
             {
               "name": "nextMap",
               "type": "string",
-              "value": "cocktail_party"
+              "value": "gallery_test"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "gallery_test_main"
             }
           ],
           "rotation": 0,
@@ -750,6 +760,274 @@
           "width": 0,
           "x": 599.225719575829,
           "y": 1132.24485215732
+        },
+        {
+          "height": 0,
+          "id": 130,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "gallery_test"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "gallery_test_main"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 576,
+          "y": 480
+        },
+        {
+          "height": 0,
+          "id": 131,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "SoHo Contemporary Gallery — Enter to view artwork"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 576,
+          "y": 432
+        },
+        {
+          "height": 0,
+          "id": 140,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "uptown_gallery"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "uptown_gallery_main"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 576,
+          "y": 192
+        },
+        {
+          "height": 0,
+          "id": 141,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "Uptown Contemporary — Group Show"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 576,
+          "y": 144
+        },
+        {
+          "height": 0,
+          "id": 142,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "artist_studio_visit"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "artist_studio_visit_main"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 336,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 143,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "Kwame Asante — Studio"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 384,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 144,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "soho_gallery"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "soho_gallery_lobby_main"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "value": "SoHo Gallery"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 816,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 145,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "SoHo Gallery — Group Show"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 864,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 146,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "chelsea_gallery"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "chelsea_gallery_main"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "value": "Chelsea Gallery"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 960,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 147,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "Chelsea Gallery — New Works"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 1008,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 148,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "chelsea_showcase"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "chelsea_showcase_main"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 1056,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 149,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "Chelsea Showcase — Contemporary Masters"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 1056,
+          "y": 216
         }
       ],
       "opacity": 1,
@@ -760,7 +1038,7 @@
     }
   ],
   "nextlayerid": 14,
-  "nextobjectid": 127,
+  "nextobjectid": 150,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.10.2",

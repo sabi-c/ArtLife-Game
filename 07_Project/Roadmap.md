@@ -7,12 +7,30 @@
 
 ## Current State (2026-02-22)
 
-**Version:** v0.3.0
-**Tests:** 36/36 unit, 36/38 flow (2 pre-existing Phase A timing issues) — all green
-**Build:** Clean (no new warnings)
+**Version:** v0.3.1
+**Tests:** 53/53 flow, 5/5 unit — all green
+**Build:** Clean
 **Branch:** `main`
-**Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE ✅
-**Phase 3:** ~98% complete
+**Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
+**Phase 3:** Complete. Phase 4 active.
+
+### Gallery Interior Test Room (2026-02-22 Session 5)
+- **Gallery Tiled Map** — `public/content/maps/gallery_test.json`: 12x10 room with floor/wall tiles, 5 painting objects, 1 NPC dealer, 1 dialog sign, spawn point, exit door. Uses grounds.png tileset (48px tiles).
+- **LocationScene Dual-Mode** — `src/scenes/LocationScene.js` rewritten with two modes:
+  - **Classic mode**: Existing venues with hardcoded tile array + Arcade physics (unchanged behavior)
+  - **Tiled mode**: New `roomData.tiledMap` property triggers Tiled JSON loading + GridEngine movement + painting/NPC/door interaction system
+- **Painting Interaction Popup** — SPACE on a painting shows artwork detail overlay (title, artist, description, price). Press A to make an offer → HaggleScene.
+- **NPC Dialogue → Haggle Flow** — Talk to Elena Ross → dialogue popup with options → "Make an offer" launches HaggleManager.start() → HaggleScene with proper return-to-gallery flow.
+- **WorldScene Door** — Added `gallery_test` door + sign to pallet_town.json objects layer. Walk up to the gallery in WorldScene → SPACE to enter → LocationScene (Tiled mode).
+- **BootScene Preload** — gallery_test map JSON preloaded in BootScene.
+- **rooms.js** — Added `GALLERY_TEST` venue with `tiledMap: 'gallery_test'` room property.
+- **PageFlow.md** — New document in `07_Project/` mapping every screen, overlay, and scene transition.
+
+### Boot Flow Restructure (2026-02-22 Session 5)
+- IntroScene now plays first on fresh visits (cinematic "$67 billion" briefing)
+- IntroScene → TerminalLogin (React) → CharacterSelectScene (Phaser) → Dashboard
+- Travel button fixed: was emitting dead GLOBAL_MAP overlay, now pushes cityScreen
+- Test suite updated: 53/53 checks passing with new boot flow
 
 ### CMS Store Audit & Fixes (2026-02-22 Session 4)
 - **StorylineEditor.jsx** — Fixed `s.active`/`s.completed` → `s.activeStorylines`/`s.completedStorylines` (runtime crash)
@@ -279,6 +297,37 @@
 | The WorldScene Rebuild | ✅ Done | Extends BaseScene, proper layer depth ordering, GridEngine with Tiled collision props, spawn point from objects, opaque bg, ESC exit, error recovery, door/dialog interaction from Tiled objects. |
 | React MobileJoypad Overlay | ✅ Done | D-pad with arrow symbols (56px touch targets), action button (A), exit button. Gold highlight on active direction. Pointer events with global touch failsafe. |
 | Admin Test Trigger & Exit UI | ✅ Done | Admin Dashboard "Launch: World Map (Pokemon)" button. Terminal "Walk the Neighborhood" in late-game. Both use GameEventBus.DEBUG_LAUNCH_SCENE. MobileJoypad EXIT calls scene.exitScene(). |
+
+### 4B2. Interior Tiled Maps (Gallery Test Room)
+| Task | Status | Notes |
+|---|---|---|
+| Create gallery_test.json Tiled map | ✅ Done | 12x10 room, 5 paintings, 1 NPC, door, sign. Uses grounds tileset. |
+| Upgrade LocationScene for dual-mode (classic + Tiled) | ✅ Done | `roomData.tiledMap` branch: GridEngine movement, painting popups, NPC dialogue, haggle launch |
+| Add gallery venue to rooms.js | ✅ Done | `GALLERY_TEST` with `tiledMap: 'gallery_test'` property |
+| Wire gallery door in WorldScene map | ✅ Done | Door + sign added to pallet_town.json objects |
+| Preload gallery map in BootScene | ✅ Done | `map_gallery_test` key |
+| Create PageFlow.md documentation | ✅ Done | Complete navigation flow map in `07_Project/PageFlow.md` |
+| Generate AI art assets (Antigravity prompt) | ✅ Done | 20 assets generated via Antigravity v2 (green screen), processed through gallery_asset_pipeline.py |
+| Replace placeholder tiles with custom assets | ✅ Done | LimeZu Room_Builder_free_48x48.png tileset (professional 391 tiles), painting/furniture/NPC sprites with green screen cleanup, auto-zoom camera |
+| Mobile Game Boy controls for gallery | ✅ Done | LocationScene emits SCENE_READY → React shows MobileJoypad, A button opens popups, D-pad movement, canvas auto-resized |
+| Gallery E2E test suite | ✅ Done | 29/29 tests: WorldScene→door→gallery, painting popup, NPC dialogue, exit door, mobile joypad + viewport |
+| Auto-door trigger on walk-through | ✅ Done | Player steps onto door tile → auto-exits (Pokemon-style), with spawn protection to prevent instant re-exit |
+| Room Generation Pipeline | ✅ Done | `npm run generate:room` — 5 templates (gallery, studio, office, bar, warehouse). Generates Tiled JSON + rooms.js snippet + BootScene preload line. |
+| Uptown Gallery (generated) | ✅ Done | Second gallery room generated via pipeline. Door + sign wired in WorldScene map. |
+| Artist Studio Visit (generated) | ✅ Done | Studio room for Kwame Asante. Generated via pipeline, wired into game. |
+| WorldScene "not found" fix | ✅ Done | Replaced `scene.keys[]` with `scene.getScene()` for reliable scene existence check |
+| Camera setZoom race condition fix | ✅ Done | Added null guard on WorldScene resize handler to prevent crash after scene stop |
+| LimeZu character sprites integration | ✅ Done | adam/alex/amelia/bob run+idle sprites (16×32), scaled 3x for 48px tiles. NPCs in LocationScene use LimeZu walk animations. |
+| Interiors tileset mapping | ✅ Done | `interior_tile_map.json`: 478 tile IDs across 18 categories + 6 room presets from Interiors_free_48x48.png |
+| Room generator Interiors upgrade | ✅ Done | All 5 templates (gallery, studio, office, bar, warehouse) now place tile-based furniture from Interiors tileset (sofas, desks, bookcases, plants, lamps, rugs, counters, paintings) |
+| Multi-room venue generator | ✅ Done | `node tools/generate_room.js venue <preset> <id>` — 3 presets (gallery_venue, auction_house, artist_compound). Generates connected rooms with internal doors. |
+| SoHo Gallery (3-room venue) | ✅ Done | Lobby → Exhibition → Office. Generated via venue pipeline, wired into rooms.js + BootScene + pallet_town.json. |
+| Pokemon-style building enter transition | ✅ Done | Fade to black → location name overlay → launch LocationScene. Replaces simple camera fadeout. |
+| Door interaction fix (hint + SPACE key) | ✅ Done | Fixed hint system (`d.tileX`→`d.x`), moved doors to reachable tiles, added window-level SPACE fallback for canvas focus, `_doorTransitioning` guard, debug logging. |
+| Chelsea Gallery showcase room | ✅ Done | Hand-crafted 16×14 gallery with beige Interiors floor, gold sofa, 9 paintings, reception desk, plants, rugs. Wired into rooms.js + BootScene + pallet_town.json. |
+| Map editor research | ✅ Done | Porymap/AwesomeMapEditor/Pokemon Style Map Generator all dead ends (GBA-specific). **Tiled Map Editor** is the correct tool — native JSON export, custom tileset support, macOS via Homebrew. |
+| LocationScene camera fix | ✅ Done | Fixed zoom from "fit whole map" to fixed 2-2.5x (matching WorldScene). Added window-level SPACE/ESC fallback, cleanup handler, responsive resize, location name toast. |
+| Tiled Map Editor setup | ✅ Done | `brew install --cask tiled` (v1.11.2). Template project at `tools/tiled/` with Room_Builder + Interiors .tsx files, room_template.tmx, import_map.js converter, README guide. |
 
 ### 4C. The Content Asset Pipeline
 | Task | Status | Notes |

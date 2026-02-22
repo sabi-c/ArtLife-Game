@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { useCmsStore } from '../stores/cmsStore.js';
 
-// Sub-components that we will build out
+// Sub-components
 import StorylineEditor from './cms/StorylineEditor.jsx';
 import EventEditor from './cms/EventEditor.jsx';
 import NPCEditor from './cms/NPCEditor.jsx';
@@ -9,38 +10,110 @@ import ArtworkEditor from './cms/ArtworkEditor.jsx';
 import VenueEditor from './cms/VenueEditor.jsx';
 import DataIngestion from './cms/DataIngestion.jsx';
 import KanbanBoard from './cms/KanbanBoard.jsx';
+import TimelineCalendar from './cms/TimelineCalendar.jsx';
+import HaggleEditor from './cms/HaggleEditor.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board' },
+    { id: 'timeline', icon: '📅', label: 'Timeline' },
     { id: 'storylines', icon: '⛓️', label: 'Storylines' },
     { id: 'events', icon: '🌳', label: 'Events / Dialogue' },
     { id: 'npcs', icon: '👤', label: 'NPCs & Roles' },
     { id: 'artworks', icon: '🖼️', label: 'Artworks / Market' },
+    { id: 'haggle', icon: '⚔️', label: 'Haggle Battles' },
     { id: 'venues', icon: '🏢', label: 'Venues / Map' },
     { id: 'ingest', icon: '🤖', label: 'AI Ingestion Port' },
 ];
 
 export default function MasterCMS({ onClose }) {
     const [activeTab, setActiveTab] = useState('board');
+    const [saveFlash, setSaveFlash] = useState(null);
+    const fileInputRef = useRef(null);
 
-    // Close on ESC
+    const hasUnsaved = useCmsStore(s => s.hasUnsavedChanges());
+    const dirtyDomains = useCmsStore(s => s.getDirtyDomains());
+    const lastSaveTime = useCmsStore(s => s.lastSaveTime);
+    const saveAll = useCmsStore(s => s.saveAll);
+    const exportBundle = useCmsStore(s => s.exportBundle);
+    const importBundle = useCmsStore(s => s.importBundle);
+    const startAutoSave = useCmsStore(s => s.startAutoSave);
+    const stopAutoSave = useCmsStore(s => s.stopAutoSave);
+
+    // Start auto-save on mount
     useEffect(() => {
-        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        startAutoSave();
+        return () => stopAutoSave();
+    }, []);
+
+    // Close on ESC — with unsaved changes warning
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                if (hasUnsaved) {
+                    const ok = window.confirm('You have unsaved CMS changes. Save before closing?');
+                    if (ok) saveAll();
+                }
+                onClose();
+            }
+        };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
+    }, [onClose, hasUnsaved, saveAll]);
+
+    const handleSave = () => {
+        const ok = saveAll();
+        setSaveFlash(ok ? '✅ Saved' : '❌ Save failed');
+        setTimeout(() => setSaveFlash(null), 2500);
+    };
+
+    const handleExport = () => {
+        exportBundle();
+        setSaveFlash('📦 Exported');
+        setTimeout(() => setSaveFlash(null), 2500);
+    };
+
+    const handleImport = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImportFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const ok = importBundle(ev.target.result);
+            setSaveFlash(ok ? '📥 Imported' : '❌ Import failed');
+            setTimeout(() => setSaveFlash(null), 2500);
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    };
+
+    const formatSaveTime = (ts) => {
+        if (!ts) return 'never';
+        const d = new Date(ts);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'board': return <KanbanBoard />;
+            case 'timeline': return <TimelineCalendar />;
             case 'storylines': return <StorylineEditor />;
             case 'events': return <EventEditor />;
             case 'npcs': return <NPCEditor />;
             case 'artworks': return <ArtworkEditor />;
+            case 'haggle': return <HaggleEditor />;
             case 'venues': return <VenueEditor />;
             case 'ingest': return <DataIngestion />;
             default: return null;
         }
+    };
+
+    const btnStyle = {
+        background: 'transparent', border: '1px solid #444', color: '#aaa',
+        padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+        transition: 'all 0.15s',
     };
 
     return (
@@ -53,20 +126,63 @@ export default function MasterCMS({ onClose }) {
             {/* Header */}
             <header style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '12px 20px', background: '#111', borderBottom: '1px solid #333'
+                padding: '10px 20px', background: '#111', borderBottom: '1px solid #333'
             }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <h1 style={{ margin: 0, color: '#c9a84c', fontSize: 18, letterSpacing: 2 }}>
                         MASTER CMS
                     </h1>
-                    <span style={{ color: '#666', fontSize: 12 }}>
-                        Visual Database Editor
-                    </span>
+                    {/* Save status indicator */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{
+                            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                            background: hasUnsaved ? '#ff6b35' : '#4caf50',
+                            boxShadow: hasUnsaved ? '0 0 6px #ff6b35' : '0 0 4px #4caf50',
+                        }} />
+                        <span style={{ color: '#666', fontSize: 11 }}>
+                            {hasUnsaved
+                                ? `Unsaved: ${dirtyDomains.join(', ')}`
+                                : `Saved ${formatSaveTime(lastSaveTime)}`
+                            }
+                        </span>
+                    </div>
+                    {saveFlash && (
+                        <span style={{ color: '#4caf50', fontSize: 12, fontWeight: 'bold' }}>
+                            {saveFlash}
+                        </span>
+                    )}
                 </div>
-                <div>
-                    <button onClick={onClose} style={{
-                        background: 'transparent', color: '#888', border: '1px solid #444',
-                        padding: '6px 16px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12
+
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button onClick={handleSave} style={{
+                        ...btnStyle,
+                        borderColor: hasUnsaved ? '#c9a84c' : '#444',
+                        color: hasUnsaved ? '#c9a84c' : '#666',
+                    }}>
+                        💾 Save All
+                    </button>
+                    <button onClick={handleExport} style={btnStyle}>
+                        📦 Export
+                    </button>
+                    <button onClick={handleImport} style={btnStyle}>
+                        📥 Import
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportFile}
+                        style={{ display: 'none' }}
+                    />
+                    <div style={{ width: 1, height: 20, background: '#333', margin: '0 4px' }} />
+                    <button onClick={() => {
+                        if (hasUnsaved) {
+                            const ok = window.confirm('Save unsaved changes before closing?');
+                            if (ok) saveAll();
+                        }
+                        onClose();
+                    }} style={{
+                        ...btnStyle, color: '#888',
                     }}>
                         [ ESC ] CLOSE
                     </button>
