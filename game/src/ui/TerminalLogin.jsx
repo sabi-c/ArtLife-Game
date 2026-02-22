@@ -440,7 +440,7 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                         color: '#5a5a6a', letterSpacing: '2px', borderBottom: '1px dashed #2a2a3a',
                         paddingBottom: '15px', marginTop: '10px', fontSize: 13
                     }}>
-                        SECURE TERMINAL // V2.1.0 // SYSTEM READY
+                        SECURE TERMINAL // V{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.3.0'}-{typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'dev'} // SYSTEM READY
                     </div>
                 </div>
 

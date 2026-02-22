@@ -10,6 +10,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useContentStore, CATEGORY_META } from '../stores/contentStore.js';
 import {
     ReactFlow,
+    ReactFlowProvider,
     Background,
     Controls,
     MiniMap,
@@ -434,12 +435,12 @@ function findConnections(entity, allEntities) {
 
 // Group colors
 const GC = {
-    boot:     '#c94040',  // Red — boot/login flow
-    core:     '#c9a84c',  // Gold — core game loop
+    boot: '#c94040',  // Red — boot/login flow
+    core: '#c9a84c',  // Gold — core game loop
     terminal: '#3a8a5c',  // Green — terminal screens (action)
-    info:     '#88bbdd',  // Blue — info/stat screens
-    scene:    '#aa66cc',  // Purple — Phaser scenes
-    overlay:  '#e08050',  // Orange — React overlays
+    info: '#88bbdd',  // Blue — info/stat screens
+    scene: '#aa66cc',  // Purple — Phaser scenes
+    overlay: '#e08050',  // Orange — React overlays
 };
 
 // Node style helper
@@ -473,76 +474,76 @@ const flowEdge = (source, target, animated = false) => ({
 // ── All pages/screens the user can see ──
 const INITIAL_NODES = [
     // ── BOOT FLOW (TerminalLogin.jsx steps) ──
-    flowNode('boot',            'BOOT\n(Typewriter)',      0,    0,   GC.boot, 'boot'),
-    flowNode('profile_menu',    'PROFILE MENU',            0,    80,  GC.boot, 'boot'),
-    flowNode('profile_create',  'CREATE PROFILE',          200,  40,  GC.boot, 'boot'),
-    flowNode('profile_login',   'LOGIN',                   200,  120, GC.boot, 'boot'),
-    flowNode('primary_menu',    'PRIMARY MENU\n(New/Load)', 0,   180, GC.boot, 'boot'),
-    flowNode('dossier_select',  'DOSSIER SELECT\n(Save Slots)', 200, 200, GC.boot, 'boot'),
-    flowNode('confirm',         'CONFIRM\n(Review)',       400,  160, GC.boot, 'boot'),
-    flowNode('auth',            'AUTH\n(Authenticating)',   400,  240, GC.boot, 'boot'),
+    flowNode('boot', 'BOOT\n(Typewriter)', 0, 0, GC.boot, 'boot'),
+    flowNode('profile_menu', 'PROFILE MENU', 0, 80, GC.boot, 'boot'),
+    flowNode('profile_create', 'CREATE PROFILE', 200, 40, GC.boot, 'boot'),
+    flowNode('profile_login', 'LOGIN', 200, 120, GC.boot, 'boot'),
+    flowNode('primary_menu', 'PRIMARY MENU\n(New/Load)', 0, 180, GC.boot, 'boot'),
+    flowNode('dossier_select', 'DOSSIER SELECT\n(Save Slots)', 200, 200, GC.boot, 'boot'),
+    flowNode('confirm', 'CONFIRM\n(Review)', 400, 160, GC.boot, 'boot'),
+    flowNode('auth', 'AUTH\n(Authenticating)', 400, 240, GC.boot, 'boot'),
 
     // ── PHASER INTRO SCENES ──
-    flowNode('title_scene',     'TITLE SCENE',             0,    320, GC.scene, 'scene'),
-    flowNode('intro_scene',     'INTRO SCENE\n(Cutscene)', 200,  320, GC.scene, 'scene'),
-    flowNode('char_select',     'CHARACTER SELECT',        400,  320, GC.scene, 'scene'),
+    flowNode('title_scene', 'TITLE SCENE', 0, 320, GC.scene, 'scene'),
+    flowNode('intro_scene', 'INTRO SCENE\n(Cutscene)', 200, 320, GC.scene, 'scene'),
+    flowNode('char_select', 'CHARACTER SELECT', 400, 320, GC.scene, 'scene'),
 
     // ── CORE TERMINAL DASHBOARD ──
-    flowNode('dashboard',       'DASHBOARD\n(Main Hub)',   0,    460, GC.core, 'core'),
+    flowNode('dashboard', 'DASHBOARD\n(Main Hub)', 0, 460, GC.core, 'core'),
 
     // ── MARKET DESK ──
-    flowNode('market',          'BROWSE MARKET',           -200, 580, GC.terminal, 'terminal'),
-    flowNode('inspect',         'INSPECT ARTWORK',         -380, 580, GC.terminal, 'terminal'),
-    flowNode('collection',      'MY COLLECTION',           -200, 660, GC.terminal, 'terminal'),
-    flowNode('piece_detail',    'PIECE DETAIL',            -380, 660, GC.terminal, 'terminal'),
+    flowNode('market', 'BROWSE MARKET', -200, 580, GC.terminal, 'terminal'),
+    flowNode('inspect', 'INSPECT ARTWORK', -380, 580, GC.terminal, 'terminal'),
+    flowNode('collection', 'MY COLLECTION', -200, 660, GC.terminal, 'terminal'),
+    flowNode('piece_detail', 'PIECE DETAIL', -380, 660, GC.terminal, 'terminal'),
 
     // ── OPERATIONS ──
-    flowNode('venue_picker',    'VENUE PICKER',            0,    580, GC.terminal, 'terminal'),
-    flowNode('venue_detail',    'VENUE DETAIL',            0,    660, GC.terminal, 'terminal'),
-    flowNode('room',            'ROOM VIEW',               0,    740, GC.terminal, 'terminal'),
-    flowNode('npc_talk',        'NPC DIALOGUE',            170,  740, GC.terminal, 'terminal'),
-    flowNode('city',            'TRAVEL / CITY',           200,  580, GC.terminal, 'terminal'),
-    flowNode('news',            'MARKET INTEL',            200,  660, GC.terminal, 'terminal'),
+    flowNode('venue_picker', 'VENUE PICKER', 0, 580, GC.terminal, 'terminal'),
+    flowNode('venue_detail', 'VENUE DETAIL', 0, 660, GC.terminal, 'terminal'),
+    flowNode('room', 'ROOM VIEW', 0, 740, GC.terminal, 'terminal'),
+    flowNode('npc_talk', 'NPC DIALOGUE', 170, 740, GC.terminal, 'terminal'),
+    flowNode('city', 'TRAVEL / CITY', 200, 580, GC.terminal, 'terminal'),
+    flowNode('news', 'MARKET INTEL', 200, 660, GC.terminal, 'terminal'),
 
     // ── DOSSIER ──
-    flowNode('phone',           'PHONE\n(NPC Contacts)',   400,  460, GC.info, 'info'),
-    flowNode('contact_detail',  'CONTACT DETAIL',          580,  460, GC.info, 'info'),
-    flowNode('ego',             'EGO DASHBOARD\n(Stats)',  400,  540, GC.info, 'info'),
-    flowNode('journal',         'JOURNAL',                 400,  620, GC.info, 'info'),
-    flowNode('legacy_end',      'LEGACY / RETIRE',         580,  620, GC.info, 'info'),
+    flowNode('phone', 'PHONE\n(NPC Contacts)', 400, 460, GC.info, 'info'),
+    flowNode('contact_detail', 'CONTACT DETAIL', 580, 460, GC.info, 'info'),
+    flowNode('ego', 'EGO DASHBOARD\n(Stats)', 400, 540, GC.info, 'info'),
+    flowNode('journal', 'JOURNAL', 400, 620, GC.info, 'info'),
+    flowNode('legacy_end', 'LEGACY / RETIRE', 580, 620, GC.info, 'info'),
 
     // ── WEEK CYCLE ──
-    flowNode('calendar_event',  'CALENDAR EVENT\n(Attend)', -200, 460, GC.core, 'core'),
-    flowNode('week_advance',    'ADVANCE WEEK',            -200, 380, GC.core, 'core'),
-    flowNode('week_report',     'WEEK REPORT',             -380, 380, GC.core, 'core'),
+    flowNode('calendar_event', 'CALENDAR EVENT\n(Attend)', -200, 460, GC.core, 'core'),
+    flowNode('week_advance', 'ADVANCE WEEK', -200, 380, GC.core, 'core'),
+    flowNode('week_report', 'WEEK REPORT', -380, 380, GC.core, 'core'),
 
     // ── PHASER SCENES ──
-    flowNode('haggle',          'HAGGLE SCENE\n(Art Battle)', 600, 720, GC.scene, 'scene'),
-    flowNode('world',           'WORLD SCENE\n(Pokemon Walk)', 400, 720, GC.scene, 'scene'),
-    flowNode('location',        'LOCATION SCENE',          200,  820, GC.scene, 'scene'),
-    flowNode('dialogue_scene',  'DIALOGUE SCENE\n(Visual Novel)', 400, 820, GC.scene, 'scene'),
-    flowNode('mac_dialogue',    'MAC DIALOGUE',            600,  820, GC.scene, 'scene'),
-    flowNode('overworld',       'OVERWORLD\n(Legacy)',     0,    820, GC.scene, 'scene'),
-    flowNode('fast_travel',     'FAST TRAVEL\n(Map)',      200,  720, GC.scene, 'scene'),
-    flowNode('end_scene',       'END SCENE\n(Game Over)',  0,    920, GC.scene, 'scene'),
-    flowNode('menu_scene',      'MENU SCENE',              200,  920, GC.scene, 'scene'),
+    flowNode('haggle', 'HAGGLE SCENE\n(Art Battle)', 600, 720, GC.scene, 'scene'),
+    flowNode('world', 'WORLD SCENE\n(Pokemon Walk)', 400, 720, GC.scene, 'scene'),
+    flowNode('location', 'LOCATION SCENE', 200, 820, GC.scene, 'scene'),
+    flowNode('dialogue_scene', 'DIALOGUE SCENE\n(Visual Novel)', 400, 820, GC.scene, 'scene'),
+    flowNode('mac_dialogue', 'MAC DIALOGUE', 600, 820, GC.scene, 'scene'),
+    flowNode('overworld', 'OVERWORLD\n(Legacy)', 0, 820, GC.scene, 'scene'),
+    flowNode('fast_travel', 'FAST TRAVEL\n(Map)', 200, 720, GC.scene, 'scene'),
+    flowNode('end_scene', 'END SCENE\n(Game Over)', 0, 920, GC.scene, 'scene'),
+    flowNode('menu_scene', 'MENU SCENE', 200, 920, GC.scene, 'scene'),
 
     // ── REACT OVERLAYS ──
-    flowNode('admin',           'ADMIN DASHBOARD\n(~ key)', 600, 0,   GC.overlay, 'overlay'),
-    flowNode('settings',        'SETTINGS\n(Overlay)',     600,  80,  GC.overlay, 'overlay'),
-    flowNode('inventory',       'INVENTORY\n(Overlay)',    780,  0,   GC.overlay, 'overlay'),
-    flowNode('cms',             'CONTENT STUDIO\n(F1)',    780,  80,  GC.overlay, 'overlay'),
-    flowNode('player_dash',     'PLAYER DASHBOARD\n(React)', 600, 160, GC.overlay, 'overlay'),
+    flowNode('admin', 'ADMIN DASHBOARD\n(~ key)', 600, 0, GC.overlay, 'overlay'),
+    flowNode('settings', 'SETTINGS\n(Overlay)', 600, 80, GC.overlay, 'overlay'),
+    flowNode('inventory', 'INVENTORY\n(Overlay)', 780, 0, GC.overlay, 'overlay'),
+    flowNode('cms', 'CONTENT STUDIO\n(F1)', 780, 80, GC.overlay, 'overlay'),
+    flowNode('player_dash', 'PLAYER DASHBOARD\n(React)', 600, 160, GC.overlay, 'overlay'),
 
     // ── SAVE/LOAD / SYSTEM ──
-    flowNode('save_load',       'SAVE / LOAD',             -380, 460, GC.boot, 'boot'),
-    flowNode('pause_menu',      'PAUSE MENU',              -380, 540, GC.boot, 'boot'),
-    flowNode('settings_term',   'SETTINGS\n(Terminal)',    -380, 620, GC.boot, 'boot'),
+    flowNode('save_load', 'SAVE / LOAD', -380, 460, GC.boot, 'boot'),
+    flowNode('pause_menu', 'PAUSE MENU', -380, 540, GC.boot, 'boot'),
+    flowNode('settings_term', 'SETTINGS\n(Terminal)', -380, 620, GC.boot, 'boot'),
 
     // ── EVENT SCREENS ──
-    flowNode('event_screen',    'EVENT SCREEN',            580,  540, GC.info, 'info'),
-    flowNode('event_step',      'EVENT STEP\n(Branching)', 580,  620, GC.info, 'info'),
-    flowNode('scene_screen',    'SCENE SCREEN\n(Text)',    780,  540, GC.info, 'info'),
+    flowNode('event_screen', 'EVENT SCREEN', 580, 540, GC.info, 'info'),
+    flowNode('event_step', 'EVENT STEP\n(Branching)', 580, 620, GC.info, 'info'),
+    flowNode('scene_screen', 'SCENE SCREEN\n(Text)', 780, 540, GC.info, 'info'),
 ];
 
 const INITIAL_EDGES = [
@@ -631,29 +632,29 @@ const LEGEND = [
 // ── Node click → navigation mapping ──
 const NODE_ACTIONS = {
     // Terminal screens → push onto terminal stack
-    dashboard:       { type: 'terminal', screen: 'dashboardScreen' },
-    market:          { type: 'terminal', screen: 'marketScreen' },
-    collection:      { type: 'terminal', screen: 'portfolioScreen' },
-    phone:           { type: 'terminal', screen: 'phoneScreen' },
-    ego:             { type: 'terminal', screen: 'egoDashboardScreen' },
-    journal:         { type: 'terminal', screen: 'journalScreen' },
-    city:            { type: 'terminal', screen: 'cityScreen' },
-    news:            { type: 'terminal', screen: 'newsScreen' },
-    pause_menu:      { type: 'terminal', screen: 'pauseMenuScreen' },
-    save_load:       { type: 'terminal', screen: 'saveLoadScreen' },
-    settings_term:   { type: 'terminal', screen: 'settingsScreen' },
+    dashboard: { type: 'terminal', screen: 'dashboardScreen' },
+    market: { type: 'terminal', screen: 'marketScreen' },
+    collection: { type: 'terminal', screen: 'portfolioScreen' },
+    phone: { type: 'terminal', screen: 'phoneScreen' },
+    ego: { type: 'terminal', screen: 'egoDashboardScreen' },
+    journal: { type: 'terminal', screen: 'journalScreen' },
+    city: { type: 'terminal', screen: 'cityScreen' },
+    news: { type: 'terminal', screen: 'newsScreen' },
+    pause_menu: { type: 'terminal', screen: 'pauseMenuScreen' },
+    save_load: { type: 'terminal', screen: 'saveLoadScreen' },
+    settings_term: { type: 'terminal', screen: 'settingsScreen' },
     // Overlays
-    admin:           { type: 'overlay', key: 'ADMIN' },
-    settings:        { type: 'overlay', key: 'SETTINGS' },
-    inventory:       { type: 'overlay', key: 'INVENTORY' },
-    cms:             { type: 'overlay', key: 'CMS' },
+    admin: { type: 'overlay', key: 'ADMIN' },
+    settings: { type: 'overlay', key: 'SETTINGS' },
+    inventory: { type: 'overlay', key: 'INVENTORY' },
+    cms: { type: 'overlay', key: 'CMS' },
     // Phaser scenes
-    world:           { type: 'scene', name: 'WorldScene' },
-    haggle:          { type: 'scene', name: 'HaggleScene' },
+    world: { type: 'scene', name: 'WorldScene' },
+    haggle: { type: 'scene', name: 'HaggleScene' },
     // Boot steps
-    boot:            { type: 'boot', step: 'BOOT' },
-    profile_menu:    { type: 'boot', step: 'PROFILE_MENU' },
-    primary_menu:    { type: 'boot', step: 'PRIMARY_MENU' },
+    boot: { type: 'boot', step: 'BOOT' },
+    profile_menu: { type: 'boot', step: 'PROFILE_MENU' },
+    primary_menu: { type: 'boot', step: 'PRIMARY_MENU' },
 };
 
 function navigateToNode(nodeId, onClose) {
@@ -833,9 +834,10 @@ function AddNodeForm({ onAdd, onCancel }) {
 
     return (
         <div style={{
-            position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50)',
+            position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)',
             background: '#0a0a14', border: '1px solid #c9a84c', padding: 16,
-            zIndex: 10, minWidth: 240, borderRadius: 4,
+            zIndex: 100, minWidth: 240, borderRadius: 4,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.8)'
         }}>
             <div style={{ color: '#c9a84c', fontWeight: 'bold', marginBottom: 10, fontSize: 12 }}>ADD NODE</div>
             <div style={{ marginBottom: 8 }}>
@@ -1044,43 +1046,45 @@ function FlowMapPanel({ onClose }) {
                 </div>
 
                 <div style={{ flex: 1, position: 'relative' }}>
-                    {showAddForm && (
-                        <AddNodeForm
-                            onAdd={handleAddNode}
-                            onCancel={() => setShowAddForm(false)}
-                        />
-                    )}
-                    <ReactFlow
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={(changes) => {
-                            onEdgesChange(changes);
-                        }}
-                        onNodeClick={handleNodeClick}
-                        onNodeDoubleClick={handleNodeDoubleClick}
-                        onNodeDragStop={handleNodeDragStop}
-                        onConnect={handleConnect}
-                        onEdgeClick={handleEdgeClick}
-                        fitView
-                        fitViewOptions={{ padding: 0.2 }}
-                        minZoom={0.2}
-                        maxZoom={2}
-                        proOptions={{ hideAttribution: true }}
-                        style={{ background: '#08080e' }}
-                        connectionLineStyle={{ stroke: '#c9a84c' }}
-                    >
-                        <Background color="#1a1a2e" gap={20} size={1} />
-                        <Controls
-                            style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 4 }}
-                        />
-                        <MiniMap
-                            style={minimapStyle}
-                            nodeColor={(node) => node.data?.color || '#555'}
-                            nodeStrokeWidth={0}
-                            nodeBorderRadius={3}
-                        />
-                    </ReactFlow>
+                    <ReactFlowProvider>
+                        {showAddForm && (
+                            <AddNodeForm
+                                onAdd={handleAddNode}
+                                onCancel={() => setShowAddForm(false)}
+                            />
+                        )}
+                        <ReactFlow
+                            nodes={nodes}
+                            edges={edges}
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={(changes) => {
+                                onEdgesChange(changes);
+                            }}
+                            onNodeClick={handleNodeClick}
+                            onNodeDoubleClick={handleNodeDoubleClick}
+                            onNodeDragStop={handleNodeDragStop}
+                            onConnect={handleConnect}
+                            onEdgeClick={handleEdgeClick}
+                            fitView
+                            fitViewOptions={{ padding: 0.2 }}
+                            minZoom={0.2}
+                            maxZoom={2}
+                            proOptions={{ hideAttribution: true }}
+                            style={{ background: '#08080e' }}
+                            connectionLineStyle={{ stroke: '#c9a84c' }}
+                        >
+                            <Background color="#1a1a2e" gap={20} size={1} />
+                            <Controls
+                                style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 4 }}
+                            />
+                            <MiniMap
+                                style={minimapStyle}
+                                nodeColor={(node) => node.data?.color || '#555'}
+                                nodeStrokeWidth={0}
+                                nodeBorderRadius={3}
+                            />
+                        </ReactFlow>
+                    </ReactFlowProvider>
                 </div>
             </div>
 

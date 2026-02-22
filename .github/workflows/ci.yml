@@ -7,8 +7,77 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build_and_test:
+  validate:
+    name: Build & Validate
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./game
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: './game/package-lock.json'
+
+    - name: Install dependencies
+      run: npm install
+
+    # Step 1: Build validation (catches missing imports, syntax errors)
+    - name: Vite Build
+      run: npm run build
+
+    # Step 2: Verify critical asset files exist in the build output
+    - name: Verify Critical Assets
+      run: |
+        echo "Checking critical assets in dist..."
+        MISSING=0
+        for asset in content/maps/pallet_town.json assets/tilesets/world.png assets/tilesets/world2.png assets/tilesets/grounds.png assets/tilesets/grounds2.png assets/sprites/player.png; do
+          if [ ! -f "dist/$asset" ]; then
+            echo "MISSING: dist/$asset"
+            MISSING=$((MISSING + 1))
+          else
+            echo "OK: dist/$asset"
+          fi
+        done
+        if [ $MISSING -gt 0 ]; then
+          echo "ERROR: $MISSING critical asset(s) missing from build!"
+          exit 1
+        fi
+        echo "All critical assets present."
+
+    # Step 3: Verify index.html exists and contains script tags
+    - name: Verify HTML Entry Point
+      run: |
+        if [ ! -f dist/index.html ]; then
+          echo "ERROR: dist/index.html missing!"
+          exit 1
+        fi
+        if ! grep -q '<script' dist/index.html; then
+          echo "ERROR: No script tags in dist/index.html!"
+          exit 1
+        fi
+        echo "dist/index.html valid."
+
+    # Step 4: Check version is injected
+    - name: Verify Version Injection
+      run: |
+        VERSION=$(node -e "console.log(require('./package.json').version)")
+        if grep -r "$VERSION" dist/assets/*.js > /dev/null 2>&1; then
+          echo "Version $VERSION found in build output."
+        else
+          echo "WARNING: Version $VERSION not found in build output (non-blocking)."
+        fi
+
+  test:
+    name: Playwright Tests
+    runs-on: ubuntu-latest
+    needs: validate
 
     defaults:
       run:
@@ -30,12 +99,26 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
 
-    - name: Verify Build
-      run: npm run build
-
     - name: Start dev server and run tests
       run: |
         npx vite --port 5175 &
-        sleep 5
-        npm test
-        kill %1 || true
+        SERVER_PID=$!
+        # Wait for server to be ready (up to 30s)
+        for i in $(seq 1 30); do
+          if curl -s http://127.0.0.1:5175 > /dev/null 2>&1; then
+            echo "Server ready after ${i}s"
+            break
+          fi
+          sleep 1
+        done
+        npm test || TEST_EXIT=$?
+        kill $SERVER_PID 2>/dev/null || true
+        exit ${TEST_EXIT:-0}
+
+    - name: Upload test artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-reports
+        path: game/tests/reports/
+        retention-days: 7

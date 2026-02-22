@@ -40,6 +40,17 @@ export default function EventEditor() {
         }
     };
 
+    const handleAddStep = () => {
+        if (!selected) return;
+        const newStep = {
+            type: "dialogue",
+            speaker: "System",
+            text: "New dialogue step...",
+            position: { x: 300, y: 100 }
+        };
+        handleEventUpdate(selected.id, 'steps', [...(selected.steps || []), newStep]);
+    };
+
     const handleDownload = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(events, null, 4));
         const anchor = document.createElement('a');
@@ -158,6 +169,9 @@ export default function EventEditor() {
                                 <div>
                                     <button onClick={handleTestEvent} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }}>
                                         ▶ Test In-Game
+                                    </button>
+                                    <button onClick={handleAddStep} style={{ ...btnStyle, marginLeft: 8, borderColor: '#88bbdd', color: '#88bbdd' }}>
+                                        + Add Step
                                     </button>
                                 </div>
                             </div>

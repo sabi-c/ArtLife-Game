@@ -1,6 +1,6 @@
 {
   "name": "artlife",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "ArtLife — An 8-bit noir art market simulation game",
   "private": true,
   "type": "module",
@@ -17,9 +17,11 @@
     "test:flow": "node tests/headless/test_flow.cjs",
     "test:all": "node tests/headless/test_comprehensive.cjs",
     "expose": "npx localtunnel --port 5173 --subdomain artlife",
-    "tunnel": "npx cloudflared tunnel --url http://localhost:5173"
+    "tunnel": "npx cloudflared tunnel --url http://localhost:5173",
+    "validate": "node scripts/validate-build.cjs"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@xyflow/react": "^12.10.1",
     "grid-engine": "^2.48.2",
     "immer": "^11.1.4",

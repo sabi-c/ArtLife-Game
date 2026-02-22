@@ -8,8 +8,10 @@ import NPCEditor from './cms/NPCEditor.jsx';
 import ArtworkEditor from './cms/ArtworkEditor.jsx';
 import VenueEditor from './cms/VenueEditor.jsx';
 import DataIngestion from './cms/DataIngestion.jsx';
+import KanbanBoard from './cms/KanbanBoard.jsx';
 
 const TABS = [
+    { id: 'board', icon: '📋', label: 'Project Board' },
     { id: 'storylines', icon: '⛓️', label: 'Storylines' },
     { id: 'events', icon: '🌳', label: 'Events / Dialogue' },
     { id: 'npcs', icon: '👤', label: 'NPCs & Roles' },
@@ -19,7 +21,7 @@ const TABS = [
 ];
 
 export default function MasterCMS({ onClose }) {
-    const [activeTab, setActiveTab] = useState('storylines');
+    const [activeTab, setActiveTab] = useState('board');
 
     // Close on ESC
     useEffect(() => {
@@ -30,6 +32,7 @@ export default function MasterCMS({ onClose }) {
 
     const renderTabContent = () => {
         switch (activeTab) {
+            case 'board': return <KanbanBoard />;
             case 'storylines': return <StorylineEditor />;
             case 'events': return <EventEditor />;
             case 'npcs': return <NPCEditor />;

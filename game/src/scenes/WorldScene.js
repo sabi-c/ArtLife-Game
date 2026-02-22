@@ -136,6 +136,21 @@ export default class WorldScene extends BaseScene {
     }
 
     _initScene(data) {
+        // Guard: if scale dimensions are 0, defer until Phaser recalculates
+        const { width, height } = this.scale;
+        if (width < 10 || height < 10) {
+            console.warn(`[WorldScene] Scale too small (${width}x${height}), waiting for resize...`);
+            if (!this._scaleRetryCount) this._scaleRetryCount = 0;
+            this._scaleRetryCount++;
+            if (this._scaleRetryCount > 10) {
+                this._createFailed = true;
+                this._showError(`Canvas has zero dimensions (${width}x${height}). Try reloading.`);
+                return;
+            }
+            this.time.delayedCall(100, () => this._initScene(data));
+            return;
+        }
+
         try {
             this._buildScene(data);
             this._playWipeTransition();

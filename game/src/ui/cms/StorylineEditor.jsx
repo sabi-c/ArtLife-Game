@@ -67,10 +67,11 @@ export default function StorylineEditor() {
             if (sl) {
                 sl[field] = value;
                 EventRegistry.jsonStorylines = updated;
+                if (selectedId === storylineId) setJsonEdit(JSON.stringify(sl, null, 4));
             }
             return updated;
         });
-    }, []);
+    }, [selectedId]);
 
     const handleStepEdit = (field, value) => {
         if (!editingStep) return;
@@ -83,10 +84,20 @@ export default function StorylineEditor() {
         }
     };
 
+    const handleAddStep = () => {
+        if (!selected) return;
+        const newStep = {
+            eventId: "new_event_id",
+            delayWeeks: 1,
+            position: { x: 300, y: 100 }
+        };
+        handleStorylineUpdate(selected.id, 'steps', [...(selected.steps || []), newStep]);
+    };
+
     // ── Styles ──
     const panel = {
-        background: '#0a0a0f',
-        border: '1px solid #333',
+        background: 'rgba(10, 10, 15, 0.95)',
+        border: '1px solid #2a2a3e',
         padding: 16,
         overflow: 'auto',
         fontFamily: 'inherit',
@@ -181,6 +192,9 @@ export default function StorylineEditor() {
                                 <div style={{ marginTop: 8 }}>
                                     <button onClick={() => handleTestFire(selected)} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }}>
                                         ▶ Test Fire
+                                    </button>
+                                    <button onClick={handleAddStep} style={{ ...btnStyle, marginLeft: 8, borderColor: '#88bbdd', color: '#88bbdd' }}>
+                                        + Add Step
                                     </button>
                                 </div>
                             </div>

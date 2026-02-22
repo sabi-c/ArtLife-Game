@@ -36,6 +36,51 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Safety check: verify critical assets before deploying
+      - name: Pre-deploy Asset Validation
+        run: |
+          echo "=== Pre-deploy Validation ==="
+          ERRORS=0
+
+          # Check critical game assets
+          for asset in content/maps/pallet_town.json assets/tilesets/world.png assets/tilesets/world2.png assets/tilesets/grounds.png assets/tilesets/grounds2.png assets/sprites/player.png; do
+            if [ ! -f "dist/$asset" ]; then
+              echo "FATAL: Missing dist/$asset"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          # Check index.html
+          if [ ! -f dist/index.html ]; then
+            echo "FATAL: Missing dist/index.html"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check JS bundles exist
+          JS_COUNT=$(ls dist/assets/*.js 2>/dev/null | wc -l)
+          if [ "$JS_COUNT" -lt 2 ]; then
+            echo "FATAL: Only $JS_COUNT JS bundles found (expected at least 2)"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check CSS exists
+          CSS_COUNT=$(ls dist/assets/*.css 2>/dev/null | wc -l)
+          if [ "$CSS_COUNT" -lt 1 ]; then
+            echo "FATAL: No CSS bundles found"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "DEPLOYMENT BLOCKED: $ERRORS critical issue(s) found."
+            echo "The build output is incomplete. This would break the live site."
+            exit 1
+          fi
+
+          echo "All pre-deploy checks passed."
+          echo "JS bundles: $JS_COUNT, CSS bundles: $CSS_COUNT"
+          ls -la dist/assets/ | head -10
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

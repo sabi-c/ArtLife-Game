@@ -19,6 +19,7 @@ import EventCMS from './ui/CMSOverlay.jsx';
 import MasterCMS from './ui/MasterCMS.jsx';
 import MarketDashboard from './ui/MarketDashboard.jsx';
 import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
+import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
@@ -43,6 +44,9 @@ export default function App() {
             if (e.key === 'F1') {
                 e.preventDefault();
                 setActiveOverlay(prev => prev === OVERLAY.CMS ? OVERLAY.NONE : OVERLAY.CMS);
+            } else if (e.key === 'F2') {
+                e.preventDefault();
+                setActiveOverlay(prev => prev === OVERLAY.DEBUG_LOG ? OVERLAY.NONE : OVERLAY.DEBUG_LOG);
             } else if (e.key === '`' || e.key === '~') {
                 setActiveOverlay(prev => {
                     const next = prev === OVERLAY.ADMIN ? OVERLAY.NONE : OVERLAY.ADMIN;
@@ -359,6 +363,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.ARTWORK_DASHBOARD && (
                 <ArtworkDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} payload={viewPayload} />
+            )}
+
+            {activeOverlay === OVERLAY.DEBUG_LOG && (
+                <DiagnosticsOverlay onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {isWorldSceneActive && <MobileJoypad />}

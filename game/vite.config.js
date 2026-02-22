@@ -1,5 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
+
+// Inject version info at build time
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+let gitHash = 'dev';
+try { gitHash = execSync('git rev-parse --short HEAD').toString().trim(); } catch (e) { /* no git */ }
+const buildTime = new Date().toISOString();
 
 export default defineConfig({
     base: './', // Use relative paths for built assets
@@ -23,6 +31,11 @@ export default defineConfig({
     // Prevent Vite from pre-bundling inkjs (internal circular deps break the build)
     optimizeDeps: {
         exclude: ['inkjs'],
+    },
+    define: {
+        '__APP_VERSION__': JSON.stringify(pkg.version),
+        '__GIT_HASH__': JSON.stringify(gitHash),
+        '__BUILD_TIME__': JSON.stringify(buildTime),
     },
     plugins: [
         react(),

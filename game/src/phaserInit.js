@@ -47,6 +47,14 @@ if (container) container.style.display = 'none';
 // Configure debug API
 configureGameDebugAPI(ui);
 
+// Expose build version info globally for diagnostics
+window.ARTLIFE_VERSION = {
+    version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev',
+    hash: typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'unknown',
+    built: typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : 'dev-mode',
+};
+console.log(`[ArtLife] v${window.ARTLIFE_VERSION.version}-${window.ARTLIFE_VERSION.hash} (built ${window.ARTLIFE_VERSION.built})`);
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Scene list — every Phaser scene must be registered here
 // ──────────────────────────────────────────────────────────────────────────────
@@ -231,7 +239,21 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
         const startDelay = activeScenes.length > 0 ? 100 : 50;
         setTimeout(() => {
             if (!window.phaserGame) return;
-            console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}`, data);
+
+            // Ensure scale dimensions are correct BEFORE scene create() reads them.
+            // React's useEffect also calls refresh(), but it may fire too late (after rAF).
+            const pc = document.getElementById('phaser-game-container');
+            if (pc) {
+                pc.style.height = '100%';
+                pc.style.visibility = 'visible';
+            }
+            if (window.phaserGame.canvas) {
+                window.phaserGame.canvas.style.height = '';
+                window.phaserGame.canvas.style.visibility = 'visible';
+            }
+            window.phaserGame.scale.refresh();
+
+            console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}, scale: ${window.phaserGame.scale.width}x${window.phaserGame.scale.height}`, data);
             window.phaserGame.scene.start(sceneKey, { ui, ...data });
 
             // Give canvas keyboard focus so WASD/arrows work immediately
