@@ -10,8 +10,15 @@
 **Tests:** 36/36 unit, 36/38 flow (2 pre-existing Phase A timing issues) — all green
 **Build:** Clean (no new warnings)
 **Branch:** `main`
-**Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/)
-**Phase 3:** ~95% complete
+**Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE ✅
+**Phase 3:** ~98% complete
+
+### Critical Fixes (2026-02-22 Session 2)
+- **GitHub Pages Deployment Fixed** — `MasterCMS.jsx` and all `src/ui/cms/` files were imported by App.jsx but never committed to git. This caused `vite build` to fail on CI with "Could not resolve ./ui/MasterCMS.jsx". All 7 CMS files now committed. Deployment verified working.
+- **WorldScene Black Screen Fixed** — Root cause: `game.scale.resize(width, height)` conflicted with Phaser's `Scale.RESIZE` auto-sizing mode, resulting in `scaleH: 0` (zero-height canvas). Fix: replaced with `container.style.height = '100%'` + `game.scale.refresh()`, letting Phaser auto-size from parent element. Mobile WorldScene still uses explicit resize for Game Boy split layout.
+- **Admin Dashboard Auto-Init** — Scene launch buttons (WorldScene, Haggle, etc.) now auto-call `quickDemoInit()` if no game state exists, eliminating the "GameState not initialized" error. Users no longer need to click INIT DEMO STATE first.
+- **GameState Error Resilience** — `GameState.init()` and `quickDemoInit()` wrap subsystem init calls (`MarketManager`, `PhoneManager`, etc.) in try/catch so state is always set even if a subsystem fails.
+- **Missing State Fields** — Added `toneHistory` to `GameState.init()` (was only in quickDemoInit).
 
 ### Recently Completed
 - **WorldScene Polish + Door Transitions + Flow Map Editor** — Fixed mobile A button interaction (replaced `window.dispatchEvent(KeyboardEvent)` with polled `window.joypadAction` global — same pattern as D-pad movement). Added Pokemon-style location name toast on scene entry (slide-down bar with hold + fade). CalendarHUD expanded with second row showing cash, location, portfolio count, and market bull/bear indicator. Door transitions now launch LocationScene with proper venue IDs (gallery_opening, cocktail_party) and return-to-WorldScene flow with spawn position persistence. Flow Map Editor upgraded from read-only to full editor: localStorage persistence for node positions/edges/custom nodes, right-side property panel (label/type/description editing), edge creation via drag-connect, edge deletion via click, add custom nodes, export to clipboard as JSON, reset layout button.

@@ -42,8 +42,18 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 | Agent | Current Task | Status |
 |---|---|---|
-| **Claude Code (Agent 1)** | WorldScene fixes, Game Boy mobile controls, GH Pages deployment, project management | 🟢 Active |
-| **Claude Code (Agent 2)** | Art market economy, real-world data ingestion, MarketDashboard, ArtworkDashboard | 🟢 Active |
+| **Claude Code (Agent 1)** | Critical bug fixes (WorldScene render, GH Pages deploy, Admin auto-init), documentation | 🟢 Active |
+| **Claude Code (Agent 2)** | Art market economy, real-world data ingestion, MarketDashboard, ArtworkDashboard | ⏸️ Idle |
+
+### Known Issues & Recent Fixes (2026-02-22)
+
+| Issue | Root Cause | Fix | Status |
+|---|---|---|---|
+| GitHub Pages shows stale code | `MasterCMS.jsx` + 6 `cms/` files never committed → `vite build` fails on CI | Committed all 7 CMS files | ✅ Fixed |
+| WorldScene renders black screen | `game.scale.resize()` conflicts with `Scale.RESIZE` mode → `scaleH: 0` | Use `scale.refresh()` + `container.height: 100%` | ✅ Fixed |
+| "No state found" on Admin scene launch | `triggerScene()` guards require state but INIT DEMO STATE easily missed | Auto-call `quickDemoInit()` when state missing | ✅ Fixed |
+| `quickDemoInit()` could fail silently | No try/catch around subsystem init calls | Wrapped in try/catch, state always set | ✅ Fixed |
+| CI test runner fails | Playwright tests need running dev server, CI infra incomplete | Deploy workflow separate from CI check | ⚠️ Non-blocking |
 
 ### Phase 2.7 — Code Audit Refactoring: COMPLETE
 
