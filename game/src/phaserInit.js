@@ -154,6 +154,19 @@ GameEventBus.on(GameEvents.OVERWORLD_EXIT, () => {
 });
 GameEventBus.on(GameEvents.UI_NOTIFICATION, (msg) => {
     console.log(`[GameEventBus] ${msg}`);
+    // Visible toast so users actually see feedback
+    const toast = document.createElement('div');
+    toast.textContent = msg;
+    Object.assign(toast.style, {
+        position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+        background: '#1a1a2e', color: '#c9a84c', border: '1px solid #c9a84c',
+        padding: '12px 24px', fontFamily: '"IBM Plex Mono", monospace', fontSize: '13px',
+        zIndex: '9999999', borderRadius: '4px', pointerEvents: 'none',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.6)', transition: 'opacity 0.3s',
+    });
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+    setTimeout(() => { toast.remove(); }, 3000);
 });
 
 // Bankruptcy / game-over: launch EndScene
@@ -170,7 +183,19 @@ GameEventBus.on(GameEvents.GAME_OVER, () => {
 
 // Admin Dashboard overrides — also used by market haggle and venue cutscenes
 GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
-    if (window.phaserGame) {
+    if (!window.phaserGame) {
+        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Phaser not initialized.');
+        return;
+    }
+
+    // Verify the scene exists in the scene manager
+    const sceneExists = window.phaserGame.scene.keys[sceneKey];
+    if (!sceneExists) {
+        GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene "${sceneKey}" not found.`);
+        return;
+    }
+
+    try {
         // Hide terminal
         if (container) container.style.display = 'none';
 
@@ -196,10 +221,14 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
         });
 
         // Launch the requested scene
+        console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}`, data);
         window.phaserGame.scene.start(sceneKey, { ui, ...data });
 
         // Sync React state so activeView effect stays consistent
         GameEventBus.emit(GameEvents.UI_ROUTE, 'PHASER');
+    } catch (err) {
+        console.error(`[DEBUG_LAUNCH_SCENE] Failed to launch ${sceneKey}:`, err);
+        GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene launch failed: ${err.message}`);
     }
 });
 

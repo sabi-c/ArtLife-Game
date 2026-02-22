@@ -39,12 +39,33 @@ export class CityScene extends BaseScene {
         super.create({ ...data, hideUI: true }); // Extends from BaseScene
         this.spawnAt = data?.spawnAt || null;
 
-        this.cameras.main.fadeIn(400, 0, 0, 0);
         const { width, height } = this.scale;
 
-        // ── Background ──
+        // Opaque background first so errors are visible
         this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a14).setDepth(-1);
         this.cameras.main.setBackgroundColor('#0a0a14');
+
+        try {
+            this._buildCityHub(data, width, height);
+        } catch (err) {
+            console.error('[CityScene] create() error:', err);
+            window.ArtLife?.recordSceneError?.('CityScene', err);
+            this.add.text(width / 2, height / 2 - 20, 'CITY HUB ERROR', {
+                fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#ff4444',
+            }).setOrigin(0.5).setDepth(999);
+            this.add.text(width / 2, height / 2 + 10, err.message, {
+                fontFamily: 'monospace', fontSize: '12px', color: '#aaaaaa',
+                wordWrap: { width: width - 60 },
+            }).setOrigin(0.5).setDepth(999);
+            const btn = this.add.text(width / 2, height / 2 + 60, '[ EXIT ]', {
+                fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888',
+            }).setOrigin(0.5).setDepth(999).setInteractive({ useHandCursor: true });
+            btn.on('pointerdown', () => this.returnToDashboard());
+        }
+    }
+
+    _buildCityHub(data, width, height) {
+        this.cameras.main.fadeIn(400, 0, 0, 0);
 
         // Draw a simple grid pattern for streets
         const gfx = this.add.graphics();

@@ -52,7 +52,11 @@ export default function ScenePlayer({ onClose, payload }) {
         if (!selectedScene) return;
         const engine = new SceneEngine(selectedScene.data);
         setScene(engine);
-        const step = engine.continue();
+        // Ink stories have content in named knots (not top-level). Jump to 'start'.
+        let step = engine.continue();
+        if (step.isEnd && step.lines.length === 0) {
+            step = engine.goToKnot('start');
+        }
         setCurrentStep(step);
         WebAudioService.sceneEnter();
         return () => engine.destroy();
