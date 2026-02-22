@@ -7,11 +7,21 @@
 
 ## Current State (2026-02-22)
 
+**Version:** v0.3.0
 **Tests:** 36/36 unit, 36/38 flow (2 pre-existing Phase A timing issues) — all green
 **Build:** Clean (no new warnings)
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE ✅
 **Phase 3:** ~98% complete
+
+### Deployment Safety System (2026-02-22 Session 3)
+- **Build-Time Version Injection** — `package.json` version + git short hash injected via Vite `define`. Shown on login screen header and `window.ARTLIFE_VERSION`. Console logs version on boot.
+- **Pre-Push Validation Script** — `npm run validate` runs: vite build, import resolution check (337 imports), asset file verification (21 Phaser assets), git tracking audit. Catches the exact class of bug that broke deployments (untracked files imported in code).
+- **CI Workflow Upgrade** — Split into `validate` (build + assets + HTML check) and `test` (Playwright) jobs. Server readiness polling instead of blind `sleep 5`. Test artifacts uploaded on failure.
+- **Deploy Workflow Safety** — Pre-deploy validation checks critical assets exist in `dist/` before uploading. Blocks deployment if any are missing.
+- **F2 Diagnostics Overlay** — Shows version, Phaser scale dimensions, active scenes, game state, error log, missing assets, captured console.error output. Copy Report button for bug reports. Accessible on deployed site without console.
+- **WorldScene Scale Guard** — If canvas dimensions are 0 at scene init, retries up to 10 times with 100ms delay instead of showing black screen.
+- **DEBUG_LAUNCH_SCENE Scale Fix** — Explicit `scale.refresh()` called before scene start to prevent race condition with React useEffect.
 
 ### Critical Fixes (2026-02-22 Session 2)
 - **GitHub Pages Deployment Fixed** — `MasterCMS.jsx` and all `src/ui/cms/` files were imported by App.jsx but never committed to git. This caused `vite build` to fail on CI with "Could not resolve ./ui/MasterCMS.jsx". All 7 CMS files now committed. Deployment verified working.

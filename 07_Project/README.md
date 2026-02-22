@@ -53,7 +53,18 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 | WorldScene renders black screen | `game.scale.resize()` conflicts with `Scale.RESIZE` mode → `scaleH: 0` | Use `scale.refresh()` + `container.height: 100%` | ✅ Fixed |
 | "No state found" on Admin scene launch | `triggerScene()` guards require state but INIT DEMO STATE easily missed | Auto-call `quickDemoInit()` when state missing | ✅ Fixed |
 | `quickDemoInit()` could fail silently | No try/catch around subsystem init calls | Wrapped in try/catch, state always set | ✅ Fixed |
-| CI test runner fails | Playwright tests need running dev server, CI infra incomplete | Deploy workflow separate from CI check | ⚠️ Non-blocking |
+| CI test runner fails | Playwright tests need running dev server, CI infra incomplete | CI now has readiness polling + split validate/test jobs | ✅ Fixed |
+
+### Deployment Safety System (2026-02-22 Session 3)
+
+| Tool | What It Does | How To Use |
+|---|---|---|
+| **Version Display** | Shows `v0.3.0-abc1234` on login screen + console + `window.ARTLIFE_VERSION` | Automatic — check login page header |
+| **Build Validator** | Checks: build passes, all imports resolve, all assets in git, untracked files | `npm run validate` before pushing |
+| **CI Validation** | Build + asset + HTML verification on every push, test artifacts on failure | Automatic on push to `main` |
+| **Deploy Validation** | Pre-deploy checks critical assets exist in `dist/` — blocks broken deploys | Automatic in deploy workflow |
+| **F2 Diagnostics** | Version, Phaser scale, active scenes, errors, game state, console capture | Press F2 on any page (including deployed site) |
+| **WorldScene Scale Guard** | Auto-retries if canvas dimensions are 0 | Automatic |
 
 ### Phase 2.7 — Code Audit Refactoring: COMPLETE
 
