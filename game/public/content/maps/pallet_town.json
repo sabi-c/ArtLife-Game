@@ -1071,6 +1071,198 @@
           "width": 0,
           "x": 1104,
           "y": 216
+        },
+        {
+          "height": 0,
+          "id": 152,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "art_gallery_museum"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "art_gallery_museum_main"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "value": "Metropolitan Art Gallery"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 432,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 153,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "ART GALLERY"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 432,
+          "y": 216
+        },
+        {
+          "height": 0,
+          "id": 154,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "museum_entrance"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "museum_entrance_main"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "value": "Museum Entrance"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 528,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 155,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "MUSEUM"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 528,
+          "y": 216
+        },
+        {
+          "height": 0,
+          "id": 156,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "dinosaur_museum"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "dinosaur_museum_main"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "value": "Dinosaur Museum"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 624,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 157,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "DINOSAUR MUSEUM"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 624,
+          "y": 216
+        },
+        {
+          "height": 0,
+          "id": 158,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "small_gallery"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "small_gallery_main"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "value": "Small Gallery"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 720,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 159,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "SMALL GALLERY"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 720,
+          "y": 216
         }
       ],
       "opacity": 1,
@@ -1081,7 +1273,7 @@
     }
   ],
   "nextlayerid": 14,
-  "nextobjectid": 152,
+  "nextobjectid": 160,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.10.2",

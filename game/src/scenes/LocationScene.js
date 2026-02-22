@@ -236,6 +236,20 @@ export class LocationScene extends BaseScene {
         // Build tilemap from preloaded JSON
         this.map = this.make.tilemap({ key: mapKey });
 
+        // Check for background image mode — pre-composed room PNG used as visual backdrop
+        // The bgImage property is set by bg_room_builder.py on maps using premium LimeZu artwork
+        const bgImageProp = this.map.properties?.bgImage
+            || this.map.properties?.find?.(p => p.name === 'bgImage')?.value;
+
+        if (bgImageProp && this.textures.exists(`bg_room_${this.roomData.tiledMap}`)) {
+            // Display pre-composed room image as the visual layer
+            const bgKey = `bg_room_${this.roomData.tiledMap}`;
+            this._bgImage = this.add.image(0, 0, bgKey)
+                .setOrigin(0, 0)
+                .setDepth(DEPTH.BELOW_PLAYER);
+            console.log(`[LocationScene] Using background image: ${bgKey}`);
+        }
+
         // Add all tilesets referenced in the map
         const allSets = [];
         for (const tsData of this.map.tilesets) {
@@ -243,19 +257,23 @@ export class LocationScene extends BaseScene {
             if (ts) allSets.push(ts);
         }
 
-        if (allSets.length === 0) {
+        if (allSets.length === 0 && !this._bgImage) {
             console.error('[LocationScene] No tilesets loaded for Tiled map');
             this._createClassicScene(data);
             return;
         }
 
-        // Render tile layers
+        // Render tile layers (collision layer is invisible when using bg image)
         for (const layerData of this.map.layers) {
             const name = layerData.name;
             if (name === 'objects') continue;
             const layer = this.map.createLayer(name, allSets);
             if (layer) {
                 layer.setDepth(LAYER_DEPTHS[name] ?? DEPTH.WORLD);
+                // Hide the collision-only world layer when using background image
+                if (this._bgImage && name === 'world') {
+                    layer.setAlpha(0);
+                }
             }
         }
 
@@ -336,20 +354,54 @@ export class LocationScene extends BaseScene {
             });
         }
 
+        // Gallery NPC walk animations (3 cols × 4 rows, 48×96 frames)
+        // Same frame layout as npc_dealer: down(0-2), left(3-5), right(6-8), up(9-11)
+        const galleryNPCKeys = [
+            'npc_curator', 'npc_collector', 'npc_gallerist', 'npc_artist', 'npc_patron',
+            'npc_critic', 'npc_assistant', 'npc_handler', 'npc_guard', 'npc_visitor',
+        ];
+        galleryNPCKeys.forEach(npcKey => {
+            if (this.textures.exists(npcKey) && !this.anims.exists(`${npcKey}_walk_down`)) {
+                const dirs = [
+                    { key: `${npcKey}_walk_down`, start: 0, end: 2 },
+                    { key: `${npcKey}_walk_left`, start: 3, end: 5 },
+                    { key: `${npcKey}_walk_right`, start: 6, end: 8 },
+                    { key: `${npcKey}_walk_up`, start: 9, end: 11 },
+                ];
+                dirs.forEach(({ key, start, end }) => {
+                    this.anims.create({
+                        key, frames: this.anims.generateFrameNumbers(npcKey, { start, end }),
+                        frameRate: 6, repeat: -1,
+                    });
+                });
+            }
+        });
+
         // ── Spawn NPC sprites ──
-        // LimeZu character sprite rotation for NPCs
+        // Gallery NPC sprites (LimeZu premade 48×96) with fallback chain
+        const GALLERY_NPCS = [
+            'npc_curator', 'npc_collector', 'npc_gallerist', 'npc_artist', 'npc_patron',
+            'npc_critic', 'npc_assistant', 'npc_handler', 'npc_guard', 'npc_visitor',
+        ];
         const LZ_CHARS = ['adam', 'alex', 'amelia', 'bob'];
         const npcCharacters = [];
         this._tiledNPCs.forEach((npc, i) => {
             const npcId = `gallery_npc_${i}`;
 
-            // Pick sprite: prefer LimeZu characters (rotated), fallback to npc_dealer/world_player
+            // Pick sprite: prefer gallery NPCs (48×96), then LimeZu 16×32, then npc_dealer
+            const galleryKey = GALLERY_NPCS[i % GALLERY_NPCS.length];
             const lzName = LZ_CHARS[i % LZ_CHARS.length];
             const lzRunKey = `lz_${lzName}_run`;
             let npcSprite;
             let npcSpriteScale = 1;
+            let npcSpriteKey = null;
 
-            if (this.textures.exists(lzRunKey)) {
+            if (this.textures.exists(galleryKey)) {
+                // LimeZu premade 48×96 character — offset up so feet sit on tile
+                npcSprite = this.add.sprite(0, 0, galleryKey, 0).setDepth(4);
+                npcSprite.setOrigin(0.5, 0.75); // anchor at feet
+                npcSpriteKey = galleryKey;
+            } else if (this.textures.exists(lzRunKey)) {
                 // LimeZu 16×32 sprite — needs 3x scale for 48px tiles
                 npcSprite = this.add.sprite(0, 0, lzRunKey, 0).setDepth(4);
                 npcSpriteScale = 3;
@@ -374,6 +426,7 @@ export class LocationScene extends BaseScene {
                 startPosition: { x: npc.x, y: npc.y },
                 data: npc,
                 lzName: this.textures.exists(lzRunKey) ? lzName : null,
+                galleryKey: npcSpriteKey,
                 scale: npcSpriteScale,
             });
         });
@@ -437,7 +490,10 @@ export class LocationScene extends BaseScene {
                 })),
             ];
 
-            this.gridEngine.create(this.map, { characters });
+            this.gridEngine.create(this.map, {
+                collisionTilePropertyName: 'collides',
+                characters,
+            });
 
             // Camera follow player with smooth lerp (matching WorldScene)
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);

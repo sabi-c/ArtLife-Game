@@ -268,7 +268,8 @@ export default function TimelineCalendar() {
     const [filter, setFilter] = useState('all');
     const markDirty = useCmsStore(s => s.markDirty);
     const saveTimelineOverride = useCmsStore(s => s.saveTimelineOverride);
-    const timelineOverrides = useCmsStore(s => s.getTimelineOverrides());
+    const rawTimelineOverrides = useCmsStore(s => s.snapshots?.timelineOverrides);
+    const timelineOverrides = useMemo(() => rawTimelineOverrides || {}, [rawTimelineOverrides]);
 
     // Get current game week (fallback to 1)
     const currentWeek = window._artLifeState?.week || 1;

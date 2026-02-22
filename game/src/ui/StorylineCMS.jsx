@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { useStorylineStore } from '../stores/storylineStore.js';
 
@@ -15,7 +15,13 @@ export default function StorylineCMS({ onClose }) {
     const [jsonEdit, setJsonEdit] = useState('');
     const [notification, setNotification] = useState(null);
 
-    const storeStatus = useStorylineStore((s) => s.getStatusSummary());
+    // FIXED: Select raw state, derive status with useMemo to avoid infinite re-render
+    const active = useStorylineStore((s) => s.active);
+    const completed = useStorylineStore((s) => s.completed);
+    const storeStatus = useMemo(() => ({
+        active: Object.keys(active || {}).length,
+        completed: (completed || []).length,
+    }), [active, completed]);
     const forceActivate = useStorylineStore((s) => s.forceActivate);
 
     useEffect(() => {

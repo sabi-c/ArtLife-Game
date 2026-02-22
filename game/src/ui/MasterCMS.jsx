@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { useCmsStore } from '../stores/cmsStore.js';
 
@@ -30,19 +30,22 @@ export default function MasterCMS({ onClose }) {
     const [saveFlash, setSaveFlash] = useState(null);
     const fileInputRef = useRef(null);
 
-    const hasUnsaved = useCmsStore(s => s.hasUnsavedChanges());
-    const dirtyDomains = useCmsStore(s => s.getDirtyDomains());
+    // ── FIXED: Select raw state, derive values with useMemo ──
+    // Previously: useCmsStore(s => s.hasUnsavedChanges()) called get() inside selector,
+    // returning a new value every render and causing infinite re-render loop.
+    const dirty = useCmsStore(s => s.dirty);
     const lastSaveTime = useCmsStore(s => s.lastSaveTime);
-    const saveAll = useCmsStore(s => s.saveAll);
-    const exportBundle = useCmsStore(s => s.exportBundle);
-    const importBundle = useCmsStore(s => s.importBundle);
-    const startAutoSave = useCmsStore(s => s.startAutoSave);
-    const stopAutoSave = useCmsStore(s => s.stopAutoSave);
 
-    // Start auto-save on mount
+    const hasUnsaved = useMemo(() => Object.values(dirty).some(Boolean), [dirty]);
+    const dirtyDomains = useMemo(
+        () => Object.entries(dirty).filter(([, d]) => d).map(([k]) => k),
+        [dirty]
+    );
+
+    // Start auto-save on mount (use getState() to avoid selector re-renders)
     useEffect(() => {
-        startAutoSave();
-        return () => stopAutoSave();
+        useCmsStore.getState().startAutoSave();
+        return () => useCmsStore.getState().stopAutoSave();
     }, []);
 
     // Close on ESC — with unsaved changes warning
@@ -51,23 +54,23 @@ export default function MasterCMS({ onClose }) {
             if (e.key === 'Escape') {
                 if (hasUnsaved) {
                     const ok = window.confirm('You have unsaved CMS changes. Save before closing?');
-                    if (ok) saveAll();
+                    if (ok) useCmsStore.getState().saveAll();
                 }
                 onClose();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [onClose, hasUnsaved, saveAll]);
+    }, [onClose, hasUnsaved]);
 
     const handleSave = () => {
-        const ok = saveAll();
+        const ok = useCmsStore.getState().saveAll();
         setSaveFlash(ok ? '✅ Saved' : '❌ Save failed');
         setTimeout(() => setSaveFlash(null), 2500);
     };
 
     const handleExport = () => {
-        exportBundle();
+        useCmsStore.getState().exportBundle();
         setSaveFlash('📦 Exported');
         setTimeout(() => setSaveFlash(null), 2500);
     };
@@ -81,7 +84,7 @@ export default function MasterCMS({ onClose }) {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => {
-            const ok = importBundle(ev.target.result);
+            const ok = useCmsStore.getState().importBundle(ev.target.result);
             setSaveFlash(ok ? '📥 Imported' : '❌ Import failed');
             setTimeout(() => setSaveFlash(null), 2500);
         };

@@ -43,6 +43,17 @@ export class BootScene extends Phaser.Scene {
         this.load.image('dealer_rival', 'sprites/dealer_rival.png');
         this.load.image('player_back', 'sprites/player_back.png');
 
+        // ── Gallery NPC spritesheets (LimeZu premade, 3×4 grid, 48×96 frames) ──
+        const galleryNPCs = [
+            'npc_curator', 'npc_collector', 'npc_gallerist', 'npc_artist', 'npc_patron',
+            'npc_critic', 'npc_assistant', 'npc_handler', 'npc_guard', 'npc_visitor',
+        ];
+        galleryNPCs.forEach(key => {
+            this.load.spritesheet(key, `sprites/gallery/${key}.png`, {
+                frameWidth: 48, frameHeight: 96,
+            });
+        });
+
         // ── Overworld tilesets ──
         this.load.spritesheet('tiles_urban', 'assets/tilesets/kenney_rpg_urban_pack/Tilemap/tilemap_packed.png', {
             frameWidth: 16, frameHeight: 16, margin: 0, spacing: 1
@@ -80,6 +91,16 @@ export class BootScene extends Phaser.Scene {
         this.load.image('1_Generic_48x48', 'assets/tilesets/1_Generic_48x48.png');
         this.load.image('13_Conference_Hall_48x48', 'assets/tilesets/13_Conference_Hall_48x48.png');
         this.load.image('2_LivingRoom_48x48', 'assets/tilesets/2_LivingRoom_48x48.png');
+
+        // ── Background-image rooms (pre-composed LimeZu premium art) ──
+        this.load.tilemapTiledJSON('map_art_gallery_museum', 'content/maps/art_gallery_museum.json');
+        this.load.tilemapTiledJSON('map_museum_entrance', 'content/maps/museum_entrance.json');
+        this.load.tilemapTiledJSON('map_dinosaur_museum', 'content/maps/dinosaur_museum.json');
+        this.load.tilemapTiledJSON('map_small_gallery', 'content/maps/small_gallery.json');
+        this.load.image('bg_room_art_gallery_museum', 'assets/rooms/art_gallery_museum.png');
+        this.load.image('bg_room_museum_entrance', 'assets/rooms/museum_entrance.png');
+        this.load.image('bg_room_dinosaur_museum', 'assets/rooms/dinosaur_museum.png');
+        this.load.image('bg_room_small_gallery', 'assets/rooms/small_gallery.png');
 
         // ── Event JSON Data ──
         this.load.json('events_json', 'content/events.json');

@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
-import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES } from '../data/haggle_config.js';
+import { MarketManager } from '../managers/MarketManager.js';
+import { GameState } from '../managers/GameState.js';
+import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES, TACTIC_DIALOGUE_CHOICES, DIALOGUE_EFFECTIVENESS, BATTLE_MENU_CATEGORIES } from '../data/haggle_config.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
@@ -449,28 +451,37 @@ export class HaggleScene extends BaseScene {
     }
 
     drawInteractiveUI(width, height) {
-        // Dialogue Box at bottom
-        const dlHeight = 150;
+        // Dialogue Box at bottom — expanded for menu system
+        const dlHeight = 180;
         const dlY = height - dlHeight - 40;
 
-        this.dialogueBg = this.add.rectangle(width / 2, dlY + dlHeight / 2, width - 60, dlHeight, 0x14141f, 0.95);
+        this.dialogueBg = this.add.rectangle(width / 2, dlY + dlHeight / 2, width - 40, dlHeight, 0x14141f, 0.95);
         this.dialogueBg.setStrokeStyle(3, 0x3a3a4e);
 
-        this.speakerTab = this.add.text(45, dlY - 14, this.state.dealerName?.toUpperCase() || 'DEALER', {
+        this.speakerTab = this.add.text(35, dlY - 14, this.state.dealerName?.toUpperCase() || 'DEALER', {
             fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c', backgroundColor: '#14141f', padding: { x: 8, y: 4 }
         });
 
-        this.dialogueTextContent = this.add.text(50, dlY + 20, '', {
-            fontFamily: '"Playfair Display"', fontSize: '18px', color: '#e8e4df', wordWrap: { width: width - 100, useAdvancedWrap: true }, lineSpacing: 8
+        this.dialogueTextContent = this.add.text(40, dlY + 16, '', {
+            fontFamily: '"Playfair Display"', fontSize: '17px', color: '#e8e4df', wordWrap: { width: width - 100, useAdvancedWrap: true }, lineSpacing: 6
         });
+
+        // Right-side menu panel (Pokemon-style action box)
+        const menuW = 260;
+        this.menuBg = this.add.rectangle(width - menuW / 2 - 20, dlY + dlHeight / 2, menuW, dlHeight, 0x0a0a1e, 0.98);
+        this.menuBg.setStrokeStyle(2, 0x3a3a4e).setVisible(false);
 
         // Tactics Grid Container (hidden initially)
         this.tacticsContainer = this.add.container(0, 0);
         this.tacticsContainer.setVisible(false);
+
+        // Store layout constants for reuse
+        this._uiLayout = { dlHeight, dlY, menuW };
     }
 
     playDialogue(text, onComplete) {
         this.tacticsContainer.setVisible(false);
+        this.menuBg?.setVisible(false);
         this.dialogueTextContent.setText('');
 
         let i = 0;
@@ -489,99 +500,422 @@ export class HaggleScene extends BaseScene {
         });
     }
 
+    // ════════════════════════════════════════════════════
+    // POKEMON-STYLE MENU SYSTEM
+    // Stage 1: Main Menu (TACTICS / POWERS / INFO / DEAL)
+    // Stage 2: Tactic Selection (within chosen category)
+    // Stage 3: Dialogue Choice (HOW to execute the tactic)
+    // ════════════════════════════════════════════════════
+
     renderTactics() {
-        // If the haggle is already resolved, skip straight to result screen
         if (this.state.resolved) {
             this.renderResult();
             return;
         }
+        this._renderMainMenu();
+    }
 
+    /** Stage 1: 2×2 category menu (like Pokemon's FIGHT/BAG/POKEMON/RUN) */
+    _renderMainMenu() {
         this.tacticsContainer.removeAll(true);
         this.tacticsContainer.setVisible(true);
+        this.menuBg?.setVisible(true);
         this.speakerTab.setText('YOUR MOVE');
+        this.dialogueTextContent.setText('What will you do?');
 
         const { width, height } = this.scale;
-        const dlHeight = 150;
-        const dlY = height - dlHeight - 40;
+        const { dlHeight, dlY, menuW } = this._uiLayout;
 
-        // WalkAway comes from HaggleManager.getAvailableTactics() already — do NOT push again
-        const tactics = HaggleManager.getAvailableTactics();
-
-        // "Extend Hand" climax — when gap < 10% or patience < 2
+        // Check for extend hand / deal close conditions
         const currentState = HaggleManager.getState();
         const asking = currentState.askingPrice || 1;
         const gapPct = (currentState.gap / asking) * 100;
-        if (gapPct < 10 || currentState.patience < 2) {
-            this._renderExtendHand(width, height, dlY, dlHeight, currentState);
+
+        // 2×2 grid in the right-side menu area
+        const menuX = width - menuW - 20;
+        const menuY = dlY + 8;
+        const btnW = (menuW - 24) / 2;
+        const btnH = (dlHeight - 28) / 2;
+        const gap = 6;
+
+        const categories = [
+            { id: 'tactics', label: '⚔️ TACTICS', color: 0xc9a84c, textColor: '#c9a84c' },
+            { id: 'powers', label: '⭐ POWERS', color: 0x60a5fa, textColor: '#60a5fa' },
+            { id: 'info', label: '📊 INFO', color: 0x888888, textColor: '#888888' },
+            { id: gapPct < 10 ? 'extend' : 'deal', label: gapPct < 10 ? '🤝 DEAL!' : '🤝 DEAL', color: gapPct < 10 ? 0x4ade80 : 0x3a8a5c, textColor: gapPct < 10 ? '#4ade80' : '#3a8a5c' },
+        ];
+
+        categories.forEach((cat, i) => {
+            const col = i % 2;
+            const row = Math.floor(i / 2);
+            const x = menuX + 8 + col * (btnW + gap) + btnW / 2;
+            const y = menuY + 4 + row * (btnH + gap) + btnH / 2;
+
+            const bg = this.add.rectangle(x, y, btnW, btnH, 0x1a1a2e)
+                .setStrokeStyle(2, cat.color).setInteractive({ useHandCursor: true });
+
+            const txt = this.add.text(x, y, cat.label, {
+                fontFamily: '"Press Start 2P"', fontSize: '9px', color: cat.textColor, align: 'center',
+            }).setOrigin(0.5);
+
+            bg.on('pointerover', () => { bg.setFillStyle(0x2a2a3e); this.dialogueTextContent.setText(this._getCategoryHint(cat.id)); });
+            bg.on('pointerout', () => { bg.setFillStyle(0x1a1a2e); });
+
+            bg.on('pointerdown', () => {
+                WebAudioService.tactic?.();
+                if (cat.id === 'tactics') this._renderTacticList(false);
+                else if (cat.id === 'powers') this._renderTacticList(true);
+                else if (cat.id === 'info') this._renderInfoScreen();
+                else if (cat.id === 'deal') this._renderDealMenu();
+                else if (cat.id === 'extend') this._renderExtendHand(width, height, dlY, dlHeight, currentState);
+            });
+
+            // Pulse the DEAL button if gap < 10%
+            if (cat.id === 'extend') {
+                this.tweens.add({ targets: bg, scaleX: 1.03, scaleY: 1.03, yoyo: true, repeat: -1, duration: 500, ease: 'Sine.easeInOut' });
+            }
+
+            this.tacticsContainer.add([bg, txt]);
+        });
+    }
+
+    _getCategoryHint(id) {
+        switch (id) {
+            case 'tactics': return 'Choose a negotiation tactic.';
+            case 'powers': return 'Use a special ability (stat-gated).';
+            case 'info': return 'View the dealer\'s profile and round details.';
+            case 'deal': return 'Close the deal or walk away.';
+            case 'extend': return 'The gap is close! Seal the deal!';
+            default: return '';
+        }
+    }
+
+    /** Stage 2: List of available tactics (scrollable, with BACK button) */
+    _renderTacticList(powersOnly = false) {
+        this.tacticsContainer.removeAll(true);
+        const { width, height } = this.scale;
+        const { dlHeight, dlY } = this._uiLayout;
+
+        const allTactics = HaggleManager.getAvailableTactics();
+        const filtered = powersOnly
+            ? allTactics.filter(t => t.isBlueOption)
+            : allTactics.filter(t => !t.isBlueOption && t.id !== 'walkAway');
+
+        this.speakerTab.setText(powersOnly ? '⭐ POWERS' : '⚔️ TACTICS');
+        this.dialogueTextContent.setText(powersOnly ? 'Choose a special power.' : 'Choose your tactic.');
+
+        // Scrollable list on the left side of dialogue box
+        const listX = 40;
+        const listW = width - 320;
+        const itemH = 36;
+        const maxVisible = Math.floor((dlHeight - 10) / itemH);
+
+        const page = this._tacticPage || 0;
+        const visibleTactics = filtered.slice(page * maxVisible, (page + 1) * maxVisible);
+        const totalPages = Math.ceil(filtered.length / maxVisible);
+
+        visibleTactics.forEach((t, i) => {
+            const y = dlY + 8 + i * itemH;
+            const isLocked = t.locked;
+
+            // Type colors
+            let borderColor = 0x3a3a4e;
+            let typeIcon = '';
+            if (t.type) {
+                switch (t.type) {
+                    case HAGGLE_TYPES.EMOTIONAL: borderColor = 0xff88aa; typeIcon = '❤️'; break;
+                    case HAGGLE_TYPES.LOGICAL: borderColor = 0x88bbff; typeIcon = '🧠'; break;
+                    case HAGGLE_TYPES.AGGRESSIVE: borderColor = 0xff6666; typeIcon = '🔥'; break;
+                    case HAGGLE_TYPES.FINANCIAL: borderColor = 0x88cc88; typeIcon = '💰'; break;
+                }
+            }
+
+            const bg = this.add.rectangle(listX + listW / 2, y + itemH / 2, listW, itemH - 4, isLocked ? 0x0a0a0f : 0x1a1a2e)
+                .setStrokeStyle(1.5, isLocked ? 0x222222 : borderColor);
+
+            if (!isLocked) {
+                bg.setInteractive({ useHandCursor: true });
+                bg.on('pointerover', () => {
+                    bg.setFillStyle(0x2a2a3e);
+                    this.dialogueTextContent.setText(t.description || '');
+                });
+                bg.on('pointerout', () => bg.setFillStyle(0x1a1a2e));
+                bg.on('pointerdown', () => this._renderDialogueChoices(t));
+            }
+
+            const label = this.add.text(listX + 10, y + itemH / 2, `${typeIcon} ${t.label}`, {
+                fontFamily: '"Press Start 2P"', fontSize: '9px',
+                color: isLocked ? '#333' : '#e8e4df',
+            }).setOrigin(0, 0.5);
+
+            this.tacticsContainer.add([bg, label]);
+
+            if (isLocked) {
+                const lock = this.add.text(listX + listW - 10, y + itemH / 2, '🔒', {
+                    fontSize: '12px'
+                }).setOrigin(1, 0.5);
+                this.tacticsContainer.add(lock);
+            }
+
+            // Success rate badge (right side)
+            if (!isLocked && t.baseSuccess) {
+                const pct = Math.round(t.baseSuccess * 100);
+                const pctColor = pct >= 60 ? '#4ade80' : pct >= 40 ? '#c9a84c' : '#f87171';
+                const badge = this.add.text(listX + listW - 10, y + itemH / 2, `${pct}%`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: pctColor,
+                }).setOrigin(1, 0.5);
+                this.tacticsContainer.add(badge);
+            }
+        });
+
+        // Page nav (if needed)
+        if (totalPages > 1) {
+            const navY = dlY + dlHeight - 16;
+            if (page > 0) {
+                const prev = this.add.text(listX + 10, navY, '◄ PREV', {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#888',
+                }).setInteractive({ useHandCursor: true });
+                prev.on('pointerdown', () => { this._tacticPage = page - 1; this._renderTacticList(powersOnly); });
+                this.tacticsContainer.add(prev);
+            }
+            if (page < totalPages - 1) {
+                const next = this.add.text(listX + listW - 10, navY, 'NEXT ►', {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#888',
+                }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+                next.on('pointerdown', () => { this._tacticPage = page + 1; this._renderTacticList(powersOnly); });
+                this.tacticsContainer.add(next);
+            }
+            const pageText = this.add.text(listX + listW / 2, navY, `${page + 1}/${totalPages}`, {
+                fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#555',
+            }).setOrigin(0.5, 0);
+            this.tacticsContainer.add(pageText);
+        }
+
+        // BACK button (right side)
+        this._addBackButton(() => this._renderMainMenu());
+    }
+
+    /** Stage 3: Dialogue choice — HOW to execute the tactic */
+    _renderDialogueChoices(tactic) {
+        this.tacticsContainer.removeAll(true);
+        const { width, height } = this.scale;
+        const { dlHeight, dlY } = this._uiLayout;
+
+        const choices = TACTIC_DIALOGUE_CHOICES[tactic.id];
+
+        // If no dialogue choices for this tactic, go straight to execute
+        if (!choices || choices.length === 0) {
+            this.executeTactic(tactic.id, tactic.label, null);
             return;
         }
 
-        // Draw 2x2 grid inside dialogue box area
-        const cols = 2;
-        const padX = 20;
-        const padY = 15;
-        const btnW = (width - 60 - padX * 3) / 2;
-        const btnH = (dlHeight - padY * 3) / 2;
+        this.speakerTab.setText('💬 CHOOSE YOUR WORDS');
+        this.dialogueTextContent.setText(`${tactic.label} — Pick your approach:`);
 
-        let ox = 30 + padX;
-        let oy = dlY + padY;
+        const listX = 40;
+        const listW = width - 120;
+        const itemH = Math.min(50, (dlHeight - 20) / choices.length);
 
-        tactics.forEach((t, index) => {
-            if (index > 3 && t.id !== 'walkAway') return; // Limit to 4 for clean layout, but let's just arrange them
+        choices.forEach((choice, i) => {
+            const y = dlY + 10 + i * itemH;
 
-            const x = ox + (index % cols) * (btnW + padX);
-            const y = oy + Math.floor(index / cols) * (btnH + padY);
+            // Calculate effectiveness hint for current dealer
+            const dealerKey = this.state.dealerTypeKey || 'patron';
+            const eff = choice.effectiveness?.[dealerKey] || 'neutral';
+            let effColor = 0x3a3a4e;
+            let effIcon = '';
+            let effLabel = '';
+            if (eff === 'good') { effColor = 0x2e4e2e; effIcon = '✦'; effLabel = 'STRONG'; }
+            else if (eff === 'bad') { effColor = 0x4e2e2e; effIcon = '✗'; effLabel = 'WEAK'; }
+            else { effIcon = '·'; effLabel = ''; }
 
-            const isBlue = t.isBlueOption;
+            const bg = this.add.rectangle(listX + listW / 2, y + itemH / 2, listW, itemH - 4, 0x1a1a2e)
+                .setStrokeStyle(1.5, effColor === 0x3a3a4e ? 0x3a3a4e : effColor)
+                .setInteractive({ useHandCursor: true });
 
-            // Map tactic types to header colors
-            let typeColor = isBlue ? '#88ccff' : '#e8e4df';
-            let typeBgColor = isBlue ? 0x1a2e4e : 0x1a1a2e;
-            let typeHoverColor = isBlue ? 0x2a3e6e : 0x2a2a3e;
-            let typeBorderColor = isBlue ? 0x4488cc : 0x3a3a4e;
-
-            // Type styling
-            let typeLabel = '';
-            if (t.type) {
-                switch (t.type) {
-                    case HAGGLE_TYPES.EMOTIONAL: typeBorderColor = 0xff88aa; typeLabel = 'EMOTION'; break;
-                    case HAGGLE_TYPES.LOGICAL: typeBorderColor = 0x88bbff; typeLabel = 'LOGIC'; break;
-                    case HAGGLE_TYPES.AGGRESSIVE: typeBorderColor = 0xff6666; typeLabel = 'AGGRESSIVE'; break;
-                    case HAGGLE_TYPES.FINANCIAL: typeBorderColor = 0x88cc88; typeLabel = 'FINANCIAL'; break;
-                }
-            }
-            if (t.id === 'walkAway') {
-                typeBorderColor = 0xff6666;
-            }
-
-            const bg = this.add.rectangle(x + btnW / 2, y + btnH / 2, btnW, btnH, typeBgColor)
-                .setStrokeStyle(1.5, typeBorderColor).setInteractive({ useHandCursor: true });
-
-            const displayLabel = (t.id !== 'walkAway') ? `Drop: ${t.label}` : t.label;
-            const txt = this.add.text(x + 10, y + btnH / 2 - 12, displayLabel, {
-                fontFamily: '"Press Start 2P"', fontSize: '10px', color: typeColor
+            // Dialogue line
+            const lineTxt = this.add.text(listX + 14, y + itemH / 2 - 6, choice.line, {
+                fontFamily: '"Playfair Display"', fontSize: '14px', color: '#e8e4df', fontStyle: 'italic',
+                wordWrap: { width: listW - 100 },
             }).setOrigin(0, 0.5);
 
-            const descText = this.add.text(x + 10, y + btnH / 2 + 10, t.description || '', {
-                fontFamily: '"Playfair Display"', fontSize: '12px', color: '#7a7a8a'
+            // Tone tag
+            const toneTxt = this.add.text(listX + 14, y + itemH / 2 + 10, `[${choice.tone}]`, {
+                fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#555',
             }).setOrigin(0, 0.5);
 
-            // Add the type label in the top right corner
-            let typeBadge = null;
-            if (typeLabel) {
-                typeBadge = this.add.text(x + btnW - 5, y + 5, typeLabel, {
-                    fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#' + typeBorderColor.toString(16).padStart(6, '0')
-                }).setOrigin(1, 0).setAlpha(0.7);
+            // Effectiveness hint (subtle — only shows after high intel?)
+            // For now, always show a subtle hint via border color
+            let effBadge = null;
+            if (effLabel) {
+                effBadge = this.add.text(listX + listW - 14, y + itemH / 2, `${effIcon} ${effLabel}`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '7px',
+                    color: eff === 'good' ? '#4ade80' : '#f87171',
+                }).setOrigin(1, 0.5).setAlpha(0.7);
             }
 
-            bg.on('pointerover', () => bg.setFillStyle(typeHoverColor));
-            bg.on('pointerout', () => bg.setFillStyle(typeBgColor));
+            bg.on('pointerover', () => {
+                bg.setFillStyle(eff === 'good' ? 0x1e3e1e : eff === 'bad' ? 0x3e1e1e : 0x2a2a3e);
+            });
+            bg.on('pointerout', () => bg.setFillStyle(0x1a1a2e));
 
-            bg.on('pointerdown', () => this.executeTactic(t.id, t.label));
+            bg.on('pointerdown', () => {
+                // Player selected their words — execute with this dialogue choice
+                this._selectedDialogue = choice;
+                this.executeTactic(tactic.id, tactic.label, choice);
+            });
 
-            this.tacticsContainer.add([bg, txt, descText]);
-            if (typeBadge) this.tacticsContainer.add(typeBadge);
+            const elements = [bg, lineTxt, toneTxt];
+            if (effBadge) elements.push(effBadge);
+            this.tacticsContainer.add(elements);
         });
+
+        // BACK button
+        this._addBackButton(() => {
+            this._tacticPage = 0;
+            this._renderTacticList(tactic.isBlueOption || false);
+        });
+    }
+
+    /** INFO screen — shows dealer profile, round stats, gap analysis */
+    _renderInfoScreen() {
+        this.tacticsContainer.removeAll(true);
+        const { width } = this.scale;
+        const { dlHeight, dlY } = this._uiLayout;
+        const state = HaggleManager.getState();
+
+        this.speakerTab.setText('📊 INTEL');
+        this.dialogueTextContent.setText('');
+
+        const infoX = 40;
+        const col2X = width / 2;
+
+        // Left column: Dealer info
+        const lines = [
+            { label: 'DEALER', value: state.dealerName || 'Unknown', color: '#c9a84c' },
+            { label: 'TYPE', value: (state.dealerType?.name || state.dealerTypeKey || '?').toUpperCase(), color: '#888' },
+            { label: 'PATIENCE', value: `${state.patience} / ${state.maxPatience || '?'}`, color: state.patience <= 2 ? '#f87171' : '#4ade80' },
+            { label: 'ROUND', value: `${state.round} / ${state.maxRounds}`, color: '#888' },
+        ];
+
+        lines.forEach((l, i) => {
+            const y = dlY + 14 + i * 22;
+            this.tacticsContainer.add(
+                this.add.text(infoX, y, `${l.label}:`, { fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#555' })
+            );
+            this.tacticsContainer.add(
+                this.add.text(infoX + 100, y, l.value, { fontFamily: '"Press Start 2P"', fontSize: '8px', color: l.color })
+            );
+        });
+
+        // Right column: Price info
+        const asking = state.askingPrice || 0;
+        const gap = state.gap || 0;
+        const offer = asking - gap;
+        const gapPct = Math.round((gap / (asking || 1)) * 100);
+
+        const priceLines = [
+            { label: 'ASKING', value: `$${asking.toLocaleString()}`, color: '#f87171' },
+            { label: 'YOUR OFFER', value: `$${offer.toLocaleString()}`, color: '#4ade80' },
+            { label: 'GAP', value: `$${gap.toLocaleString()} (${gapPct}%)`, color: '#c9a84c' },
+            { label: 'ARTWORK', value: (state.work?.title || 'Unknown').substring(0, 25), color: '#888' },
+        ];
+
+        priceLines.forEach((l, i) => {
+            const y = dlY + 14 + i * 22;
+            this.tacticsContainer.add(
+                this.add.text(col2X, y, `${l.label}:`, { fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#555' })
+            );
+            this.tacticsContainer.add(
+                this.add.text(col2X + 110, y, l.value, { fontFamily: '"Press Start 2P"', fontSize: '8px', color: l.color })
+            );
+        });
+
+        // Type effectiveness hint
+        const dealerStyle = state.dealerType?.style;
+        if (dealerStyle) {
+            const hint = this.add.text(infoX, dlY + dlHeight - 22, `Dealer style: ${dealerStyle.toUpperCase()} — choose your approach wisely.`, {
+                fontFamily: '"Playfair Display"', fontSize: '12px', color: '#555', fontStyle: 'italic',
+            });
+            this.tacticsContainer.add(hint);
+        }
+
+        this._addBackButton(() => this._renderMainMenu());
+    }
+
+    /** DEAL menu — Walk Away or Extend Hand */
+    _renderDealMenu() {
+        this.tacticsContainer.removeAll(true);
+        const { width } = this.scale;
+        const { dlHeight, dlY } = this._uiLayout;
+        const currentState = HaggleManager.getState();
+        const asking = currentState.askingPrice || 1;
+        const gapPct = (currentState.gap / asking) * 100;
+
+        this.speakerTab.setText('🤝 DEAL');
+        this.dialogueTextContent.setText(`Gap: ${Math.round(gapPct)}% — $${currentState.gap?.toLocaleString() || '?'} apart.`);
+
+        const centerX = width / 2;
+        const btnW = 240;
+        const btnH = 44;
+
+        // Walk Away
+        const walkY = dlY + 30;
+        const walkBg = this.add.rectangle(centerX, walkY + btnH / 2, btnW, btnH, 0x2e1a1a)
+            .setStrokeStyle(2, 0xc94040).setInteractive({ useHandCursor: true });
+        const walkTxt = this.add.text(centerX, walkY + btnH / 2, '💨 WALK AWAY', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#f87171',
+        }).setOrigin(0.5);
+        walkBg.on('pointerover', () => walkBg.setFillStyle(0x4e2a2a));
+        walkBg.on('pointerout', () => walkBg.setFillStyle(0x2e1a1a));
+        walkBg.on('pointerdown', () => {
+            // Check for dialogue choices on walkAway
+            const walkTactic = { id: 'walkAway', label: '💨 Walk Away', isBlueOption: false };
+            this._renderDialogueChoices(walkTactic);
+        });
+
+        // Extend Hand (only if gap < 25%)
+        const elements = [walkBg, walkTxt];
+        if (gapPct < 25) {
+            const extendY = dlY + 30 + btnH + 10;
+            const extendBg = this.add.rectangle(centerX, extendY + btnH / 2, btnW, btnH, 0x1a2e1a)
+                .setStrokeStyle(2, 0x3a8a5c).setInteractive({ useHandCursor: true });
+            const extendTxt = this.add.text(centerX, extendY + btnH / 2, '🤝 EXTEND HAND', {
+                fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#4ade80',
+            }).setOrigin(0.5);
+            extendBg.on('pointerover', () => extendBg.setFillStyle(0x2a3e2a));
+            extendBg.on('pointerout', () => extendBg.setFillStyle(0x1a2e1a));
+            extendBg.on('pointerdown', () => this._renderExtendHand(width, this.scale.height, dlY, dlHeight, currentState));
+
+            if (gapPct < 10) {
+                this.tweens.add({ targets: extendBg, scaleX: 1.02, scaleY: 1.02, yoyo: true, repeat: -1, duration: 600, ease: 'Sine.easeInOut' });
+            }
+            elements.push(extendBg, extendTxt);
+        }
+
+        this.tacticsContainer.add(elements);
+        this._addBackButton(() => this._renderMainMenu());
+    }
+
+    /** Reusable BACK button in bottom-right of menu */
+    _addBackButton(onBack) {
+        const { width } = this.scale;
+        const { dlHeight, dlY, menuW } = this._uiLayout;
+
+        const btnX = width - 60;
+        const btnY = dlY + dlHeight - 18;
+
+        const backBg = this.add.rectangle(btnX, btnY, 80, 22, 0x1a1a2e)
+            .setStrokeStyle(1, 0x3a3a4e).setInteractive({ useHandCursor: true });
+        const backTxt = this.add.text(btnX, btnY, '◄ BACK', {
+            fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#888',
+        }).setOrigin(0.5);
+
+        backBg.on('pointerover', () => { backBg.setFillStyle(0x2a2a3e); backTxt.setColor('#e8e4df'); });
+        backBg.on('pointerout', () => { backBg.setFillStyle(0x1a1a2e); backTxt.setColor('#888'); });
+        backBg.on('pointerdown', () => { this._tacticPage = 0; onBack(); });
+
+        this.tacticsContainer.add([backBg, backTxt]);
     }
 
     _renderExtendHand(width, height, dlY, dlHeight, currentState) {
@@ -919,81 +1253,125 @@ export class HaggleScene extends BaseScene {
         }
     }
 
-    executeTactic(tacticId, label) {
+    executeTactic(tacticId, label, dialogueChoice = null) {
         this.tacticsContainer.setVisible(false);
+        this.menuBg?.setVisible(false);
         this.speakerTab.setText('SYSTEM');
-        WebAudioService.tactic();
+        WebAudioService.tactic?.();
 
-        // Look up tactic definition for animType and type
-        let animType = 'slash';
-        let tacticType = null;
-        if (TACTICS[tacticId]) {
-            animType = TACTICS[tacticId].animType;
-            tacticType = TACTICS[tacticId].type;
-        } else {
-            const blueOpt = BLUE_OPTIONS.find(o => o.id === tacticId);
-            if (blueOpt) {
-                animType = blueOpt.animType || 'charm';
-                tacticType = blueOpt.type;
-            }
-        }
+        // ── Dialogue cutscene moment ──
+        // If a dialogue choice was selected, show the player's line first
+        const showPlayerLine = dialogueChoice?.line;
 
-        // Play the multi-step animation, then resolve the tactic
-        this.playTacticAnimation(animType, () => {
-            const result = HaggleManager.executeTactic(tacticId);
-
-            if (!result) {
-                console.warn('[HaggleScene] executeTactic returned null for:', tacticId);
-                this.renderTactics();
-                return;
-            }
-
-            // Type effectiveness check
-            const isSuperEffective = result.effectivenessMessage?.toLowerCase().includes('super effective');
-            const isNotEffective = result.effectivenessMessage?.toLowerCase().includes('not very effective');
-
-            // Show effectiveness flash + sound
-            if (isSuperEffective) {
-                this.showEffectivenessFlash('SUPER EFFECTIVE!', '#ffcc00');
-                WebAudioService.superEffective();
-            } else if (isNotEffective) {
-                this.showEffectivenessFlash('Not very effective...', '#666688');
-                WebAudioService.miss();
-            } else if (result.success) {
-                this.showEffectivenessFlash('Effective!', '#88cc88');
-                WebAudioService.hit();
+        const proceedWithTactic = () => {
+            // Look up tactic definition for animType and type
+            let animType = 'slash';
+            let tacticType = null;
+            if (TACTICS[tacticId]) {
+                animType = TACTICS[tacticId].animType;
+                tacticType = TACTICS[tacticId].type;
             } else {
-                WebAudioService.miss();
+                const blueOpt = BLUE_OPTIONS.find(o => o.id === tacticId);
+                if (blueOpt) {
+                    animType = blueOpt.animType || 'charm';
+                    tacticType = blueOpt.type;
+                }
             }
 
-            // Dealer reaction
-            this.dealerHitReaction(result.success, isSuperEffective);
+            // Play the multi-step animation, then resolve the tactic
+            this.playTacticAnimation(animType, () => {
+                const result = HaggleManager.executeTactic(tacticId);
 
-            // Animate bars smoothly
-            this.updateBars(true);
+                if (!result) {
+                    console.warn('[HaggleScene] executeTactic returned null for:', tacticId);
+                    this.renderTactics();
+                    return;
+                }
 
-            // Use real dealer dialogue from haggle_config instead of generic text
-            const dealerDialogue = result.dialogue ? result.dialogue.replace(/"/g, '') : (result.success ? 'Interesting...' : 'I don\'t think so.');
-            const priceInfo = result.priceChange ? `\n> Price shifted by $${Math.abs(result.priceChange).toLocaleString()}` : '';
+                // Apply dialogue choice effectiveness modifier
+                if (dialogueChoice) {
+                    const dealerKey = this.state.dealerTypeKey || 'patron';
+                    const eff = dialogueChoice.effectiveness?.[dealerKey] || 'neutral';
+                    const mod = DIALOGUE_EFFECTIVENESS[eff] || 0;
 
-            let effectText = result.success ? '✦ Effective!' : '✗ No effect.';
-            if (result.effectivenessMessage) {
-                effectText = `✦ ${result.effectivenessMessage}`;
-            }
+                    if (mod !== 0) {
+                        // Re-roll success with modifier applied
+                        const baseRoll = result.success;
+                        const adjustedChance = (result.successChance || 0.5) + mod;
+                        const newRoll = Math.random() < adjustedChance;
 
-            this.time.delayedCall(400, () => {
-                this.playDialogue(`> ${effectText}${priceInfo}`, () => {
-                    this.time.delayedCall(800, () => {
-                        this.speakerTab.setText(this.state.dealerName?.toUpperCase() || 'DEALER');
-                        if (result.dealReached || result.dealFailed) {
-                            this.playDialogue(result.finalDialogue ? result.finalDialogue.replace(/"/g, '') : 'We\'re done here.', () => this.renderResult());
-                        } else {
-                            this.playDialogue(dealerDialogue, () => this.renderTactics());
+                        // Override result if dialogue choice changed the outcome
+                        if (newRoll !== baseRoll) {
+                            result.success = newRoll;
+                            if (eff === 'good' && newRoll) {
+                                result.effectivenessMessage = 'Your words struck a chord! SUPER EFFECTIVE!';
+                            } else if (eff === 'bad' && !newRoll) {
+                                result.effectivenessMessage = 'Wrong approach... not very effective.';
+                            }
+                        } else if (eff === 'good' && newRoll) {
+                            result.effectivenessMessage = 'Great choice of words! Effective!';
                         }
+                    }
+                }
+
+                // Type effectiveness check
+                const isSuperEffective = result.effectivenessMessage?.toLowerCase().includes('super effective');
+                const isNotEffective = result.effectivenessMessage?.toLowerCase().includes('not very effective');
+
+                // Show effectiveness flash + sound
+                if (isSuperEffective) {
+                    this.showEffectivenessFlash('SUPER EFFECTIVE!', '#ffcc00');
+                    WebAudioService.superEffective?.();
+                } else if (isNotEffective) {
+                    this.showEffectivenessFlash('Not very effective...', '#666688');
+                    WebAudioService.miss?.();
+                } else if (result.success) {
+                    this.showEffectivenessFlash('Effective!', '#88cc88');
+                    WebAudioService.hit?.();
+                } else {
+                    WebAudioService.miss?.();
+                }
+
+                // Dealer reaction
+                this.dealerHitReaction(result.success, isSuperEffective);
+
+                // Animate bars smoothly
+                this.updateBars(true);
+
+                // Use real dealer dialogue from haggle_config instead of generic text
+                const dealerDialogue = result.dialogue ? result.dialogue.replace(/"/g, '') : (result.success ? 'Interesting...' : 'I don\'t think so.');
+                const priceInfo = result.priceChange ? `\n> Price shifted by $${Math.abs(result.priceChange).toLocaleString()}` : '';
+
+                let effectText = result.success ? '✦ Effective!' : '✗ No effect.';
+                if (result.effectivenessMessage) {
+                    effectText = `✦ ${result.effectivenessMessage}`;
+                }
+
+                this.time.delayedCall(400, () => {
+                    this.playDialogue(`> ${effectText}${priceInfo}`, () => {
+                        this.time.delayedCall(800, () => {
+                            this.speakerTab.setText(this.state.dealerName?.toUpperCase() || 'DEALER');
+                            if (result.dealReached || result.dealFailed) {
+                                this.playDialogue(result.finalDialogue ? result.finalDialogue.replace(/"/g, '') : 'We\'re done here.', () => this.renderResult());
+                            } else {
+                                this.playDialogue(dealerDialogue, () => this.renderTactics());
+                            }
+                        });
                     });
                 });
             });
-        });
+        };
+
+        // ── Cutscene: show player's chosen dialogue line first ──
+        if (showPlayerLine) {
+            this.speakerTab.setText('YOU');
+            this.playDialogue(showPlayerLine, () => {
+                // Brief dramatic pause before the tactic resolves
+                this.time.delayedCall(300, proceedWithTactic);
+            });
+        } else {
+            proceedWithTactic();
+        }
     }
 
     renderResult() {
@@ -1001,6 +1379,7 @@ export class HaggleScene extends BaseScene {
         if (live) Object.assign(this.state, live);
         this.tacticsContainer.removeAll(true);
         this.tacticsContainer.setVisible(true);
+        this.menuBg?.setVisible(false);
 
         const { width, height } = this.scale;
         const isDeal = this.state.result === 'deal';
@@ -1010,102 +1389,348 @@ export class HaggleScene extends BaseScene {
         this.speakerTab.setAlpha(0);
         this.dialogueTextContent.setAlpha(0);
 
+        const DEPTH = 200;
+        const elements = [];
+
         if (isDeal) {
-            // ═══ ART ACQUISITION CELEBRATION ═══
-            WebAudioService.dealSuccess();
+            // ═════════════════════════════════════════════
+            // ═══ CINEMATIC ART ACQUISITION CELEBRATION ═══
+            // ═════════════════════════════════════════════
+            WebAudioService.dealSuccess?.();
 
-            // Full-screen dramatic overlay
-            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92).setDepth(200);
-            overlay.setAlpha(0);
-            this.tweens.add({ targets: overlay, alpha: 1, duration: 600 });
+            const work = this.state.work || {};
+            const finalPrice = this.state.finalPrice || 0;
+            const askingPrice = this.state.askingPrice || 0;
+            const savings = askingPrice - finalPrice;
+            const savingsPct = askingPrice > 0 ? Math.round((savings / askingPrice) * 100) : 0;
 
-            // Screen flash
-            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.9).setDepth(201);
-            this.tweens.add({ targets: flash, alpha: 0, duration: 400, delay: 300 });
-            this.cameras.main.shake(300, 0.02);
+            // Get market value for comparison
+            let marketValue = 0;
+            try { marketValue = MarketManager.calculatePrice(work, false) || work.basePrice || askingPrice; } catch (e) { marketValue = askingPrice; }
+            const vsMkt = finalPrice - marketValue;
+            const vsMktPct = marketValue > 0 ? Math.round((vsMkt / marketValue) * 100) : 0;
+            const isGoodDeal = vsMkt < 0;
 
-            // Art piece title
-            const titleText = this.add.text(width / 2, height / 2 - 80, '🤝  DEAL CLOSED', {
-                fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#c9a84c', align: 'center'
-            }).setOrigin(0.5).setDepth(202).setAlpha(0);
-            this.tweens.add({ targets: titleText, alpha: 1, y: height / 2 - 90, duration: 800, delay: 500, ease: 'Power2' });
+            // Remaining cash
+            const cashAfter = (GameState.state?.cash || 0) - finalPrice;
+            const roundCount = this.state.rounds?.length || this.state.round || '?';
 
-            const workTitle = this.add.text(width / 2, height / 2 - 30, `"${this.state.work?.title || 'Untitled'}"`, {
-                fontFamily: '"Playfair Display"', fontSize: '22px', color: '#e8e4df', fontStyle: 'italic', align: 'center'
-            }).setOrigin(0.5).setDepth(202).setAlpha(0);
-            this.tweens.add({ targets: workTitle, alpha: 1, duration: 600, delay: 800 });
+            // ── Phase 0: Dramatic blackout + flash ──
+            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x050510, 0.96).setDepth(DEPTH).setAlpha(0);
+            elements.push(overlay);
+            this.tweens.add({ targets: overlay, alpha: 1, duration: 500 });
 
-            const artistText = this.add.text(width / 2, height / 2 + 10, `by ${this.state.work?.artist || 'Unknown Artist'}`, {
-                fontFamily: '"Playfair Display"', fontSize: '16px', color: '#7a7a8a', align: 'center'
-            }).setOrigin(0.5).setDepth(202).setAlpha(0);
-            this.tweens.add({ targets: artistText, alpha: 1, duration: 600, delay: 1000 });
+            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.9).setDepth(DEPTH + 1);
+            elements.push(flash);
+            this.tweens.add({ targets: flash, alpha: 0, duration: 350, delay: 250 });
+            this.cameras.main.shake(300, 0.015);
 
-            // Price details
-            const savings = (this.state.askingPrice || 0) - (this.state.finalPrice || 0);
-            const priceText = this.add.text(width / 2, height / 2 + 60, `DEAL AT $${(this.state.finalPrice || 0).toLocaleString()}`, {
-                fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#3a8a5c', align: 'center'
-            }).setOrigin(0.5).setDepth(202).setAlpha(0);
-            this.tweens.add({ targets: priceText, alpha: 1, duration: 600, delay: 1200 });
+            // ── Phase 1 (500ms): "ACQUIRED" header ──
+            const headerText = this.add.text(width / 2, 55, '✦  A R T   A C Q U I R E D  ✦', {
+                fontFamily: '"Press Start 2P"', fontSize: '18px', color: '#c9a84c',
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(headerText);
+            this.tweens.add({ targets: headerText, alpha: 1, y: 50, duration: 700, delay: 500, ease: 'Back.easeOut' });
 
-            if (savings > 0) {
-                const savingsText = this.add.text(width / 2, height / 2 + 90, `You saved $${savings.toLocaleString()} from the asking price`, {
-                    fontFamily: '"Playfair Display"', fontSize: '14px', color: '#c9a84c', align: 'center'
-                }).setOrigin(0.5).setDepth(202).setAlpha(0);
-                this.tweens.add({ targets: savingsText, alpha: 1, duration: 600, delay: 1400 });
+            // Decorative line under header
+            const headerLine = this.add.graphics().setDepth(DEPTH + 2).setAlpha(0);
+            headerLine.lineStyle(1, 0xc9a84c, 0.5);
+            headerLine.lineBetween(width * 0.15, 75, width * 0.85, 75);
+            elements.push(headerLine);
+            this.tweens.add({ targets: headerLine, alpha: 1, duration: 500, delay: 800 });
+
+            // ── Phase 2 (800ms): Artwork display card ──
+            // Try to show artwork sprite if available
+            const cardX = width * 0.32;
+            const cardY = height / 2 - 20;
+            const cardW = 200;
+            const cardH = 250;
+
+            // Card background (frame)
+            const frame = this.add.rectangle(cardX, cardY, cardW + 16, cardH + 16, 0x0a0a1a, 0.9)
+                .setStrokeStyle(3, 0xc9a84c).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(frame);
+
+            // Inner mat
+            const mat = this.add.rectangle(cardX, cardY, cardW, cardH, 0x1a1a2e)
+                .setStrokeStyle(1, 0x2a2a3e).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(mat);
+
+            // Artwork sprite or placeholder
+            const spriteKey = work.sprite || work.spriteKey;
+            let artworkDisplay;
+            if (spriteKey && this.textures.exists(spriteKey)) {
+                const tex = this.textures.get(spriteKey).source[0];
+                const scale = Math.min((cardW - 20) / tex.width, (cardH - 60) / tex.height);
+                artworkDisplay = this.add.image(cardX, cardY - 15, spriteKey)
+                    .setScale(scale).setDepth(DEPTH + 3).setAlpha(0);
+            } else {
+                // Text placeholder with artwork title
+                artworkDisplay = this.add.text(cardX, cardY - 15, '🖼️', {
+                    fontSize: '64px',
+                }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
             }
+            elements.push(artworkDisplay);
 
-            // Continue button (appears last)
-            const btnY = height / 2 + 140;
-            const bg = this.add.rectangle(width / 2, btnY, 220, 36, 0x1a2e4e, 0.9).setStrokeStyle(2, 0x4488cc).setInteractive({ useHandCursor: true }).setDepth(202).setAlpha(0);
-            const txt = this.add.text(width / 2, btnY, 'CONTINUE →', { fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#88ccff' }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            // Artwork title & artist under the card
+            const artTitle = this.add.text(cardX, cardY + cardH / 2 - 20, `"${(work.title || 'Untitled').substring(0, 20)}"`, {
+                fontFamily: '"Playfair Display"', fontSize: '14px', color: '#e8e4df', fontStyle: 'italic', align: 'center',
+            }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+            elements.push(artTitle);
 
-            this.tweens.add({ targets: [bg, txt], alpha: 1, duration: 400, delay: 1800 });
+            const artArtist = this.add.text(cardX, cardY + cardH / 2 + 0, work.artist || 'Unknown', {
+                fontFamily: '"Playfair Display"', fontSize: '11px', color: '#7a7a8a', align: 'center',
+            }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+            elements.push(artArtist);
 
-            bg.on('pointerover', () => bg.setFillStyle(0x2a3e6e));
-            bg.on('pointerout', () => bg.setFillStyle(0x1a2e4e));
-            bg.on('pointerdown', () => {
-                HaggleManager.applyResult();
-                this.endBattle();
+            // Medium + Year badge
+            const medium = [work.medium, work.year].filter(Boolean).join(', ');
+            const mediumText = this.add.text(cardX, cardY + cardH / 2 + 18, medium, {
+                fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#555', align: 'center',
+            }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+            elements.push(mediumText);
+
+            // Animate card reveal
+            const cardElements = [frame, mat, artworkDisplay, artTitle, artArtist, mediumText];
+            cardElements.forEach((el, i) => {
+                this.tweens.add({ targets: el, alpha: 1, duration: 500, delay: 900 + i * 80, ease: 'Power2' });
             });
 
-            this.tacticsContainer.add([overlay, flash, titleText, workTitle, artistText, priceText, bg, txt]);
+            // Subtle float animation on artwork
+            this.tweens.add({ targets: artworkDisplay, y: artworkDisplay.y - 4, yoyo: true, repeat: -1, duration: 2000, ease: 'Sine.easeInOut', delay: 1400 });
+
+            // ── Phase 3 (1400ms): Price Comparison Panel ──
+            const panelX = width * 0.68;
+            const panelY = height / 2 - 60;
+            const panelW = 300;
+
+            // Panel background
+            const pricePanelBg = this.add.rectangle(panelX, panelY + 60, panelW, 220, 0x0e0e1a, 0.9)
+                .setStrokeStyle(2, 0x2a2a3e).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(pricePanelBg);
+            this.tweens.add({ targets: pricePanelBg, alpha: 1, duration: 400, delay: 1400 });
+
+            // Price rows with staggered reveal
+            const priceRows = [
+                { label: 'DEAL PRICE', value: `$${finalPrice.toLocaleString()}`, color: '#4ade80', fontSize: '14px', bold: true },
+                { label: 'ASKING PRICE', value: `$${askingPrice.toLocaleString()}`, color: '#f87171', fontSize: '10px', strikethrough: true },
+                { label: 'MARKET VALUE', value: `$${marketValue.toLocaleString()}`, color: '#60a5fa', fontSize: '10px' },
+            ];
+
+            priceRows.forEach((row, i) => {
+                const rowY = panelY + 5 + i * 32;
+                const lbl = this.add.text(panelX - panelW / 2 + 16, rowY, row.label, {
+                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#555',
+                }).setDepth(DEPTH + 3).setAlpha(0);
+
+                const val = this.add.text(panelX + panelW / 2 - 16, rowY, row.value, {
+                    fontFamily: '"Press Start 2P"', fontSize: row.fontSize, color: row.color,
+                }).setOrigin(1, 0).setDepth(DEPTH + 3).setAlpha(0);
+
+                elements.push(lbl, val);
+                this.tweens.add({ targets: [lbl, val], alpha: 1, duration: 300, delay: 1500 + i * 200 });
+
+                // Strikethrough line on asking price
+                if (row.strikethrough) {
+                    const strike = this.add.graphics().setDepth(DEPTH + 4).setAlpha(0);
+                    strike.lineStyle(2, 0xf87171, 0.6);
+                    const textWidth = row.value.length * 8;
+                    strike.lineBetween(panelX + panelW / 2 - 16 - textWidth - 4, rowY + 7, panelX + panelW / 2 - 12, rowY + 7);
+                    elements.push(strike);
+                    this.tweens.add({ targets: strike, alpha: 1, duration: 200, delay: 1750 });
+                }
+            });
+
+            // ── Savings / Market comparison badges ──
+            const badgeY = panelY + 105;
+
+            // Savings badge
+            if (savings > 0) {
+                const savBg = this.add.rectangle(panelX - 65, badgeY, 130, 28, 0x1a2e1a)
+                    .setStrokeStyle(1, 0x3a8a5c).setDepth(DEPTH + 3).setAlpha(0);
+                const savTxt = this.add.text(panelX - 65, badgeY, `▼ ${savingsPct}% OFF ASK`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#4ade80',
+                }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+                elements.push(savBg, savTxt);
+                this.tweens.add({ targets: [savBg, savTxt], alpha: 1, duration: 300, delay: 2100 });
+            }
+
+            // Market value comparison badge
+            if (marketValue > 0) {
+                const mktBadgeColor = isGoodDeal ? 0x1a2e1a : 0x2e1a1a;
+                const mktBorderColor = isGoodDeal ? 0x3a8a5c : 0xc94040;
+                const mktTextColor = isGoodDeal ? '#4ade80' : '#f87171';
+                const mktLabel = isGoodDeal
+                    ? `▼ ${Math.abs(vsMktPct)}% BELOW MKT`
+                    : `▲ ${Math.abs(vsMktPct)}% ABOVE MKT`;
+
+                const mktBg = this.add.rectangle(panelX + 65, badgeY, 130, 28, mktBadgeColor)
+                    .setStrokeStyle(1, mktBorderColor).setDepth(DEPTH + 3).setAlpha(0);
+                const mktTxt = this.add.text(panelX + 65, badgeY, mktLabel, {
+                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: mktTextColor,
+                }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+                elements.push(mktBg, mktTxt);
+                this.tweens.add({ targets: [mktBg, mktTxt], alpha: 1, duration: 300, delay: 2300 });
+            }
+
+            // ── Phase 4 (2600ms): Stats summary row ──
+            const statsY = panelY + 150;
+
+            const statsData = [
+                { label: 'ROUNDS', value: `${roundCount}`, icon: '⚔️' },
+                { label: 'SAVED', value: savings > 0 ? `$${savings.toLocaleString()}` : '$0', icon: '💰' },
+                { label: 'CASH LEFT', value: `$${Math.max(0, cashAfter).toLocaleString()}`, icon: '💵' },
+            ];
+
+            statsData.forEach((stat, i) => {
+                const sx = panelX - panelW / 2 + 20 + i * 100;
+                const lbl = this.add.text(sx, statsY, `${stat.icon} ${stat.label}`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#555',
+                }).setDepth(DEPTH + 3).setAlpha(0);
+                const val = this.add.text(sx, statsY + 14, stat.value, {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#c9a84c',
+                }).setDepth(DEPTH + 3).setAlpha(0);
+                elements.push(lbl, val);
+                this.tweens.add({ targets: [lbl, val], alpha: 1, duration: 300, delay: 2600 + i * 150 });
+            });
+
+            // ── Collection confirmation banner ──
+            const bannerY = height - 90;
+            const bannerBg = this.add.rectangle(width / 2, bannerY, width - 80, 32, 0x0a1a0a, 0.9)
+                .setStrokeStyle(1, 0x3a8a5c).setDepth(DEPTH + 2).setAlpha(0);
+            const portfolioCount = (GameState.state?.portfolio?.length || 0) + 1;
+            const bannerTxt = this.add.text(width / 2, bannerY, `✦ Added to collection — ${portfolioCount} work${portfolioCount !== 1 ? 's' : ''} in portfolio`, {
+                fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#4ade80',
+            }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+            elements.push(bannerBg, bannerTxt);
+            this.tweens.add({ targets: [bannerBg, bannerTxt], alpha: 1, duration: 400, delay: 3000 });
+
+            // ── Phase 5 (3400ms): Continue button ──
+            const btnY = height - 50;
+            const btnBg = this.add.rectangle(width / 2, btnY, 240, 36, 0x1a2e4e, 0.9)
+                .setStrokeStyle(2, 0x4488cc).setInteractive({ useHandCursor: true }).setDepth(DEPTH + 5).setAlpha(0);
+            const btnTxt = this.add.text(width / 2, btnY, 'ADD TO COLLECTION →', {
+                fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#88ccff',
+            }).setOrigin(0.5).setDepth(DEPTH + 5).setAlpha(0);
+            elements.push(btnBg, btnTxt);
+            this.tweens.add({ targets: [btnBg, btnTxt], alpha: 1, duration: 400, delay: 3400 });
+
+            btnBg.on('pointerover', () => btnBg.setFillStyle(0x2a3e6e));
+            btnBg.on('pointerout', () => btnBg.setFillStyle(0x1a2e4e));
+            btnBg.on('pointerdown', () => {
+                btnBg.disableInteractive();
+                HaggleManager.applyResult();
+                // Brief celebration flash before exit
+                this.cameras.main.flash(400, 201, 168, 76); // gold flash
+                this.time.delayedCall(500, () => this.endBattle());
+            });
+
+            // ── Ambient sparkle particles ──
+            this.time.delayedCall(1200, () => {
+                const sparkles = ['✦', '✧', '·', '·', '✦'];
+                for (let i = 0; i < 12; i++) {
+                    const sp = this.add.text(
+                        Phaser.Math.Between(40, width - 40),
+                        Phaser.Math.Between(40, height - 80),
+                        sparkles[i % sparkles.length],
+                        { fontSize: `${Phaser.Math.Between(8, 16)}px`, color: '#c9a84c' }
+                    ).setOrigin(0.5).setDepth(DEPTH + 1).setAlpha(0);
+                    elements.push(sp);
+                    this.tweens.add({
+                        targets: sp,
+                        alpha: { from: 0, to: Phaser.Math.FloatBetween(0.2, 0.5) },
+                        y: sp.y - Phaser.Math.Between(10, 30),
+                        duration: Phaser.Math.Between(2000, 4000),
+                        delay: i * 200,
+                        yoyo: true,
+                        repeat: -1,
+                    });
+                }
+            });
+
+            this.tacticsContainer.add(elements);
 
         } else {
-            // ═══ FAILED DEAL SCREEN ═══
-            WebAudioService.dealFail();
-            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85).setDepth(200);
-            overlay.setAlpha(0);
-            this.tweens.add({ targets: overlay, alpha: 1, duration: 400 });
+            // ═════════════════════════════════════════════
+            // ═══ DEAL FAILED — ARTWORK SLIPS AWAY ═══
+            // ═════════════════════════════════════════════
+            WebAudioService.dealFail?.();
 
-            // Dealer walks away — slide out
+            const work = this.state.work || {};
+            const askingPrice = this.state.askingPrice || 0;
+
+            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x0a0505, 0.90).setDepth(DEPTH).setAlpha(0);
+            elements.push(overlay);
+            this.tweens.add({ targets: overlay, alpha: 1, duration: 500 });
+
+            // Dealer walks away — dramatic slide out with rotation
             if (this.dealer) {
-                this.tweens.add({ targets: this.dealer, x: width + 200, alpha: 0, duration: 1000, ease: 'Power2' });
+                this.tweens.add({
+                    targets: this.dealer,
+                    x: width + 300, alpha: 0, angle: -5,
+                    duration: 1200, ease: 'Power3',
+                });
             }
 
-            const failHeader = this.add.text(width / 2, height / 2 - 60, '💨  NO DEAL', {
-                fontFamily: '"Press Start 2P"', fontSize: '20px', color: '#c94040', align: 'center'
-            }).setOrigin(0.5).setDepth(202).setAlpha(0);
-            this.tweens.add({ targets: failHeader, alpha: 1, duration: 600, delay: 400 });
+            // Red vignette pulse
+            const vignettePulse = this.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.08).setDepth(DEPTH + 1).setAlpha(0);
+            elements.push(vignettePulse);
+            this.tweens.add({ targets: vignettePulse, alpha: 0.08, duration: 400, yoyo: true, delay: 300 });
 
-            const failSub = this.add.text(width / 2, height / 2, `"${this.state.work?.title || 'The artwork'}" slipped through your fingers.`, {
-                fontFamily: '"Playfair Display"', fontSize: '16px', color: '#7a7a8a', align: 'center', wordWrap: { width: width - 200 }
-            }).setOrigin(0.5).setDepth(202).setAlpha(0);
-            this.tweens.add({ targets: failSub, alpha: 1, duration: 600, delay: 700 });
+            // Header
+            const failHeader = this.add.text(width / 2, height / 2 - 80, '💨  NO DEAL', {
+                fontFamily: '"Press Start 2P"', fontSize: '22px', color: '#c94040', align: 'center',
+                stroke: '#000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(failHeader);
+            this.tweens.add({ targets: failHeader, alpha: 1, duration: 600, delay: 500 });
 
-            const btnY = height / 2 + 80;
-            const bg = this.add.rectangle(width / 2, btnY, 200, 36, 0x2e1a1a, 0.9).setStrokeStyle(2, 0xc94040).setInteractive({ useHandCursor: true }).setDepth(202).setAlpha(0);
-            const txt = this.add.text(width / 2, btnY, 'RETURN →', { fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888' }).setOrigin(0.5).setDepth(202).setAlpha(0);
+            // Artwork title fading away
+            const failSub = this.add.text(width / 2, height / 2 - 30, `"${work.title || 'The artwork'}"`, {
+                fontFamily: '"Playfair Display"', fontSize: '20px', color: '#e8e4df', fontStyle: 'italic', align: 'center',
+            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(failSub);
+            this.tweens.add({ targets: failSub, alpha: 0.6, duration: 600, delay: 700 });
+            // Fade the title away slowly to emphasize loss
+            this.tweens.add({ targets: failSub, alpha: 0.2, duration: 2000, delay: 1800, ease: 'Power2' });
 
-            this.tweens.add({ targets: [bg, txt], alpha: 1, duration: 400, delay: 1200 });
+            const failReason = this.add.text(width / 2, height / 2 + 10, 'slipped through your fingers.', {
+                fontFamily: '"Playfair Display"', fontSize: '14px', color: '#7a7a8a', align: 'center',
+            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(failReason);
+            this.tweens.add({ targets: failReason, alpha: 1, duration: 600, delay: 900 });
 
-            bg.on('pointerover', () => bg.setFillStyle(0x4e2a2a));
-            bg.on('pointerout', () => bg.setFillStyle(0x2e1a1a));
-            bg.on('pointerdown', () => {
+            // What you missed out on
+            const missedDetails = [
+                `Asking: $${askingPrice.toLocaleString()}`,
+                `Artist: ${work.artist || 'Unknown'}`,
+                `Rounds: ${this.state.rounds?.length || this.state.round || '?'}`,
+            ].join('  ·  ');
+            const missedText = this.add.text(width / 2, height / 2 + 50, missedDetails, {
+                fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#444', align: 'center',
+            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(missedText);
+            this.tweens.add({ targets: missedText, alpha: 1, duration: 400, delay: 1200 });
+
+            // Return button
+            const btnY = height / 2 + 100;
+            const btnBg = this.add.rectangle(width / 2, btnY, 200, 36, 0x2e1a1a, 0.9)
+                .setStrokeStyle(2, 0xc94040).setInteractive({ useHandCursor: true }).setDepth(DEPTH + 5).setAlpha(0);
+            const btnTxt = this.add.text(width / 2, btnY, 'RETURN →', {
+                fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888',
+            }).setOrigin(0.5).setDepth(DEPTH + 5).setAlpha(0);
+            elements.push(btnBg, btnTxt);
+            this.tweens.add({ targets: [btnBg, btnTxt], alpha: 1, duration: 400, delay: 1500 });
+
+            btnBg.on('pointerover', () => btnBg.setFillStyle(0x4e2a2a));
+            btnBg.on('pointerout', () => btnBg.setFillStyle(0x2e1a1a));
+            btnBg.on('pointerdown', () => {
                 HaggleManager.applyResult();
                 this.endBattle();
             });
 
-            this.tacticsContainer.add([overlay, failHeader, failSub, bg, txt]);
+            this.tacticsContainer.add(elements);
         }
     }
 

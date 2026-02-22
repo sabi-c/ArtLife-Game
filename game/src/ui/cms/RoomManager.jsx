@@ -383,6 +383,41 @@ function RoomInspector({ venue, mapData }) {
                     </div>
                 )}
 
+                {/* Visual Room Preview (background-image rooms) */}
+                {mapJSON?.properties && (() => {
+                    const bgProp = Array.isArray(mapJSON.properties)
+                        ? mapJSON.properties.find(p => p.name === 'bgImage')?.value
+                        : mapJSON.properties?.bgImage;
+                    if (!bgProp) return null;
+                    // Derive the public URL from the bgImage path
+                    const imgUrl = bgProp.startsWith('assets/') ? bgProp : `assets/rooms/${room?.tiledMap}.png`;
+                    return (
+                        <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a1a2e' }}>
+                            <div style={{ fontSize: 11, color: '#c9a84c', marginBottom: 8, fontFamily: mono }}>
+                                ROOM PREVIEW
+                                <span style={{ color: '#555', fontWeight: 'normal', marginLeft: 8, fontSize: 9 }}>
+                                    {mapJSON.width}&times;{mapJSON.height} tiles &bull; background image
+                                </span>
+                            </div>
+                            <div style={{
+                                background: '#0a0a14', border: '1px solid #1a1a2e',
+                                borderRadius: 2, padding: 4, textAlign: 'center',
+                            }}>
+                                <img
+                                    src={imgUrl}
+                                    alt={`${room?.name || 'Room'} preview`}
+                                    style={{
+                                        maxWidth: '100%', maxHeight: 300,
+                                        imageRendering: 'pixelated',
+                                        border: '1px solid #2a2a3e',
+                                    }}
+                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })()}
+
                 {/* ASCII Mini-map */}
                 {ascii && (
                     <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a1a2e' }}>
