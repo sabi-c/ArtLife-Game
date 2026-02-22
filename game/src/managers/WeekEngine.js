@@ -17,6 +17,7 @@ import { EventRegistry } from './EventRegistry.js';
 import { useEventStore } from '../stores/eventStore.js';
 import { useMarketStore } from '../stores/marketStore.js';
 import { checkSystemicTriggers } from '../engines/SystemicTriggers.js';
+import { useStorylineStore } from '../stores/storylineStore.js';
 
 export class WeekEngine {
     /** Last week's advance report — set after each advanceWeek() call. */
@@ -86,14 +87,11 @@ export class WeekEngine {
 
         // ── Storyline Events ──
         try {
-            // Lazy import to avoid circular dependency
-            import('../stores/storylineStore.js').then(({ useStorylineStore }) => {
-                const storylinesToFire = useStorylineStore.getState().tickWeek(state.week, state, EventRegistry.getStorylines());
-                for (const s of storylinesToFire) {
-                    useEventStore.getState().addPriorityEvent(s.eventId);
-                    GameState.addNews(`Storyline Event Pending: ${s.storylineId}`);
-                }
-            });
+            const storylinesToFire = useStorylineStore.getState().tickWeek(state.week, state, EventRegistry.getStorylines());
+            for (const s of storylinesToFire) {
+                useEventStore.getState().addPriorityEvent(s.eventId);
+                GameState.addNews(`Storyline Event Pending: ${s.storylineId}`);
+            }
         }
         catch (e) { console.error('[WeekEngine] Storyline tick failed:', e); }
 

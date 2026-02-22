@@ -10,10 +10,11 @@
 **Tests:** 36/36 unit, 36/38 flow (2 pre-existing Phase A timing issues) — all green
 **Build:** Clean (no new warnings)
 **Branch:** `main`
-**Deployed:** Cloudflare Pages
+**Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/)
 **Phase 3:** ~95% complete
 
 ### Recently Completed
+- **GitHub Pages Asset Path Fix** — All Phaser scenes and React components used absolute paths (`/content/maps/...`, `/assets/...`, `/sprites/...`) which broke on GitHub Pages subpath deployment (`/ArtLife-Game/`). Converted to relative paths across 10 files (WorldScene, BootScene, HaggleScene, LocationScene, OverworldScene, MacDialogueScene, DialogueBox, ScenePlayer, events screen, phaserInit SW registration). Bumped SW cache version to `artlife-v2` to bust stale caches.
 - **Uplink-Inspired Dashboard, World Map, Calendar, Dev Mode & Content Tooling** — 4-sprint overhaul:
   - **SVG World Map:** Replaced ASCII world map with interactive inline SVG (`generateWorldMapSVG()`). Hardcoded city coordinates on 800x400 viewBox, quadratic bezier flight paths between visited cities, animated route traces, pulsing player dot, color-coded event markers (cyan=fair, gold=auction, purple=biennale, green=social). Click-to-travel via `data-city` delegation. Uplink-style dark navy background with subtle grid lines.
   - **Uplink Dashboard Polish:** Status strip top bar (`db-status-strip`) showing CONNECTION/WEEK/MONTH/CITY/NET WORTH. Trace bars (`db-trace-*`) replace warning bar — animated Uplink-style progress meters for HEAT/BURNOUT/SUSPICION with pulsing critical state. Cyan-tinted panel borders.

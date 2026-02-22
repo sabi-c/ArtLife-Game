@@ -6,7 +6,6 @@
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, BLANK, DIM, GOLD, GREEN, RED, STAT, NEWS, WORLDMAP } from './shared.js';
 import { TickerSystem } from '../../ui/TickerSystem.js';
-import { dashboardScreen, hasActions, useAction } from './dashboard.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
 import { VIEW, OVERLAY } from '../../constants/views.js';
 import { characterSelectScreen } from './character.js';
