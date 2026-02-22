@@ -8,6 +8,7 @@ import { generateId } from '../utils/id.js';
  * Manages artist heat, price calculations, and available works
  */
 export class MarketManager {
+    static realWorldData = null;
     static artists = [];
     static works = [];
 
@@ -15,6 +16,12 @@ export class MarketManager {
         // Deep copy artists so we can mutate heat
         MarketManager.artists = ARTISTS.map((a) => ({ ...a }));
         MarketManager.works = works;
+
+        // Asynchronously load the real-world scraped data backend
+        fetch('/content/real_world_data.json')
+            .then(res => res.json())
+            .then(data => { MarketManager.realWorldData = data; })
+            .catch(err => console.warn('No real_world_data.json found, skipping stochastic anchor data.', err));
     }
 
     static tick() {
@@ -74,28 +81,59 @@ export class MarketManager {
         const artist = MarketManager.getArtist(work.artistId);
         if (!artist) return work.basePrice;
 
-        // Continuous curve: Heat 0 = x0.5, Heat 50 = x2.9, Heat 100 = x10.2
         const heatMultiplier = 0.5 + Math.pow(artist.heat / 32, 2);
-
         const state = GameState.state;
-        const marketMultiplier =
-            state.marketState === 'bull' ? 1.2 :
-                state.marketState === 'bear' ? 0.8 :
-                    1.0;
-
+        const marketMultiplier = state.marketState === 'bull' ? 1.2 : state.marketState === 'bear' ? 0.8 : 1.0;
         const eraModifier = state?.eraModifier || 1.0;
-
-        // Flipper penalty — known flippers pay 20% more
         const flipperPenalty = state?.dealerBlacklisted ? 1.20 : 1.0;
 
-        // Volatility Jitter
-        let jitter = 1.0;
-        if (includeJitter) {
-            const volatility = artist.heatVolatility || 0;
-            jitter = 1 + ((Math.random() * 2 - 1) * (volatility / 100));
+        // Fundamental Base Value based on generic gameplay vectors
+        let targetPrice = work.basePrice * heatMultiplier * marketMultiplier * eraModifier * flipperPenalty;
+
+        // ── Real-World Data Drift Integration ──
+        const rwData = MarketManager.realWorldData?.[artist.id];
+        let volatility = (artist.heatVolatility || 10) / 100;
+
+        if (rwData?.realWorldAnchor) {
+            volatility = rwData.realWorldAnchor.volatilityIndex ?? volatility;
+            const history = rwData.realWorldAnchor.auctionHistory;
+            if (history && history.length >= 2) {
+                const start = history[0];
+                const end = history[history.length - 1];
+                const years = Math.max(1, end.year - start.year);
+
+                // Calculate Required Annual CAGR Drift to hit target
+                const annualDrift = Math.pow(end.price / start.price, 1 / years) - 1;
+                // Convert to weekly compounding drift rate
+                const weeklyDrift = annualDrift / 52;
+
+                const weeksElapsed = state?.week || 1;
+                const driftMultiplier = Math.pow(1 + weeklyDrift, weeksElapsed);
+
+                // Inflate the fundamental value mathematically using the scraper data
+                targetPrice = targetPrice * driftMultiplier;
+            }
         }
 
-        return Math.round(work.basePrice * heatMultiplier * marketMultiplier * eraModifier * flipperPenalty * jitter);
+        if (includeJitter) {
+            // ── Ornstein-Uhlenbeck Process (Mean-Reverting Random Walk) ──
+            // Allows the stock to jitter randomly, but magnetically pulls it toward the target fundamental value.
+            const prevPrice = work.price || targetPrice;
+            const theta = 0.2; // Speed of mean reversion (20% correction towards fundamental value per week)
+
+            // Box-Muller transform for standard normal random variable Z
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            const Z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+
+            const randomShock = volatility * prevPrice * Z;
+            const meanReversion = theta * (targetPrice - prevPrice);
+
+            return Math.max(10, Math.round(prevPrice + meanReversion + randomShock));
+        }
+
+        return Math.round(targetPrice);
     }
 
     static getWorkValue(work) {

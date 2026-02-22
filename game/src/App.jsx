@@ -15,6 +15,8 @@ import ContentStudio from './ui/ContentStudio.jsx';
 import MobileJoypad from './ui/MobileJoypad.jsx';
 import CalendarHUD from './ui/CalendarHUD.jsx';
 import StorylineCMS from './ui/StorylineCMS.jsx';
+import MarketDashboard from './ui/MarketDashboard.jsx';
+import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
@@ -302,6 +304,14 @@ export default function App() {
 
             {activeOverlay === OVERLAY.STORYLINE_CMS && (
                 <StorylineCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.MARKET_DASHBOARD && (
+                <MarketDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.ARTWORK_DASHBOARD && (
+                <ArtworkDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} payload={viewPayload} />
             )}
 
             {isWorldSceneActive && <MobileJoypad />}

@@ -224,6 +224,12 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
         console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}`, data);
         window.phaserGame.scene.start(sceneKey, { ui, ...data });
 
+        // Give canvas keyboard focus so WASD/arrows work immediately
+        if (window.phaserGame.canvas) {
+            window.phaserGame.canvas.setAttribute('tabindex', '0');
+            window.phaserGame.canvas.focus();
+        }
+
         // Sync React state so activeView effect stays consistent
         GameEventBus.emit(GameEvents.UI_ROUTE, 'PHASER');
     } catch (err) {

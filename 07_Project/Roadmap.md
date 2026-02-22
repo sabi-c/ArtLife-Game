@@ -227,6 +227,7 @@
 | Build `EventRegistry.js` | ✅ Done | Event trigger conditions, consequences, and follow-up scheduling |
 | Build `InventoryStore.js` | ✅ Done | Tracks owned items (artworks, documents, contraband) with provenance |
 | Build `MarketEngine.js` | ✅ Done | MarketManager.tick() wired into WeekEngine. MarketStore tracks price history, artist heat snapshots, weekly news. Buyback simulation, flipper penalties, market cycle transitions all active. |
+| **Data Ingestion System (Sprint 7)** | ✅ Done | `Data_Ingestion_Template.md` JSON schema mapping for AI scraping. `ArtworkDashboard.jsx` Recharts overlay for deep data inspection inside `market.js`. |
 
 ---
 

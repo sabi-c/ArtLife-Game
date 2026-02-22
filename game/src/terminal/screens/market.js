@@ -7,7 +7,7 @@ import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, DIM, GOLD, RED, BLANK, STAT } from './shared.js';
 import { dashboardScreen, hasActions, useAction } from './dashboard.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
-import { VIEW } from '../../constants/views.js';
+import { VIEW, OVERLAY } from '../../constants/views.js';
 // ════════════════════════════════════════════
 // SCREEN: Market List
 // ════════════════════════════════════════════
@@ -160,6 +160,11 @@ export function inspectScreen(ui, work) {
         lines.push(DIM(`Your cash: $${s.cash.toLocaleString()}`));
 
         const options = [];
+
+        options.push({
+            label: 'View Detailed Dossier',
+            action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.ARTWORK_DASHBOARD, { work })
+        });
 
         if (canAfford && hasActions(1) && !alreadyOwn) {
             options.push({
@@ -507,6 +512,11 @@ export function pieceDetailScreen(ui, work) {
 
         const options = [];
         const hasActionsLeft = hasActions(1);
+
+        options.push({
+            label: 'View Detailed Dossier & Provenance',
+            action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.ARTWORK_DASHBOARD, { work })
+        });
 
         if (loc === 'home') {
             options.push({

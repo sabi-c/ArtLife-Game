@@ -5,14 +5,15 @@
  * Strategy: Cache-first for assets, network-first for HTML.
  */
 
-const CACHE_NAME = 'artlife-v2';
+const CACHE_NAME = 'artlife-v3';
 
 // Core assets to pre-cache on install
+// Use relative paths so the SW works on any deployment subpath (e.g. GitHub Pages /ArtLife-Game/)
 const PRECACHE_ASSETS = [
-    '/',
-    '/index.html',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
+    './',
+    './index.html',
+    './icons/icon-192.png',
+    './icons/icon-512.png',
 ];
 
 // Asset extensions to cache on fetch

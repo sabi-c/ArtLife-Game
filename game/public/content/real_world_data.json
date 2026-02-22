@@ -1,0 +1,48 @@
+{
+    "artist_basquiat_01": {
+        "name": "Jean-Michel Basquiat",
+        "realWorldAnchor": {
+            "auctionHistory": [
+                {
+                    "year": 1982,
+                    "price": 4000,
+                    "house": "Private"
+                },
+                {
+                    "year": 1984,
+                    "price": 20900,
+                    "house": "Christie's"
+                },
+                {
+                    "year": 2017,
+                    "price": 110500000,
+                    "house": "Sotheby's"
+                }
+            ],
+            "volatilityIndex": 0.85
+        }
+    },
+    "artist_schnabel_01": {
+        "name": "Julian Schnabel",
+        "realWorldAnchor": {
+            "auctionHistory": [
+                {
+                    "year": 1981,
+                    "price": 40000,
+                    "house": "Mary Boone"
+                },
+                {
+                    "year": 1989,
+                    "price": 800000,
+                    "house": "Pace"
+                },
+                {
+                    "year": 2014,
+                    "price": 1200000,
+                    "house": "Christie's"
+                }
+            ],
+            "volatilityIndex": 0.40
+        }
+    }
+}

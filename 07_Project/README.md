@@ -65,6 +65,7 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 | **Visual Scene Flow Editor** | `Scene_Flow_Visual_Editor_Plan.md` | Node-based React Flow editor architectural plan for drag-and-drop scene transitions and narrative branching. |
 | **Time & Sequencing Engine** | `Systemic_Time_and_Event_Architecture_Plan.md` | The continuous 24-hour clock system linking macro weeks to micro GridEngine exploration minutes, with spatial event triggers. |
 | **Core Loop (7 Systems)** | `Core_Loop_Systems_Spec.md` | Phone, Calendar, Scene Engine, NPC Registry, Event Registry, Inventory, Art Pricing & Economics. |
+| **Data Ingestion** | `Data_Ingestion_Template.md` | Standardized JSON schema guidelines for AI scrapers feeding real-world auction data and artwork records into the game. |
 | **Open-Source Research** | `Reference_Tools_Research.md` | Audit of narrative engines, CMS tools, and market sims with INTEGRATE vs REFERENCE recommendations. |
 | **Implementation Blueprints** | `Implementation_Plan.md` | Production-grade code patterns, error handling tables, and critical-path build order for all V2 systems. |
 | **Dialogue Tree Template** | `Dialogue_Tree_Template.md` | AI content pipeline: JSON schema, field docs, stat/NPC/venue reference, design guidelines, minimal + complex examples. Give to AI to generate new scenes. |
