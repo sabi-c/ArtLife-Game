@@ -134,6 +134,10 @@ export function createPhaserGame() {
         container.style.zIndex = '10';
     }
 
+    // Game-over handler also sets background (in case Phaser canvas is transparent)
+    const gc = document.getElementById('phaser-game-container');
+    if (gc) gc.style.background = '#0a0a0f';
+
     return phaserGame;
 }
 
@@ -173,6 +177,7 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
         if (phaserContainer) {
             phaserContainer.style.visibility = 'visible';
             phaserContainer.style.pointerEvents = 'auto';
+            phaserContainer.style.background = '#0a0a0f'; // prevent body theme bleed-through
         }
 
         // Make canvas itself visible

@@ -180,9 +180,12 @@ export default function App() {
     useEffect(() => {
         const container = document.getElementById('phaser-game-container');
         if (container) {
-            // Canvas visible only when a Phaser scene is active
-            container.style.visibility = (activeView === VIEW.PHASER) ? 'visible' : 'hidden';
-            container.style.pointerEvents = (activeView === VIEW.PHASER) ? 'auto' : 'none';
+            const showPhaser = activeView === VIEW.PHASER;
+            container.style.visibility = showPhaser ? 'visible' : 'hidden';
+            container.style.pointerEvents = showPhaser ? 'auto' : 'none';
+            // Opaque background prevents body color (e.g. Pantone Blue theme) from
+            // bleeding through when the transparent Phaser canvas is active.
+            container.style.background = showPhaser ? '#0a0a0f' : '';
         }
         // Terminal visibility: show when in TERMINAL view, hide when Phaser takes over
         const termContainer = document.getElementById('terminal');
@@ -246,7 +249,7 @@ export default function App() {
             )}
 
             {/* The Phaser Canvas Layer sets up in this div */}
-            <div id="phaser-game-container" />
+            <div id="phaser-game-container" style={{ position: 'fixed', inset: 0, zIndex: 0 }} />
         </ErrorBoundary>
     );
 }

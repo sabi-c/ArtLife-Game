@@ -57,6 +57,28 @@ export class HaggleScene extends BaseScene {
         // ── Opaque background (required because Phaser config has transparent: true) ──
         this.add.rectangle(width / 2, height / 2, width, height, 0x14141f).setDepth(-1);
 
+        try {
+            this._buildScene(width, height);
+        } catch (err) {
+            console.error('[HaggleScene] create() error:', err);
+            window.ArtLife?.recordSceneError?.('HaggleScene', err);
+            // Show error text on the opaque background so user sees something
+            this.add.text(width / 2, height / 2 - 20, 'HAGGLE ERROR', {
+                fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#c94040'
+            }).setOrigin(0.5).setDepth(999);
+            this.add.text(width / 2, height / 2 + 20, err.message || 'Unknown error', {
+                fontFamily: 'monospace', fontSize: '12px', color: '#7a7a8a',
+                wordWrap: { width: width - 80 }
+            }).setOrigin(0.5).setDepth(999);
+            const exitBtn = this.add.text(width / 2, height / 2 + 80, '[ CLICK TO EXIT ]', {
+                fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
+            }).setOrigin(0.5).setDepth(999).setInteractive({ useHandCursor: true });
+            exitBtn.on('pointerdown', () => this.forceExit());
+        }
+    }
+
+    /** Internal scene builder — separated so create()'s try/catch can catch errors */
+    _buildScene(width, height) {
         // ── Cinematic Entry (pokemon-react-phaser battle transition) ──
         this.cameras.main.fadeIn(500, 0, 0, 0);
         try {
@@ -217,7 +239,11 @@ export class HaggleScene extends BaseScene {
     }
 
     updateBars(animate = false) {
-        this.state = HaggleManager.getState();
+        // Merge live haggle state without losing local extras (bgKey, playerStats, etc.)
+        const live = HaggleManager.getState();
+        if (live) {
+            Object.assign(this.state, live);
+        }
         this.roundText.setText(`ROUND ${this.state.round || 1} / ${this.state.maxRounds || 5}`);
 
         const patPercent = Math.max(0, this.state.patience / (this.state.maxPatience || 1));
@@ -821,7 +847,8 @@ export class HaggleScene extends BaseScene {
     }
 
     renderResult() {
-        this.state = HaggleManager.getState();
+        const live = HaggleManager.getState();
+        if (live) Object.assign(this.state, live);
         this.tacticsContainer.removeAll(true);
         this.tacticsContainer.setVisible(true);
 
