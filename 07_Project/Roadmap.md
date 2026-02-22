@@ -182,8 +182,13 @@
 | **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
 | **Haggle Battle Animations** | ✅ Done | Multi-step tactic animations per type: coin rain (financial), hex-shield (logical), slash lines + sparks (aggressive), heart cascade (emotional), shadow eyes (bluff). Player lunge, dealer hit reactions, type effectiveness flashes ("SUPER EFFECTIVE!"), smooth bar tweening. |
 | **Juice & Sound Design** | PARTIAL | Terminal SFX wired (hover/select/typewriter via WebAudioService). Remaining: ambient gallery noise, market crash glitch, Phaser scene sounds |
+| **Variable Text Interpolation** | ✅ Done | `{variable}` placeholders in dialogue text resolved at render time. Supports game state, NPC memory vars, portfolio data. |
+| **InkBridge (inkjs integration)** | ✅ Done | `InkBridge.js` bridges inkjs stories to DialogueEngine. Bidirectional GameState sync, tone tracking from `[tone]` tags, save/restore. |
+| **Oregon Trail Week Transition** | ✅ Done | Animated day-by-day ticker screen before week report. Shows activities, auto-advances after 2.8s, skip option. CSS: `wt-*` classes. |
+| **NPC Memory Matrix** | ✅ Done | DialogueEngine interpolates `{npc_favor}`, `{npc_relationship}`, `{npc_grudge_count}`, `{npc_last_grudge}`. Condition evaluation checks NPC favor/grudges. |
+| **Consequence Tease Feedback** | ✅ Done | ConsequenceScheduler shows atmospheric lines when scheduling ("The art world has a long memory..."). Type-specific tease pools. |
 | **Systemic Lattice Triggers** | TODO | Wire `subscribeWithSelector` for Fail States (Informant/Auteur arcs) |
-| **NPC Memory Modules** | TODO | Log interactions per NPC for `inkjs` narrative branching |
+| **NPC Memory Modules** | ✅ Done | npcStore tracks witnessed/grudges/favors per NPC. DialogueEngine reads memory for dynamic text. Gossip propagation in autonomousTick. |
 
 ### 3D. JSON Data Layer (Content Authoring Foundation)
 > See `Core_Loop_Systems_Spec.md` for full JSON schemas.
@@ -221,10 +226,10 @@
 ### 4C. Narrative Depth (Pacing & Tones)
 | Task | Status | Notes |
 |---|---|---|
-| The 4-Tone Dialogue System | TODO | Aggressive, Professional, Casual, Mysterious player stances |
-| The Memory Matrix Wiring | TODO | Connect `npcStore` Favors/Grudges dynamically into node text |
-| Variable Text Parsing | TODO | Support syntax like `{last_purchased_art}` directly in narrative strings |
-| Interpretible `WeekEngine.js` Pacing | TODO | Visual day-by-day week transitions that pause for emergency events |
+| The 5-Tone Dialogue System | ✅ Done | Friendly/Schmoozing/Direct/Generous/Ruthless. DialogueEngine tracks per-conversation, persists to `toneHistory`. Week 20 specialization. |
+| The Memory Matrix Wiring | ✅ Done | DialogueEngine interpolates NPC favor/grudge/relationship dynamically into node text. |
+| Variable Text Parsing | ✅ Done | `{variable}` syntax resolved at render time — cash, name, city, NPC data, portfolio info. |
+| Interpretible `WeekEngine.js` Pacing | ✅ Done | Oregon Trail day-by-day transition screen with animated ticker, skip option, auto-advance. |
 
 ### 4D. The Week 26 Reckoning (Endgame)
 | Task | Status | Notes |
