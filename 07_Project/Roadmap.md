@@ -7,12 +7,23 @@
 
 ## Current State (2026-02-22)
 
-**Version:** v0.3.1
+**Version:** v0.3.2
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
+
+### Background-Image Rooms + Visual Map Editor (2026-02-22 Session 7)
+- **4 Museum Rooms** — Art Gallery Museum (20×17, Great Wave/Starry Night/Mona Lisa), Museum Entrance (16×22, ticket booth), Dinosaur Museum (17×21, dinosaur skeletons), Small Gallery (16×10, contemporary). All use pre-composed LimeZu premium artwork as background images with collision-only tile layers.
+- **Background Image Rendering** — LocationScene now detects `bgImage` map property and renders pre-composed PNG at BELOW_PLAYER depth. Collision-only world layer stays invisible but drives GridEngine pathfinding.
+- **LocationScene Collision Fix** — Added `collisionTilePropertyName: 'collides'` to GridEngine.create() — previously wall collision inside rooms was silently missing.
+- **10 Gallery NPC Sprites** — Extracted from LimeZu premade characters (48×96 frames): curator, collector, gallerist, artist, patron, critic, assistant, handler, guard, visitor. Walk animations registered for all 4 directions.
+- **Visual Map Editor** — `src/ui/cms/MapEditor.jsx`: Canvas-based Tiled map viewer/editor in CMS. Renders tile layers from tilesets or bg images pixel-perfectly. Object overlay with colored markers (P=painting, N=NPC, D=door, S=spawn, ?=dialog). Click-to-select, drag-to-move with grid snap, property editor sidebar, add/delete objects, zoom 1x/2x/3x, export JSON.
+- **CMS Room Preview** — RoomManager now shows visual room preview images for background-image rooms.
+- **Pallet Town Doors** — 4 new doors + signs added (Art Gallery at tile 9, Museum at tile 11, Dinosaur Museum at tile 13, Small Gallery at tile 15).
+- **12 Tiled maps total** — 8 original + 4 new bg-image rooms. 58+ paintings, 12+ NPCs across all maps.
+- **Tools**: `tools/bg_room_builder.py` — generates Tiled JSON maps using pre-composed background images with collision layers, walkable zones, and rich object data.
 
 ### Room Management System (2026-02-22 Session 6)
 - **Museum Template** — New `museum` template in `tools/generate_room.js`: 18×14 showcase gallery with beige Interiors floors, picture rail molding on all walls, 9 paintings with real artwork data (Basquiat, Haring, Koons, Sherman, Tanaka, Asante, Liu Wei), gold sofa on Persian rug, reception desk with lamp/laptop, large plants, floor lamps, Elena Ross NPC. BFS-validated reachability.
