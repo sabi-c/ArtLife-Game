@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
 import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
-import { PhoneManager } from '../managers/PhoneManager.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW, OVERLAY } from '../constants/views.js';
+import { useNPCStore } from '../stores/npcStore.js';
 
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
@@ -36,7 +36,23 @@ export default function AdminDashboard({ onClose }) {
         onClose();
     };
 
+    const triggerOverlay = (overlayKey) => {
+        // Don't call onClose() — it would reset overlay to NONE, canceling the toggle.
+        // The overlay handler in App.jsx will switch from ADMIN to the target overlay.
+        onClose(); // close admin first
+        // Use setTimeout to ensure React processes the admin close before toggling
+        setTimeout(() => {
+            GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, overlayKey);
+        }, 0);
+    };
+
     const triggerScene = (sceneKey, data = {}) => {
+        // Scenes that need game state — warn if not initialized
+        const needsState = ['WorldScene', 'CityScene', 'OverworldScene', 'LocationScene', 'HaggleScene'];
+        if (needsState.includes(sceneKey) && !GameState.state) {
+            GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'GameState not initialized. Start or load a game first.');
+            return;
+        }
         GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, sceneKey, data);
         onClose();
     };
@@ -77,7 +93,7 @@ export default function AdminDashboard({ onClose }) {
         forceUpdate();
     };
 
-    const handleImportState = () => {
+    const handleImportState = async () => {
         try {
             const parsed = JSON.parse(importData);
             if (!parsed.state || !parsed.state.week) throw new Error('Invalid save state JSON format');
@@ -85,8 +101,10 @@ export default function AdminDashboard({ onClose }) {
             GameState.state = parsed.state;
             window._artLifeState = GameState.state;
 
-            const { generateInitialWorks } = require('../data/artists.js');
-            const { MarketManager } = require('../managers/MarketManager.js');
+            // Dynamic imports for modules not used elsewhere in this file
+            const { generateInitialWorks } = await import('../data/artists.js');
+            const { MarketManager } = await import('../managers/MarketManager.js');
+            const { PhoneManager } = await import('../managers/PhoneManager.js');
             MarketManager.init(generateInitialWorks());
             PhoneManager.init();
             ConsequenceScheduler.reset();
@@ -156,7 +174,7 @@ export default function AdminDashboard({ onClose }) {
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>REACT DOM OVERLAYS</div>
                             <button style={btnStyle} onClick={() => triggerUI(VIEW.BOOT)}>[ Mount Terminal Login ]</button>
                             <button style={btnStyle} onClick={() => triggerUI(VIEW.SCENE_ENGINE)}>[ Mount Scene Engine ]</button>
-                            <button style={btnStyle} onClick={() => triggerUI(VIEW.INVENTORY)}>[ Mount Inventory Dashboard ]</button>
+                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.INVENTORY)}>[ Mount Inventory Dashboard ]</button>
                             <button style={btnStyle} onClick={() => triggerUI(VIEW.DASHBOARD)}>[ Mount Player Dashboard ]</button>
                         </div>
                         <div>
@@ -196,13 +214,14 @@ export default function AdminDashboard({ onClose }) {
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Pokemon-style negotiation</div>
                             </button>
                             <button style={btnStyle} onClick={() => triggerScene('MacDialogueScene', {
-                                event: {
-                                    title: 'Admin Test Dialogue',
-                                    steps: [
-                                        { type: 'narrative', text: 'This is a test dialogue from the admin panel.', characterId: 'elena_ross' },
-                                        { type: 'narrative', text: 'You can use this to test dialogue rendering.', characterId: 'elena_ross' },
-                                    ],
-                                },
+                                bgKey: 'bg_gallery_main_1bit_1771587911969.png',
+                                dialogueSequence: [
+                                    { name: 'Gallerist', speakerSide: 'right', text: 'Welcome to the gallery. I have a few pieces you might find... interesting.' },
+                                    { name: 'You', speakerSide: 'left', text: 'Show me what you\'ve got.' },
+                                    { name: 'Gallerist', speakerSide: 'right', text: 'This Basquiat is from his early period. Quite rare.' },
+                                ],
+                                leftSpriteKey: 'player_back.png',
+                                rightSpriteKey: 'portrait_it_girl_1bit.png',
                             })}>
                                 [ Dialogue Scene (Mac) ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>1-bit Macintosh visual novel</div>
@@ -290,14 +309,24 @@ export default function AdminDashboard({ onClose }) {
                 )}
 
                 {/* ── NPC MEMORY MATRIX ── */}
-                {activeTab === 'npcs' && (
+                {activeTab === 'npcs' && (() => {
+                    const npcContacts = useNPCStore.getState().contacts || [];
+                    return (
                     <div>
-                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NPC RELATIONAL DATA</div>
+                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NPC RELATIONAL DATA ({npcContacts.length} contacts)</div>
+                        {npcContacts.length === 0 ? (
+                            <div>
+                                <div style={{ padding: 20, border: '1px dashed #333', color: '#555', textAlign: 'center', marginBottom: 10 }}>
+                                    NPC store is empty. Start or load a game to populate NPCs.
+                                </div>
+                                <button style={btnStyle} onClick={() => { useNPCStore.getState().init(); forceUpdate(); }}>[ INIT NPC STORE ]</button>
+                            </div>
+                        ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
-                            {PhoneManager.contacts.map((npc, i) => (
+                            {npcContacts.map((npc, i) => (
                                 <div key={i} style={{ padding: 12, border: '1px solid #333', background: '#0a0a0f' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed #222', paddingBottom: 8 }}>
-                                        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{npc.id}</div>
+                                        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{npc.name || npc.id} <span style={{ color: '#555', fontWeight: 'normal', fontSize: 11 }}>({npc.role || 'unknown'}){npc.met ? ' ✓ met' : ''}</span></div>
                                         <div style={{ color: npc.favor > 0 ? '#4ade80' : npc.favor < 0 ? '#f87171' : '#888' }}>Favor: {npc.favor || 0}</div>
                                     </div>
                                     {!npc.memory ? (
@@ -327,8 +356,10 @@ export default function AdminDashboard({ onClose }) {
                                 </div>
                             ))}
                         </div>
+                        )}
                     </div>
-                )}
+                    );
+                })()}
 
                 {/* ── GLOBAL FLAGS ── */}
                 {activeTab === 'flags' && (

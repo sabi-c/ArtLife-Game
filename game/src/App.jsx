@@ -251,11 +251,11 @@ export default function App() {
             <DialogueBox />
 
             {activeView === VIEW.DASHBOARD && (
-                <PlayerDashboard onClose={() => setActiveView(VIEW.PHASER)} />
+                <PlayerDashboard onClose={() => setActiveView(VIEW.TERMINAL)} />
             )}
 
             {activeView === VIEW.SCENE_ENGINE && (
-                <ScenePlayer onClose={() => setActiveView(VIEW.PHASER)} payload={viewPayload} />
+                <ScenePlayer onClose={() => setActiveView(VIEW.TERMINAL)} payload={viewPayload} />
             )}
 
             {/* ── OVERLAY REGISTRY ── */}

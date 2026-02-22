@@ -153,6 +153,9 @@ export class GameState {
                 insideVenue: false,              // true when inside a LocationScene
             },
             hoursUsedToday: 0,   // resets each week, max ~8 hours of activity
+            dayOfWeek: 1,        // 1 = Monday, 7 = Sunday
+            hour: 8,             // 0-23 (Starts at 8:00 AM)
+            minute: 0,           // 0-59
         };
 
         // Expose reference for React UI components (PlayerDashboard etc.)
@@ -213,8 +216,39 @@ export class GameState {
         };
         if (location.travelTime > 0) {
             GameState.addNews(`🚶 Walked to ${location.name}. (${location.travelTime}h)`);
+            GameState.advanceTime(location.travelTime * 60);
         }
         return true;
+    }
+
+    /**
+     * Advance the narrative clock by minutes.
+     * Rolls over hours, days, and eventually the macro-week automatically.
+     */
+    static advanceTime(minutes) {
+        const state = GameState.state;
+        state.minute += minutes;
+
+        while (state.minute >= 60) {
+            state.minute -= 60;
+            state.hour += 1;
+        }
+
+        // If we push past midnight, force a sleep until 8 AM next day
+        // Future systems will add exhaustion/burnout penalties for staying up late
+        if (state.hour >= 24) {
+            state.hour = 8;
+            state.minute = 0;
+            state.dayOfWeek += 1;
+
+            GameState.addNews(`🌅 Slept until morning.`);
+
+            // Sunday night rollover -> New Macro Week
+            if (state.dayOfWeek > 7) {
+                state.dayOfWeek = 1;
+                GameState.advanceWeek();
+            }
+        }
     }
 
     /**
@@ -618,6 +652,13 @@ export class GameState {
 
             GameState.state = saveData.state;
             GameState.activeSlot = slotIndex;
+
+            // Ensure newer state fields exist on old saves
+            if (!GameState.state.playerLocation) {
+                GameState.state.playerLocation = {
+                    locationId: 'player_apartment', cityX: 5, cityY: 14, insideVenue: false,
+                };
+            }
 
             // Keep global reference in sync for React components
             window._artLifeState = GameState.state;

@@ -157,6 +157,12 @@ export class CityScene extends BaseScene {
     enterBuilding(loc) {
         // Track player location for spawn-back using Phase 41 schema
         if (GameState.state) {
+            // Ensure playerLocation exists (old saves may lack it)
+            if (!GameState.state.playerLocation) {
+                GameState.state.playerLocation = {
+                    locationId: 'player_apartment', cityX: 5, cityY: 14, insideVenue: false,
+                };
+            }
             GameState.state.playerLocation.locationId = loc.id;
             GameState.state.playerLocation.insideVenue = true;
         }

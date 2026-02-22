@@ -118,17 +118,28 @@ export class SceneEngine {
         // Push game state INTO ink
         const gameState = useGameStore.getState();
         try {
-            if (this.story.variablesState['player_capital'] !== undefined) {
-                this.story.variablesState['player_capital'] = gameState.capital || 0;
-            }
-            if (this.story.variablesState['player_audacity'] !== undefined) {
-                this.story.variablesState['player_audacity'] = gameState.stats?.audacity || 0;
-            }
-            if (this.story.variablesState['player_taste'] !== undefined) {
-                this.story.variablesState['player_taste'] = gameState.stats?.taste || 0;
-            }
-            if (this.story.variablesState['player_access'] !== undefined) {
-                this.story.variablesState['player_access'] = gameState.stats?.access || 0;
+            if (this.story.HasVariableWithName !== undefined) {
+                // If the inkjs version exposes HasVariableWithName on story or variablesState
+                const checkVar = (name) => {
+                    try {
+                        return this.story.variablesState[name] !== undefined && this.story.variablesState[name] !== null;
+                    } catch (e) {
+                        return false;
+                    }
+                };
+                if (checkVar('player_capital')) this.story.variablesState['player_capital'] = gameState.capital || 0;
+                if (checkVar('player_audacity')) this.story.variablesState['player_audacity'] = gameState.stats?.audacity || 0;
+                if (checkVar('player_taste')) this.story.variablesState['player_taste'] = gameState.stats?.taste || 0;
+                if (checkVar('player_access')) this.story.variablesState['player_access'] = gameState.stats?.access || 0;
+            } else {
+                // Fallback safe assignment
+                const safeAssign = (name, val) => {
+                    try { this.story.variablesState[name] = val; } catch (e) { }
+                };
+                safeAssign('player_capital', gameState.capital || 0);
+                safeAssign('player_audacity', gameState.stats?.audacity || 0);
+                safeAssign('player_taste', gameState.stats?.taste || 0);
+                safeAssign('player_access', gameState.stats?.access || 0);
             }
         } catch (error) {
             console.warn('[SceneEngine] Could not push initials to ink:', error);
