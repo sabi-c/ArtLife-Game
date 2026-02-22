@@ -186,11 +186,26 @@ export default function App() {
         } else {
             // New game: launch Phaser intro sequence
             setActiveView(VIEW.PHASER);
-            if (window.startPhaserGame) {
-                setTimeout(() => {
+            // Poll for startPhaserGame — BootScene may still be preloading assets
+            const pollStart = Date.now();
+            const pollId = setInterval(() => {
+                if (window.startPhaserGame) {
+                    clearInterval(pollId);
                     window.startPhaserGame(action);
-                }, 50); // delay to ensure React un-hides the canvas container
-            }
+                    // Give canvas keyboard focus for Phaser input
+                    setTimeout(() => {
+                        const canvas = game?.canvas || window.phaserGame?.canvas;
+                        if (canvas) {
+                            canvas.setAttribute('tabindex', '0');
+                            canvas.focus();
+                        }
+                    }, 200);
+                } else if (Date.now() - pollStart > 8000) {
+                    clearInterval(pollId);
+                    console.error('[App] startPhaserGame never registered after 8s');
+                    setActiveView(VIEW.BOOT); // Fallback to login
+                }
+            }, 100);
         }
     };
 
