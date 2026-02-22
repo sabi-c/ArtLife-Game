@@ -24,7 +24,20 @@ export class DialogueScene extends BaseScene {
 
     create(data) {
         super.create({ ...data, hideUI: true }); // BaseScene applies DOM hiding
-        this.eventData = data?.event || {};
+
+        if (data?.eventId) {
+            import('../managers/EventRegistry.js').then(({ EventRegistry }) => {
+                this.eventData = EventRegistry.getEvent(data.eventId) || {};
+                this._initUI(data);
+            });
+            return; // _initUI will continue rendering
+        } else {
+            this.eventData = data?.event || {};
+            this._initUI(data);
+        }
+    }
+
+    _initUI(data) {
         this.currentStep = 0;
         this.stepObjects = [];  // Track objects per step for cleanup
         this.isTransitioning = false;

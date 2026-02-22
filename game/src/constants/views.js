@@ -24,4 +24,5 @@ export const OVERLAY = {
     SETTINGS: 'SETTINGS',
     INVENTORY: 'INVENTORY',
     CMS: 'CMS',
+    GLOBAL_MAP: 'GLOBAL_MAP',
 };

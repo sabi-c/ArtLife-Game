@@ -11,4 +11,4 @@ export * from './world.js';
 export * from './events.js';
 export * from './journal.js';
 export * from './system.js';
-
+export * from './ego.js';

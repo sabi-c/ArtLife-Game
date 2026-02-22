@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { EventRegistry } from '../managers/EventRegistry.js';
 
 /**
  * BootScene — Preloads shared assets, then launches TitleScene
@@ -54,6 +55,9 @@ export class BootScene extends Phaser.Scene {
         this.load.spritesheet('player_walk', 'sprites/player_walk.png', {
             frameWidth: 160, frameHeight: 160
         });
+
+        // ── Event JSON Data ──
+        this.load.json('events_json', '/content/events.json');
     }
 
     create() {
@@ -72,6 +76,15 @@ export class BootScene extends Phaser.Scene {
                     this.anims.create({ key, frames: this.anims.generateFrameNumbers('player_walk', { start, end }), frameRate: 8, repeat: -1 });
                 }
             });
+        }
+
+        // Cache decoupled event JSON into the Registry for immediate lookup
+        const eventsData = this.cache.json.get('events_json');
+        if (eventsData && Array.isArray(eventsData)) {
+            EventRegistry.jsonEvents = eventsData;
+            console.log(`[BootScene] Injected ${eventsData.length} decoupled events into EventRegistry`);
+        } else {
+            console.warn('[BootScene] No events.json data found or failed to parse.');
         }
 
         const ui = window.game?.ui;

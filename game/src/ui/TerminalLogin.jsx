@@ -91,9 +91,9 @@ const optStyle = (isActive, isDisabled) => ({
 });
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export default function TerminalLogin({ onComplete }) {
+export default function TerminalLogin({ onComplete, previewStep }) {
     // Flow: BOOT → PROFILE_MENU → [PROFILE_LOGIN | PROFILE_CREATE | GUEST] → PRIMARY_MENU → DOSSIER_SELECT → CONFIRM → AUTH
-    const [step, setStep] = useState('BOOT');
+    const [step, setStep] = useState(previewStep || 'BOOT');
     const [visible, setVisible] = useState(false);
     const terminalEndRef = useRef(null);
 

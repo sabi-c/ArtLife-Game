@@ -42,46 +42,59 @@ export default function CalendarHUD({ visible }) {
     return (
         <div style={{
             position: 'absolute',
-            top: 16,
-            right: 16,
+            top: 20,
+            right: 20,
             zIndex: 1000,
-            background: 'rgba(10, 10, 15, 0.85)',
-            backdropFilter: 'blur(4px)',
-            border: '1px solid #c9a84c',
-            color: '#c9a84c',
-            padding: '8px 16px',
-            fontFamily: 'monospace',
+            background: 'var(--bg)',
+            // Fake scanlines via linear-gradient over the background
+            backgroundImage: `linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))`,
+            backgroundSize: `100% 4px, 100% 100%`,
+            border: '1px solid var(--border)',
+            color: 'var(--gold)',
+            padding: '10px 20px',
+            fontFamily: 'var(--font)',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '16px',
             pointerEvents: 'none',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+            boxShadow: '0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 255, 255, 0.05)',
+            textShadow: '0 0 4px var(--gold)',
+            textTransform: 'uppercase',
             transition: 'all 0.3s ease'
         }}>
+            {/* Blinking recording/status dot */}
+            <div style={{
+                width: 8, height: 8,
+                background: 'var(--red)',
+                borderRadius: '50%',
+                boxShadow: '0 0 8px var(--red)',
+                animation: 'pulse 2s infinite'
+            }} />
+
             <div style={{
                 display: 'flex',
                 flexDirection: 'column',
-                borderRight: '1px solid rgba(201, 168, 76, 0.3)',
-                paddingRight: '12px',
+                borderRight: '1px dotted var(--dim)',
+                paddingRight: '16px',
                 textAlign: 'right'
             }}>
-                <span style={{ fontSize: '10px', opacity: 0.7, letterSpacing: '1px' }}>WEEK</span>
-                <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{timeState.week.toString().padStart(2, '0')}</span>
+                <span style={{ fontSize: '10px', color: 'var(--dim)', letterSpacing: '2px' }}>SYS.WEEK</span>
+                <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--fg)' }}>{timeState.week.toString().padStart(2, '0')}</span>
             </div>
 
             <div style={{
                 display: 'flex',
                 alignItems: 'baseline',
-                gap: '8px'
+                gap: '12px'
             }}>
-                <span style={{ fontSize: '18px', fontWeight: isNight ? 'normal' : 'bold', color: isNight ? '#7a7a8a' : '#c9a84c' }}>
+                <span style={{ fontSize: '16px', color: 'var(--dim)', fontWeight: 'bold' }}>
                     {dayName}
                 </span>
                 <span style={{
-                    fontSize: '22px',
+                    fontSize: '24px',
                     fontWeight: 'bold',
-                    color: isNight ? '#a0a0b0' : '#fff',
-                    textShadow: isNight ? 'none' : '0 0 4px rgba(255,255,255,0.4)'
+                    color: 'var(--fg)',
+                    letterSpacing: '1px'
                 }}>
                     {hourStr}:{minStr}
                 </span>
@@ -89,11 +102,19 @@ export default function CalendarHUD({ visible }) {
 
             {isNight && (
                 <div style={{
-                    marginLeft: '4px',
-                    fontSize: '14px',
+                    marginLeft: '8px',
+                    fontSize: '12px',
+                    color: 'var(--blue)',
                     opacity: 0.8
-                }}>🌙</div>
+                }}>[NIGHT_OP]</div>
             )}
+            <style>{`
+                @keyframes pulse {
+                    0% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.2; transform: scale(0.8); }
+                    100% { opacity: 1; transform: scale(1); }
+                }
+            `}</style>
         </div>
     );
 }

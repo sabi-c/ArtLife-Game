@@ -16,6 +16,12 @@ import { journalScreen, legacyEndScreen } from './journal.js';
 import { pauseMenuScreen } from './system.js';
 import { SettingsManager } from '../../managers/SettingsManager.js';
 import { getUpcomingEvents } from '../../data/calendar_events.js';
+import { egoDashboardScreen } from './ego.js';
+
+// Lazy wrapper so ego.js doesn't need to be loaded at parse time
+function egoDashboardScreenLazy(ui) {
+    return egoDashboardScreen(ui);
+}
 
 // ════════════════════════════════════════════
 // SCREEN: Venue Picker
@@ -498,9 +504,33 @@ export function hasActions(cost = 1) {
 // Dashboard Helpers
 // ════════════════════════════════════════════
 
+// ════════════════════════════════════════════
+// Menu Card Helper
+// ════════════════════════════════════════════
+function menuCardHtml(title, icon, items, options, startIndex) {
+    if (items.length === 0) return { html: '', nextIndex: startIndex };
+    let html = `<div class="db-mc-card">`;
+    html += `<div class="db-mc-title"><span class="db-mc-title-icon">${icon}</span>${title}</div>`;
+    let idx = startIndex;
+    items.forEach(item => {
+        const disabledCls = item.disabled ? ' disabled' : '';
+        const apBadge = item.ap ? `<span class="db-mc-ap">${item.ap} AP</span>` : '';
+        const badge = item.badge ? `<span class="db-mc-badge">${item.badge}</span>` : '';
+        const itemIcon = item.icon || '';
+        html += `<div class="db-mc-item${disabledCls}" data-option-index="${idx}">`;
+        html += `<span class="db-mc-item-icon">${itemIcon}</span>`;
+        html += `<span class="db-mc-item-label">${item.label}</span>`;
+        html += apBadge + badge;
+        html += `</div>`;
+        idx++;
+    });
+    html += `</div>`;
+    return { html, nextIndex: idx };
+}
+
 const SPARK_CHARS = '▁▂▃▄▅▆▇█';
 
-function sparkline(values, width = 12) {
+export function sparkline(values, width = 12) {
     if (!values || values.length === 0) return SPARK_CHARS[0].repeat(width);
     const nums = values.slice(-width);
     const min = Math.min(...nums);
@@ -509,7 +539,7 @@ function sparkline(values, width = 12) {
     return nums.map(v => SPARK_CHARS[Math.round(((v - min) / range) * 7)]).join('');
 }
 
-function statBarHtml(label, value, max, color) {
+export function statBarHtml(label, value, max, color) {
     const pct = Math.min(100, Math.max(0, (value / max) * 100));
     return `<div class="db-stat-bar">`
         + `<span class="db-stat-label">${label}</span>`
@@ -547,7 +577,7 @@ const CITY_FLAVOR = {
     'switzerland': 'BASEL: Art Basel prep underway — hotel prices soaring',
 };
 
-function generateFlavorNews(s) {
+export function generateFlavorNews(s) {
     const items = [];
     // Market-condition flavor
     const pool = FLAVOR_NEWS_POOL[s.marketState] || FLAVOR_NEWS_POOL.flat;
@@ -752,15 +782,17 @@ function weekTransitionScreen(ui) {
         return {
             lines: [{ type: 'raw', text: tickerHtml }],
             options: [
-                { label: '⏩  Skip →', action: () => {
-                    try {
-                        TerminalAPI.advanceWeek();
-                        ui.replaceScreen(weekReportScreen(ui));
-                    } catch (err) {
-                        window.lastError = err.message;
-                        ui.render();
+                {
+                    label: '⏩  Skip →', action: () => {
+                        try {
+                            TerminalAPI.advanceWeek();
+                            ui.replaceScreen(weekReportScreen(ui));
+                        } catch (err) {
+                            window.lastError = err.message;
+                            ui.render();
+                        }
                     }
-                }},
+                },
             ],
         };
     };
@@ -1167,134 +1199,170 @@ export function dashboardScreen(ui) {
         // ── Progressive Disclosure Phases ──
         const phase = s.week <= 4 ? 'early' : s.week <= 12 ? 'mid' : 'late';
 
-        // ═══ ART ═══
-        options.push({ label: `═══ MARKET DESK ═══`, disabled: true, _sectionHeader: true });
+        // ── Build Menu Card Items (flat options array stays as keyboard nav source) ──
+        // MARKET DESK card items
+        const marketItems = [];
+        marketItems.push({
+            icon: '🖼️', label: `Browse Market (${availableWorks})`, ap: 1,
+            disabled: !hasActions(1),
+        });
         options.push({
-            label: `[1 AP] 🖼️  Browse Market (${availableWorks} works)`,
+            label: `Browse Market (${availableWorks} works)`,
             disabled: !hasActions(1),
             action: hasActions(1) ? () => safePush(marketScreen) : undefined
         });
+
+        marketItems.push({
+            icon: '📁', label: `My Collection (${s.portfolio.length})`,
+            badge: `$${portfolioValue.toLocaleString()}`,
+        });
         options.push({
-            label: `📁  My Collection (${s.portfolio.length} works, $${portfolioValue.toLocaleString()})`,
+            label: `My Collection (${s.portfolio.length} works)`,
             action: () => safePush(portfolioScreen)
         });
 
-        // ═══ CALENDAR EVENTS ═══ (active this week)
+        // THIS WEEK card items
         const thisWeekEvents = getUpcomingEvents(s.week, 1).filter(e => e.weeksAway === 0);
+        const weekItems = [];
         if (thisWeekEvents.length > 0 && phase !== 'early') {
-            options.push({ label: `═══ THIS WEEK ═══`, disabled: true, _sectionHeader: true });
             thisWeekEvents.forEach(ev => {
-                const icon = CAL_ICONS[ev.type] || '▸';
+                const evIcon = CAL_ICONS[ev.type] || '▸';
                 const cost = ev.cost > 0 ? ev.cost : 0;
                 const apCost = ev.tier === 1 ? 2 : 1;
                 const canAfford = s.cash >= cost;
                 const canAttend = hasActions(apCost) && canAfford;
                 const costLabel = cost > 0 ? ` · $${cost.toLocaleString()}` : '';
-                options.push({
-                    label: `[${apCost} AP] ${icon} ${ev.name} (${ev.location}${costLabel})`,
+                weekItems.push({
+                    icon: evIcon, label: `${ev.name} (${ev.location}${costLabel})`, ap: apCost,
                     disabled: !canAttend,
-                    action: canAttend ? () => {
-                        ui.pushScreen(calendarEventScreen(ui, ev, apCost));
-                    } : undefined
+                });
+                options.push({
+                    label: `${ev.name} (${ev.location})`,
+                    disabled: !canAttend,
+                    action: canAttend ? () => ui.pushScreen(calendarEventScreen(ui, ev, apCost)) : undefined
                 });
             });
         }
 
-        // ═══ BUSINESS ═══ (Venue + Travel unlock at week 5)
+        // OPERATIONS card items
+        const opsItems = [];
         if (phase !== 'early') {
-            options.push({ label: `═══ OPERATIONS ═══`, disabled: true, _sectionHeader: true });
+            opsItems.push({ icon: '🎨', label: 'Visit Venue', ap: 1, disabled: !hasActions(1) });
             options.push({
-                label: `[1 AP] 🎨  Visit Venue`,
+                label: 'Visit Venue',
                 disabled: !hasActions(1),
                 action: hasActions(1) ? () => safePush(venuePickerScreen) : undefined
             });
+
             if (phase === 'late') {
+                opsItems.push({ icon: '🗺️', label: 'Walk the Neighborhood' });
                 options.push({
-                    label: `🗺️  Walk the Neighborhood`,
-                    action: () => {
-                        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui });
-                    }
+                    label: 'Walk the Neighborhood',
+                    action: () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui })
                 });
             }
+
+            opsItems.push({ icon: '✈️', label: `Travel (${cityInfo.name})`, ap: 1, disabled: !hasActions(1) });
             options.push({
-                label: `[1 AP] ✈️  Travel (${cityInfo.name})`,
+                label: `Travel (${cityInfo.name})`,
                 disabled: !hasActions(1),
-                action: hasActions(1) ? () => safePush(cityScreen) : undefined
+                action: hasActions(1) ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'GLOBAL_MAP') : undefined
             });
+
+            opsItems.push({ icon: '📊', label: `Market Intel`, badge: s.marketState.toUpperCase() });
             options.push({
-                label: `📊  Market Intel (${s.marketState} market)`,
+                label: `Market Intel (${s.marketState})`,
                 action: () => safePush(newsScreen)
             });
         }
 
         if (pendingCount > 0) {
+            opsItems.push({ icon: '💼', label: `Pending Offers`, badge: `${pendingCount}` });
             options.push({
-                label: `💼  Pending Offers (${pendingCount} awaiting response)`,
+                label: `Pending Offers (${pendingCount})`,
                 action: () => safePush(phoneScreen)
             });
         }
 
-        // ═══ YOU ═══
-        options.push({ label: `═══ DOSSIER ═══`, disabled: true, _sectionHeader: true });
+        // DOSSIER card items
+        const dossierItems = [];
         if (phase === 'late') {
+            dossierItems.push({ icon: '🧰', label: 'Inventory & Artifacts' });
             options.push({
-                label: `🧰  Inventory & Artifacts`,
-                action: () => {
-                    GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY');
-                }
+                label: 'Inventory & Artifacts',
+                action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY')
             });
         }
         if (phase !== 'early') {
+            dossierItems.push({ icon: '🪞', label: 'Ego Dashboard' });
             options.push({
-                label: `🪞  Ego Dashboard & Profile`,
-                action: () => {
-                    GameEventBus.emit(GameEvents.TOGGLE_DASHBOARD, { state: true });
-                }
+                label: 'Ego Dashboard & Profile',
+                action: () => safePush(() => egoDashboardScreenLazy(ui))
             });
         }
+        dossierItems.push({
+            icon: '📱', label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
+            ap: 1, disabled: !hasActions(1),
+        });
         options.push({
-            label: unreadMessages > 0 ? `[1 AP] 📱  Phone (${unreadMessages} unread)` : `[1 AP] 📱  Phone`,
+            label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
             disabled: !hasActions(1),
             action: hasActions(1) ? () => safePush(phoneScreen) : undefined
         });
         if (phase !== 'early') {
+            dossierItems.push({ icon: '📓', label: 'Journal & Calendar' });
             options.push({
-                label: '📓  Journal & Calendar',
+                label: 'Journal & Calendar',
                 action: () => safePush(journalScreen)
             });
         }
 
-        // --- VENUE CUTSCENES TEST ---
-        options.push({
-            label: '🎬  Test Venue Cutscenes',
-            action: () => safePush(testVenueCutscenesScreen)
-        });
+        // SYSTEM card items
+        const systemItems = [];
+        systemItems.push({ icon: '🎬', label: 'Test Venue Cutscenes' });
+        options.push({ label: 'Test Venue Cutscenes', action: () => safePush(testVenueCutscenesScreen) });
 
-        options.push({
-            label: '⚙️  System & Settings',
-            action: () => safePush(pauseMenuScreen)
-        });
+        systemItems.push({ icon: '⚙️', label: 'System & Settings' });
+        options.push({ label: 'System & Settings', action: () => safePush(pauseMenuScreen) });
 
-        options.push({
-            label: '💻  System Admin (God Mode)',
-            action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'ADMIN') // Using raw string to match OVERLAY.ADMIN in views.js
-        });
+        systemItems.push({ icon: '💻', label: 'System Admin (God Mode)' });
+        options.push({ label: 'System Admin (God Mode)', action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'ADMIN') });
 
-        // ──────────
-        // Retire option after week 26
         if (s.week >= 26) {
-            options.push({
-                label: '🌟  Retire — End your career',
-                action: () => safePush(legacyEndScreen)
-            });
+            systemItems.push({ icon: '🌟', label: 'Retire — End career' });
+            options.push({ label: 'Retire — End your career', action: () => safePush(legacyEndScreen) });
         }
 
         if (actionsLeft > 0) {
-            options.push({
-                label: '⏩  Advance Week →',
-                action: () => ui.replaceScreen(weekTransitionScreen(ui)),
-            });
+            systemItems.push({ icon: '⏩', label: 'Advance Week →' });
+            options.push({ label: 'Advance Week →', action: () => ui.replaceScreen(weekTransitionScreen(ui)) });
         }
+
+        // ── Build Menu Card HTML ──
+        let cardIdx = actionsLeft === 0 ? 1 : 0; // skip priority advance-week option
+        let cardsHtml = '<div class="db-mc-grid">';
+
+        const mc1 = menuCardHtml('MARKET DESK', '🖼️', marketItems, options, cardIdx);
+        cardsHtml += mc1.html; cardIdx = mc1.nextIndex;
+
+        if (weekItems.length > 0) {
+            const mc2 = menuCardHtml('THIS WEEK', '📅', weekItems, options, cardIdx);
+            cardsHtml += mc2.html; cardIdx = mc2.nextIndex;
+        }
+
+        if (opsItems.length > 0) {
+            const mc3 = menuCardHtml('OPERATIONS', '🎯', opsItems, options, cardIdx);
+            cardsHtml += mc3.html; cardIdx = mc3.nextIndex;
+        }
+
+        const mc4 = menuCardHtml('DOSSIER', '📋', dossierItems, options, cardIdx);
+        cardsHtml += mc4.html; cardIdx = mc4.nextIndex;
+
+        const mc5 = menuCardHtml('SYSTEM', '⚙️', systemItems, options, cardIdx);
+        cardsHtml += mc5.html;
+
+        cardsHtml += '</div>';
+        lines.push({ type: 'raw', text: cardsHtml });
 
         // Ticker bar — rendered as raw HTML below options
         const footerHtml = TickerSystem.generate('single');

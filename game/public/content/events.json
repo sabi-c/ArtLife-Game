@@ -1,0 +1,50 @@
+[
+    {
+        "id": "event_art_market_gossip",
+        "category": "social",
+        "title": "Overheard in Chelsea",
+        "requirements": {},
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "You overhear two well-dressed collectors arguing outside a pristine white-cube gallery.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "choice",
+                "text": "They seem to be debating the value of a new digital artist. What do you do?",
+                "choices": [
+                    {
+                        "label": "Eavesdrop carefully.",
+                        "nextStep": 2,
+                        "statChange": {
+                            "intel": 1
+                        }
+                    },
+                    {
+                        "label": "Interrupt and offer your opinion.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "audacity": 1
+                        },
+                        "requires": {
+                            "audacity": 5
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "You catch a few names and upcoming exhibition dates. Useful intel.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "They look at you, stunned by your blatant interruption, but they respect your confidence.",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
+    }
+]

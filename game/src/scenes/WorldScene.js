@@ -21,6 +21,7 @@ import { BaseScene } from './BaseScene.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
+import { NPCManager } from '../managers/NPCManager.js';
 
 // ── Layer depth constants ──
 const DEPTH = {
@@ -45,13 +46,6 @@ const LAYER_DEPTHS = {
     world2: DEPTH.WORLD2,
     above_player: DEPTH.ABOVE_PLAYER,
 };
-
-// ── NPC definitions (spawned at Tiled dialog object positions) ──
-const NPC_DEFS = [
-    { id: 'npc_elena', tint: 0xff9999, label: 'Elena Ross', speed: 2 },
-    { id: 'npc_margaux', tint: 0x99ccff, label: 'Margaux Villiers', speed: 1.5 },
-    { id: 'npc_julian', tint: 0xccff99, label: 'Julian Vance', speed: 2.5 },
-];
 
 // ── Art-world flavor for grass encounters ──
 const GRASS_ENCOUNTERS = [
@@ -185,6 +179,7 @@ export default class WorldScene extends BaseScene {
         this.dialogs = [];
         this.grassTiles = new Set(); // individual grass tile positions
         this.items = [];
+        this.eventZones = new Map(); // key: "x,y", value: eventId
 
         for (const obj of objects) {
             const tx = Math.floor(obj.x / tileW);
@@ -214,6 +209,19 @@ export default class WorldScene extends BaseScene {
                     // Point object — single grass tile
                     this.grassTiles.add(`${tx},${ty}`);
                 }
+            } else if (nameOrType === 'event') {
+                const eventId = props.eventId || props.event_id || obj.name;
+                if (obj.width > 0 && obj.height > 0) {
+                    const w = Math.ceil(obj.width / tileW);
+                    const h = Math.ceil(obj.height / tileH);
+                    for (let gx = 0; gx < w; gx++) {
+                        for (let gy = 0; gy < h; gy++) {
+                            this.eventZones.set(`${tx + gx},${ty + gy}`, eventId);
+                        }
+                    }
+                } else {
+                    this.eventZones.set(`${tx},${ty}`, eventId);
+                }
             } else if (nameOrType === 'pokeball' || nameOrType === 'item') {
                 const itemName = props.pokemon_inside
                     ? `Pokeball (#${props.pokemon_inside})`
@@ -240,6 +248,7 @@ export default class WorldScene extends BaseScene {
             const val = layerData.properties?.ge_charLayer;
             if (val) { charLayer = val; break; }
         }
+        this.charLayer = charLayer; // Save for dynamic spawns
 
         const charConfig = (id, sprite, startPosition, speed) => {
             const cfg = { id, sprite, walkingAnimationMapping: 0, startPosition, speed };
@@ -263,9 +272,11 @@ export default class WorldScene extends BaseScene {
             characters,
         });
 
-        // Start NPC wandering
+        // Start NPC wandering for eligible chars
         for (const npc of this.npcData) {
-            this.gridEngine.moveRandomly(npc.id, 2000 + Math.random() * 2000);
+            if (npc.behavior === 'wandering') {
+                this.gridEngine.moveRandomly(npc.id, 2000 + Math.random() * 2000);
+            }
         }
 
         // ── Y-depth sorting ──
@@ -295,6 +306,8 @@ export default class WorldScene extends BaseScene {
 
                 // Check grass encounters
                 this._checkGrassEncounter(pos);
+                // Check event trigger zones
+                this._checkEventTrigger(pos);
                 // Check item pickups
                 this._checkItemPickup(pos);
             }
@@ -318,6 +331,8 @@ export default class WorldScene extends BaseScene {
         this.daylightOverlay.setDepth(DEPTH.DAYLIGHT);
         this.daylightOverlay.setScrollFactor(0);
         this._applyDaylight();
+
+        this.lastHour = GameState.state?.hour ?? 8;
 
         // ── Input ──
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -359,25 +374,21 @@ export default class WorldScene extends BaseScene {
     // ════════════════════════════════════════════════════
 
     _spawnNPCs() {
-        // Place NPCs at dialog object positions from the Tiled map
-        const dialogPositions = this.dialogs.slice(0, NPC_DEFS.length);
+        const hour = GameState.state?.hour ?? 8;
+        const day = GameState.state?.dayOfWeek ?? 1;
+        const mapId = 'pallet_town';
 
-        for (let i = 0; i < Math.min(NPC_DEFS.length, dialogPositions.length); i++) {
-            const def = NPC_DEFS[i];
-            const pos = dialogPositions[i];
+        const activeNPCs = NPCManager.getNPCsForMap(mapId, day, hour);
 
+        for (const npc of activeNPCs) {
             const sprite = this.add.sprite(0, 0, 'world_player');
             sprite.setOrigin(0.5, 0.75);
-            sprite.setTint(def.tint);
+            sprite.setTint(npc.tint);
 
             this.npcSprites.push(sprite);
             this.npcData.push({
-                id: def.id,
-                label: def.label,
-                sprite,
-                speed: def.speed,
-                startPosition: { x: pos.x, y: pos.y },
-                dialogContent: pos.content,
+                ...npc,
+                sprite
             });
         }
     }
@@ -448,8 +459,73 @@ export default class WorldScene extends BaseScene {
         // Daylight refresh every ~5s
         if (time % 5000 < 20) this._applyDaylight();
 
+        // Hourly NPC schedule sync
+        const currentHour = GameState.state?.hour ?? 8;
+        if (this.lastHour !== currentHour) {
+            this.lastHour = currentHour;
+            this._syncNPCs();
+        }
+
         // Grass cooldown
         if (this.grassCooldown > 0) this.grassCooldown -= delta;
+    }
+
+    _syncNPCs() {
+        if (!this.gridEngine) return;
+
+        const hour = GameState.state?.hour ?? 8;
+        const day = GameState.state?.dayOfWeek ?? 1;
+        const mapId = 'pallet_town';
+
+        const activeNPCs = NPCManager.getNPCsForMap(mapId, day, hour);
+        const activeIds = activeNPCs.map(n => n.id);
+        const currentIds = this.npcData.map(n => n.id);
+
+        // Remove departed NPCs
+        for (let i = this.npcData.length - 1; i >= 0; i--) {
+            const npc = this.npcData[i];
+            if (!activeIds.includes(npc.id)) {
+                try {
+                    this.gridEngine.removeCharacter(npc.id);
+                } catch (e) { }
+                if (npc.sprite) npc.sprite.destroy();
+                this.npcSprites = this.npcSprites.filter(s => s !== npc.sprite);
+                this.npcData.splice(i, 1);
+            }
+        }
+
+        // Add arriving NPCs
+        for (const npcDef of activeNPCs) {
+            if (!currentIds.includes(npcDef.id)) {
+                const sprite = this.add.sprite(0, 0, 'world_player');
+                sprite.setOrigin(0.5, 0.75);
+                sprite.setTint(npcDef.tint);
+                sprite.setDepth(DEPTH.WORLD2 + 1 + npcDef.startPosition.y); // Initial depth
+
+                this.npcSprites.push(sprite);
+                const npcDataObj = { ...npcDef, sprite };
+                this.npcData.push(npcDataObj);
+
+                try {
+                    const cfg = {
+                        id: npcDef.id,
+                        sprite: sprite,
+                        startPosition: npcDef.startPosition,
+                        speed: npcDef.speed,
+                        walkingAnimationMapping: 0
+                    };
+                    if (this.charLayer) cfg.charLayer = this.charLayer;
+
+                    this.gridEngine.addCharacter(cfg);
+
+                    if (npcDef.behavior === 'wandering') {
+                        this.gridEngine.moveRandomly(npcDef.id, 2000 + Math.random() * 2000);
+                    }
+                } catch (e) {
+                    console.warn('[WorldScene] Failed to add late NPC to gridEngine', e);
+                }
+            }
+        }
     }
 
     // ════════════════════════════════════════════════════
@@ -514,8 +590,10 @@ export default class WorldScene extends BaseScene {
                 npcAtTarget.label,
                 npcAtTarget.dialogContent || `${npcAtTarget.label}: "The art world is full of surprises."`,
                 () => {
-                    // Resume wandering after dialog
-                    this.gridEngine.moveRandomly(npcAtTarget.id, 2000 + Math.random() * 2000);
+                    // Resume wandering after dialog if applicable
+                    if (npcAtTarget.behavior === 'wandering') {
+                        this.gridEngine.moveRandomly(npcAtTarget.id, 2000 + Math.random() * 2000);
+                    }
                 }
             );
             return;
@@ -688,6 +766,27 @@ export default class WorldScene extends BaseScene {
                 GameState.applyEffects({ ...encounter.effect, _silent: true });
             }
         });
+    }
+
+    // ════════════════════════════════════════════════════
+    // Event Trigger Zones
+    // ════════════════════════════════════════════════════
+
+    _checkEventTrigger(pos) {
+        if (this.dialogActive) return;
+
+        const eventId = this.eventZones.get(`${pos.x},${pos.y}`);
+        if (!eventId) return;
+
+        // Ensure we don't rapid-fire the same event by returning if we just checked it
+        if (pos.x === this.lastGrassCheck.x && pos.y === this.lastGrassCheck.y) return;
+        this.lastGrassCheck = { x: pos.x, y: pos.y };
+
+        console.log(`[WorldScene] Stepped on Event Zone: ${eventId}`);
+
+        // Emitting DEBUG_LAUNCH_SCENE temporarily routes us to the DialogueScene
+        // with the requested event ID, suspending this scene automatically as it runs in parallel / modal
+        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'DialogueScene', { eventId });
     }
 
     // ════════════════════════════════════════════════════

@@ -8,6 +8,45 @@ import { QualityGate } from './QualityGate.js';
  * Replaces EventManager (Phase 2.7+ Update).
  */
 export class EventRegistry {
+    static jsonEvents = [];
+
+    static getEvent(id) {
+        // Priority 1: Check the decoupled JSON file
+        const jsonRecord = this.jsonEvents?.find(e => e.id === id);
+        if (jsonRecord) return jsonRecord;
+
+        // Priority 2: Fallback to the legacy JS-bound events in the Zustand store
+        return useEventStore.getState().getEvent(id);
+    }
+
+    static getAvailableEvents(category = null, state = GameState.state) {
+        const store = useEventStore.getState();
+        const allEvents = [...(this.jsonEvents || []), ...store.eventPool];
+
+        // Deduplicate events by ID to prevent legacy overlaps
+        const uniqueEventsMap = new Map();
+        allEvents.forEach(e => uniqueEventsMap.set(e.id, e));
+        const uniqueEvents = Array.from(uniqueEventsMap.values());
+
+        return uniqueEvents.filter((event) => {
+            if (category && event.category !== category) return false;
+
+            // Class restriction check
+            if (event.classRestriction && event.classRestriction !== state.character.id) return false;
+
+            // Don't repeat the last 5 events
+            if (store.recentEventIds.includes(event.id)) return false;
+
+            // Min-week check for rare events
+            if (event.frequency?.[0] > 1 && state.week < event.frequency[0]) return false;
+
+            // Quality Gate check
+            if (event.requirements && !QualityGate.check(event.requirements)) return false;
+
+            return true;
+        });
+    }
+
     static checkForEvent() {
         const state = GameState.state;
         const store = useEventStore.getState();
@@ -15,7 +54,7 @@ export class EventRegistry {
         // ── Priority queue: consequence-scheduled events fire first ──
         const priorityEventId = store.popPriorityEvent();
         if (priorityEventId) {
-            const event = store.getEvent(priorityEventId);
+            const event = this.getEvent(priorityEventId);
             if (event) {
                 state.eventsTriggered.push(event.id);
                 store.recordEventTriggered(event.id, state.week);
@@ -27,43 +66,15 @@ export class EventRegistry {
 
         // Oregon Trail pacing: ~75% chance of an event every turn
         let probability;
-        if (weeksSinceLastEvent === 0) {
-            probability = 0.0;
-        } else if (weeksSinceLastEvent === 1) {
-            probability = 0.70;
-        } else if (weeksSinceLastEvent === 2) {
-            probability = 0.90;
-        } else {
-            probability = 0.98;
-        }
+        if (weeksSinceLastEvent === 0) probability = 0.0;
+        else if (weeksSinceLastEvent === 1) probability = 0.70;
+        else if (weeksSinceLastEvent === 2) probability = 0.90;
+        else probability = 0.98;
 
         if (Math.random() > probability) return null;
 
         // Pick eligible events
-        const eligible = store.eventPool.filter((event) => {
-            // Class restriction check
-            if (event.classRestriction && event.classRestriction !== state.character.id) {
-                return false;
-            }
-
-            // Don't repeat the last 5 events
-            if (store.recentEventIds.includes(event.id)) {
-                return false;
-            }
-
-            // Min-week check for rare events
-            if (event.frequency[0] > 1 && state.week < event.frequency[0]) {
-                return false;
-            }
-
-            // ── Quality Gate check ──
-            // Events with requirements only fire if player meets them
-            if (event.requirements && !QualityGate.check(event.requirements)) {
-                return false;
-            }
-
-            return true;
-        });
+        const eligible = this.getAvailableEvents(null, state);
 
         if (eligible.length === 0) return null;
 

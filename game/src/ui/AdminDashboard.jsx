@@ -212,6 +212,14 @@ export default function AdminDashboard({ onClose }) {
                                 [ Content Management Studio ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Visual content wiring & timeline editor</div>
                             </button>
+
+                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>BOOT FLOWS</div>
+                            {['BOOT', 'PROFILE_MENU', 'PROFILE_CREATE', 'PROFILE_LOGIN', 'PRIMARY_MENU', 'DOSSIER_SELECT', 'CONFIRM', 'AUTH'].map(step => (
+                                <button key={step} style={{ ...btnStyle, fontSize: 11, padding: '6px 12px', minHeight: 36 }}
+                                    onClick={() => triggerUI(VIEW.BOOT, { previewStep: step })}>
+                                    [ {step} ]
+                                </button>
+                            ))}
                         </div>
                     </div>
                 )}

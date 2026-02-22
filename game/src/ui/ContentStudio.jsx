@@ -416,11 +416,133 @@ function findConnections(entity, allEntities) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// Flow Map Panel
+// ════════════════════════════════════════════════════════════════
+
+const FLOW_NODES = [
+    // Boot flow
+    { id: 'boot', label: 'BOOT', x: 60, y: 40, color: '#c94040', group: 'system' },
+    { id: 'profile_menu', label: 'PROFILE MENU', x: 60, y: 100, color: '#c94040', group: 'system' },
+    { id: 'profile_create', label: 'CREATE PROFILE', x: 180, y: 70, color: '#c94040', group: 'system' },
+    { id: 'profile_login', label: 'LOGIN', x: 180, y: 130, color: '#c94040', group: 'system' },
+    { id: 'primary_menu', label: 'PRIMARY MENU', x: 60, y: 180, color: '#c94040', group: 'system' },
+    { id: 'dossier_select', label: 'LOAD SAVE', x: 180, y: 180, color: '#c94040', group: 'system' },
+    // Core loop
+    { id: 'dashboard', label: 'DASHBOARD', x: 60, y: 280, color: '#c9a84c', group: 'core' },
+    { id: 'ego', label: 'EGO DASHBOARD', x: 220, y: 250, color: '#88bbdd', group: 'info' },
+    { id: 'market', label: 'BROWSE MARKET', x: 220, y: 310, color: '#3a8a5c', group: 'action' },
+    { id: 'collection', label: 'MY COLLECTION', x: 370, y: 310, color: '#3a8a5c', group: 'action' },
+    { id: 'phone', label: 'PHONE', x: 370, y: 250, color: '#88bbdd', group: 'info' },
+    { id: 'venue', label: 'VISIT VENUE', x: 220, y: 380, color: '#3a8a5c', group: 'action' },
+    { id: 'travel', label: 'TRAVEL', x: 370, y: 380, color: '#3a8a5c', group: 'action' },
+    { id: 'journal', label: 'JOURNAL', x: 500, y: 250, color: '#88bbdd', group: 'info' },
+    { id: 'market_intel', label: 'MARKET INTEL', x: 500, y: 310, color: '#88bbdd', group: 'info' },
+    { id: 'inventory', label: 'INVENTORY', x: 500, y: 380, color: '#88bbdd', group: 'info' },
+    // Venue sub-flow
+    { id: 'venue_detail', label: 'VENUE DETAIL', x: 220, y: 450, color: '#3a8a5c', group: 'action' },
+    { id: 'room', label: 'ROOM', x: 370, y: 450, color: '#3a8a5c', group: 'action' },
+    { id: 'npc_talk', label: 'NPC TALK', x: 500, y: 450, color: '#3a8a5c', group: 'action' },
+    // Week flow
+    { id: 'week_transition', label: 'WEEK TRANSITION', x: 60, y: 380, color: '#c9a84c', group: 'core' },
+    { id: 'week_report', label: 'WEEK REPORT', x: 60, y: 450, color: '#c9a84c', group: 'core' },
+    // System
+    { id: 'settings', label: 'SETTINGS', x: 60, y: 530, color: '#c94040', group: 'system' },
+    { id: 'admin', label: 'ADMIN', x: 180, y: 530, color: '#c94040', group: 'system' },
+    { id: 'cms', label: 'CMS', x: 300, y: 530, color: '#c94040', group: 'system' },
+    // Scenes
+    { id: 'haggle', label: 'HAGGLE', x: 420, y: 530, color: '#aa66cc', group: 'scene' },
+    { id: 'world', label: 'WORLD MAP', x: 540, y: 530, color: '#aa66cc', group: 'scene' },
+];
+
+const FLOW_EDGES = [
+    ['boot', 'profile_menu'],
+    ['profile_menu', 'profile_create'],
+    ['profile_menu', 'profile_login'],
+    ['profile_menu', 'primary_menu'],
+    ['profile_create', 'primary_menu'],
+    ['profile_login', 'primary_menu'],
+    ['primary_menu', 'dashboard'],
+    ['primary_menu', 'dossier_select'],
+    ['dossier_select', 'dashboard'],
+    ['dashboard', 'ego'],
+    ['dashboard', 'market'],
+    ['dashboard', 'collection'],
+    ['dashboard', 'phone'],
+    ['dashboard', 'venue'],
+    ['dashboard', 'travel'],
+    ['dashboard', 'journal'],
+    ['dashboard', 'market_intel'],
+    ['dashboard', 'inventory'],
+    ['dashboard', 'week_transition'],
+    ['dashboard', 'settings'],
+    ['dashboard', 'admin'],
+    ['week_transition', 'week_report'],
+    ['week_report', 'dashboard'],
+    ['venue', 'venue_detail'],
+    ['venue_detail', 'room'],
+    ['room', 'npc_talk'],
+    ['market', 'haggle'],
+    ['dashboard', 'world'],
+    ['admin', 'cms'],
+];
+
+function FlowMapPanel() {
+    const svgW = 640;
+    const svgH = 580;
+    const nodeW = 110;
+    const nodeH = 28;
+
+    return (
+        <div style={{ ...panelStyle, flex: 1 }}>
+            <div style={headerStyle}>FLOW MAP</div>
+            <div className="fm-container">
+                <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: '100%', height: '100%', minHeight: 500 }}>
+                    <defs>
+                        <marker id="fm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                            <polygon points="0 0, 8 3, 0 6" fill="#2a2a3e" />
+                        </marker>
+                    </defs>
+
+                    {/* Edges */}
+                    {FLOW_EDGES.map(([fromId, toId], i) => {
+                        const from = FLOW_NODES.find(n => n.id === fromId);
+                        const to = FLOW_NODES.find(n => n.id === toId);
+                        if (!from || !to) return null;
+                        const x1 = from.x + nodeW / 2;
+                        const y1 = from.y + nodeH / 2;
+                        const x2 = to.x + nodeW / 2;
+                        const y2 = to.y + nodeH / 2;
+                        return <line key={i} className="fm-edge" x1={x1} y1={y1} x2={x2} y2={y2} />;
+                    })}
+
+                    {/* Nodes */}
+                    {FLOW_NODES.map(node => (
+                        <g key={node.id} className="fm-node" transform={`translate(${node.x},${node.y})`}>
+                            <rect
+                                width={nodeW} height={nodeH} rx={4}
+                                fill={node.color + '22'}
+                                stroke={node.color}
+                                strokeWidth={1.5}
+                            />
+                            <text x={nodeW / 2} y={nodeH / 2 + 3} textAnchor="middle"
+                                style={{ fontSize: 8, fill: '#eaeaea' }}>
+                                {node.label}
+                            </text>
+                        </g>
+                    ))}
+                </svg>
+            </div>
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════
 // Main CMS Component
 // ════════════════════════════════════════════════════════════════
 
 export default function ContentStudio({ onClose }) {
     const [visible, setVisible] = useState(false);
+    const [activeTab, setActiveTab] = useState('content');
 
     useEffect(() => {
         requestAnimationFrame(() => setVisible(true));
@@ -428,6 +550,14 @@ export default function ContentStudio({ onClose }) {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
+
+    const tabStyle = (isActive) => ({
+        background: isActive ? '#c9a84c' : 'none',
+        color: isActive ? '#000' : '#888',
+        border: isActive ? '1px solid #c9a84c' : '1px solid #444',
+        padding: '6px 14px', cursor: 'pointer', fontFamily: mono, fontSize: 11,
+        fontWeight: isActive ? 'bold' : 'normal',
+    });
 
     return (
         <div style={{
@@ -444,13 +574,17 @@ export default function ContentStudio({ onClose }) {
                 padding: '12px 20px', borderBottom: '1px solid #2a2a3e',
                 flexShrink: 0,
             }}>
-                <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <span style={{ color: '#c9a84c', fontSize: 16, fontWeight: 'bold', letterSpacing: 3 }}>
                         CONTENT STUDIO
                     </span>
-                    <span style={{ color: '#555', fontSize: 11, marginLeft: 12 }}>
+                    <span style={{ color: '#555', fontSize: 11 }}>
                         The Director's Chair
                     </span>
+                    <div style={{ display: 'flex', gap: 6, marginLeft: 12 }}>
+                        <button onClick={() => setActiveTab('content')} style={tabStyle(activeTab === 'content')}>CONTENT</button>
+                        <button onClick={() => setActiveTab('flowmap')} style={tabStyle(activeTab === 'flowmap')}>FLOW MAP</button>
+                    </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                     <button
@@ -463,26 +597,29 @@ export default function ContentStudio({ onClose }) {
                 </div>
             </div>
 
-            {/* 3-Panel Layout */}
-            <div style={{
-                flex: 1, display: 'flex', gap: 1, overflow: 'hidden',
-                padding: '8px',
-            }}>
-                {/* Left: Content Library */}
-                <div style={{ width: '25%', minWidth: 220, display: 'flex', flexDirection: 'column' }}>
-                    <ContentLibrary />
+            {/* Tab Content */}
+            {activeTab === 'content' && (
+                <div style={{
+                    flex: 1, display: 'flex', gap: 1, overflow: 'hidden',
+                    padding: '8px',
+                }}>
+                    <div style={{ width: '25%', minWidth: 220, display: 'flex', flexDirection: 'column' }}>
+                        <ContentLibrary />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '0 8px' }}>
+                        <TimelinePanel />
+                    </div>
+                    <div style={{ width: '30%', minWidth: 280, display: 'flex', flexDirection: 'column' }}>
+                        <WiringInspector />
+                    </div>
                 </div>
+            )}
 
-                {/* Center: Timeline */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', margin: '0 8px' }}>
-                    <TimelinePanel />
+            {activeTab === 'flowmap' && (
+                <div style={{ flex: 1, padding: '8px', overflow: 'hidden' }}>
+                    <FlowMapPanel />
                 </div>
-
-                {/* Right: Wiring Inspector */}
-                <div style={{ width: '30%', minWidth: 280, display: 'flex', flexDirection: 'column' }}>
-                    <WiringInspector />
-                </div>
-            </div>
+            )}
         </div>
     );
 }

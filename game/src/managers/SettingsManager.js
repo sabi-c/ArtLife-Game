@@ -15,6 +15,7 @@ export class SettingsManager {
             type: 'cycle',
             options: [
                 { value: 'pantone_blue', display: 'Pantone Dark Blue C' },
+                { value: 'uplink', display: 'Uplink Hacker' },
                 { value: 'classic_dark', display: 'Classic Dark' }
             ],
             default: 'pantone_blue'

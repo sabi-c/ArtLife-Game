@@ -64,8 +64,13 @@ export default function App() {
             const theme = SettingsManager.get('colorTheme');
             if (theme === 'pantone_blue') {
                 document.body.classList.add('theme-pantone-blue');
+                document.body.classList.remove('theme-uplink');
+            } else if (theme === 'uplink') {
+                document.body.classList.add('theme-uplink');
+                document.body.classList.remove('theme-pantone-blue');
             } else {
                 document.body.classList.remove('theme-pantone-blue');
+                document.body.classList.remove('theme-uplink');
             }
         };
         applyTheme(); // apply initially
@@ -248,7 +253,7 @@ export default function App() {
         <ErrorBoundary>
             {/* ── CENTRAL UI ROUTER ── */}
             {activeView === VIEW.BOOT && (
-                <TerminalLogin onComplete={handleLoginComplete} />
+                <TerminalLogin onComplete={handleLoginComplete} previewStep={viewPayload?.previewStep} />
             )}
 
             {/* The DialogueLayer overlays the Phase Canvas, so it sits outside the router bounds */}

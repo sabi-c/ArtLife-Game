@@ -117,7 +117,7 @@ export class TerminalUI {
         }
         this.onScreen = renderFn;
         this.selectedIndex = 0;
-        this.render();
+        this._transitionRender('t-trans-push-in');
     }
 
     popScreen() {
@@ -125,7 +125,7 @@ export class TerminalUI {
         if (this.screenStack.length > 0) {
             this.onScreen = this.screenStack.pop();
             this.selectedIndex = 0;
-            this.render();
+            this._transitionRender('t-trans-pop-in');
         }
     }
 
@@ -133,6 +133,21 @@ export class TerminalUI {
         if (window.lastError) window.lastError = null;
         this.onScreen = renderFn;
         this.selectedIndex = 0;
+        this._transitionRender('t-trans-replace');
+    }
+
+    _transitionRender(transClass) {
+        // Skip animation if reduced motion preferred or container hidden
+        if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || !this.container.offsetParent) {
+            this.render();
+            return;
+        }
+        this.container.classList.add(transClass);
+        const cleanup = () => {
+            this.container.classList.remove(transClass);
+            this.container.removeEventListener('animationend', cleanup);
+        };
+        this.container.addEventListener('animationend', cleanup, { once: true });
         this.render();
     }
 
@@ -348,6 +363,25 @@ export class TerminalUI {
                     // Just highlight if disabled
                     this.selectedIndex = idx;
                     this.render();
+                }
+            });
+        });
+
+        // Menu card items — delegate to option by data-option-index
+        this.container.querySelectorAll('.db-mc-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (this._isAnimating) { this._skipAnimation(); return; }
+                const idx = parseInt(el.dataset.optionIndex);
+                const opt = this.options[idx];
+                if (opt && !opt.disabled && opt.action) {
+                    this.selectedIndex = idx;
+                    WebAudioService.select();
+                    try { opt.action(); } catch (err) {
+                        console.error('[TerminalUI] Menu card action error:', err);
+                        window.lastError = err.message || String(err);
+                        this.render();
+                    }
                 }
             });
         });
