@@ -88,9 +88,10 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 
 ---
 
-## Current Phase: Foundation & Infrastructure (~85%)
+## Current Phase: Foundation & Infrastructure (~95%)
 
 > **See [Roadmap.md](Roadmap.md) for detailed task tracking.**
+> **Deployed:** [sabi-c.github.io/ArtLife-Game/](https://sabi-c.github.io/ArtLife-Game/)
 
 **Phase 3** focuses on hardening the foundation so content can be dropped in without rewiring:
 - Scene flow & navigation — WorldScene v2 (GridEngine overworld), venue flow, transitions ✅
@@ -99,7 +100,13 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 - Progressive disclosure — early/mid/late game phases based on week thresholds ✅
 - Settings — intro style, color theme, sound toggle ✅
 - Storyline CMS — event chains, NPC arcs, storylineStore, active storyline testing ✅
-- Remaining: Tone system, MarketEngine, Zustand store completion
+- Uplink-inspired dashboard — SVG world map, status strip, trace bars, calendar timeline ✅
+- Dev Mode boot — option [4] in login, opens Content Studio directly ✅
+- ContentAPI facade — CRUD for all content types, `window.ContentAPI` ✅
+- Flow Map navigation — all nodes clickable, wired to screens/overlays/scenes ✅
+- Mobile audit — responsive MobileJoypad, safe-area padding, responsive WorldScene ✅
+- GitHub Pages deployment fix — all asset paths relative for subpath deployment ✅
+- Remaining: Guided onboarding, MarketEngine, Zustand store completion
 
 ## Code Health Audit
 
@@ -110,7 +117,8 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 | `data/` | 10 + `events/` (8) + `scenes/` (3) + `maps/` | events split by category, 3 ink scenes (boom_room, gallery_opening, studio_visit), rooms.js (76KB) |
 | `terminal/` | TerminalUI + TerminalAPI + 11 screen modules | Screens split: dashboard, market, phone, world, character, events, venue, system, haggle, journal, collection |
 | `engines/` | 1 | SceneEngine.js — ink.js visual novel engine |
-| `stores/` | 5 | gameStore, npcStore, inventoryStore, marketStore, eventStore (Zustand) |
+| `stores/` | 7 | gameStore, npcStore, inventoryStore, marketStore, eventStore, contentStore, storylineStore (Zustand) |
+| `api/` | 1 | ContentAPI.js — CRUD facade, `window.ContentAPI` |
 | `utils/` | 4 | shuffle.js, id.js, ErrorRegistry.js, GameDebugAPI.js |
 | `sprites/` | 2 | Player.js, NPC.js (decoupled entity classes) |
 | `ui/` | 9 | AdminDashboard, PlayerDashboard, InventoryDashboard, ScenePlayer, TerminalLogin, SettingsOverlay, DialogueBox, MobileJoypad, ErrorBoundary |
