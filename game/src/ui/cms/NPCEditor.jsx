@@ -1,24 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNPCStore } from '../../stores/npcStore.js';
 
 export default function NPCEditor() {
-    const { npcsByTier, addNPC, updateNPCStatus } = useNPCStore();
-    const [allNpcs, setAllNpcs] = useState([]);
+    const contacts = useNPCStore(s => s.contacts);
     const [selectedId, setSelectedId] = useState(null);
     const [jsonEdit, setJsonEdit] = useState('');
     const [notification, setNotification] = useState(null);
 
-    // Flatten NPC dicts to a list
-    useEffect(() => {
-        const flat = [];
-        Object.values(npcsByTier).forEach(tierList => {
-            flat.push(...tierList);
-        });
-        // Sort by ID
-        flat.sort((a, b) => a.id.localeCompare(b.id));
-        setAllNpcs(flat);
-    }, [npcsByTier]);
-
+    const allNpcs = [...contacts].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
     const selected = allNpcs.find(n => n.id === selectedId);
 
     const showNotif = (msg) => {
@@ -38,28 +27,23 @@ export default function NPCEditor() {
         anchor.href = dataStr;
         anchor.download = "npcs.json";
         anchor.click();
-        showNotif('📥 Downloaded npcs.json');
+        showNotif('Downloaded npcs.json');
     };
 
     const handleHotSwap = () => {
         try {
             const parsed = JSON.parse(jsonEdit);
-
-            // Assuming addNPC or updateNPC can handle raw overwrite
             useNPCStore.setState(state => {
-                const tier = parsed.tier || 1;
-                const list = [...(state.npcsByTier[tier] || [])];
-                const existingIdx = list.findIndex(n => n.id === parsed.id);
-                if (existingIdx >= 0) {
-                    list[existingIdx] = parsed;
+                const idx = state.contacts.findIndex(n => n.id === parsed.id);
+                if (idx >= 0) {
+                    state.contacts[idx] = { ...state.contacts[idx], ...parsed };
                 } else {
-                    list.push(parsed);
+                    state.contacts.push(parsed);
                 }
-                return { npcsByTier: { ...state.npcsByTier, [tier]: list } };
             });
-            showNotif('🔥 Hot-swapped NPC into memory');
+            showNotif('Hot-swapped NPC into memory');
         } catch (err) {
-            showNotif('❌ JSON Error: ' + err.message);
+            showNotif('JSON Error: ' + err.message);
         }
     };
 
@@ -68,17 +52,14 @@ export default function NPCEditor() {
         const updated = { ...selected, [field]: value };
         setJsonEdit(JSON.stringify(updated, null, 4));
 
-        // Push directly to store state for live updates
         useNPCStore.setState(state => {
-            const tier = updated.tier || 1;
-            const list = [...(state.npcsByTier[tier] || [])];
-            const idx = list.findIndex(n => n.id === updated.id);
-            if (idx >= 0) list[idx] = updated;
-            return { npcsByTier: { ...state.npcsByTier, [tier]: list } };
+            const idx = state.contacts.findIndex(n => n.id === updated.id);
+            if (idx >= 0) {
+                state.contacts[idx] = { ...state.contacts[idx], [field]: value };
+            }
         });
     };
 
-    // ── Styles ──
     const panel = {
         background: '#0a0a0f', border: '1px solid #333', padding: 16, overflow: 'auto',
         fontFamily: 'inherit', fontSize: 12, color: '#eaeaea', flex: 1, display: 'flex', flexDirection: 'column'
@@ -102,8 +83,7 @@ export default function NPCEditor() {
                     {notification && <span style={{ color: '#4caf50', marginLeft: 16 }}>{notification}</span>}
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
-                    <button onClick={handleDownload} style={btnStyle}>📥 Export JSON</button>
-                    <button style={btnStyle}>➕ New NPC</button>
+                    <button onClick={handleDownload} style={btnStyle}>Export JSON</button>
                 </div>
             </div>
 
@@ -114,6 +94,9 @@ export default function NPCEditor() {
                     <div style={{ color: '#666', fontSize: 10, textTransform: 'uppercase', marginBottom: 12, letterSpacing: 1 }}>
                         ALL NPCS
                     </div>
+                    {allNpcs.length === 0 && (
+                        <div style={{ color: '#555', padding: 12 }}>No NPCs loaded. Initialize game state first.</div>
+                    )}
                     {allNpcs.map(npc => (
                         <div key={npc.id} onClick={() => handleSelect(npc.id)} style={{
                             padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #1a1a2e',
@@ -121,7 +104,9 @@ export default function NPCEditor() {
                             borderLeft: selectedId === npc.id ? '3px solid #c9a84c' : '3px solid transparent',
                         }}>
                             <div style={{ fontSize: 13, color: selectedId === npc.id ? '#c9a84c' : '#eaeaea', fontWeight: 'bold' }}>{npc.name}</div>
-                            <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>ID: {npc.id} · Tier {npc.tier || 1}</div>
+                            <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>
+                                ID: {npc.id} {npc.tier ? `· Tier ${npc.tier}` : ''} {npc.met ? '· MET' : ''}
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -137,34 +122,39 @@ export default function NPCEditor() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                                 <div>
                                     <label style={{ display: 'block', color: '#888', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Full Name</label>
-                                    <input value={selected.name || ''} onChange={e => handleFieldEdit('name', e.target.value)} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333' }} />
+                                    <input value={selected.name || ''} onChange={e => handleFieldEdit('name', e.target.value)} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333', fontFamily: 'inherit' }} />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', color: '#888', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Role / Class</label>
-                                    <input value={selected.role || ''} onChange={e => handleFieldEdit('role', e.target.value)} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333' }} />
+                                    <input value={selected.role || ''} onChange={e => handleFieldEdit('role', e.target.value)} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333', fontFamily: 'inherit' }} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', color: '#888', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Wealth</label>
-                                    <input type="number" value={selected.wealth || 0} onChange={e => handleFieldEdit('wealth', parseInt(e.target.value))} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333' }} />
+                                    <label style={{ display: 'block', color: '#888', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Favor</label>
+                                    <input type="number" value={selected.favor || 0} onChange={e => handleFieldEdit('favor', parseInt(e.target.value))} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333', fontFamily: 'inherit' }} />
                                 </div>
                                 <div>
                                     <label style={{ display: 'block', color: '#888', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Tier</label>
-                                    <input type="number" value={selected.tier || 1} onChange={e => handleFieldEdit('tier', parseInt(e.target.value))} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333' }} />
+                                    <input type="number" value={selected.tier || 1} onChange={e => handleFieldEdit('tier', parseInt(e.target.value))} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333', fontFamily: 'inherit' }} />
                                 </div>
                             </div>
 
                             <div style={{ marginTop: 20 }}>
                                 <label style={{ display: 'block', color: '#888', fontSize: 10, textTransform: 'uppercase', marginBottom: 4 }}>Traits (Comma Sep)</label>
-                                <input value={(selected.traits || []).join(', ')} onChange={e => handleFieldEdit('traits', e.target.value.split(',').map(s => s.trim()))} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333' }} />
+                                <input value={(selected.traits || []).join(', ')} onChange={e => handleFieldEdit('traits', e.target.value.split(',').map(s => s.trim()))} style={{ width: '100%', padding: 8, background: '#111', color: '#fff', border: '1px solid #333', fontFamily: 'inherit' }} />
                             </div>
 
                             <div style={{ marginTop: 30, padding: 16, border: '1px dashed #444', background: 'rgba(255,255,255,0.02)' }}>
                                 <div style={{ color: '#88bbdd', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>LIVE RELATIONSHIP STATS</div>
                                 <div style={{ display: 'flex', gap: 20, fontSize: 11 }}>
-                                    <div>Trust: <strong style={{ color: '#fff' }}>{selected.trust || 0}</strong></div>
-                                    <div>Respect: <strong style={{ color: '#fff' }}>{selected.respect || 0}</strong></div>
-                                    <div>Connection Level: <strong style={{ color: '#c9a84c' }}>{selected.connectionLevel || 0}</strong></div>
+                                    <div>Favor: <strong style={{ color: selected.favor > 0 ? '#3a8a5c' : selected.favor < 0 ? '#c94040' : '#fff' }}>{selected.favor || 0}</strong></div>
+                                    <div>Met: <strong style={{ color: '#fff' }}>{selected.met ? 'YES' : 'NO'}</strong></div>
+                                    <div>Phone Unlocked: <strong style={{ color: '#c9a84c' }}>{selected.phoneUnlocked ? 'YES' : 'NO'}</strong></div>
                                 </div>
+                                {selected.memory && (
+                                    <div style={{ marginTop: 8, fontSize: 10, color: '#666' }}>
+                                        Witnessed: {selected.memory.witnessed?.length || 0} | Grudges: {selected.memory.grudges?.length || 0} | Favors: {selected.memory.favors?.length || 0}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -174,7 +164,7 @@ export default function NPCEditor() {
                 <div style={{ ...panel, flex: '0 0 320px' }}>
                     <div style={{ color: '#666', fontSize: 10, textTransform: 'uppercase', marginBottom: 12 }}>RAW JSON DUMP</div>
                     <textarea value={jsonEdit} onChange={(e) => setJsonEdit(e.target.value)} spellCheck={false} style={{ flex: 1, background: '#050508', color: '#4caf50', border: '1px solid #333', fontFamily: 'inherit', fontSize: 11, padding: 8, resize: 'none', outline: 'none' }} placeholder="Select NPC to view full JSON payload..." />
-                    <button onClick={handleHotSwap} style={{ ...btnStyle, marginTop: 8, width: '100%', borderColor: '#c9a84c', color: '#c9a84c' }}>🔥 Hot-Swap Into Memory</button>
+                    <button onClick={handleHotSwap} style={{ ...btnStyle, marginTop: 8, width: '100%', borderColor: '#c9a84c', color: '#c9a84c' }}>Hot-Swap Into Memory</button>
                 </div>
             </div>
         </div>
