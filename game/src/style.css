@@ -1937,17 +1937,20 @@ button {
 
 .db-panel {
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 10px 14px;
+  border-radius: 6px;
+  padding: 12px 14px;
   margin: 6px 0;
+  background: linear-gradient(180deg, rgba(15, 15, 28, 0.6) 0%, rgba(10, 10, 18, 0.9) 100%);
 }
 
 .db-panel-header {
   color: var(--gold);
-  font-size: 0.8em;
+  font-size: 0.78em;
   font-weight: 700;
   letter-spacing: 2px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(201, 168, 76, 0.1);
 }
 
 /* Financials grid */
@@ -2346,32 +2349,40 @@ button {
 
 .db-header-panel {
   border-top: 2px solid var(--gold);
-  padding: 12px;
-  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 12px;
+  margin-bottom: 10px;
+  background: linear-gradient(180deg, rgba(201, 168, 76, 0.06) 0%, transparent 100%);
 }
 
 .db-header-name {
   color: var(--gold);
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.15);
 }
 
 .db-header-meta {
   color: var(--dim);
   font-size: 11px;
-  margin-top: 4px;
+  margin-top: 5px;
+  letter-spacing: 0.5px;
 }
 
 .db-header-worth {
   color: var(--green);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .db-header-worth.down {
   color: var(--red);
+}
+
+.db-header-worth.up {
+  color: var(--green);
 }
 
 /* ═══════════════════════════════════════════
@@ -2381,7 +2392,8 @@ button {
 .db-hud-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 4px;
 }
 
 @media (max-width: 700px) {
@@ -2637,75 +2649,70 @@ button {
 .db-mc-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 8px 0;
+  gap: 10px;
+  margin: 10px 0;
 }
 
 .db-mc-card {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 0;
   overflow: hidden;
-  animation: dbCardIn 0.3s ease-out both;
+  animation: dbCardIn 0.35s ease-out both;
+  background: linear-gradient(180deg, rgba(20, 20, 35, 0.8) 0%, rgba(10, 10, 20, 0.95) 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.db-mc-card:nth-child(1) {
-  animation-delay: 0s;
+.db-mc-card:hover {
+  border-color: rgba(201, 168, 76, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
-.db-mc-card:nth-child(2) {
-  animation-delay: 0.05s;
-}
-
-.db-mc-card:nth-child(3) {
-  animation-delay: 0.1s;
-}
-
-.db-mc-card:nth-child(4) {
-  animation-delay: 0.15s;
-}
-
-.db-mc-card:nth-child(5) {
-  animation-delay: 0.2s;
-}
+.db-mc-card:nth-child(1) { animation-delay: 0s; }
+.db-mc-card:nth-child(2) { animation-delay: 0.06s; }
+.db-mc-card:nth-child(3) { animation-delay: 0.12s; }
+.db-mc-card:nth-child(4) { animation-delay: 0.18s; }
+.db-mc-card:nth-child(5) { animation-delay: 0.24s; }
 
 @keyframes dbCardIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(12px) scale(0.97);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .db-mc-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  font-size: 0.75em;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 0.72em;
   font-weight: 700;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
   color: var(--gold);
   border-bottom: 1px solid var(--border);
-  background: rgba(201, 168, 76, 0.04);
+  background: linear-gradient(90deg, rgba(201, 168, 76, 0.08) 0%, transparent 100%);
 }
 
 .db-mc-title-icon {
-  font-size: 1.2em;
+  font-size: 1.3em;
 }
 
 .db-mc-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 10px 14px;
   cursor: pointer;
-  transition: background 0.1s;
-  border-bottom: 1px solid rgba(42, 42, 58, 0.4);
+  transition: background 0.15s, border-left 0.15s;
+  border-bottom: 1px solid rgba(42, 42, 58, 0.3);
+  border-left: 3px solid transparent;
   min-height: 44px;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -2717,46 +2724,48 @@ button {
 }
 
 .db-mc-item:hover {
-  background: var(--highlight-bg);
+  background: rgba(201, 168, 76, 0.06);
+  border-left-color: rgba(201, 168, 76, 0.4);
 }
 
 .db-mc-item.selected {
-  background: var(--highlight-bg);
-  border-left: 3px solid var(--gold);
+  background: rgba(201, 168, 76, 0.1);
+  border-left-color: var(--gold);
 }
 
 .db-mc-item.disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: default;
 }
 
 .db-mc-item.disabled:hover {
   background: transparent;
+  border-left-color: transparent;
 }
 
 .db-mc-item-icon {
-  font-size: 1.1em;
+  font-size: 1.15em;
   flex-shrink: 0;
-  width: 22px;
+  width: 24px;
   text-align: center;
 }
 
 .db-mc-item-label {
   flex: 1;
-  font-size: 0.88em;
+  font-size: 0.85em;
   color: var(--fg);
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
 .db-mc-ap {
   flex-shrink: 0;
-  padding: 2px 6px;
-  font-size: 0.7em;
+  padding: 2px 8px;
+  font-size: 0.68em;
   font-weight: 700;
   color: var(--gold);
-  background: rgba(201, 168, 76, 0.1);
-  border: 1px solid rgba(201, 168, 76, 0.3);
-  border-radius: 10px;
+  background: rgba(201, 168, 76, 0.12);
+  border: 1px solid rgba(201, 168, 76, 0.25);
+  border-radius: 12px;
   letter-spacing: 0.5px;
 }
 
@@ -2764,6 +2773,9 @@ button {
   flex-shrink: 0;
   font-size: 0.72em;
   color: var(--dim);
+  padding: 1px 6px;
+  background: rgba(100, 100, 140, 0.1);
+  border-radius: 8px;
 }
 
 @media (max-width: 600px) {
@@ -2845,37 +2857,37 @@ button {
 }
 
 /* ═══════════════════════════════════════════
-   Flow Map (fm-*)
+   Flow Map — @xyflow/react dark theme overrides
    ═══════════════════════════════════════════ */
 
-.fm-container {
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.fm-node {
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.fm-node:hover {
-  opacity: 0.8;
-}
-
-.fm-node text {
+.react-flow__node-default {
   font-family: var(--font);
-  font-size: 10px;
-  fill: #eaeaea;
-  pointer-events: none;
+  white-space: pre-line;
+  text-align: center;
 }
 
-.fm-edge {
-  stroke: #2a2a3e;
-  stroke-width: 1.5;
-  fill: none;
-  marker-end: url(#fm-arrow);
+.react-flow__controls button {
+  background: #1a1a2e !important;
+  border-color: #2a2a3e !important;
+  fill: #888 !important;
+}
+
+.react-flow__controls button:hover {
+  background: #2a2a3e !important;
+  fill: #c9a84c !important;
+}
+
+.react-flow__minimap {
+  border: 1px solid #2a2a3e !important;
+  border-radius: 4px;
+}
+
+.react-flow__edge-path {
+  stroke: #3a3a5e;
+}
+
+.react-flow__background pattern line {
+  stroke: #1a1a2e;
 }
 
 /* ── Global Map Dash Trace Animation ── */

@@ -6,8 +6,18 @@
  * See: 07_Project/Content_Management_Studio_Spec.md
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useContentStore, CATEGORY_META } from '../stores/contentStore.js';
+import {
+    ReactFlow,
+    Background,
+    Controls,
+    MiniMap,
+    useNodesState,
+    useEdgesState,
+    MarkerType,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
 
@@ -416,121 +426,263 @@ function findConnections(entity, allEntities) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// Flow Map Panel
+// Flow Map Panel — @xyflow/react interactive node graph
 // ════════════════════════════════════════════════════════════════
 
-const FLOW_NODES = [
-    // Boot flow
-    { id: 'boot', label: 'BOOT', x: 60, y: 40, color: '#c94040', group: 'system' },
-    { id: 'profile_menu', label: 'PROFILE MENU', x: 60, y: 100, color: '#c94040', group: 'system' },
-    { id: 'profile_create', label: 'CREATE PROFILE', x: 180, y: 70, color: '#c94040', group: 'system' },
-    { id: 'profile_login', label: 'LOGIN', x: 180, y: 130, color: '#c94040', group: 'system' },
-    { id: 'primary_menu', label: 'PRIMARY MENU', x: 60, y: 180, color: '#c94040', group: 'system' },
-    { id: 'dossier_select', label: 'LOAD SAVE', x: 180, y: 180, color: '#c94040', group: 'system' },
-    // Core loop
-    { id: 'dashboard', label: 'DASHBOARD', x: 60, y: 280, color: '#c9a84c', group: 'core' },
-    { id: 'ego', label: 'EGO DASHBOARD', x: 220, y: 250, color: '#88bbdd', group: 'info' },
-    { id: 'market', label: 'BROWSE MARKET', x: 220, y: 310, color: '#3a8a5c', group: 'action' },
-    { id: 'collection', label: 'MY COLLECTION', x: 370, y: 310, color: '#3a8a5c', group: 'action' },
-    { id: 'phone', label: 'PHONE', x: 370, y: 250, color: '#88bbdd', group: 'info' },
-    { id: 'venue', label: 'VISIT VENUE', x: 220, y: 380, color: '#3a8a5c', group: 'action' },
-    { id: 'travel', label: 'TRAVEL', x: 370, y: 380, color: '#3a8a5c', group: 'action' },
-    { id: 'journal', label: 'JOURNAL', x: 500, y: 250, color: '#88bbdd', group: 'info' },
-    { id: 'market_intel', label: 'MARKET INTEL', x: 500, y: 310, color: '#88bbdd', group: 'info' },
-    { id: 'inventory', label: 'INVENTORY', x: 500, y: 380, color: '#88bbdd', group: 'info' },
-    // Venue sub-flow
-    { id: 'venue_detail', label: 'VENUE DETAIL', x: 220, y: 450, color: '#3a8a5c', group: 'action' },
-    { id: 'room', label: 'ROOM', x: 370, y: 450, color: '#3a8a5c', group: 'action' },
-    { id: 'npc_talk', label: 'NPC TALK', x: 500, y: 450, color: '#3a8a5c', group: 'action' },
-    // Week flow
-    { id: 'week_transition', label: 'WEEK TRANSITION', x: 60, y: 380, color: '#c9a84c', group: 'core' },
-    { id: 'week_report', label: 'WEEK REPORT', x: 60, y: 450, color: '#c9a84c', group: 'core' },
-    // System
-    { id: 'settings', label: 'SETTINGS', x: 60, y: 530, color: '#c94040', group: 'system' },
-    { id: 'admin', label: 'ADMIN', x: 180, y: 530, color: '#c94040', group: 'system' },
-    { id: 'cms', label: 'CMS', x: 300, y: 530, color: '#c94040', group: 'system' },
-    // Scenes
-    { id: 'haggle', label: 'HAGGLE', x: 420, y: 530, color: '#aa66cc', group: 'scene' },
-    { id: 'world', label: 'WORLD MAP', x: 540, y: 530, color: '#aa66cc', group: 'scene' },
+// Group colors
+const GC = {
+    boot:     '#c94040',  // Red — boot/login flow
+    core:     '#c9a84c',  // Gold — core game loop
+    terminal: '#3a8a5c',  // Green — terminal screens (action)
+    info:     '#88bbdd',  // Blue — info/stat screens
+    scene:    '#aa66cc',  // Purple — Phaser scenes
+    overlay:  '#e08050',  // Orange — React overlays
+};
+
+// Node style helper
+const flowNode = (id, label, x, y, color, group) => ({
+    id,
+    data: { label, color, group },
+    position: { x, y },
+    type: 'default',
+    style: {
+        background: color + '22',
+        border: `2px solid ${color}`,
+        borderRadius: 6,
+        color: '#eaeaea',
+        fontSize: 10,
+        fontFamily: '"IBM Plex Mono", monospace',
+        padding: '6px 12px',
+        minWidth: 110,
+        textAlign: 'center',
+    },
+});
+
+const flowEdge = (source, target, animated = false) => ({
+    id: `${source}-${target}`,
+    source,
+    target,
+    animated,
+    style: { stroke: '#3a3a5e' },
+    markerEnd: { type: MarkerType.ArrowClosed, color: '#3a3a5e' },
+});
+
+// ── All pages/screens the user can see ──
+const INITIAL_NODES = [
+    // ── BOOT FLOW (TerminalLogin.jsx steps) ──
+    flowNode('boot',            'BOOT\n(Typewriter)',      0,    0,   GC.boot, 'boot'),
+    flowNode('profile_menu',    'PROFILE MENU',            0,    80,  GC.boot, 'boot'),
+    flowNode('profile_create',  'CREATE PROFILE',          200,  40,  GC.boot, 'boot'),
+    flowNode('profile_login',   'LOGIN',                   200,  120, GC.boot, 'boot'),
+    flowNode('primary_menu',    'PRIMARY MENU\n(New/Load)', 0,   180, GC.boot, 'boot'),
+    flowNode('dossier_select',  'DOSSIER SELECT\n(Save Slots)', 200, 200, GC.boot, 'boot'),
+    flowNode('confirm',         'CONFIRM\n(Review)',       400,  160, GC.boot, 'boot'),
+    flowNode('auth',            'AUTH\n(Authenticating)',   400,  240, GC.boot, 'boot'),
+
+    // ── PHASER INTRO SCENES ──
+    flowNode('title_scene',     'TITLE SCENE',             0,    320, GC.scene, 'scene'),
+    flowNode('intro_scene',     'INTRO SCENE\n(Cutscene)', 200,  320, GC.scene, 'scene'),
+    flowNode('char_select',     'CHARACTER SELECT',        400,  320, GC.scene, 'scene'),
+
+    // ── CORE TERMINAL DASHBOARD ──
+    flowNode('dashboard',       'DASHBOARD\n(Main Hub)',   0,    460, GC.core, 'core'),
+
+    // ── MARKET DESK ──
+    flowNode('market',          'BROWSE MARKET',           -200, 580, GC.terminal, 'terminal'),
+    flowNode('inspect',         'INSPECT ARTWORK',         -380, 580, GC.terminal, 'terminal'),
+    flowNode('collection',      'MY COLLECTION',           -200, 660, GC.terminal, 'terminal'),
+    flowNode('piece_detail',    'PIECE DETAIL',            -380, 660, GC.terminal, 'terminal'),
+
+    // ── OPERATIONS ──
+    flowNode('venue_picker',    'VENUE PICKER',            0,    580, GC.terminal, 'terminal'),
+    flowNode('venue_detail',    'VENUE DETAIL',            0,    660, GC.terminal, 'terminal'),
+    flowNode('room',            'ROOM VIEW',               0,    740, GC.terminal, 'terminal'),
+    flowNode('npc_talk',        'NPC DIALOGUE',            170,  740, GC.terminal, 'terminal'),
+    flowNode('city',            'TRAVEL / CITY',           200,  580, GC.terminal, 'terminal'),
+    flowNode('news',            'MARKET INTEL',            200,  660, GC.terminal, 'terminal'),
+
+    // ── DOSSIER ──
+    flowNode('phone',           'PHONE\n(NPC Contacts)',   400,  460, GC.info, 'info'),
+    flowNode('contact_detail',  'CONTACT DETAIL',          580,  460, GC.info, 'info'),
+    flowNode('ego',             'EGO DASHBOARD\n(Stats)',  400,  540, GC.info, 'info'),
+    flowNode('journal',         'JOURNAL',                 400,  620, GC.info, 'info'),
+    flowNode('legacy_end',      'LEGACY / RETIRE',         580,  620, GC.info, 'info'),
+
+    // ── WEEK CYCLE ──
+    flowNode('calendar_event',  'CALENDAR EVENT\n(Attend)', -200, 460, GC.core, 'core'),
+    flowNode('week_advance',    'ADVANCE WEEK',            -200, 380, GC.core, 'core'),
+    flowNode('week_report',     'WEEK REPORT',             -380, 380, GC.core, 'core'),
+
+    // ── PHASER SCENES ──
+    flowNode('haggle',          'HAGGLE SCENE\n(Art Battle)', 600, 720, GC.scene, 'scene'),
+    flowNode('world',           'WORLD SCENE\n(Pokemon Walk)', 400, 720, GC.scene, 'scene'),
+    flowNode('location',        'LOCATION SCENE',          200,  820, GC.scene, 'scene'),
+    flowNode('dialogue_scene',  'DIALOGUE SCENE\n(Visual Novel)', 400, 820, GC.scene, 'scene'),
+    flowNode('mac_dialogue',    'MAC DIALOGUE',            600,  820, GC.scene, 'scene'),
+    flowNode('overworld',       'OVERWORLD\n(Legacy)',     0,    820, GC.scene, 'scene'),
+    flowNode('fast_travel',     'FAST TRAVEL\n(Map)',      200,  720, GC.scene, 'scene'),
+    flowNode('end_scene',       'END SCENE\n(Game Over)',  0,    920, GC.scene, 'scene'),
+    flowNode('menu_scene',      'MENU SCENE',              200,  920, GC.scene, 'scene'),
+
+    // ── REACT OVERLAYS ──
+    flowNode('admin',           'ADMIN DASHBOARD\n(~ key)', 600, 0,   GC.overlay, 'overlay'),
+    flowNode('settings',        'SETTINGS\n(Overlay)',     600,  80,  GC.overlay, 'overlay'),
+    flowNode('inventory',       'INVENTORY\n(Overlay)',    780,  0,   GC.overlay, 'overlay'),
+    flowNode('cms',             'CONTENT STUDIO\n(F1)',    780,  80,  GC.overlay, 'overlay'),
+    flowNode('player_dash',     'PLAYER DASHBOARD\n(React)', 600, 160, GC.overlay, 'overlay'),
+
+    // ── SAVE/LOAD / SYSTEM ──
+    flowNode('save_load',       'SAVE / LOAD',             -380, 460, GC.boot, 'boot'),
+    flowNode('pause_menu',      'PAUSE MENU',              -380, 540, GC.boot, 'boot'),
+    flowNode('settings_term',   'SETTINGS\n(Terminal)',    -380, 620, GC.boot, 'boot'),
+
+    // ── EVENT SCREENS ──
+    flowNode('event_screen',    'EVENT SCREEN',            580,  540, GC.info, 'info'),
+    flowNode('event_step',      'EVENT STEP\n(Branching)', 580,  620, GC.info, 'info'),
+    flowNode('scene_screen',    'SCENE SCREEN\n(Text)',    780,  540, GC.info, 'info'),
 ];
 
-const FLOW_EDGES = [
-    ['boot', 'profile_menu'],
-    ['profile_menu', 'profile_create'],
-    ['profile_menu', 'profile_login'],
-    ['profile_menu', 'primary_menu'],
-    ['profile_create', 'primary_menu'],
-    ['profile_login', 'primary_menu'],
-    ['primary_menu', 'dashboard'],
-    ['primary_menu', 'dossier_select'],
-    ['dossier_select', 'dashboard'],
-    ['dashboard', 'ego'],
-    ['dashboard', 'market'],
-    ['dashboard', 'collection'],
-    ['dashboard', 'phone'],
-    ['dashboard', 'venue'],
-    ['dashboard', 'travel'],
-    ['dashboard', 'journal'],
-    ['dashboard', 'market_intel'],
-    ['dashboard', 'inventory'],
-    ['dashboard', 'week_transition'],
-    ['dashboard', 'settings'],
-    ['dashboard', 'admin'],
-    ['week_transition', 'week_report'],
-    ['week_report', 'dashboard'],
-    ['venue', 'venue_detail'],
-    ['venue_detail', 'room'],
-    ['room', 'npc_talk'],
-    ['market', 'haggle'],
-    ['dashboard', 'world'],
-    ['admin', 'cms'],
+const INITIAL_EDGES = [
+    // Boot flow
+    flowEdge('boot', 'profile_menu'),
+    flowEdge('profile_menu', 'profile_create'),
+    flowEdge('profile_menu', 'profile_login'),
+    flowEdge('profile_menu', 'primary_menu'),
+    flowEdge('profile_create', 'primary_menu'),
+    flowEdge('profile_login', 'primary_menu'),
+    flowEdge('primary_menu', 'dossier_select'),
+    flowEdge('dossier_select', 'confirm'),
+    flowEdge('confirm', 'auth'),
+
+    // New game → Phaser intro
+    flowEdge('primary_menu', 'title_scene', true),
+    flowEdge('title_scene', 'intro_scene'),
+    flowEdge('intro_scene', 'char_select'),
+    flowEdge('char_select', 'dashboard'),
+
+    // Load game → dashboard
+    flowEdge('auth', 'dashboard'),
+
+    // Dashboard → Market Desk
+    flowEdge('dashboard', 'market'),
+    flowEdge('market', 'inspect'),
+    flowEdge('dashboard', 'collection'),
+    flowEdge('collection', 'piece_detail'),
+
+    // Dashboard → Operations
+    flowEdge('dashboard', 'venue_picker'),
+    flowEdge('venue_picker', 'venue_detail'),
+    flowEdge('venue_detail', 'room'),
+    flowEdge('room', 'npc_talk'),
+    flowEdge('dashboard', 'city'),
+    flowEdge('city', 'news'),
+
+    // Dashboard → Dossier
+    flowEdge('dashboard', 'phone'),
+    flowEdge('phone', 'contact_detail'),
+    flowEdge('dashboard', 'ego'),
+    flowEdge('dashboard', 'journal'),
+    flowEdge('journal', 'legacy_end'),
+
+    // Dashboard → Week Cycle
+    flowEdge('dashboard', 'calendar_event'),
+    flowEdge('dashboard', 'week_advance'),
+    flowEdge('week_advance', 'week_report'),
+    flowEdge('week_report', 'dashboard', true),
+
+    // Dashboard → Scenes
+    flowEdge('market', 'haggle', true),
+    flowEdge('dashboard', 'world', true),
+    flowEdge('dashboard', 'fast_travel', true),
+    flowEdge('venue_detail', 'location', true),
+    flowEdge('dashboard', 'dialogue_scene', true),
+    flowEdge('dialogue_scene', 'mac_dialogue'),
+    flowEdge('dashboard', 'overworld', true),
+    flowEdge('dashboard', 'end_scene'),
+
+    // Dashboard → System
+    flowEdge('dashboard', 'save_load'),
+    flowEdge('dashboard', 'pause_menu'),
+    flowEdge('pause_menu', 'settings_term'),
+
+    // Dashboard → Events
+    flowEdge('dashboard', 'event_screen'),
+    flowEdge('event_screen', 'event_step'),
+    flowEdge('event_screen', 'scene_screen'),
+
+    // Overlays (global access)
+    flowEdge('admin', 'settings'),
+    flowEdge('admin', 'cms'),
+    flowEdge('admin', 'inventory'),
+];
+
+const LEGEND = [
+    { color: GC.boot, label: 'Boot / System' },
+    { color: GC.core, label: 'Core Loop' },
+    { color: GC.terminal, label: 'Terminal Actions' },
+    { color: GC.info, label: 'Info Screens' },
+    { color: GC.scene, label: 'Phaser Scenes' },
+    { color: GC.overlay, label: 'React Overlays' },
 ];
 
 function FlowMapPanel() {
-    const svgW = 640;
-    const svgH = 580;
-    const nodeW = 110;
-    const nodeH = 28;
+    const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+
+    const minimapStyle = {
+        backgroundColor: '#0a0a14',
+        maskColor: 'rgba(0,0,0,0.6)',
+    };
 
     return (
-        <div style={{ ...panelStyle, flex: 1 }}>
-            <div style={headerStyle}>FLOW MAP</div>
-            <div className="fm-container">
-                <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: '100%', height: '100%', minHeight: 500 }}>
-                    <defs>
-                        <marker id="fm-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                            <polygon points="0 0, 8 3, 0 6" fill="#2a2a3e" />
-                        </marker>
-                    </defs>
+        <div style={{ ...panelStyle, flex: 1, position: 'relative' }}>
+            <div style={headerStyle}>
+                FLOW MAP
+                <span style={{ color: '#555', fontSize: 10, marginLeft: 12, fontWeight: 'normal' }}>
+                    {nodes.length} pages &middot; {edges.length} connections &middot; Drag to rearrange
+                </span>
+            </div>
 
-                    {/* Edges */}
-                    {FLOW_EDGES.map(([fromId, toId], i) => {
-                        const from = FLOW_NODES.find(n => n.id === fromId);
-                        const to = FLOW_NODES.find(n => n.id === toId);
-                        if (!from || !to) return null;
-                        const x1 = from.x + nodeW / 2;
-                        const y1 = from.y + nodeH / 2;
-                        const x2 = to.x + nodeW / 2;
-                        const y2 = to.y + nodeH / 2;
-                        return <line key={i} className="fm-edge" x1={x1} y1={y1} x2={x2} y2={y2} />;
-                    })}
+            {/* Legend */}
+            <div style={{
+                display: 'flex', gap: 12, padding: '6px 16px', borderBottom: '1px solid #1a1a2e',
+                flexWrap: 'wrap',
+            }}>
+                {LEGEND.map(({ color, label }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{
+                            width: 10, height: 10, borderRadius: 2,
+                            background: color + '44', border: `1px solid ${color}`,
+                        }} />
+                        <span style={{ fontSize: 9, color: '#888' }}>{label}</span>
+                    </div>
+                ))}
+            </div>
 
-                    {/* Nodes */}
-                    {FLOW_NODES.map(node => (
-                        <g key={node.id} className="fm-node" transform={`translate(${node.x},${node.y})`}>
-                            <rect
-                                width={nodeW} height={nodeH} rx={4}
-                                fill={node.color + '22'}
-                                stroke={node.color}
-                                strokeWidth={1.5}
-                            />
-                            <text x={nodeW / 2} y={nodeH / 2 + 3} textAnchor="middle"
-                                style={{ fontSize: 8, fill: '#eaeaea' }}>
-                                {node.label}
-                            </text>
-                        </g>
-                    ))}
-                </svg>
+            <div style={{ flex: 1 }}>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    fitView
+                    fitViewOptions={{ padding: 0.2 }}
+                    minZoom={0.2}
+                    maxZoom={2}
+                    proOptions={{ hideAttribution: true }}
+                    style={{ background: '#08080e' }}
+                >
+                    <Background color="#1a1a2e" gap={20} size={1} />
+                    <Controls
+                        style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 4 }}
+                    />
+                    <MiniMap
+                        style={minimapStyle}
+                        nodeColor={(node) => node.data?.color || '#555'}
+                        nodeStrokeWidth={0}
+                        nodeBorderRadius={3}
+                    />
+                </ReactFlow>
             </div>
         </div>
     );
