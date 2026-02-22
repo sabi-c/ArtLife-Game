@@ -42,7 +42,8 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 | Agent | Current Task | Status |
 |---|---|---|
-| **Claude Code** | Phase 3 hardening: WorldScene v2, Scene Engine, Admin Dashboard, refactoring | 🟢 Active |
+| **Claude Code (Agent 1)** | WorldScene fixes, Game Boy mobile controls, GH Pages deployment, project management | 🟢 Active |
+| **Claude Code (Agent 2)** | Art market economy, real-world data ingestion, MarketDashboard, ArtworkDashboard | 🟢 Active |
 
 ### Phase 2.7 — Code Audit Refactoring: COMPLETE
 
@@ -122,7 +123,7 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 | `api/` | 1 | ContentAPI.js — CRUD facade, `window.ContentAPI` |
 | `utils/` | 4 | shuffle.js, id.js, ErrorRegistry.js, GameDebugAPI.js |
 | `sprites/` | 2 | Player.js, NPC.js (decoupled entity classes) |
-| `ui/` | 9 | AdminDashboard, PlayerDashboard, InventoryDashboard, ScenePlayer, TerminalLogin, SettingsOverlay, DialogueBox, MobileJoypad, ErrorBoundary |
+| `ui/` | 13 | AdminDashboard, PlayerDashboard, InventoryDashboard, ScenePlayer, TerminalLogin, SettingsOverlay, DialogueBox, MobileJoypad, ErrorBoundary, ContentStudio, CalendarHUD, MarketDashboard, ArtworkDashboard, StorylineCMS |
 
 ### Patterns
 - **GameEventBus** — singleton EventEmitter bridging Phaser scenes ↔ React UI ↔ Terminal
@@ -341,10 +342,13 @@ game/
 | Scene Engine (ink.js visual novel — 3 scenes) | ✅ |
 | Inventory Dashboard (React overlay) | ✅ |
 | Sound design (WebAudioService — 16 procedural SFX) | ✅ |
-| MobileJoypad (D-pad, A interact, B sprint) | ✅ |
+| MobileJoypad (Game Boy-style D-pad, A interact, B sprint) | ✅ |
 | Intro style selection (cinematic vs skip) | ✅ |
-| Tone system for dialogues | Stub |
-| MarketEngine (weekly price fluctuation) | TODO |
+| MarketDashboard + ArtworkDashboard (Recharts data viz) | ✅ |
+| ContentAPI facade (CRUD for all content types) | ✅ |
+| GitHub Pages deployment (all relative paths) | ✅ |
+| Tone system for dialogues | ✅ |
+| MarketEngine (weekly price fluctuation) | ✅ |
 | Endgame reckoning (Week 26) | TODO |
 
 ---
@@ -354,22 +358,19 @@ game/
 > **Full tracker: [Roadmap.md](Roadmap.md)**
 
 ```
-  NOW    Phase 3: Foundation & Infrastructure (~85% complete)
+  NOW    Phase 3: Foundation & Infrastructure (~98% complete)
   ├──── 3A: Scene flow hardening — WorldScene v2, venue flow ✅
-  ├──── 3B: Admin Dashboard (God Mode — 6 tabs, mobile) ✅
-  ├──── 3C: Sound, progressive disclosure, settings ✅
-  └──── Remaining: Tone system, MarketEngine, store completion
+  ├──── 3B: Admin Dashboard, CMS, Content tools ✅
+  ├──── 3C: Sound, disclosure, settings, tone system ✅
+  ├──── 3D: JSON data layer, stores, market engine ✅
+  └──── Remaining: Zustand full migration, guided onboarding
 
-  NEXT   Scene Flow Visual Editor
-  ├──── Node-based React Flow editor for scene transitions
-  └──── Connect all building blocks via visual graph
+  NOW    Phase 4: Architecture & Endgame
+  ├──── 4A: Zustand bedrock (gameStore migration)
+  ├──── 4D: Week 26 reckoning (museum, SEC, shadow broker)
+  └──── Data ingestion pipeline (real-world art data)
 
-  LATER  Phase 4: Content & Narrative Depth
-  ├──── 4A: Expand artists, perks, character arcs
-  ├──── 4B: Deep branching events, venue encounters
-  └──── 4C: Freeport, auctions, city content
-  ↓
-  LATER  Phase 5: 40-Year Career / Phase 6: Polish & Release
+  LATER  Phase 5-8: Content, Polish & Release
 ```
 
 ---
@@ -407,8 +408,9 @@ game/
 | 42b | Phaser Title & Character Selection | ✅ TitleScene, CharacterSelectScene, IntroScene |
 | Sprites | Asset Pipeline | ✅ 18 NPC portraits, 8 dealer sprites, 15+ backgrounds, player sheet |
 
-### Remaining Work (Phase 3 Completion)
-- Tone system for dialogue variation (5 tones: Friendly, Schmoozing, Direct, Generous, Ruthless)
-- MarketEngine (weekly price fluctuation based on artist heat, era modifiers)
-- Zustand store completion (marketStore, consequenceStore flesh-out)
-- Scene Flow Visual Editor (node-based React Flow for connecting building blocks)
+### Remaining Work (Phase 4 Push)
+- Zustand full migration (gameStore replacing GameState singleton)
+- Week 26 endgame reckoning (Museum Retrospective, SEC Investigation, Shadow Broker)
+- Guided onboarding / tutorial for new players
+- Full pixel art pass (portraits, backgrounds, UI polish)
+- Real-world art data ingestion and market simulation depth
