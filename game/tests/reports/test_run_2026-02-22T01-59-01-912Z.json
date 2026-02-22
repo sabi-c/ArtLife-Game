@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-02-22T01:59:01.912Z",
+  "summary": {
+    "total": 3,
+    "passed": 0,
+    "failed": 3,
+    "successRate": "0.0%"
+  },
+  "tests": [
+    {
+      "name": "API Start & Dashboard Render",
+      "status": "fail",
+      "durationMs": 3238,
+      "assertions": [
+        {
+          "status": "fail",
+          "label": "Successfully loaded into Terminal UI Dashboard"
+        }
+      ],
+      "error": "Assertion Failed: Successfully loaded into Terminal UI Dashboard",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_api_start___dashboard_render_2026-02-22T01-59-00-304Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": false,
+        "gameState": {
+          "week": 1,
+          "cash": 250000,
+          "city": "new-york",
+          "market": "flat"
+        },
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    },
+    {
+      "name": "Art Market Navigation",
+      "status": "fail",
+      "durationMs": 1030,
+      "assertions": [
+        {
+          "status": "fail",
+          "label": "Art Market listed available artworks"
+        }
+      ],
+      "error": "Assertion Failed: Art Market listed available artworks",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_art_market_navigation_2026-02-22T01-59-01-351Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": false,
+        "gameState": {
+          "week": 1,
+          "cash": 250000,
+          "city": "new-york",
+          "market": "flat"
+        },
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    },
+    {
+      "name": "Action Budget & Pacing",
+      "status": "fail",
+      "durationMs": 535,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "Starting at Week 1"
+        }
+      ],
+      "error": "page.evaluate: TypeError: window.game.uiState(...).popScreen is not a function\n    at eval (eval at evaluate (:290:30), <anonymous>:1:29)\n    at UtilityScript.evaluate (<anonymous>:292:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_action_budget___pacing_2026-02-22T01-59-01-881Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": false,
+        "gameState": {
+          "week": 1,
+          "cash": 250000,
+          "city": "new-york",
+          "market": "flat"
+        },
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    }
+  ],
+  "browserLogs": [],
+  "networkErrors": []
+}

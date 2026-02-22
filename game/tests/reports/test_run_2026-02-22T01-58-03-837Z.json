@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-02-22T01:58:03.837Z",
+  "summary": {
+    "total": 3,
+    "passed": 0,
+    "failed": 3,
+    "successRate": "0.0%"
+  },
+  "tests": [
+    {
+      "name": "Quick Start & Dashboard Render",
+      "status": "fail",
+      "durationMs": 3637,
+      "assertions": [
+        {
+          "status": "fail",
+          "label": "Successfully loaded into Terminal UI Dashboard"
+        }
+      ],
+      "error": "Assertion Failed: Successfully loaded into Terminal UI Dashboard",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_quick_start___dashboard_render_2026-02-22T01-58-02-719Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": false,
+        "gameState": null,
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    },
+    {
+      "name": "Art Market Navigation",
+      "status": "fail",
+      "durationMs": 1033,
+      "assertions": [
+        {
+          "status": "fail",
+          "label": "Art Market listed available artworks"
+        }
+      ],
+      "error": "Assertion Failed: Art Market listed available artworks",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_art_market_navigation_2026-02-22T01-58-03-769Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": false,
+        "gameState": null,
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    },
+    {
+      "name": "Action Budget & Pacing",
+      "status": "fail",
+      "durationMs": 38,
+      "assertions": [
+        {
+          "status": "fail",
+          "label": "Starting at Week undefined"
+        }
+      ],
+      "error": "Assertion Failed: Starting at Week undefined",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_action_budget___pacing_2026-02-22T01-58-03-800Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": false,
+        "gameState": null,
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    }
+  ],
+  "browserLogs": [],
+  "networkErrors": []
+}

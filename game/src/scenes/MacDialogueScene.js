@@ -99,7 +99,14 @@ export class MacDialogueScene extends BaseScene {
                     this.ui.popScreen();
                 }
             }
-            if (this.scene) this.scene.stop();
+
+            try {
+                if (this.scene && this.sys && this.sys.settings && this.sys.settings.active) {
+                    this.scene.stop();
+                }
+            } catch (e) {
+                // Ignore queueOp null references if engine already disposed scene
+            }
         };
         if (this.cameras && this.cameras.main) {
             this.cameras.main.fadeOut(800, 0, 0, 0);

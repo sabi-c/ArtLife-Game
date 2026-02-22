@@ -1,0 +1,134 @@
+{
+  "timestamp": "2026-02-22T02:01:21.266Z",
+  "summary": {
+    "total": 6,
+    "passed": 5,
+    "failed": 1,
+    "successRate": "83.3%"
+  },
+  "tests": [
+    {
+      "name": "Boot Sequence",
+      "status": "pass",
+      "durationMs": 5,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "Phaser engine is running and ready"
+        },
+        {
+          "status": "pass",
+          "label": "Terminal UI state is manageable"
+        }
+      ],
+      "error": null,
+      "screenshotPath": null
+    },
+    {
+      "name": "Backroom Deal Dialogue",
+      "status": "pass",
+      "durationMs": 3852,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "MacDialogueScene is active"
+        },
+        {
+          "status": "pass",
+          "label": "Dialogue has a reward item"
+        },
+        {
+          "status": "pass",
+          "label": "Terminal UI restored after dialogue"
+        }
+      ],
+      "error": null,
+      "screenshotPath": null
+    },
+    {
+      "name": "Gallery Opening Dialogue",
+      "status": "pass",
+      "durationMs": 2508,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "MacDialogueScene is active (Gallery Opening)"
+        },
+        {
+          "status": "pass",
+          "label": "No reward item (expected)"
+        }
+      ],
+      "error": null,
+      "screenshotPath": null
+    },
+    {
+      "name": "Haggle Scene Initialization",
+      "status": "pass",
+      "durationMs": 3898,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "startHaggle() returned started=true"
+        },
+        {
+          "status": "pass",
+          "label": "HaggleScene is active"
+        },
+        {
+          "status": "pass",
+          "label": "Haggle phase: opening, round: 0"
+        }
+      ],
+      "error": null,
+      "screenshotPath": null
+    },
+    {
+      "name": "MarketManager Initialization",
+      "status": "fail",
+      "durationMs": 66,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "MarketManager initialized: SUCCESS"
+        },
+        {
+          "status": "fail",
+          "label": "Market loaded 0 total global artworks"
+        }
+      ],
+      "error": "Assertion Failed: Market loaded 0 total global artworks",
+      "screenshotPath": "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/tests/reports/screenshots/fail_marketmanager_initialization_2026-02-22T02-01-21-227Z.png",
+      "stateSnapshot": {
+        "activeScenes": [
+          "BootScene"
+        ],
+        "terminalVisible": true,
+        "gameState": {
+          "week": 1,
+          "cash": 250000,
+          "city": "new-york",
+          "market": "flat"
+        },
+        "errors": [],
+        "missingAssets": [],
+        "sceneErrors": []
+      }
+    },
+    {
+      "name": "Scene Cleanup Integrity",
+      "status": "pass",
+      "durationMs": 1,
+      "assertions": [
+        {
+          "status": "pass",
+          "label": "No lingering active scenes (found 0)"
+        }
+      ],
+      "error": null,
+      "screenshotPath": null
+    }
+  ],
+  "browserLogs": [],
+  "networkErrors": []
+}
