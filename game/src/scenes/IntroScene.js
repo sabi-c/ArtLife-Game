@@ -22,6 +22,7 @@ export class IntroScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
+        this.add.rectangle(width / 2, height / 2, width, height, 0x060608).setDepth(-1);
         this.cameras.main.setBackgroundColor('#060608');
 
         // ── Scanline overlay ──

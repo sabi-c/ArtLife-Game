@@ -16,6 +16,7 @@ export class EndScene extends Phaser.Scene {
 
         // Guard: if somehow we reach EndScene without a game state, show minimal screen
         if (!state || !state.character) {
+            this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a0f).setDepth(-1);
             this.cameras.main.setBackgroundColor('#0a0a0f');
             this.add.text(width / 2, height / 2, 'GAME OVER', {
                 fontFamily: '"Press Start 2P"', fontSize: '32px', color: '#c94040',

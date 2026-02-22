@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES } from '../data/haggle_config.js';
@@ -10,11 +11,29 @@ export class HaggleScene extends BaseScene {
 
     init(data) {
         this.ui = data.ui;
-        this.haggleInfo = data.haggleInfo || {}; // initial state
-        this.state = HaggleManager.getState() || data.haggleInfo?.state || this.haggleInfo;
+        this.haggleInfo = data.haggleInfo || {};
         this.returnScene = data.returnScene || null;
         this.returnArgs = data.returnArgs || {};
         this.returnCallback = data.returnCallback || null;
+
+        // Merge HaggleManager's live state with haggleInfo extras (bgKey, playerStats, etc.)
+        const managerState = HaggleManager.getState();
+        const infoState = this.haggleInfo.state || this.haggleInfo;
+        this.state = {
+            ...infoState,       // bgKey, playerStats, dealerSpriteKey, etc. from caller
+            ...managerState,    // live haggle state from HaggleManager (overrides duplicates)
+        };
+
+        // Ensure playerStats are always available (for NERVE bar)
+        if (!this.state.playerStats) {
+            const s = window._artLifeState || {};
+            this.state.playerStats = {
+                reputation: s.reputation || 0, taste: s.taste || 0,
+                audacity: s.audacity || 30, access: s.access || 0,
+                intel: s.intel || 0, cash: s.cash || 0,
+                suspicion: s.suspicion || 0, marketHeat: s.marketHeat || 0,
+            };
+        }
     }
 
     preload() {
@@ -35,6 +54,9 @@ export class HaggleScene extends BaseScene {
 
         const { width, height } = this.scale;
 
+        // ── Opaque background (required because Phaser config has transparent: true) ──
+        this.add.rectangle(width / 2, height / 2, width, height, 0x14141f).setDepth(-1);
+
         // ── Cinematic Entry (pokemon-react-phaser battle transition) ──
         this.cameras.main.fadeIn(500, 0, 0, 0);
         try {
@@ -52,8 +74,6 @@ export class HaggleScene extends BaseScene {
             this.bg = this.add.image(width / 2, height / 2 - 80, bgKey);
             const scale = Math.max(width / this.bg.width, (height - 250) / this.bg.height);
             this.bg.setScale(scale).setTint(0x888888);
-        } else {
-            this.cameras.main.setBackgroundColor('#14141f');
         }
 
         // 2. Sprites

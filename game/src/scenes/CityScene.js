@@ -42,6 +42,7 @@ export class CityScene extends BaseScene {
         const { width, height } = this.scale;
 
         // ── Background ──
+        this.add.rectangle(width / 2, height / 2, width, height, 0x0a0a14).setDepth(-1);
         this.cameras.main.setBackgroundColor('#0a0a14');
 
         // Draw a simple grid pattern for streets

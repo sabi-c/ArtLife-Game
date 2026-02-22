@@ -52,6 +52,7 @@ export class CharacterSelectScene extends BaseScene {
         this.W = this.scale.width;
         this.H = this.scale.height;
 
+        this.add.rectangle(this.W / 2, this.H / 2, this.W, this.H, 0x12121e).setDepth(-1);
         this.cameras.main.setBackgroundColor('#12121e');
         this.cameras.main.fadeIn(350, 18, 18, 28);
 

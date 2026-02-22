@@ -43,6 +43,7 @@ export class OverworldScene extends BaseScene {
 
         // ── Fade In (cinematic entry, pokemon-react-phaser pattern) ──
         this.cameras.main.fadeIn(400, 0, 0, 0);
+        this.add.rectangle(width / 2, height / 2, width, height, 0x14141f).setDepth(-1);
         this.cameras.main.setBackgroundColor('#14141f');
 
         // ── Camera Vignette PostFX (1-line polish from pokemon-react-phaser) ──

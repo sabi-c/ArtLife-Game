@@ -28,18 +28,17 @@ export class MacDialogueScene extends BaseScene {
             const camW = this.cameras.main.width;
             const camH = this.cameras.main.height;
 
-            // 1. Background
+            // Opaque background (required because Phaser config has transparent: true)
+            this.add.rectangle(camW / 2, camH / 2, camW, camH, 0x1a1a2e).setDepth(-1);
+
+            // 1. Background image (overlays the solid background)
             if (this.dialogueData.bgKey && this.textures.exists(this.dialogueData.bgKey)) {
                 const src = this.textures.get(this.dialogueData.bgKey).source[0];
                 if (src.width > 1) { // >1px means a real image, not our placeholder
                     this.bg = this.add.image(camW / 2, camH / 2, this.dialogueData.bgKey);
                     const scale = Math.max(camW / this.bg.width, camH / this.bg.height);
                     this.bg.setScale(scale).setScrollFactor(0);
-                } else {
-                    this.cameras.main.setBackgroundColor('#1a1a2e');
                 }
-            } else {
-                this.cameras.main.setBackgroundColor('#1a1a2e');
             }
 
             // 2. Trigger React Overlay UI via Zustand Store

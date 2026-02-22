@@ -352,6 +352,7 @@ class _HaggleManager {
             resolved: h.resolved,
             result: h.result,
             finalPrice: h.finalPrice,
+            playerStats: h.playerStats,
         };
     }
 

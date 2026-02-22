@@ -25,6 +25,7 @@ export class TitleScene extends Phaser.Scene {
         const { width, height } = this.scale;
 
         // ── Background ──
+        this.add.rectangle(width / 2, height / 2, width, height, 0x060608).setDepth(-1);
         this.cameras.main.setBackgroundColor('#060608');
 
         // ── Scanlines ──

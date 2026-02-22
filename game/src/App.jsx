@@ -166,7 +166,6 @@ export default function App() {
             setActiveOverlay(prev => prev === overlayKey ? OVERLAY.NONE : overlayKey);
         };
 
-        GameEventBus.on(GameEvents.UI_ROUTE, handler);
         GameEventBus.on(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
         GameEventBus.on(GameEvents.UI_TOGGLE_OVERLAY, overlayHandler);
 

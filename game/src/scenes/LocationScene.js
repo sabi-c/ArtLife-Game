@@ -90,6 +90,7 @@ export class LocationScene extends BaseScene {
 
         // Fade in
         this.cameras.main.fadeIn(300, 0, 0, 0);
+        this.add.rectangle(width / 2, height / 2, width, height, 0x14141f).setDepth(-1);
         this.cameras.main.setBackgroundColor('#14141f');
 
         // ── Camera Vignette PostFX (visual consistency with OverworldScene) ──
