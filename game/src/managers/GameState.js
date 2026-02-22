@@ -20,12 +20,18 @@ export class GameState {
     static state = null;
 
     static init(character) {
-        const works = generateInitialWorks();
-        MarketManager.init(works);
-        PhoneManager.init();
-        ConsequenceScheduler.reset();
-        DecisionLog.reset();
-        resetSystemicTriggers();
+        let works;
+        try {
+            works = generateInitialWorks();
+            MarketManager.init(works);
+            PhoneManager.init();
+            ConsequenceScheduler.reset();
+            DecisionLog.reset();
+            resetSystemicTriggers();
+        } catch (err) {
+            console.error('[GameState.init] Subsystem init error (non-fatal):', err);
+            works = works || [];
+        }
 
         // Calculate initial stats starting from character base
         let initialCash = character.startingCash;
@@ -164,6 +170,8 @@ export class GameState {
             // ── Macro Economic State ──
             eraModifier: 1.0,    // Global price multiplier
             activeModifiers: [], // Array of active event economic modifiers
+            // ── Tone / dialogue tracking ──
+            toneHistory: {},     // { npcId: [tone1, tone2, ...] }
         };
 
         // Expose reference for React UI components (PlayerDashboard etc.)
@@ -868,12 +876,17 @@ export class GameState {
      * Used by Admin Dashboard to quickly bootstrap a testable game state.
      */
     static quickDemoInit() {
-        const works = generateInitialWorks();
-        MarketManager.init(works);
-        PhoneManager.init();
-        ConsequenceScheduler.reset();
-        DecisionLog.reset();
-        resetSystemicTriggers();
+        try {
+            const works = generateInitialWorks();
+            MarketManager.init(works);
+            PhoneManager.init();
+            ConsequenceScheduler.reset();
+            DecisionLog.reset();
+            resetSystemicTriggers();
+        } catch (err) {
+            console.error('[GameState] quickDemoInit subsystem init error (non-fatal):', err);
+            // Continue — state can still be set even if some subsystems fail
+        }
 
         GameState.state = {
             character: {

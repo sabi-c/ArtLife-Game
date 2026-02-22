@@ -47,11 +47,15 @@ export default function AdminDashboard({ onClose }) {
     };
 
     const triggerScene = (sceneKey, data = {}) => {
-        // Scenes that need game state — warn if not initialized
+        // Scenes that need game state — auto-init if missing
         const needsState = ['WorldScene', 'CityScene', 'OverworldScene', 'LocationScene', 'HaggleScene'];
         if (needsState.includes(sceneKey) && !GameState.state) {
-            GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'GameState not initialized. Start or load a game first.');
-            return;
+            GameState.quickDemoInit();
+            forceUpdate();
+            if (!GameState.state) {
+                GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Failed to initialize game state.');
+                return;
+            }
         }
         GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, sceneKey, data);
         onClose();
@@ -59,8 +63,12 @@ export default function AdminDashboard({ onClose }) {
 
     const launchHaggleBattle = () => {
         if (!GameState.state) {
-            GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'GameState not initialized. Start or load a game first.');
-            return;
+            GameState.quickDemoInit();
+            forceUpdate();
+            if (!GameState.state) {
+                GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Failed to initialize game state.');
+                return;
+            }
         }
         const haggleInfo = HaggleManager.start({
             mode: 'buy',
