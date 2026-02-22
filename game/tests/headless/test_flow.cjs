@@ -95,17 +95,17 @@ async function safeEval(page, fn, fallback = null) {
     console.log('═══════════════════════════════════════════════════════\n');
 
     // ─────────────────────────────────────────────────────────────
-    // PHASE A: Real navigation (TitleScene → CharacterSelect → Dashboard)
+    // PHASE A: Real navigation (IntroScene → Login → CharacterSelect → Dashboard)
     // ─────────────────────────────────────────────────────────────
     console.log('── Phase A: Real navigation ────────────────────────────\n');
 
     await page.goto(BASE, { waitUntil: 'networkidle' });
     await page.waitForTimeout(3000); // Extra time for Phaser init + BootScene + skipBoot race
 
-    // Scene 1 — TitleScene
-    section('A1', 'TitleScene boot');
-    const titleActive = await waitForScene(page, 'TitleScene', 8000);
-    assert(titleActive, 'TitleScene is active on boot');
+    // Scene 1 — IntroScene (skipBoot triggers startPhaserGame('new') → IntroScene)
+    section('A1', 'IntroScene boot');
+    const introActive = await waitForScene(page, 'IntroScene', 8000);
+    assert(introActive, 'IntroScene is active on boot');
 
     const canvasVis = await page.evaluate(() => {
         const c = document.querySelector('canvas');
@@ -117,21 +117,51 @@ async function safeEval(page, fn, fallback = null) {
         const el = document.getElementById('terminal');
         return el ? el.style.display === 'none' : true;
     });
-    assert(termHidden, 'Terminal is hidden during TitleScene');
-    await shot(page, 'A1_title');
+    assert(termHidden, 'Terminal is hidden during IntroScene');
+    await shot(page, 'A1_intro');
 
-    // Scene 2 — TitleScene → IntroScene → CharacterSelectScene
-    // TitleScene now routes through IntroScene first; ESC skips it immediately.
-    section('A2', 'TitleScene → CharacterSelectScene (via IntroScene)');
-    await pressKey(page, '1'); // triggers this.startNewGame() for Option 1
-    // Wait for IntroScene, then ESC to skip it directly to CharacterSelectScene
-    const introActive = await waitForScene(page, 'IntroScene', 5000);
-    if (introActive) {
-        await page.waitForTimeout(400); // let IntroScene create() settle
-        await pressKey(page, 'Escape'); // _skipToSelect() — no fade, immediate
+    // Scene 2 — IntroScene → ESC → TerminalLogin → New → CharacterSelectScene
+    section('A2', 'IntroScene → Login → CharacterSelectScene');
+    // ESC skips IntroScene → emits UI_ROUTE:BOOT → TerminalLogin appears
+    await pressKey(page, 'Escape');
+    await page.waitForTimeout(1500); // TerminalLogin boot typewriter + transition
+
+    // TerminalLogin keyboard handler listens on window — but after IntroScene stops,
+    // the Phaser canvas may still eat keyboard focus. Use direct DOM onClick handlers
+    // which TerminalLogin registers on each menu option.
+    await page.waitForTimeout(600); // Let PROFILE_MENU render after boot typewriter
+
+    // Click the overlay body first to ensure it has focus
+    await page.click('.pd-overlay', { timeout: 2000 }).catch(() => {});
+    await page.waitForTimeout(300);
+
+    // PROFILE_MENU: Click [2] GUEST ACCESS using Playwright's locator
+    try {
+        await page.locator('div:has-text("GUEST ACCESS")').first().click({ timeout: 3000 });
+    } catch {
+        // Fallback: keyboard navigate
+        await page.keyboard.press('ArrowDown');
+        await page.waitForTimeout(100);
+        await page.keyboard.press('Enter');
     }
-    const charActive = await waitForScene(page, 'CharacterSelectScene', 8000);
-    assert(charActive, 'CharacterSelectScene activated after clicking title');
+    await page.waitForTimeout(1500); // Wait for PRIMARY_MENU
+
+    // Take a debug screenshot to see current state
+    await shot(page, 'A2_after_guest');
+
+    // PRIMARY_MENU: Click [1] SUBMIT NEW APPLICATION using Playwright's click
+    // (which properly triggers React synthetic events through the browser event pipeline)
+    try {
+        await page.locator('div:has-text("SUBMIT NEW APPLICATION")').first().click({ timeout: 3000 });
+    } catch {
+        // Fallback: try keyboard Enter (PRIMARY_MENU index 0 = New Application)
+        await page.keyboard.press('Enter');
+    }
+    await page.waitForTimeout(3000); // Auth typewriter + charselect launch (needs extra time)
+
+    // Wait for CharacterSelectScene to launch (startPhaserGame('charselect'))
+    const charActive = await waitForScene(page, 'CharacterSelectScene', 10000);
+    assert(charActive, 'CharacterSelectScene activated after login flow');
     await page.waitForTimeout(500); // let animations settle
     await shot(page, 'A2_char_select');
 
