@@ -86,4 +86,65 @@ export class WebAudioService {
         this.playTone('sine', 659.25, 0.4, 0.05); // E5
         this.playTone('sine', 783.99, 0.5, 0.05, 100); // G5 rising
     }
+
+    // ── Haggle Battle Sound Effects ──
+
+    static tactic() {
+        // Rising synth blip — tactic selected
+        this.playTone('square', 350, 0.08, 0.06, 200);
+        setTimeout(() => this.playTone('square', 500, 0.1, 0.05, 100), 60);
+    }
+
+    static hit() {
+        // Punchy impact — tactic succeeded
+        this.playTone('square', 600, 0.08, 0.08);
+        setTimeout(() => this.playTone('sine', 800, 0.15, 0.06, 200), 50);
+    }
+
+    static miss() {
+        // Descending sad tone — tactic failed
+        this.playTone('triangle', 400, 0.2, 0.06, -150);
+    }
+
+    static penalty() {
+        // Low rumble — patience lost or stat penalty
+        this.playTone('sawtooth', 120, 0.25, 0.06, -30);
+    }
+
+    static dealSuccess() {
+        // Triumphant 4-note fanfare — deal closed
+        this.playTone('square', 440, 0.15, 0.06);
+        setTimeout(() => this.playTone('square', 554, 0.15, 0.06), 120);
+        setTimeout(() => this.playTone('square', 659, 0.15, 0.06), 240);
+        setTimeout(() => this.playTone('sine', 880, 0.4, 0.07, 100), 360);
+    }
+
+    static dealFail() {
+        // Descending minor — deal failed
+        this.playTone('triangle', 440, 0.2, 0.06);
+        setTimeout(() => this.playTone('triangle', 370, 0.2, 0.06), 150);
+        setTimeout(() => this.playTone('sawtooth', 300, 0.3, 0.05, -50), 300);
+    }
+
+    static superEffective() {
+        // Quick ascending sparkle — critical hit
+        this.playTone('sine', 700, 0.06, 0.07);
+        setTimeout(() => this.playTone('sine', 900, 0.06, 0.07), 50);
+        setTimeout(() => this.playTone('sine', 1100, 0.1, 0.06, 200), 100);
+    }
+
+    // ── Scene & Notification Sounds ──
+
+    static notify() {
+        // Short ping — notification arrived
+        this.playTone('sine', 880, 0.1, 0.05);
+        setTimeout(() => this.playTone('sine', 1100, 0.15, 0.04), 80);
+    }
+
+    static levelUp() {
+        // 3-note ascending fanfare — milestone
+        this.playTone('square', 523, 0.2, 0.05);
+        setTimeout(() => this.playTone('square', 659, 0.2, 0.05), 150);
+        setTimeout(() => this.playTone('sine', 784, 0.4, 0.06, 100), 300);
+    }
 }

@@ -3,6 +3,7 @@ import { BaseScene } from './BaseScene.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES } from '../data/haggle_config.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { WebAudioService } from '../managers/WebAudioService.js';
 
 export class HaggleScene extends BaseScene {
     constructor() {
@@ -778,6 +779,7 @@ export class HaggleScene extends BaseScene {
     executeTactic(tacticId, label) {
         this.tacticsContainer.setVisible(false);
         this.speakerTab.setText('SYSTEM');
+        WebAudioService.tactic();
 
         // Look up tactic definition for animType and type
         let animType = 'slash';
@@ -807,13 +809,18 @@ export class HaggleScene extends BaseScene {
             const isSuperEffective = result.effectivenessMessage?.toLowerCase().includes('super effective');
             const isNotEffective = result.effectivenessMessage?.toLowerCase().includes('not very effective');
 
-            // Show effectiveness flash
+            // Show effectiveness flash + sound
             if (isSuperEffective) {
                 this.showEffectivenessFlash('SUPER EFFECTIVE!', '#ffcc00');
+                WebAudioService.superEffective();
             } else if (isNotEffective) {
                 this.showEffectivenessFlash('Not very effective...', '#666688');
+                WebAudioService.miss();
             } else if (result.success) {
                 this.showEffectivenessFlash('Effective!', '#88cc88');
+                WebAudioService.hit();
+            } else {
+                WebAudioService.miss();
             }
 
             // Dealer reaction
@@ -862,6 +869,8 @@ export class HaggleScene extends BaseScene {
 
         if (isDeal) {
             // ═══ ART ACQUISITION CELEBRATION ═══
+            WebAudioService.dealSuccess();
+
             // Full-screen dramatic overlay
             const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92).setDepth(200);
             overlay.setAlpha(0);
@@ -920,6 +929,7 @@ export class HaggleScene extends BaseScene {
 
         } else {
             // ═══ FAILED DEAL SCREEN ═══
+            WebAudioService.dealFail();
             const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85).setDepth(200);
             overlay.setAlpha(0);
             this.tweens.add({ targets: overlay, alpha: 1, duration: 400 });

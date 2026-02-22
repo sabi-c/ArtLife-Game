@@ -16,6 +16,7 @@ import { GameEventBus, GameEvents } from './GameEventBus.js';
 import { EventRegistry } from './EventRegistry.js';
 import { useEventStore } from '../stores/eventStore.js';
 import { useMarketStore } from '../stores/marketStore.js';
+import { checkSystemicTriggers } from '../engines/SystemicTriggers.js';
 
 export class WeekEngine {
     /** Last week's advance report — set after each advanceWeek() call. */
@@ -113,6 +114,13 @@ export class WeekEngine {
         // ── Burnout Tracking ──
         try { WeekEngine._processBurnout(state); }
         catch (e) { console.error('[WeekEngine] Burnout failed:', e); }
+
+        // ── Systemic Lattice Triggers (fail state arcs) ──
+        try {
+            const arcs = checkSystemicTriggers();
+            if (arcs) console.log('[WeekEngine] Systemic arcs triggered:', arcs);
+        }
+        catch (e) { console.error('[WeekEngine] Systemic triggers failed:', e); }
 
         // ── Market State Transition ──
         try { WeekEngine._processMarketTransition(state); }

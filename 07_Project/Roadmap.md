@@ -182,13 +182,13 @@
 | **Dialogue Scene Visual Upgrade** | ✅ Done | Pokemon-style dual portrait layout (player L, NPC R), typewriter text, speaker name labels. DialogueBox.jsx rewritten with inline styles. Back buttons on both HaggleScene and MacDialogueScene. |
 | **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
 | **Haggle Battle Animations** | ✅ Done | Multi-step tactic animations per type: coin rain (financial), hex-shield (logical), slash lines + sparks (aggressive), heart cascade (emotional), shadow eyes (bluff). Player lunge, dealer hit reactions, type effectiveness flashes ("SUPER EFFECTIVE!"), smooth bar tweening. |
-| **Juice & Sound Design** | PARTIAL | Terminal SFX wired (hover/select/typewriter via WebAudioService). Remaining: ambient gallery noise, market crash glitch, Phaser scene sounds |
+| **Juice & Sound Design** | PARTIAL | Terminal SFX (hover/select/typewriter), Haggle scene SFX (tactic/hit/miss/superEffective/dealSuccess/dealFail/penalty), stat change audio feedback (success/penalty via applyEffects). Remaining: ambient gallery noise, scene transition sounds. |
 | **Variable Text Interpolation** | ✅ Done | `{variable}` placeholders in dialogue text resolved at render time. Supports game state, NPC memory vars, portfolio data. |
 | **InkBridge (inkjs integration)** | ✅ Done | `InkBridge.js` bridges inkjs stories to DialogueEngine. Bidirectional GameState sync, tone tracking from `[tone]` tags, save/restore. |
 | **Oregon Trail Week Transition** | ✅ Done | Animated day-by-day ticker screen before week report. Shows activities, auto-advances after 2.8s, skip option. CSS: `wt-*` classes. |
 | **NPC Memory Matrix** | ✅ Done | DialogueEngine interpolates `{npc_favor}`, `{npc_relationship}`, `{npc_grudge_count}`, `{npc_last_grudge}`. Condition evaluation checks NPC favor/grudges. |
 | **Consequence Tease Feedback** | ✅ Done | ConsequenceScheduler shows atmospheric lines when scheduling ("The art world has a long memory..."). Type-specific tease pools. |
-| **Systemic Lattice Triggers** | TODO | Wire `subscribeWithSelector` for Fail States (Informant/Auteur arcs) |
+| **Systemic Lattice Triggers** | ✅ Done | 4 fail-state arcs wired into WeekEngine: Informant (suspicion≥80), Auteur (burnout≥9), Recession (marketHeat≥90), Exile (avg NPC favor≤-50). Each triggers phone messages, stat mutations, consequence chains, and flags. Resets on new game/load. |
 | **NPC Memory Modules** | ✅ Done | npcStore tracks witnessed/grudges/favors per NPC. DialogueEngine reads memory for dynamic text. Gossip propagation in autonomousTick. |
 
 ### 3D. JSON Data Layer (Content Authoring Foundation)

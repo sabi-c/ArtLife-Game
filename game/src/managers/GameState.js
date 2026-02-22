@@ -9,6 +9,8 @@ import { GameEventBus, GameEvents } from './GameEventBus.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
 import { ProfileManager } from './ProfileManager.js';
+import { resetSystemicTriggers } from '../engines/SystemicTriggers.js';
+import { WebAudioService } from './WebAudioService.js';
 
 /**
  * Central game state manager for ArtLife
@@ -23,6 +25,7 @@ export class GameState {
         PhoneManager.init();
         ConsequenceScheduler.reset();
         DecisionLog.reset();
+        resetSystemicTriggers();
 
         // Calculate initial stats starting from character base
         let initialCash = character.startingCash;
@@ -510,6 +513,18 @@ export class GameState {
 
         // Store for UI access
         GameState.lastEffectsSummary = summary;
+
+        // Audio feedback for stat changes (skip during silent contexts like WeekEngine bulk processing)
+        if (summary.length > 0 && !effects._silent) {
+            const hasNegative = (effects.cash < 0) || (effects.reputation < 0) || (effects.suspicion > 0) || (effects.marketHeat > 0) || (effects.burnout > 0);
+            const hasPositive = (effects.cash > 0) || (effects.reputation > 0) || (effects.taste > 0) || (effects.access > 0);
+            if (hasNegative && !hasPositive) {
+                WebAudioService.penalty();
+            } else if (hasPositive) {
+                WebAudioService.success();
+            }
+        }
+
         return summary;
     }
 
@@ -616,6 +631,7 @@ export class GameState {
             // ConsequenceScheduler state is lost on load (pending consequences
             // are not serialised). Reset so we start clean rather than corrupt.
             ConsequenceScheduler.reset();
+            resetSystemicTriggers();
 
             return true;
         } catch (e) {
