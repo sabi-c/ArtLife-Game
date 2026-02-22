@@ -175,15 +175,47 @@ export default function AdminDashboard({ onClose }) {
                 {activeTab === 'phaser' && (
                     <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
                         <div>
-                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>CORE LOOPS</div>
-                            <button style={btnStyle} onClick={() => triggerScene('IntroScene')}>[ Launch: Intro (Creator) ]</button>
-                            <button style={btnStyle} onClick={() => triggerScene('OverworldScene')}>[ Launch: Overworld Map ]</button>
-                            <button style={btnStyle} onClick={() => triggerScene('CityScene')}>[ Launch: Inner City ]</button>
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>EXPLORATION</div>
+                            <button style={btnStyle} onClick={() => triggerScene('WorldScene')}>
+                                [ Overworld — Pokemon Walk ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Tiled map, NPCs, dialog, encounters</div>
+                            </button>
+                            <button style={btnStyle} onClick={() => triggerScene('CityScene')}>
+                                [ City Hub — Location Map ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Click buildings to enter venues</div>
+                            </button>
+                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => triggerScene('OverworldScene')}>
+                                [ Legacy Overworld (test) ]
+                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Old 160px sprites, hardcoded map</div>
+                            </button>
                         </div>
                         <div>
-                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>INSTANCED SCENES</div>
-                            <button style={btnStyle} onClick={launchHaggleBattle}>[ Launch: Haggle Battle ]</button>
-                            <button style={btnStyle} onClick={() => triggerScene('WorldScene')}>[ Launch: World Map (Pokemon) ]</button>
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>BATTLE & DIALOGUE</div>
+                            <button style={btnStyle} onClick={launchHaggleBattle}>
+                                [ Haggle Battle ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Pokemon-style negotiation</div>
+                            </button>
+                            <button style={btnStyle} onClick={() => triggerScene('MacDialogueScene', {
+                                event: {
+                                    title: 'Admin Test Dialogue',
+                                    steps: [
+                                        { type: 'narrative', text: 'This is a test dialogue from the admin panel.', characterId: 'elena_ross' },
+                                        { type: 'narrative', text: 'You can use this to test dialogue rendering.', characterId: 'elena_ross' },
+                                    ],
+                                },
+                            })}>
+                                [ Dialogue Scene (Mac) ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>1-bit Macintosh visual novel</div>
+                            </button>
+                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>NEW GAME FLOW</div>
+                            <button style={btnStyle} onClick={() => triggerScene('IntroScene')}>
+                                [ Intro — Cinematic Briefing ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Typewriter narration → character select</div>
+                            </button>
+                            <button style={btnStyle} onClick={() => triggerScene('CharacterSelectScene')}>
+                                [ Character Creator ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>6-phase archetype/trait/drip selection</div>
+                            </button>
                         </div>
                     </div>
                 )}

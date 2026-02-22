@@ -79,10 +79,8 @@ export default class WorldScene extends BaseScene {
     }
 
     preload() {
-        // Tiled JSON map
-        if (!this.cache.tilemap.has('pallet_town')) {
-            this.load.tilemapTiledJSON('pallet_town', '/content/maps/pallet_town.json');
-        }
+        // Tiled JSON map — always queue load; Phaser deduplicates internally
+        this.load.tilemapTiledJSON('pallet_town', '/content/maps/pallet_town.json');
 
         // Tilesets
         const tilesets = ['world', 'world2', 'grounds', 'grounds2'];

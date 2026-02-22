@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { SceneTransition } from '../utils/SceneTransition.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
 import { GameState } from '../managers/GameState.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
 
 export class TitleScene extends Phaser.Scene {
     constructor() {
@@ -304,7 +305,11 @@ export class TitleScene extends Phaser.Scene {
     startNewGame() {
         this.input.keyboard.removeAllKeys();
         this.input.removeAllListeners('pointerdown');
-        SceneTransition.irisWipeToScene(this, SCENE_KEYS.INTRO, { ui: this.ui }, 600);
+
+        // Respect intro style setting — cinematic goes through IntroScene, skip goes straight to creator
+        const introStyle = SettingsManager.get('introStyle') || 'cinematic';
+        const targetScene = introStyle === 'skip' ? SCENE_KEYS.CHARACTER_SELECT : SCENE_KEYS.INTRO;
+        SceneTransition.irisWipeToScene(this, targetScene, { ui: this.ui }, 600);
     }
 
     quickStart() {

@@ -31,6 +31,16 @@ export class SettingsManager {
             default: 'kruger'
         },
         {
+            id: 'introStyle',
+            label: 'Intro Sequence',
+            type: 'cycle',
+            options: [
+                { value: 'cinematic', display: 'Cinematic Briefing' },
+                { value: 'skip', display: 'Skip to Creator' }
+            ],
+            default: 'cinematic'
+        },
+        {
             id: 'dialogueStyle',
             label: 'Dialogue Style',
             type: 'cycle',

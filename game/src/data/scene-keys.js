@@ -8,11 +8,13 @@ export const SCENE_KEYS = Object.freeze({
     INTRO: 'IntroScene',
     CHARACTER_SELECT: 'CharacterSelectScene',
     OVERWORLD: 'OverworldScene',
+    WORLD: 'WorldScene',
     CITY: 'CityScene',
     FAST_TRAVEL: 'FastTravelScene',
     LOCATION: 'LocationScene',
     HAGGLE: 'HaggleScene',
     DIALOGUE: 'DialogueScene',
     MAC_DIALOGUE: 'MacDialogueScene',
+    MENU: 'MenuScene',
     END: 'EndScene',
 });

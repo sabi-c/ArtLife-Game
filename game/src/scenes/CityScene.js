@@ -1,6 +1,7 @@
 import { BaseScene } from './BaseScene.js';
 import { VENUES } from '../data/rooms.js';
 import { GameState } from '../managers/GameState.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
 
 /**
@@ -181,9 +182,11 @@ export class CityScene extends BaseScene {
 
         this.cameras.main.fadeOut(400, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
+            GameEventBus.emit(GameEvents.SCENE_EXIT, 'CityScene');
+            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
             this.showTerminalUI();
             if (this.ui) {
-                this.ui.popScreen(); // pop the trap screen
+                this.ui.popScreen();
                 this.ui.render();
             }
             this.scene.stop();

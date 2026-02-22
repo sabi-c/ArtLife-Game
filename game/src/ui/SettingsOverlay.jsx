@@ -11,6 +11,7 @@ export default function SettingsOverlay({ onClose }) {
         colorTheme: 'classic_dark',
         scanlines: true,
         crtFlicker: true,
+        introStyle: 'cinematic',
         dialogueStyle: 'visual'
     });
 
@@ -21,6 +22,7 @@ export default function SettingsOverlay({ onClose }) {
             colorTheme: SettingsManager.get('colorTheme') || 'classic_dark',
             scanlines: SettingsManager.get('scanlines') !== false,
             crtFlicker: SettingsManager.get('crtFlicker') !== false,
+            introStyle: SettingsManager.get('introStyle') || 'cinematic',
             dialogueStyle: SettingsManager.get('dialogueStyle') || 'visual'
         });
     }, []);
@@ -80,6 +82,15 @@ export default function SettingsOverlay({ onClose }) {
                     </button>
 
                     <div style={{ color: '#888', marginTop: 40, marginBottom: 15, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>Gameplay</div>
+
+                    <button style={btnStyle} onClick={() => {
+                        const styles = ['cinematic', 'skip'];
+                        const nextIdx = (styles.indexOf(settings.introStyle) + 1) % styles.length;
+                        updateSetting('introStyle', styles[nextIdx]);
+                    }}>
+                        <span>INTRO SEQUENCE</span>
+                        <span style={{ color: '#fff' }}>[{settings.introStyle === 'cinematic' ? 'CINEMATIC BRIEFING' : 'SKIP TO CREATOR'}]</span>
+                    </button>
 
                     <button style={btnStyle} onClick={() => {
                         const styles = ['visual', 'terminal'];
