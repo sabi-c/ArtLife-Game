@@ -14,6 +14,8 @@
 **Phase 3:** ~90% complete
 
 ### Recently Completed
+- **Content Management Studio v1** — 3-panel CMS overlay ("Director's Chair"): Content Library (searchable entity tree with 8 categories), Timeline (monthly calendar event view), Wiring Inspector (entity connections + raw JSON). ContentStore Zustand store auto-ingests all data/ files. F1 hotkey or Admin > CMS button. Quick Demo Init: `GameState.quickDemoInit()` button in Admin + Player Dashboard for instant testing without login flow.
+- **Admin Dashboard Hardening** — "INIT DEMO STATE" banner when no game loaded. All scene launch buttons verified. Toast notifications for errors. Scene existence validation.
 - **Scene Exit Flow Hardening** — All Phaser scenes now emit `SCENE_EXIT` + `UI_ROUTE: TERMINAL` when returning to dashboard. ESC key bindings added to DialogueScene and CityScene. Visible `[ ESC: BACK ]` button added to DialogueScene for mobile. Fixed test_flow.cjs B4 reward dismiss (canvas-aware keyboard events). 36/38 flow tests passing (2 Phase A timing issues pre-existing).
 - **WorldScene GridEngine Fix** — Fixed charLayer detection (reads `ge_charLayer` from Tiled map properties instead of hardcoding), fixed grass/item object detection (Tiled objects use `name` not `type`), improved error logging.
 - **Scene Engine with Scene Library** — ScenePlayer now has a scene selector UI with 3 ink.js scenes (The Boom Room, Gallery Opening, Studio Visit). Each scene has full branching narratives with rewards, consequences, and NPC interactions.
@@ -171,12 +173,13 @@
 | NPC Memory Matrix panel | ✅ Done | Show hidden grudges/favors/witnessed |
 | State Importer (JSON dropzone for late-game testing) | ✅ Done | |
 | Global Flags / Decision viewer | ✅ Done | Read from `DecisionLog` |
-| **Content Management Studio (CMS)** | TODO | Spec: `Content_Management_Studio_Spec.md` |
-| CMS: Content Library panel (searchable entity tree) | TODO | NPCs, Events, Items, Scenes, Artists |
-| CMS: Timeline panel (drag events onto 40-year calendar) | TODO | Visual scheduling with zoom |
-| CMS: Wiring Inspector (entity connection editor) | TODO | Add/remove NPCs from scenes, set gates |
+| **Content Management Studio (CMS)** | ✅ Done (v1) | 3-panel React overlay: Content Library, Timeline, Wiring Inspector. `F1` hotkey or admin button. `ContentStore.js` auto-ingests all data/ entities. |
+| CMS: Content Library panel (searchable entity tree) | ✅ Done | Searchable, filterable by category. Shows NPCs, Events, Artists, Artworks, Scenes, Venues, Calendar, Dialogues. Click to inspect. |
+| CMS: Timeline panel (drag events onto 40-year calendar) | ✅ Done (v1) | Monthly view of calendar events, color-coded by type. Click to inspect. Drag-drop planned for v2. |
+| CMS: Wiring Inspector (entity connection editor) | ✅ Done (v1) | Shows entity connections (NPC→venue, event→speaker, artwork→artist, etc.) with click-to-navigate. Raw JSON viewer. Edit planned for v2. |
 | CMS: Consequence Chain Previewer | TODO | Simulate downstream effects of any event |
-| CMS: File Loader (auto-import from `data/` directory) | TODO | Vite HMR hot-reload support |
+| CMS: File Loader (auto-import from `data/` directory) | ✅ Done | `ContentStore.js` uses dynamic imports from `data/`. Ingests contacts, artists, artworks, events, venues, calendar, scenes, dialogues. |
+| **Quick Demo Init** | ✅ Done | Admin banner "INIT DEMO STATE" when no game loaded. `GameState.quickDemoInit()` bootstraps testable state instantly. Player Dashboard also has demo init button. |
 
 ### 3C. Core System Gaps
 | Task | Status | Notes |

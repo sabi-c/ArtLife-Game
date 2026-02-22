@@ -11,6 +11,7 @@ import InventoryDashboard from './ui/InventoryDashboard.jsx';
 import TerminalLogin from './ui/TerminalLogin.jsx';
 import AdminDashboard, { AdminFAB } from './ui/AdminDashboard.jsx';
 import SettingsOverlay from './ui/SettingsOverlay.jsx';
+import ContentStudio from './ui/ContentStudio.jsx';
 import MobileJoypad from './ui/MobileJoypad.jsx';
 import CalendarHUD from './ui/CalendarHUD.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
@@ -33,7 +34,10 @@ export default function App() {
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === '`' || e.key === '~') {
+            if (e.key === 'F1') {
+                e.preventDefault();
+                setActiveOverlay(prev => prev === OVERLAY.CMS ? OVERLAY.NONE : OVERLAY.CMS);
+            } else if (e.key === '`' || e.key === '~') {
                 setActiveOverlay(prev => {
                     const next = prev === OVERLAY.ADMIN ? OVERLAY.NONE : OVERLAY.ADMIN;
                     if (next === OVERLAY.ADMIN) WebAudioService.select();
@@ -271,6 +275,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.INVENTORY && (
                 <InventoryDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.CMS && (
+                <ContentStudio onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {isWorldSceneActive && <MobileJoypad />}

@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import './PlayerDashboard.css';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { GameState } from '../managers/GameState.js';
 import { OVERLAY } from '../constants/views.js';
 
 // ─── Stat metadata (matches STAT_DEFS in CharacterSelectScene) ───────────────
@@ -156,8 +157,14 @@ export default function PlayerDashboard({ onClose }) {
                     <div style={{ color: '#555', fontFamily: 'Courier', textAlign: 'center', padding: 40 }}>
                         <div style={{ fontSize: 32, marginBottom: 16 }}>◈</div>
                         <div>No game in progress.</div>
-                        <div style={{ fontSize: 11, marginTop: 8, color: '#333' }}>Start a game first.</div>
-                        <button className="pd-close-btn" style={{ marginTop: 24 }} onClick={onClose}>[ESC] Close</button>
+                        <div style={{ fontSize: 11, marginTop: 8, color: '#333' }}>Start a game or init demo state to view the dashboard.</div>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>
+                            <button className="pd-close-btn" onClick={() => {
+                                GameState.quickDemoInit();
+                                refresh();
+                            }}>[ INIT DEMO ]</button>
+                            <button className="pd-close-btn" onClick={onClose}>[ESC] Close</button>
+                        </div>
                     </div>
                 </div>
             </div>

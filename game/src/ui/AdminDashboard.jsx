@@ -154,6 +154,28 @@ export default function AdminDashboard({ onClose }) {
                     }}>CLOSE</button>
                 </div>
 
+                {/* ── GAME STATE BANNER ── */}
+                {!GameState.state && (
+                    <div style={{
+                        padding: '16px 20px', marginBottom: 20,
+                        background: 'rgba(201, 64, 64, 0.1)', border: '1px solid #c94040',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        flexWrap: 'wrap', gap: 12,
+                    }}>
+                        <div>
+                            <div style={{ color: '#c94040', fontSize: 13, fontWeight: 'bold' }}>NO GAME STATE</div>
+                            <div style={{ color: '#666', fontSize: 11, marginTop: 2 }}>Most features require an active game. Init demo state to test everything.</div>
+                        </div>
+                        <button style={{
+                            ...btnStyle, width: 'auto', marginBottom: 0,
+                            background: '#c9a84c', color: '#000', fontWeight: 'bold',
+                            border: 'none', padding: '10px 20px',
+                        }} onClick={() => { GameState.quickDemoInit(); forceUpdate(); }}>
+                            [ INIT DEMO STATE ]
+                        </button>
+                    </div>
+                )}
+
                 {/* ── TABS ── */}
                 <div style={{
                     display: 'grid',
@@ -185,6 +207,11 @@ export default function AdminDashboard({ onClose }) {
                                     onClose();
                                 }
                             }}>[ Trigger Global Dialogue Box ]</button>
+                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>DEVELOPER TOOLS</div>
+                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.CMS)}>
+                                [ Content Management Studio ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Visual content wiring & timeline editor</div>
+                            </button>
                         </div>
                     </div>
                 )}

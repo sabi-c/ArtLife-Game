@@ -855,6 +855,67 @@ export class GameState {
         localStorage.setItem(GameState._lastSlotKey(), '0');
     }
 
+    /**
+     * Instantly initialize GameState with demo data (no save/load).
+     * Used by Admin Dashboard to quickly bootstrap a testable game state.
+     */
+    static quickDemoInit() {
+        const works = generateInitialWorks();
+        MarketManager.init(works);
+        PhoneManager.init();
+        ConsequenceScheduler.reset();
+        DecisionLog.reset();
+        resetSystemicTriggers();
+
+        GameState.state = {
+            character: {
+                id: 'hedge_fund', name: 'THE HEDGE FUND', icon: '📊',
+                tagline: 'Art is just another asset class.',
+                startingCash: 750000, startingWorks: 0,
+                perk: 'Market Analytics', difficulty: 'MEDIUM',
+            },
+            playerName: 'Dev Agent',
+            selectedTrait: { id: 'quant_eye', label: 'Quant Eye', effects: { taste: 8 } },
+            selectedDrip: { id: 'power_suit', label: 'Power Suit', icon: '👔', effects: { reputation: 5, access: 5 } },
+            selectedVice: null,
+            traits: ['Quant Eye'],
+            cash: 680000,
+            portfolio: [
+                {
+                    id: 'demo_work_1', title: 'Void Study #7', artist: 'Yuki Tanaka',
+                    price: 42000, purchasePrice: 38000, purchaseWeek: 1,
+                    purchaseCity: 'new-york', owner: 'player', storage: 'home',
+                    onMarket: false, era: 'contemporary', medium: 'Oil on canvas',
+                    provenance: [{ type: 'acquired', week: 1, city: 'new-york', price: 38000, source: 'Market' }],
+                },
+            ],
+            week: 5, currentCity: 'new-york',
+            marketState: 'bull', marketStateTurnsRemaining: 12,
+            reputation: 55, taste: 58, audacity: 35, access: 55, intel: 5,
+            wealthHistory: [
+                { week: 1, cash: 750000, assets: 0 },
+                { week: 2, cash: 712000, assets: 38000 },
+                { week: 3, cash: 680000, assets: 42000 },
+            ],
+            transactions: [
+                { id: 'tx_1', action: 'BUY', title: 'Void Study #7', price: 38000, week: 1 },
+            ],
+            newsFeed: ['Bull market continues.', 'Yuki Tanaka shortlisted for Turner Prize.'],
+            decisions: [], activeDeals: [],
+            totalWorksBought: 1, totalWorksSold: 0, eventsTriggered: [],
+            marketHeat: 0, suspicion: 0, burnout: 0,
+            flipHistory: [], dealerBlacklisted: false,
+            consecutiveEventWeeks: 0, forcedRest: false, actionsThisWeek: 0,
+            playerLocation: { locationId: 'player_apartment', cityX: 5, cityY: 14, insideVenue: false },
+            hoursUsedToday: 0, dayOfWeek: 1, hour: 8, minute: 0,
+            toneHistory: {},
+        };
+
+        window._artLifeState = GameState.state;
+        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Demo state initialized — all features unlocked.');
+        return true;
+    }
+
     static _migrateOldSave() {
         // Migrate from old single-save format
         const old = localStorage.getItem('artlife_save');

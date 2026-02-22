@@ -22,5 +22,6 @@ export const OVERLAY = {
     NONE: null,
     ADMIN: 'ADMIN',
     SETTINGS: 'SETTINGS',
-    INVENTORY: 'INVENTORY'
+    INVENTORY: 'INVENTORY',
+    CMS: 'CMS',
 };
