@@ -40,57 +40,13 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 ### Who Is Doing What Right Now
 
-| Agent | Current Task | Files Being Touched | Status |
-|---|---|---|---|
-| **Antigravity** | Phase 4 Active. Building Agent 2 (Scene Visuals/Rewards) & Agent 3 (Inventory UI/Dialogue). | `SceneEngine.js`, `ScenePlayer.jsx`, `inventoryStore.js`, `InventoryDashboard.jsx`, `App.jsx` | 🟢 Active |
-| **ClaudeCode** | Weekly report, dialogue trees, artwork expansion, content pipeline. | `dashboard.js`, `dialogue_trees.js`, `artworks.js`, `GameDebugAPI.js` | 🟢 Active |
+| Agent | Current Task | Status |
+|---|---|---|
+| **Claude Code** | Phase 3 hardening: WorldScene v2, Scene Engine, Admin Dashboard, refactoring | 🟢 Active |
 
----
+### Phase 2.7 — Code Audit Refactoring: COMPLETE
 
-### 🔧 ClaudeCode: Code Audit Execution Orders
-
-> [!CAUTION]
-> **ClaudeCode:** Read `Code_Audit.md` in this folder FIRST. It contains 15 specific issues with exact code fixes. Execute them in the priority order below. After each refactoring step, run `cd game && npx vite build --mode development` to verify zero errors.
-
-**Phase 2.7 — Code Audit Refactoring (execute in this order):**
-
-| # | Task | Files | What To Do |
-|---|---|---|---|
-| 1 | **Split GameState.js** | `managers/GameState.js` → `managers/GameState.js` + `managers/DealResolver.js` + `managers/WeekEngine.js` | Extract `advanceWeek()` into `WeekEngine.js`. Extract deal resolution (lines 168-220) into `DealResolver.js`. Keep core state, `init()`, `save()`, `load()`, `buyWork()`, `sellWork()` in GameState. |
-| 2 | **Split PhoneManager.js** | `managers/PhoneManager.js` → `managers/PhoneManager.js` + `managers/NPCMemory.js` | Extract `addWitnessed()`, `addGrudge()`, `addFavor()`, `npcAutonomousTick()` into `NPCMemory.js`. Keep messaging functions in PhoneManager. |
-| 3 | **Add try/catch to WeekEngine** | `managers/WeekEngine.js` | Each system call in the tick sequence gets its own try/catch (see `Code_Audit.md` issue #1 for exact pattern). |
-| 4 | **Fix cross-manager mutation** | `managers/MarketManager.js` | Move `suspicion` and `marketHeat` decay out of `MarketManager.tick()`. Return effects from `tick()`, let `WeekEngine` apply them. |
-| 5 | **Replace window globals** | `phaserInit.js`, `App.jsx` | Replace `window.toggleEgoDashboard` with `GameEventBus.emit(GameEvents.TOGGLE_DASHBOARD)`. Add listener in App.jsx useEffect. |
-| 6 | **Fix shuffle bias** | `managers/MarketManager.js` | Replace `sort(() => Math.random() - 0.5)` with Fisher-Yates shuffle. Create `utils/shuffle.js`. |
-| 7 | **Shared ID generator** | Create `utils/id.js` | Extract the `Date.now() + Math.random()` pattern into a shared `generateId(prefix)` function. Update ConsequenceScheduler, MarketManager, GameState. |
-| 8 | **Split events.js** | `data/events.js` → `data/events/index.js` + category files | Split by event category. Barrel re-export from `index.js`. |
-
----
-
-### 🔁 Crossover Verification Protocol
-
-> [!WARNING]
-> **Both agents MUST follow this protocol.** After every refactoring task, the OTHER agent verifies.
-
-**After ClaudeCode completes each task:**
-1. ClaudeCode runs `cd game && npx vite build --mode development` — must be **0 errors**
-2. ClaudeCode runs existing tests: `cd game && npm test` (if test runner exists)
-3. ClaudeCode updates the task table above with ✅ status
-4. **Antigravity verifies:** Reads the changed files, confirms the refactoring matches the `Code_Audit.md` specification, and checks that no other manager's imports broke
-
-**Verification Checklist (run after EVERY file split):**
-- [ ] All imports updated across the codebase (`grep -r "from.*GameState" game/src/`)
-- [ ] `npx vite build --mode development` produces 0 errors
-- [ ] Existing functionality preserved (game still boots to TitleScene)
-- [ ] No circular imports introduced
-- [ ] New file follows the established pattern (static class with JSDoc)
-
-### Rules
-1. **Register** your task in the table above before starting
-2. **Don't touch files** another agent is touching
-3. **Run `cd game && npx vite build --mode development`** before marking code tasks complete
-4. **Be proactive** — if you see something that would make the game better, do it
-5. **Cross-check** — after completing a refactoring task, the other agent reviews the changes
+All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.js`, `GameEventBus.js`, `utils/shuffle.js`, `utils/id.js`, `data/events/*.js` (8 category files).
 
 ---
 
@@ -104,7 +60,10 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 | **World Building & Narrative** | `Art_World_Database.md` | The core lore, NPC profiles, and market mechanics. |
 | **V2 UI & Era Engine** | `UI_and_Dynamic_Systems_Spec.md` | React ThemeProvider (`Desk` vs `Terminal`) & the 40-Year Era progression framework. |
 | **Narrative Tracking & Debugging** | `Admin_Narrative_Tracker_Spec.md` | The "God Mode" dashboard for tracking hidden flags and the consequence queue. |
+| **Admin & Settings Overhaul** | `Admin_Dashboard_and_Settings_Overhaul_Plan.md` | The blueprint for Live JSON State Editing, Visual Map Spawning, and Snapshot memory tools. |
 | **Content Management Studio** | `Content_Management_Studio_Spec.md` | Visual authoring workspace: drag-and-drop event scheduling, NPC wiring, consequence chain previewer. |
+| **Visual Scene Flow Editor** | `Scene_Flow_Visual_Editor_Plan.md` | Node-based React Flow editor architectural plan for drag-and-drop scene transitions and narrative branching. |
+| **Time & Sequencing Engine** | `Systemic_Time_and_Event_Architecture_Plan.md` | The continuous 24-hour clock system linking macro weeks to micro GridEngine exploration minutes, with spatial event triggers. |
 | **Core Loop (7 Systems)** | `Core_Loop_Systems_Spec.md` | Phone, Calendar, Scene Engine, NPC Registry, Event Registry, Inventory, Art Pricing & Economics. |
 | **Open-Source Research** | `Reference_Tools_Research.md` | Audit of narrative engines, CMS tools, and market sims with INTEGRATE vs REFERENCE recommendations. |
 | **Implementation Blueprints** | `Implementation_Plan.md` | Production-grade code patterns, error handling tables, and critical-path build order for all V2 systems. |
@@ -117,61 +76,51 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 
 ---
 
-## 🔥 Highest-Impact Tasks (MVP Readiness Audit)
+## Highest-Impact Next Tasks
 
-> **See [Roadmap.md](Roadmap.md) for the full task tracker with status columns.**
-> *Updated by Antigravity Codebase Manager after full flow audit.*
+> **See [Roadmap.md](Roadmap.md) for the full task tracker.**
 
-To get this to a "Gaming Standards" MVP that the team can playtest end-to-end, we should focus on the easiest lifts that provide the most narrative depth and usability:
-
-1. **Finish the Room & Venue Integration (B4/C1)**: The venue flow exists, but we need to ensure every room drains the time budget properly and triggers the correct scheduled `events.js` so players actually play the calendar.
-2. **The Tone System**: Passing a "Tone" (Aggressive, Professional, Casual, Mysterious) down to the Dialogue engine requires very little infrastructural code but multiplies the narrative depth by 4x.
-3. **Admin Narrative Dashboard**: A "God Mode" (tied to the backtick `~` key) is critical for you to playtest the MVP without guessing if the Consequence Queue stored your grudges.
-4. **Week 26 Endgame Sequence**: We need to cap the MVP with a single satisfying "Reckoning" sequence (Museum Retrospective vs SEC Investigation) so playtesters experience a complete arc.
-
-*(Legacy High-Impact Tasks below)*
-5. **Session Persistence** — page reload should restore last screen, not restart from title. (✅ DONE)
-6. **Weekly Report Enhancement** — richer content: decisions, inventory, dialogue outcomes, events. (✅ DONE)
-7. **Comprehensive UI & Data Audit (Anti-Cheat)** — Deep research and implementation of state protection so players cannot manipulate the DOM or local storage to cheat.
-8. **Sound design** — terminal click sounds, ambient gallery noise (Web Audio API) (✅ PARTIAL - WebAudioService added)
+1. **Scene Flow Visual Editor** — Node-based React Flow editor connecting all building blocks (scenes, transitions, events) into playable sequences. See `Scene_Flow_Visual_Editor_Plan.md`.
+2. **Tone System** — 5 dialogue tones (Friendly, Schmoozing, Direct, Generous, Ruthless) that modify NPC responses and unlock specialization perks after Week 20.
+3. **MarketEngine** — Weekly art price fluctuation: `basePrice x artistHeat x eraModifier x (1 +/- volatility)`. Makes the market feel alive.
+4. **Week 26 Endgame Sequence** — Museum Retrospective vs SEC Investigation reckoning. Caps the MVP arc.
+5. **More ink Scenes** — Expand the 3-scene library with deeper branching and NPC callbacks.
 
 ---
 
-## 🏗️ Current Phase: Foundation & Infrastructure
+## Current Phase: Foundation & Infrastructure (~85%)
 
 > **See [Roadmap.md](Roadmap.md) for detailed task tracking.**
 
 **Phase 3** focuses on hardening the foundation so content can be dropped in without rewiring:
-- Scene flow & navigation (B4/C1/C2 from Implementation_Plan)
-- Developer tools (Admin Dashboard, State Importer)
-- Core system gaps (tone system, progressive disclosure, sound)
+- Scene flow & navigation — WorldScene v2 (GridEngine overworld), venue flow, transitions ✅
+- Developer tools — Admin Dashboard (6 tabs, mobile FAB, scene launchers) ✅
+- Sound — WebAudioService (16 procedural SFX: type, hover, select, hit, miss, etc.) ✅
+- Progressive disclosure — early/mid/late game phases based on week thresholds ✅
+- Settings — intro style, color theme, sound toggle ✅
+- Remaining: Tone system, MarketEngine, Zustand store completion
 
-## 📋 Code Health Audit
+## Code Health Audit
 
-> [!WARNING]
-> **Large files that should be split:** `screens.js` (140KB, ~3800 lines) and `events.js` (150KB). Consider breaking `screens.js` into domain-specific modules (e.g. `screens/market.js`, `screens/phone.js`).
+| Layer | Files | Notes |
+|---|---|---|
+| `scenes/` | 14 | WorldScene (450 LOC), HaggleScene (23KB), DialogueScene (36KB), MacDialogueScene (15KB), LocationScene, CityScene, FastTravelScene, etc. |
+| `managers/` | 16 | GameState, WeekEngine, DealResolver, NPCMemory, GameEventBus, HaggleManager, MarketManager, PhoneManager, ConsequenceScheduler, DialogueEngine, SettingsManager, WebAudioService, etc. |
+| `data/` | 10 + `events/` (8) + `scenes/` (3) + `maps/` | events split by category, 3 ink scenes (boom_room, gallery_opening, studio_visit), rooms.js (76KB) |
+| `terminal/` | TerminalUI + TerminalAPI + 11 screen modules | Screens split: dashboard, market, phone, world, character, events, venue, system, haggle, journal, collection |
+| `engines/` | 1 | SceneEngine.js — ink.js visual novel engine |
+| `stores/` | 5 | gameStore, npcStore, inventoryStore, marketStore, eventStore (Zustand) |
+| `utils/` | 4 | shuffle.js, id.js, ErrorRegistry.js, GameDebugAPI.js |
+| `sprites/` | 2 | Player.js, NPC.js (decoupled entity classes) |
+| `ui/` | 9 | AdminDashboard, PlayerDashboard, InventoryDashboard, ScenePlayer, TerminalLogin, SettingsOverlay, DialogueBox, MobileJoypad, ErrorBoundary |
 
-| Layer | Files | Total Size | Notes |
-|---|---|---|---|
-| `scenes/` | 12 | ~175KB | Largest: `GameScene.js` (44KB), `DialogueScene.js` (36KB) |
-| `managers/` | 15 | ~140KB | Split: `GameState`+`DealResolver`+`WeekEngine`+`NPCMemory`+`GameEventBus` |
-| `data/` | 8 + `events/` (9) + `maps/` | ~380KB | `events.js` split into 8 categories. `dialogue_trees.js` expanded to ~60KB (9 trees). 28 artworks. Largest: `rooms.js` (76KB) |
-| `terminal/` | 2 | ~165KB | `screens.js` = 140KB — candidate for splitting |
-| `utils/` | 4 | ~5KB | `shuffle.js`, `id.js`, `ErrorRegistry.js`, `GameDebugAPI.js` |
-| `sprites/` | 2 | ~5KB | `Player.js`, `NPC.js` (decoupled entity classes) |
-| `anims/` | 1 | ~1.5KB | `CharacterAnims.js` (centralized animation registry) |
-| `ui/` | 1 | TBD | New UI component directory |
-
-### Missing Modules (referenced but not yet created)
-- `RoomManager.js` — room traversal state machine (currently handled inline by `LocationScene`)
-- `src/managers/MapManager.js` — tilemap parsing helper (Phase 40.5)
-
-### Patterns Adopted from [pokemon-react-phaser](https://github.com/jvnm-dev/pokemon-react-phaser)
-- **GameEventBus** — singleton `Phaser.Events.EventEmitter` bridging scenes↔terminal UI
-- **Camera Vignette** — `postFX.addVignette()` on all exploration scenes
-- **Daylight Overlay** — in-game week-based tinting on overworld
-- **Position Auto-Save** — `gridEngine.positionChangeFinished()` subscriber
-- **Cinematic Transitions** — `fadeIn()`/`fadeOut()` on scene enter/exit
+### Patterns
+- **GameEventBus** — singleton EventEmitter bridging Phaser scenes ↔ React UI ↔ Terminal
+- **BaseScene** — shared scene lifecycle (hideTerminalUI/showTerminalUI, cleanup hooks)
+- **TerminalAPI** — data facade for terminal screens (screens never import managers directly)
+- **GridEngine** — tile-based movement, NPC wandering, Y-depth sorting, position persistence
+- **WebAudioService** — procedural sound effects (oscillator-based, zero assets)
+- **Cinematic Transitions** — fadeIn/fadeOut, wipe transitions, vignette, letterbox bars
 
 ---
 
@@ -252,64 +201,87 @@ npm run build        # Vite production build → dist/
 ```
 game/
 ├── src/
-│   ├── main.js                     # Entry point + Phaser config
-│   ├── style.css                   # All styling (34KB)
+│   ├── phaserInit.js               # Phaser config + scene registration + GameEventBus bridge
+│   ├── App.jsx                     # React root — central UI router + overlay registry
+│   ├── style.css                   # All styling (~35KB)
 │   │
 │   ├── data/                       # ── DATA LAYER ──
 │   │   ├── artists.js              # 8 artists + work generator
-│   │   ├── artworks.js             # Artwork definitions
-│   │   ├── backgrounds.js          # Background traits (Alma Mater, Language)
+│   │   ├── artworks.js             # 28 artwork definitions
+│   │   ├── backgrounds.js          # Background traits
 │   │   ├── calendar_events.js      # 22 recurring calendar events
 │   │   ├── characters.js           # 3 character classes
 │   │   ├── cities.js               # 5 cities with travel costs
 │   │   ├── contacts.js             # 16 NPC contacts across 10 roles
-│   │   ├── dialogue_trees.js       # V2 dialogue trees (39KB)
-│   │   ├── events.js               # Re-export barrel → events/*.js
-│   │   ├── events/                 # 49+ events split by category (8 files)
-│   │   ├── haggle_config.js        # Haggle types, tactics, dealer types, dialogue
-│   │   ├── rooms.js                # Room/venue data (76KB)
-│   │   ├── scenes.js               # Dialogue scene content data
-│   │   ├── ticker_phrases.js       # News ticker phrase bank
-│   │   ├── world_locations.js      # World location definitions
-│   │   └── maps/                   # Tiled JSON map data
+│   │   ├── dialogue_trees.js       # V2 dialogue trees (9 trees)
+│   │   ├── events/                 # 49+ events split by category (8 files + index barrel)
+│   │   ├── haggle_config.js        # Haggle types, tactics, dealer types
+│   │   ├── rooms.js                # Room/venue data (76KB, 6 venues)
+│   │   ├── scene-keys.js           # Frozen scene key constants
+│   │   ├── scenes/                 # ink.js compiled story JSONs (3 scenes)
+│   │   └── maps/                   # Tiled JSON map data (pallet_town)
 │   │
 │   ├── managers/                   # ── ENGINE LAYER ──
-│   │   ├── GameState.js            # Central state singleton (31KB)
+│   │   ├── GameState.js            # Central state singleton
 │   │   ├── WeekEngine.js           # Weekly advance orchestrator (try/catch isolated)
 │   │   ├── DealResolver.js         # Deal/offer resolution logic
-│   │   ├── NPCMemory.js            # NPC memory system (witnessed, grudges, favors, gossip)
+│   │   ├── GameEventBus.js         # Singleton event bridge (20+ event types)
+│   │   ├── HaggleManager.js        # Haggle battle state machine
 │   │   ├── MarketManager.js        # Art market simulation
-│   │   ├── PhoneManager.js         # NPC messaging hub (slimmed)
-│   │   ├── EventManager.js         # Event selection + pacing
-│   │   ├── HaggleManager.js        # Haggle battle state machine (17KB)
+│   │   ├── PhoneManager.js         # NPC messaging hub
 │   │   ├── ConsequenceScheduler.js # Delayed effect queue
-│   │   ├── DecisionLog.js          # Player decision journal
 │   │   ├── DialogueEngine.js       # Branching narrative parser
 │   │   ├── DialogueTreeManager.js  # V2 dialogue tree manager
-│   │   ├── GameEventBus.js         # Singleton Phaser↔UI event bridge
-│   │   ├── OverworldHelper.js      # Map/physics helper (12KB)
+│   │   ├── EventRegistry.js        # Event selection + pacing
+│   │   ├── OverworldHelper.js      # Map/physics helper
 │   │   ├── QualityGate.js          # Stat-gating system
-│   │   └── SettingsManager.js      # Game settings persistence
+│   │   ├── SettingsManager.js      # Schema-driven settings persistence
+│   │   └── WebAudioService.js      # Procedural sound effects (16 methods)
+│   │
+│   ├── engines/                    # ── NARRATIVE ENGINE ──
+│   │   └── SceneEngine.js          # ink.js visual novel engine
 │   │
 │   ├── terminal/                   # ── TERMINAL UI LAYER ──
-│   │   ├── TerminalUI.js           # Screen stack renderer (25KB)
-│   │   └── screens.js              # 30+ screen functions (140KB)
+│   │   ├── TerminalUI.js           # Screen stack renderer
+│   │   ├── TerminalAPI.js          # Data facade for screens
+│   │   └── screens/                # 11 screen modules (dashboard, market, phone, etc.)
 │   │
-│   ├── ui/                         # ── UI COMPONENTS ──
-│   │   └── (emerging)              # New UI component directory
+│   ├── stores/                     # ── ZUSTAND STORES ──
+│   │   ├── gameStore.js            # Core game state store
+│   │   ├── npcStore.js             # NPC relationship data
+│   │   ├── inventoryStore.js       # Player inventory
+│   │   ├── marketStore.js          # Market price data
+│   │   └── eventStore.js           # Event tracking
 │   │
-│   └── scenes/                     # ── PHASER SCENE LAYER ──
-│       ├── BootScene.js            # Asset preloading
-│       ├── MenuScene.js            # Title screen
-│       ├── CharacterSelectScene.js # Character class picker
-│       ├── GameScene.js            # Main game scene (hosts TerminalUI, 44KB)
-│       ├── DialogueScene.js        # Event rendering + multi-step engine (36KB)
-│       ├── HaggleScene.js          # Pokémon-style haggle battle (23KB)
-│       ├── MacDialogueScene.js     # 1-bit Macintosh dialogue scene (15KB)
-│       ├── LocationScene.js        # Room navigation scene (15KB)
-│       ├── OverworldScene.js        # Top-down overworld (12KB)
-│       ├── CityScene.js            # City hub tilemap (9KB)
-│       ├── FastTravelScene.js      # Taxi/fast travel system (11KB)
+│   ├── ui/                         # ── REACT UI COMPONENTS ──
+│   │   ├── AdminDashboard.jsx      # God Mode (6 tabs + mobile FAB)
+│   │   ├── PlayerDashboard.jsx     # Stats/ledger overlay
+│   │   ├── InventoryDashboard.jsx  # Collection viewer
+│   │   ├── ScenePlayer.jsx         # ink.js scene selector + player
+│   │   ├── TerminalLogin.jsx       # Boot sequence / profile select
+│   │   ├── SettingsOverlay.jsx     # Game settings UI
+│   │   ├── DialogueBox.jsx         # Global dialogue overlay
+│   │   ├── MobileJoypad.jsx        # D-pad + A/B buttons
+│   │   └── ErrorBoundary.jsx       # React error boundary
+│   │
+│   ├── sprites/                    # ── ENTITY CLASSES ──
+│   │   ├── Player.js               # Decoupled player sprite
+│   │   └── NPC.js                  # Decoupled NPC sprite
+│   │
+│   └── scenes/                     # ── PHASER SCENES (14) ──
+│       ├── BaseScene.js            # Shared lifecycle (UI hide/show, cleanup)
+│       ├── BootScene.js            # Asset preloading + animation registry
+│       ├── TitleScene.js           # Title screen (New/Load/QuickStart)
+│       ├── IntroScene.js           # Cinematic narrator intro
+│       ├── CharacterSelectScene.js # 6-phase character creator
+│       ├── WorldScene.js           # GridEngine overworld (NPCs, dialog, encounters)
+│       ├── CityScene.js            # City hub (clickable location cards)
+│       ├── LocationScene.js        # Room navigation (venue interiors)
+│       ├── HaggleScene.js          # Haggle battle (pre-battle cinematic + tactics)
+│       ├── DialogueScene.js        # Event rendering + multi-step engine
+│       ├── MacDialogueScene.js     # 1-bit Macintosh visual novel
+│       ├── FastTravelScene.js      # Taxi/fast travel system
+│       ├── MenuScene.js            # Simple menu scene
 │       └── EndScene.js             # Game over summary
 │
 ├── public/
@@ -317,11 +289,13 @@ game/
 │   ├── sprites/                    # 8 dealer sprites + 18 NPC portraits
 │   ├── portraits/                  # 3 character class portraits
 │   ├── art/                        # In-game artwork assets
-│   ├── assets/tilesets/            # Tileset data for overworld
+│   ├── assets/tilesets/            # 4 tilesets (grounds, world, world2, grounds2)
+│   ├── assets/sprites/             # Player spritesheet (216x384, 12 frames)
+│   ├── content/maps/               # Tiled JSON maps (pallet_town)
 │   ├── icons/                      # PWA icons
-│   ├── player.png, tileset.png
-│   ├── manifest.json, sw.js
-│   └── (index.html is at game root)
+│   └── manifest.json, sw.js
+├── test_game.cjs                   # Unit tests (36 tests)
+├── test_flow.cjs                   # Playwright flow tests (53 tests)
 └── vite.config.js
 ```
 
@@ -336,36 +310,31 @@ game/
 | Multi-step branching engine (`nextSteps`) | ✅ |
 | 16 NPC contacts with phone/favor system | ✅ |
 | Market simulation (8 artists, bull/bear cycles) | ✅ |
-| Terminal UI (30+ screens, keyboard+touch) | ✅ |
-| Save/Load (5 slots, auto-save) | ✅ |
+| Terminal UI (11 screen modules, keyboard+touch) | ✅ |
+| Save/Load (5 slots, auto-save, session persistence) | ✅ |
 | PWA (manifest, service worker, offline) | ✅ |
-| Mobile layout (safe-area, touch targets, swipe) | ✅ |
-| Typewriter screen transitions | ✅ |
-| Pixel art backgrounds (15+ scenes) | ✅ |
-| Haggle Battle v3 (type attributes, Phaser visual) | ✅ |
+| Mobile layout (safe-area, touch targets, joypad) | ✅ |
+| Haggle Battle v3 (type attrs, Phaser visual, pre-battle cinematic) | ✅ |
 | 1-bit Macintosh dialogue scene | ✅ |
-| Scene system (12 Phaser scenes) | ✅ |
+| 14 Phaser scenes (World, City, Location, Haggle, Dialogue, etc.) | ✅ |
 | Rooms + dialogue trees (9 trees, 4 NPCs deep) | ✅ |
-| Weekly report screen (post-advance notification) | ✅ |
 | 28 artworks across 3 tiers | ✅ |
-| Dialogue tree content pipeline template | ✅ |
-| LocationScene (room navigation) | ✅ |
-| OverworldScene (top-down movement) | ✅ |
+| LocationScene (room navigation + venue flow) | ✅ |
+| WorldScene v2 (GridEngine overworld, NPCs, encounters, items) | ✅ |
 | CityScene + FastTravel | ✅ |
-| Settings system | ✅ |
-| News ticker phrase bank | ✅ |
+| Settings system (intro style, color theme, sound) | ✅ |
 | Ego Terminal v2 (sparklines, stat bars, market intel) | ✅ |
-| Calendar & Time UI (event strip, action budget pips) | ✅ |
-| Variable action costs (1-2 AP per action type) | ✅ |
+| Calendar & Action Budget (event strip, AP pips, variable costs) | ✅ |
 | Progressive disclosure (early/mid/late game phases) | ✅ |
-| Calendar event attendance (fairs, auctions, biennales) | ✅ |
-| Venue Dialogue Cutscenes (Gallery, Fair, Freeport etc.) | ✅ |
-| Rooms wired into game loop (full B4/C1) | ❌ TODO |
-| Tone system for dialogues | ❌ TODO |
-| Admin Narrative Dashboard | ❌ TODO |
-| Inventory system | ❌ TODO |
-| Sound design (terminal SFX) | ✅ Partial |
-| Endgame reckoning (Week 26) | ❌ TODO |
+| Admin Dashboard (God Mode — 6 tabs, mobile FAB) | ✅ |
+| Scene Engine (ink.js visual novel — 3 scenes) | ✅ |
+| Inventory Dashboard (React overlay) | ✅ |
+| Sound design (WebAudioService — 16 procedural SFX) | ✅ |
+| MobileJoypad (D-pad, A interact, B sprint) | ✅ |
+| Intro style selection (cinematic vs skip) | ✅ |
+| Tone system for dialogues | Stub |
+| MarketEngine (weekly price fluctuation) | TODO |
+| Endgame reckoning (Week 26) | TODO |
 
 ---
 
@@ -374,18 +343,22 @@ game/
 > **Full tracker: [Roadmap.md](Roadmap.md)**
 
 ```
-  NOW    Phase 3: Foundation & Infrastructure
-  ├──── 3A: Wire dialogue trees + rooms into game loop (B4/C1/C2)
-  ├──── 3B: Admin Narrative Dashboard (God Mode)
-  └──── 3C: Tone system, progressive disclosure, sound
-  ↓
-  NEXT   Phase 4: Content & Narrative Depth
+  NOW    Phase 3: Foundation & Infrastructure (~85% complete)
+  ├──── 3A: Scene flow hardening — WorldScene v2, venue flow ✅
+  ├──── 3B: Admin Dashboard (God Mode — 6 tabs, mobile) ✅
+  ├──── 3C: Sound, progressive disclosure, settings ✅
+  └──── Remaining: Tone system, MarketEngine, store completion
+
+  NEXT   Scene Flow Visual Editor
+  ├──── Node-based React Flow editor for scene transitions
+  └──── Connect all building blocks via visual graph
+
+  LATER  Phase 4: Content & Narrative Depth
   ├──── 4A: Expand artists, perks, character arcs
-  ├──── 4B: Deep branching events, venue encounters, NPC trees
+  ├──── 4B: Deep branching events, venue encounters
   └──── 4C: Freeport, auctions, city content
   ↓
-  LATER  Phase 5: 40-Year Career (Historical Eras)
-  ↓      Phase 6: Polish & Release
+  LATER  Phase 5: 40-Year Career / Phase 6: Polish & Release
 ```
 
 ---
@@ -408,162 +381,23 @@ game/
 
 ---
 
-## ✅ Phase 30: Phaser 3 Pokémon Battle Integration — COMPLETED
+## Completed Phases (Summary)
 
-> **Status:** ✅ COMPLETED. Haggle Battle is now a full visual scene in Phaser 3 with type attributes. Pure-text version backed up to `Art-Market-Game-V1-Backup`. See Phase 16.5c below.
+| Phase | Description | Status |
+|---|---|---|
+| 2.7 | Code Audit Refactoring (8 tasks) | ✅ Complete |
+| 16.5c | Haggle Type & Attribute System | ✅ Complete |
+| 30 | Phaser 3 Battle Integration | ✅ Complete |
+| 31 | Full Systems Integration (partial) | ✅ LocationScene, MacDialogue, scene transitions |
+| 40 | Overworld Exploration Engine | ✅ WorldScene v2, CityScene, FastTravel |
+| 40.5 | Top-Down RPG Refactoring | ✅ Player.js, NPC.js, Y-sorting, MobileJoypad, GridEngine |
+| 41 | City Hub & World Expansion | ✅ CityScene doorway warps, playerLocation tracking, apartment save |
+| 42 | UX Polish (partial) | ✅ Force-exit buttons, WebAudioService (16 SFX), error boundaries |
+| 42b | Phaser Title & Character Selection | ✅ TitleScene, CharacterSelectScene, IntroScene |
+| Sprites | Asset Pipeline | ✅ 18 NPC portraits, 8 dealer sprites, 15+ backgrounds, player sheet |
 
----
-
-## ✅ Phase 16.5c: Haggle Type & Attribute System — COMPLETED
-
-> **Status:** ✅ COMPLETED. 4 tactic types (`Emotional`, `Logical`, `Aggressive`, `Financial`) with rock-paper-scissors effectiveness. Types assigned to all TACTICS, BLUE_OPTIONS, and DEALER_TYPES in `haggle_config.js`. Effectiveness calculated in `HaggleManager.executeTactic()` and feedback rendered in `HaggleScene.js`.
-
----
-
-## 🏗️ Phase 31: Full Systems Integration
-
-> **Status:** PARTIALLY DONE. `LocationScene.js`, `MacDialogueScene.js`, and basic scene transitions between DOM and Phaser exist. Remaining: B4 dialogue tree wiring and full venue flow.
-
-**Remaining Tasks:**
-- [ ] B4: Modify `DialogueScene.js` to add `room_talk` + `dialogue_tree` step types, wire tone system
-- [ ] C1: Wire rooms + dialogue trees into EventManager, GameState, PhoneManager
-- [ ] C2: Testing + verification of full venue flow (Dashboard → Event → Dialogue → Haggle → Dashboard)
-
----
-
-## 🗺️ Phase 40: Overworld Exploration Engine
-
-> **Status:** PARTIALLY DONE. `OverworldScene.js` (12KB), `CityScene.js` (9KB), `FastTravelScene.js` (11KB), and `OverworldHelper.js` (12KB) already exist with basic movement, tilemap loading, and taxi system. See Phase 40.5 for the refactoring plan.
-
----
-
-## 🗺️ Phase 40.5: Top-Down RPG Usability & Code Integration Plan
-
-> **Status:** PLANNING. Based on audits of industry-standard Phaser 3 top-down RPG templates (`phaser3-top-down-template`, `phaser_dungeon_crawler`, `theodoric`), we are refactoring our `LocationScene` and `OverworldScene` approach to ensure long-term scalability, clean code, and excellent usability.
-
-### 1. Code Architecture Audit & Refactor
-*Reference: `phaser3-top-down-template` & `phaser_dungeon_crawler`*
-Our current scenes handle too much generic logic. We need to decouple entities to match best practices:
-- **Extract Player Class (`src/sprites/Player.js`):** Move player creation, GridEngine linkage, WASD/arrow input handling, and animation processing into a standalone class extending `Phaser.Physics.Arcade.Sprite`.
-- **Extract Map Manager (`src/managers/MapManager.js`):** Create a robust helper to load Tiled maps, generate collision layers (`setCollisionByProperty`), and handle map cleanup.
-- **Tilemap Object Spawning:** Do not hardcode NPC coordinates. Read them directly from an `NPCs` object layer in Tiled (`map.getObjectLayer('NPCs')`) to spawn custom `NPC.js` sprites.
-- **Parallel UI Scene (`src/scenes/GameUI.js`):** The HUD/TerminalUI needs to be cleanly decoupled from the physics scene. Run a persistent `GameUI` scene in parallel (`this.scene.run('GameUI')`) to handle UI overlays without being affected by camera zooming or scrolling.
-- **State Syncing (`GameState.state`):** Ensure player coordinates, direction, and current map `roomId` are saved to the persistent game state on scene exit, so returning to the overworld feels seamless.
-
-### 2. Usability & Controls (The "Action RPG" Feel)
-*Reference: `theodoric`*
-The movement needs to feel hyper-responsive and modern.
-- **Control Scheme:** Standardize WASD + Arrow Keys for movement.
-- **Interaction Raycasting:** Add a dedicated interaction key (Spacebar or 'E'). Use GridEngine's `getFacingDirection()` and `getCharactersAt(targetTile)` to trigger dialogues safely.
-- **Pointer/Touch Support:** Implement click-to-move pathfinding (`gridEngine.moveTo`) or a virtual D-Pad in the `GameUI` scene to ensure the game remains fully playable on mobile devices.
-- **Camera Bounds:** Lock the `cameras.main.setBounds(...)` strictly to the tilemap dimensions so the camera never reveals the void outside the map edges.
-
-### 3. Visual Depth & Layering
-*Reference: `phaser_dungeon_crawler`*
-Top-down games break immersion if layering is wrong.
-- **Y-Sorting (Depth by Y-coordinate):** Implement dynamic depth sorting. In the scene or sprite's `update()` loop, set `sprite.setDepth(sprite.y)` so entities overlap correctly.
-- **Overhead Masks:** Use custom "wall_above" or "roof" layers in Tiled. These must be rendered *above* the player sprite (e.g., `setDepth(9999)`) to act as masks when the player walks closely behind tall objects.
-
-### Implementation Checklist
-- [ ] Create `src/sprites/Player.js` hooked to GridEngine and keyboard inputs.
-- [ ] Create `src/sprites/NPC.js` to standardize GridEngine setup and ambient wandering behaviors.
-- [ ] Create `src/anims/CharacterAnims.js` to centralize all `.anims.create` calls.
-- [ ] Create `src/managers/MapManager.js` to abstract Tiled map parsing and collision setup.
-- [ ] Refactor `LocationScene.js`/`OverworldScene.js` to utilize the new decoupled classes.
-- [ ] Establish a parallel `GameUI.js` scene for overlays.
-- [ ] Add directional interaction raycasting (tied to Spacebar/E) for talking to NPCs.
-- [ ] Create dynamic Y-sorting logic (`setDepth(y)`) for all moving objects.
-- [ ] Add "wall_above" roof mask layers in Tiled rendering above the player.
-- [ ] Add collision debug toggles (using `phaser_dungeon_crawler`'s `debugDraw` pattern).
-- [ ] Implement mobile control fallbacks (click-to-move or virtual joystick).
-- [ ] Connect `GameState.state.location` persistence so the player resumes exactly where they left off after an encounter.
-
----
-
-## 🏙️ Phase 41: City Hub & World Expansion
-
-> **Status:** PARTIALLY DONE. `CityScene.js` and `FastTravelScene.js` already exist with basic city tilemap rendering and taxi fast-travel. Remaining: doorway warps, persistent spawn tracking, ambient polish.
-
-**Remaining Tasks:**
-- [ ] Implement doorway warps — walking into a gallery door loads `LocationScene` interiors
-- [ ] Configure persistent `GameState.state.playerLocation` tracking
-- [ ] Build the Apartment as the player's primary hub/save point
-- [ ] Add ambient city elements (animated pedestrians, day/night tinting)
-- [ ] Build master `CityMap.json` in Tiled (streets, Chelsea gallery district, airport)
-
----
-
-## 🛠️ Phase 42: UX Polish & Robustness Test Hub
-
-> **Status:** PLANNED. Hardening the interactive systems against soft-locks, adding sensory polish (sound/animation), and building an explicit testing hub into the Main Menu.
-
-**The Polish & Test Goal:**
-Ensure the custom dialogue and haggle logic has unbreakable fallbacks (like force-quit buttons) so players never get stuck. Add the sensory layer (ambient audio, weather effects), and expose all these modules directly on the Title Screen so we can rapidly test art and logic integration.
-
-### Execution Plan & Agent Tasks
-
-#### 🛡️ Agent-1: Robustness & Error Handling (Lead)
-- **Task 1:** Update `MacDialogueScene.js` and `DialogueScene.js` to include failsafe "Force Exit" or "Back" buttons (e.g., `ESC` key or a persistent UI button).
-- **Task 2:** Ensure broken dialogue sequences or missing assets do not crash the game; implement graceful fallbacks (e.g., pure white background if image fails to load).
-- **Task 3:** Expand the Main Menu to include a dedicated "Test Hub" section with shortcuts to:
-  - 💬 `Test RPG Dialogue Scene` (Already started)
-  - 🤝 `Test Haggle Scene` (Direct jump into a generic haggle config)
-  - 🚶 `Test Overworld/City` (Direct to exploration)
-
-#### ✨ Agent-2: Sensory Polish — Animations & Audio (Support)
-- **Task 1:** Build out scene-specific CSS or Phaser particle animations (e.g., animated rain out the window, cigarette smoke, blinking cursors).
-- **Task 2:** Introduce simple Web Audio API integration for:
-  - Terminal blips and UI typing sounds.
-  - Ambient noise (gallery murmur, street traffic).
-- **Task 3:** Smooth out timing for the MacDialogueScene typewriter effect, allowing the player to rapidly skip ahead linearly without sequence breaking.
-
-#### 🎨 Agent-3: 1-Bit Asset Refinement (Support)
-- **Task 1:** Continue generating and iterating on 1-bit backgrounds and portraits for the MacDialogue aesthetics.
-- **Task 2:** Create standard UI asset sets (speech bubbles, dialog boxes, cursor icons) to replace primitive drawn rectangles in Phaser.
-
----
-
-## 🎨 Sprite Generation Pipeline
-
-> **Status:** RESEARCH COMPLETE. Pipeline documented. 8 dealer sprites + 18 NPC portraits + 15 backgrounds generated. See [README_ARCHIVE.md](README_ARCHIVE.md) for full master prompt templates and post-processing pipeline details.
-
-### Asset Manifest
-
-| Asset | Current | Needed | Priority |
-|---|---|---|---|
-| NPC Portraits | 18 portraits | All 16 contacts covered | ✅ Done |
-| Dealer Sprites | 8 dealer sprites | 6 dealer types covered | ✅ Done |
-| Player Walking Sheet | `player.png` + `player_walk.png` | 3 class variants | MEDIUM |
-| Scene Backgrounds | 15+ | Sufficient for current content | ✅ Done |
-| Item Icons | none | artworks, phone, menu | LOW |
-| UI Elements | none | buttons, frames, cursors | LOW |
-
-### Implementation Tasks
-- [x] Generate NPC portraits for all contact archetypes
-- [x] Generate dealer sprites for all dealer types
-- [x] Generate scene backgrounds (gallery, backroom, 1-bit variants)
-- [ ] Create `scripts/bg_remove.py` with color-key and rembg modes
-- [ ] Create `scripts/sprite_slice.py` for spritesheet cutting
-- [ ] Generate 3 player class walking spritesheets
-- [ ] Store master prompts in `07_Project/sprite_prompts.md` for reproducibility
-
----
-
-## 🎮 Phase 42: Phaser-Based Title & Character Selection
-
-> **Status:** PLANNING. We are transitioning the game's Title and Character Selection screens from the DOM-based `TerminalUI` to fully graphical, animated Phaser scenes, drawing inspiration from classic RPGs like Pokemon.
-
-### 1. Code Architecture Review
-Currently, ArtLife's entry flow (`characterSelectScreen`, `characterDetailScreen`) relies exclusively on drawing HTML strings to a static `div`. We will introduce a distinct pre-game Scene flow that completely bypasses `TerminalUI` until the player enters the main game loop (`Dashboard`).
-
-### 2. Scene Blueprint
-- **`src/scenes/TitleScene.js`:** A full-screen pixel-art background with a pulsing "Press SPACE to Start" prompt. Booted immediately by `main.js`.
-- **`src/scenes/CharacterSelectScene.js`:** Arrow keys or WASD cycle through graphical portrait cards representing each archetype (`rich_kid`, `hedge_fund`, `gallery_insider`). The bottom screen dynamically types out the character stats via a typewriter effect. Pressing SPACE commits the choice, triggering `GameState.init(char)` and advancing to the overworld.
-
-### Implementation Tasks
-- [ ] Create `src/scenes/TitleScene.js` with pulsing "Press SPACE" animation.
-- [ ] Create `src/scenes/CharacterSelectScene.js` with graphical portrait navigation.
-- [ ] Implement keyboard cursors (Up/Down or Left/Right) to cycle through imported `CHARACTERS`.
-- [ ] Implement typewriter effect for the character description text panel.
-- [ ] Update `main.js` to boot `TitleScene` first, keeping the HTML Terminal hidden until needed.
-- [ ] Wire the final selection to fire `GameState.init(char)` and transition cleanly to the `Dashboard` or `OverworldScene`.
+### Remaining Work (Phase 3 Completion)
+- Tone system for dialogue variation (5 tones: Friendly, Schmoozing, Direct, Generous, Ruthless)
+- MarketEngine (weekly price fluctuation based on artist heat, era modifiers)
+- Zustand store completion (marketStore, consequenceStore flesh-out)
+- Scene Flow Visual Editor (node-based React Flow for connecting building blocks)

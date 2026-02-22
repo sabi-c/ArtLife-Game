@@ -183,7 +183,7 @@ export default class WorldScene extends BaseScene {
         // ── Catalog interactive objects ──
         this.doors = [];
         this.dialogs = [];
-        this.grassZones = [];
+        this.grassTiles = new Set(); // individual grass tile positions
         this.items = [];
 
         for (const obj of objects) {
@@ -194,17 +194,31 @@ export default class WorldScene extends BaseScene {
                 for (const p of obj.properties) props[p.name] = p.value;
             }
 
-            if (obj.name === 'door' || obj.type === 'door') {
+            const nameOrType = obj.name || obj.type || '';
+
+            if (nameOrType === 'door') {
                 this.doors.push({ x: tx, y: ty, nextMap: props.nextMap, ...props });
-            } else if (obj.name === 'dialog' || obj.type === 'dialog') {
+            } else if (nameOrType === 'dialog') {
                 this.dialogs.push({ x: tx, y: ty, content: props.content || obj.name, ...props });
-            } else if (obj.type === 'grass') {
-                // Grass zones are rectangles — store tile bounds
-                const w = Math.ceil((obj.width || tileW) / tileW);
-                const h = Math.ceil((obj.height || tileH) / tileH);
-                this.grassZones.push({ x: tx, y: ty, w, h });
-            } else if (obj.type === 'item') {
-                this.items.push({ x: tx, y: ty, name: props.item || 'mysterious object', id: `item_${tx}_${ty}` });
+            } else if (nameOrType === 'grass') {
+                // Grass objects can be points (single tile) or rectangles
+                if (obj.width > 0 && obj.height > 0) {
+                    const w = Math.ceil(obj.width / tileW);
+                    const h = Math.ceil(obj.height / tileH);
+                    for (let gx = 0; gx < w; gx++) {
+                        for (let gy = 0; gy < h; gy++) {
+                            this.grassTiles.add(`${tx + gx},${ty + gy}`);
+                        }
+                    }
+                } else {
+                    // Point object — single grass tile
+                    this.grassTiles.add(`${tx},${ty}`);
+                }
+            } else if (nameOrType === 'pokeball' || nameOrType === 'item') {
+                const itemName = props.pokemon_inside
+                    ? `Pokeball (#${props.pokemon_inside})`
+                    : (props.item || 'mysterious object');
+                this.items.push({ x: tx, y: ty, name: itemName, id: `item_${tx}_${ty}` });
             }
         }
 
@@ -219,27 +233,29 @@ export default class WorldScene extends BaseScene {
         this._spawnItems();
 
         // ── GridEngine setup ──
-        const charLayer = renderedLayers.includes('world') ? 'world' : renderedLayers[renderedLayers.length - 1];
+        // Detect charLayer from Tiled's ge_charLayer property (set by GridEngine plugin in Tiled)
+        // Phaser converts Tiled layer properties to flat objects: { ge_charLayer: "world2" }
+        let charLayer = undefined;
+        for (const layerData of this.map.layers) {
+            const val = layerData.properties?.ge_charLayer;
+            if (val) { charLayer = val; break; }
+        }
 
-        const characters = [{
-            id: 'player',
-            sprite: this.playerSprite,
-            walkingAnimationMapping: 0,
-            startPosition: { x: spawnX, y: spawnY },
-            charLayer,
-            speed: 4,
-        }];
+        const charConfig = (id, sprite, startPosition, speed) => {
+            const cfg = { id, sprite, walkingAnimationMapping: 0, startPosition, speed };
+            if (charLayer) cfg.charLayer = charLayer;
+            return cfg;
+        };
+
+        const characters = [
+            charConfig('player', this.playerSprite, { x: spawnX, y: spawnY }, 4),
+        ];
 
         // Add NPC characters
         for (const npc of this.npcData) {
-            characters.push({
-                id: npc.id,
-                sprite: npc.sprite,
-                walkingAnimationMapping: 0,
-                startPosition: npc.startPosition,
-                charLayer,
-                speed: npc.speed,
-            });
+            characters.push(
+                charConfig(npc.id, npc.sprite, npc.startPosition, npc.speed)
+            );
         }
 
         this.gridEngine.create(this.map, {
@@ -273,6 +289,10 @@ export default class WorldScene extends BaseScene {
                     y: pos.y,
                     facing,
                 };
+
+                // Drain 1 minute from the narrative clock per tile step
+                GameState.advanceTime(1);
+
                 // Check grass encounters
                 this._checkGrassEncounter(pos);
                 // Check item pickups
@@ -324,7 +344,14 @@ export default class WorldScene extends BaseScene {
 
         // ── Notify React ──
         GameEventBus.emit(GameEvents.SCENE_READY, 'WorldScene');
-        console.log('[WorldScene] Ready. NPCs:', this.npcData.length, 'Items:', this.items.length);
+        console.log('[WorldScene] Ready.',
+            'charLayer:', charLayer || '(implicit)',
+            'NPCs:', this.npcData.length,
+            'Items:', this.items.length,
+            'Grass tiles:', this.grassTiles.size,
+            'Doors:', this.doors.length,
+            'Dialogs:', this.dialogs.length,
+        );
     }
 
     // ════════════════════════════════════════════════════
@@ -641,11 +668,7 @@ export default class WorldScene extends BaseScene {
         if (this.grassCooldown > 0) return;
         if (this.dialogActive) return;
 
-        const inGrass = this.grassZones.some(zone =>
-            pos.x >= zone.x && pos.x < zone.x + zone.w &&
-            pos.y >= zone.y && pos.y < zone.y + zone.h
-        );
-
+        const inGrass = this.grassTiles.has(`${pos.x},${pos.y}`);
         if (!inGrass) return;
 
         // Don't trigger on the same tile twice in a row
@@ -710,9 +733,24 @@ export default class WorldScene extends BaseScene {
         const { width, height } = this.scale;
         this.daylightOverlay.clear();
 
-        const week = GameState.state?.week || 1;
-        const normalizedTime = (week % 26) / 26;
-        const alpha = Math.abs(0.5 - normalizedTime) * 0.3; // 0 to 0.15
+        const hour = GameState.state?.hour ?? 8;
+        const minute = GameState.state?.minute ?? 0;
+
+        let alpha = 0;
+        const timeDec = hour + minute / 60;
+
+        // Narrative Lighting Scale:
+        // 8am - 5pm (17:00): 0 alpha (Bright)
+        // 5pm - 8pm (20:00): Ramp to 0.45
+        // 8pm - 4am (04:00): 0.45 alpha (Dark/Night)
+        // 4am - 8am (08:00): Ramp to 0 (Dawn)
+        if (timeDec >= 17 && timeDec < 20) {
+            alpha = ((timeDec - 17) / 3) * 0.45;
+        } else if (timeDec >= 20 || timeDec < 4) {
+            alpha = 0.45;
+        } else if (timeDec >= 4 && timeDec < 8) {
+            alpha = 0.45 - (((timeDec - 4) / 4) * 0.45);
+        }
 
         this.daylightOverlay.fillStyle(0x000033, alpha);
         this.daylightOverlay.fillRect(0, 0, width, height);

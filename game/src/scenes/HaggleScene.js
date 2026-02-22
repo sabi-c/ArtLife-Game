@@ -80,88 +80,21 @@ export class HaggleScene extends BaseScene {
 
     /** Internal scene builder — separated so create()'s try/catch can catch errors */
     _buildScene(width, height) {
-        // ── Cinematic Entry (pokemon-react-phaser battle transition) ──
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-        try {
-            const vignette = this.cameras.main.postFX.addVignette();
-            vignette.radius = 0.75; // Tighter vignette for battle intensity
-        } catch (e) { /* Canvas renderer fallback */ }
+        this.cameras.main.setBackgroundColor('#000000');
 
         // Emit battle start event
         GameEventBus.emit(GameEvents.HAGGLE_START, {
             dealerType: this.state.dealerTypeKey,
             round: this.state.round,
         });
-        const bgKey = this.state.bgKey || 'bg_gallery';
-        if (this.textures.exists(bgKey)) {
-            this.bg = this.add.image(width / 2, height / 2 - 80, bgKey);
-            const scale = Math.max(width / this.bg.width, (height - 250) / this.bg.height);
-            this.bg.setScale(scale).setTint(0x888888);
-        }
 
-        // 2. Sprites
-        const dealerKey = this.state.dealerSpriteKey || `dealer_${this.state.dealerTypeKey || 'patron'}`;
-        const dealerSprite = this.textures.exists(dealerKey) ? dealerKey : 'dealer_patron';
+        // Build the battle scene behind the intro overlay
+        this._buildBattleArena(width, height);
 
-        if (this.textures.exists(dealerSprite)) {
-            const dealerTargetH = 200;
-            const dlTex = this.textures.get(dealerSprite).source[0];
-            const dlScale = dlTex.height > 0 ? dealerTargetH / dlTex.height : 1;
-            this.dealer = this.add.image(width - 180, height / 2 - 60, dealerSprite)
-                .setOrigin(0.5, 1)
-                .setScale(dlScale)
-                .setAlpha(0.95);
-
-            const isWebGL = this.sys.game.renderer.type === Phaser.WEBGL;
-            if (isWebGL) { this.dealer.setBlendMode(Phaser.BlendModes.LIGHTEN); }
-        } else {
-            this.dealer = this.add.text(width - 180, height / 2 - 60, this.state.dealerIcon || '👤', { fontSize: '100px' }).setOrigin(0.5, 1);
-        }
-
-        const playerKey = this.state.playerSpriteKey || 'player_back';
-        if (this.textures.exists(playerKey)) {
-            const playerTargetH = 200;
-            const plTex = this.textures.get(playerKey).source[0];
-            const plScale = plTex.height > 0 ? playerTargetH / plTex.height : 1;
-            this.player = this.add.image(180, height - 200, playerKey)
-                .setOrigin(0.5, 1)
-                .setScale(plScale)
-                .setAlpha(0.95);
-
-            const isWebGL = this.sys.game.renderer.type === Phaser.WEBGL;
-            if (isWebGL) { this.player.setBlendMode(Phaser.BlendModes.LIGHTEN); }
-        } else {
-            this.player = this.add.text(180, height - 200, '🕵️', { fontSize: '120px' }).setOrigin(0.5, 1).setScale(-1, 1);
-        }
-
-        // Letterbox bars
-        this.add.rectangle(0, 0, width, 40, 0x000000).setOrigin(0, 0).setDepth(100);
-        this.add.rectangle(0, height - 40, width, 40, 0x000000).setOrigin(0, 0).setDepth(100);
-        this.roundText = this.add.text(width / 2, 20, `ROUND ${this.state.round || 1} / ${this.state.maxRounds || 5}`, {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
-        }).setOrigin(0.5, 0.5).setDepth(101);
-
-        // Intro slides
-        this.dealer.x += 200;
-        this.dealer.alpha = 0;
-        this.tweens.add({ targets: this.dealer, x: width - 180, alpha: 0.95, duration: 800, ease: 'Power2' });
-
-        this.player.x -= 200;
-        this.player.alpha = 0;
-        this.tweens.add({ targets: this.player, x: 180, alpha: 0.95, duration: 800, ease: 'Power2', delay: 200 });
-
-        // 3. UI
-        this.drawUIContainers(width, height);
-        this.updateBars();
-
-        // 4. Interactive Box
-        this.drawInteractiveUI(width, height);
-
-        // Start opening dialogue
-        this.time.delayedCall(1000, () => {
-            this.playDialogue(this.haggleInfo.openingDialogue || "Let's negotiate.", () => {
-                this.renderTactics();
-            });
+        // Play cinematic intro first, then reveal battle
+        this._playBattleIntro(width, height, () => {
+            // Reveal the battle UI
+            this._revealBattleUI(width, height);
         });
 
         // ── ESC key force-exit (safety hatch) ──
@@ -174,6 +107,215 @@ export class HaggleScene extends BaseScene {
         backBtn.on('pointerover', () => backBtn.setColor('#c9a84c'));
         backBtn.on('pointerout', () => backBtn.setColor('#7a7a8a'));
         backBtn.on('pointerdown', () => this.forceExit());
+    }
+
+    // ════════════════════════════════════════════════════
+    // Pre-Battle Cinematic Intro
+    // ════════════════════════════════════════════════════
+
+    _playBattleIntro(width, height, onComplete) {
+        const INTRO_DEPTH = 500;
+        const introElements = [];
+
+        // Full black overlay
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000)
+            .setDepth(INTRO_DEPTH).setAlpha(1);
+        introElements.push(overlay);
+
+        // Narrow "eye" letterbox bars (cinematic widescreen effect)
+        const barH = height * 0.35;
+        const topBar = this.add.rectangle(width / 2, 0, width, barH, 0x000000)
+            .setOrigin(0.5, 0).setDepth(INTRO_DEPTH + 5);
+        const bottomBar = this.add.rectangle(width / 2, height, width, barH, 0x000000)
+            .setOrigin(0.5, 1).setDepth(INTRO_DEPTH + 5);
+        introElements.push(topBar, bottomBar);
+
+        // "Eye stripe" — the visible band between bars showing a dramatic gradient
+        const eyeStripe = this.add.rectangle(width / 2, height / 2, width, height * 0.3, 0x1a0a0a)
+            .setDepth(INTRO_DEPTH + 1).setAlpha(0);
+        introElements.push(eyeStripe);
+
+        // Dealer name (right side)
+        const dealerName = this.state.npcName || this.state.dealerName || 'The Dealer';
+        const dealerText = this.add.text(width + 200, height / 2 - 8, dealerName.toUpperCase(), {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#c94040',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 0, fill: true },
+        }).setOrigin(1, 1).setDepth(INTRO_DEPTH + 3);
+        introElements.push(dealerText);
+
+        // Player name (left side)
+        const playerName = window._artLifeState?.playerName || 'YOU';
+        const playerText = this.add.text(-200, height / 2 + 8, playerName.toUpperCase(), {
+            fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#4a9eff',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 0, fill: true },
+        }).setOrigin(0, 0).setDepth(INTRO_DEPTH + 3);
+        introElements.push(playerText);
+
+        // "VS" text (center)
+        const vsText = this.add.text(width / 2, height / 2, 'VS', {
+            fontFamily: '"Press Start 2P"', fontSize: '28px', color: '#c9a84c',
+            shadow: { offsetX: 3, offsetY: 3, color: '#000', blur: 0, fill: true },
+        }).setOrigin(0.5).setDepth(INTRO_DEPTH + 4).setAlpha(0).setScale(3);
+        introElements.push(vsText);
+
+        // Narrative flavor text
+        const flavors = [
+            'The air grows tense...',
+            'A battle of wits begins.',
+            'Every word is a weapon.',
+            'The stakes couldn\'t be higher.',
+            'Two forces collide.',
+        ];
+        const flavor = flavors[Math.floor(Math.random() * flavors.length)];
+        const flavorText = this.add.text(width / 2, height / 2 + 50, flavor, {
+            fontFamily: '"Playfair Display", serif', fontSize: '16px', color: '#888',
+            fontStyle: 'italic',
+        }).setOrigin(0.5).setDepth(INTRO_DEPTH + 3).setAlpha(0);
+        introElements.push(flavorText);
+
+        // ── Animation Timeline ──
+        WebAudioService.sceneEnter();
+
+        // Phase 1 (0ms): Reveal the eye stripe
+        this.tweens.add({
+            targets: overlay, alpha: 0.85, duration: 300,
+        });
+        this.tweens.add({
+            targets: eyeStripe, alpha: 1, duration: 400,
+        });
+
+        // Phase 2 (400ms): Slide in names from opposite sides
+        this.tweens.add({
+            targets: dealerText, x: width - 40, duration: 600, ease: 'Power3', delay: 400,
+        });
+        this.tweens.add({
+            targets: playerText, x: 40, duration: 600, ease: 'Power3', delay: 500,
+        });
+
+        // Phase 3 (1000ms): VS slam with screen shake
+        this.time.delayedCall(1000, () => {
+            WebAudioService.hit();
+            vsText.setAlpha(1);
+            this.tweens.add({
+                targets: vsText, scale: 1, duration: 300, ease: 'Back.easeOut',
+            });
+            // Screen shake
+            this.cameras.main.shake(200, 0.01);
+        });
+
+        // Phase 4 (1400ms): Show flavor text
+        this.tweens.add({
+            targets: flavorText, alpha: 1, duration: 500, delay: 1400,
+        });
+
+        // Phase 5 (2500ms): Flash and clear intro
+        this.time.delayedCall(2500, () => {
+            // White flash
+            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff)
+                .setDepth(INTRO_DEPTH + 10).setAlpha(0);
+            introElements.push(flash);
+
+            this.tweens.add({
+                targets: flash, alpha: 0.8, duration: 100, yoyo: true, hold: 50,
+                onComplete: () => {
+                    // Fade out all intro elements
+                    for (const el of introElements) {
+                        this.tweens.add({
+                            targets: el, alpha: 0, duration: 400,
+                            onComplete: () => el.destroy(),
+                        });
+                    }
+                    // Open letterbox bars
+                    this.tweens.add({
+                        targets: topBar, y: -barH, duration: 500, ease: 'Power2',
+                    });
+                    this.tweens.add({
+                        targets: bottomBar, y: height + barH, duration: 500, ease: 'Power2',
+                    });
+
+                    this.time.delayedCall(500, onComplete);
+                },
+            });
+        });
+    }
+
+    // ════════════════════════════════════════════════════
+    // Battle Arena Setup (built behind intro overlay)
+    // ════════════════════════════════════════════════════
+
+    _buildBattleArena(width, height) {
+        // Background
+        const bgKey = this.state.bgKey || 'bg_gallery';
+        if (this.textures.exists(bgKey)) {
+            this.bg = this.add.image(width / 2, height / 2 - 80, bgKey);
+            const scale = Math.max(width / this.bg.width, (height - 250) / this.bg.height);
+            this.bg.setScale(scale).setTint(0x888888);
+        }
+
+        // Dealer sprite
+        const dealerKey = this.state.dealerSpriteKey || `dealer_${this.state.dealerTypeKey || 'patron'}`;
+        const dealerSprite = this.textures.exists(dealerKey) ? dealerKey : 'dealer_patron';
+
+        if (this.textures.exists(dealerSprite)) {
+            const dealerTargetH = 200;
+            const dlTex = this.textures.get(dealerSprite).source[0];
+            const dlScale = dlTex.height > 0 ? dealerTargetH / dlTex.height : 1;
+            this.dealer = this.add.image(width - 180, height / 2 - 60, dealerSprite)
+                .setOrigin(0.5, 1).setScale(dlScale).setAlpha(0);
+
+            const isWebGL = this.sys.game.renderer.type === Phaser.WEBGL;
+            if (isWebGL) { this.dealer.setBlendMode(Phaser.BlendModes.LIGHTEN); }
+        } else {
+            this.dealer = this.add.text(width - 180, height / 2 - 60, this.state.dealerIcon || '', { fontSize: '100px' }).setOrigin(0.5, 1).setAlpha(0);
+        }
+
+        // Player sprite
+        const playerKey = this.state.playerSpriteKey || 'player_back';
+        if (this.textures.exists(playerKey)) {
+            const playerTargetH = 200;
+            const plTex = this.textures.get(playerKey).source[0];
+            const plScale = plTex.height > 0 ? playerTargetH / plTex.height : 1;
+            this.player = this.add.image(180, height - 200, playerKey)
+                .setOrigin(0.5, 1).setScale(plScale).setAlpha(0);
+
+            const isWebGL = this.sys.game.renderer.type === Phaser.WEBGL;
+            if (isWebGL) { this.player.setBlendMode(Phaser.BlendModes.LIGHTEN); }
+        } else {
+            this.player = this.add.text(180, height - 200, '', { fontSize: '120px' }).setOrigin(0.5, 1).setScale(-1, 1).setAlpha(0);
+        }
+
+        // Letterbox bars (persistent battle chrome)
+        this.add.rectangle(0, 0, width, 40, 0x000000).setOrigin(0, 0).setDepth(100);
+        this.add.rectangle(0, height - 40, width, 40, 0x000000).setOrigin(0, 0).setDepth(100);
+        this.roundText = this.add.text(width / 2, 20, `ROUND ${this.state.round || 1} / ${this.state.maxRounds || 5}`, {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
+        }).setOrigin(0.5, 0.5).setDepth(101);
+    }
+
+    _revealBattleUI(width, height) {
+        try {
+            const vignette = this.cameras.main.postFX.addVignette();
+            vignette.radius = 0.75;
+        } catch (e) { /* Canvas renderer fallback */ }
+
+        // Slide in sprites
+        this.dealer.x += 200;
+        this.tweens.add({ targets: this.dealer, x: width - 180, alpha: 0.95, duration: 800, ease: 'Power2' });
+
+        this.player.x -= 200;
+        this.tweens.add({ targets: this.player, x: 180, alpha: 0.95, duration: 800, ease: 'Power2', delay: 200 });
+
+        // Build UI
+        this.drawUIContainers(width, height);
+        this.updateBars();
+        this.drawInteractiveUI(width, height);
+
+        // Start opening dialogue
+        this.time.delayedCall(1000, () => {
+            this.playDialogue(this.haggleInfo.openingDialogue || "Let's negotiate.", () => {
+                this.renderTactics();
+            });
+        });
     }
 
     drawUIContainers(width, height) {

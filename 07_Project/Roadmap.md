@@ -11,8 +11,13 @@
 **Build:** Clean (no new warnings)
 **Branch:** `main`
 **Deployed:** Cloudflare Pages
+**Phase 3:** ~85% complete
 
 ### Recently Completed
+- **WorldScene GridEngine Fix** — Fixed charLayer detection (reads `ge_charLayer` from Tiled map properties instead of hardcoding), fixed grass/item object detection (Tiled objects use `name` not `type`), improved error logging.
+- **Scene Engine with Scene Library** — ScenePlayer now has a scene selector UI with 3 ink.js scenes (The Boom Room, Gallery Opening, Studio Visit). Each scene has full branching narratives with rewards, consequences, and NPC interactions.
+- **Haggle Pre-Battle Cinematic** — Dramatic intro sequence before haggle battles: narrowing letterbox bars, player vs dealer name slide-in, "VS" slam with screen shake, flavor text, white flash reveal. ~120 lines of animation code.
+- **README Comprehensive Update** — Updated What's Built table, project structure, code health, agent coordination, active roadmap, consolidated completed phases.
 - **Admin Scene Cleanup + Intro Settings** — Reorganized SCENES tab (clear labels + descriptions, legacy OverworldScene dimmed, added CharacterCreator + MacDialogue launchers). Added `introStyle` setting (Cinematic Briefing / Skip to Creator) to SettingsManager + SettingsOverlay. TitleScene respects setting. Scene transition sounds (sceneEnter/sceneExit/doorEnter/itemPickup) added to WebAudioService and wired into WorldScene. CityScene exit fixed with proper event emission. Added WORLD/MENU to scene-keys.js.
 - **WorldScene v2 — Full Pokemon-style overworld** — Complete rewrite with NPC spawning from Tiled objects (tinted sprites, random wandering, face-player-on-interact), full dialog box system (typewriter text, player freeze, SPACE to advance/dismiss, speaker labels), door transitions with camera fade, grass encounter zones (8 art-world themed random events with stat effects), item pickup with tween animations, daylight overlay based on in-game week, sprint mode (SHIFT key + mobile B button), wipe transition on entry, Y-depth sorting for all characters, position persistence to GameState. MobileJoypad v2 with B sprint button + A interact button. Comprehensive 450+ LOC scene.
 - **Sprint: WorldScene + MobileJoypad Integration** — Pokemon-style grid walking with Tiled maps (pallet_town.json, 26x27, 48px tiles), 4 tilesets, proper layer depth ordering, GridEngine collision from tile properties, spawn from Tiled objects, door/dialog interactions, ESC exit. MobileJoypad D-pad overlay with 56px touch targets, action button, exit button. Admin Dashboard + late-game terminal launch. Systemic Lattice Triggers (4 fail-state arcs). Haggle + stat change sound effects.
@@ -311,30 +316,17 @@
 
 ---
 
-## Phase 8 — Polish, Audio & Analytics
-
-> **Goal:** Final polish layer before sharing the MVP with external playtesters.
+## Phase 8 — Polish, Audio & Release
 
 | Task | Status | Notes |
 |---|---|---|
-| Tactile Audio Implementation | TODO | `WebAudioService` for typewriter clacks, auction gavels, startup hums |
-| Keyboard-First Navigation | TODO | Arrow Key + Enter mapping across the Ego Dashboard and Terminal |
-| Asynchronous Leaderboards | TODO | Firebase POST integration to upload Week 26 final values globally |
-
----
-
-## Phase 6 — Polish & Release
-
-| Task | Status |
-|---|---|
-| Full pixel art pass (portraits, backgrounds, UI) | TODO |
-| 8-bit noir visual effects (CRT overlay, scanlines, grain) | TODO |
-| **Comprehensive UI & Data Audit (Anti-Cheat / Security)** | TODO | Conduct deep research into securing state against DOM manipulation/cheating |
-| Sound design (chiptune/ambient + SFX) | TODO |
-| Tutorial / onboarding (guided first week) | TODO |
-| Playtesting & balance (market math, event frequency) | TODO |
-| Endgame reckoning (Week 26+: museum retrospective, SEC investigation, legacy) | TODO |
-| Publish on itch.io | TODO |
+| Tactile Audio | ✅ Done | WebAudioService: 16 procedural SFX (type, hover, select, hit, miss, etc.) |
+| Keyboard-First Navigation | ✅ Done | Arrow/WASD + Enter across terminal, SPACE in Phaser scenes |
+| Full pixel art pass | TODO | Portraits, backgrounds, UI elements |
+| Tutorial / onboarding | TODO | Guided first week |
+| Playtesting & balance | TODO | Market math, event frequency |
+| Week 26 endgame reckoning | TODO | Museum retrospective, SEC investigation |
+| Publish on itch.io | TODO | |
 
 ---
 
