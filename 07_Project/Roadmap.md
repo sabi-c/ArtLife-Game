@@ -13,6 +13,7 @@
 **Deployed:** Cloudflare Pages
 
 ### Recently Completed
+- **Sprint 0.5: QA & Testing Pipeline** — Wrote `TestReporter.js` for Playwright, ensuring headless tests cleanly isolate blocks, trap browser/network `console.error` anomalies, generate state-dump JSON artifacts upon failure, and instantly capture visual `page.screenshot()` proof. Fixed cross-contamination across async `page.evaluate` runs. Test suite is robust 5/5.
 - **Sprint: Module Hardening & Architecture** — Full DialogueEngine rewrite with 5-tone system (Friendly/Schmoozing/Direct/Generous/Ruthless), tone tracking, condition evaluation, effect application (75→370 LOC). MarketManager.tick() wired into WeekEngine pipeline (prices now actually fluctuate weekly). MarketStore fleshed out with price history, artist snapshots, weekly news generation. InventoryStore expanded with provenance tracking. ConsequenceStore made persistent with full queue management. TerminalAPI updated with all store references. Fixed missing useEventStore import in WeekEngine.
 - **Mobile Admin Dashboard** — AdminFAB floating button for touch devices, responsive full-screen layout on mobile, 44px touch targets, Phaser Plugin Inspector for dev-only debugging.
 - **Dashboard HUD Upgrade + World Map + User Profiles & Auth** — Rich header panel (character info, city, week, net worth trend), side-by-side Financials+Stats on desktop, warning bar for elevated anti-resources, styled pipeline panel, clickable world map cities with event markers (◈ fair, ◆ auction, ● event), travel-from-map with AP confirmation, PBKDF2 password-protected user profiles (`ProfileManager.js`), profile-scoped save slots, profile create/login/guest flows in `TerminalLogin.jsx`, Switch Agent + Delete Agent in system menu, ~100 lines new CSS
@@ -217,7 +218,15 @@
 | Refactor `App.jsx` React UI Router | TODO | Enforce `activeView` instead of raw DOM manipulations |
 | Save/Load Centralization | TODO | A master payload bundling all Zustand stores into localstorage |
 
-### 4B. The Content Asset Pipeline
+### 4B. The Grid Walking Prototype (Sprint 1.5)
+| Task | Status | Notes |
+|---|---|---|
+| Asset Porting | TODO | Extract `pallet-town` tilemaps and player sprites from the `pokemon-react-phaser` archive. |
+| The WorldScene Rebuild | TODO | Rebuild `WorldScene.js` natively loading Tilemap layers via GridEngine parameters. |
+| React MobileJoypad Overlay | TODO | D-pad and Action button dispatching events directly to the Phaser engine. |
+| Admin Test Trigger & Exit UI | TODO | Dev-only launch button via the Admin Dashboard and an instant `GameDebugAPI.exitScene()` teardown button. |
+
+### 4C. The Content Asset Pipeline
 | Task | Status | Notes |
 |---|---|---|
 | JSON Asset Migration | TODO | Convert massive `.js` arrays (`artworks.js`, `events.js`) into `.json` files |

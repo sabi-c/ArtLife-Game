@@ -183,6 +183,10 @@ export default function AdminDashboard({ onClose }) {
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>INSTANCED SCENES</div>
                             <button style={btnStyle} onClick={launchHaggleBattle}>[ Launch: Haggle Battle ]</button>
+                            <button style={btnStyle} onClick={() => {
+                                window.game.startTestScene('WorldScene');
+                                onClose();
+                            }}>[ Mount GridEngine Prototype (Pokemon) ]</button>
                         </div>
                     </div>
                 )}

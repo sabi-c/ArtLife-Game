@@ -27,6 +27,7 @@ import { CityScene } from './scenes/CityScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { EndScene } from './scenes/EndScene.js';
 import { FastTravelScene } from './scenes/FastTravelScene.js';
+import WorldScene from './scenes/WorldScene.js';
 
 // Managers & stores
 import { TerminalUI } from './terminal/TerminalUI.js';
@@ -63,6 +64,7 @@ const sceneList = [
     MenuScene,
     EndScene,
     FastTravelScene,
+    WorldScene,
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────

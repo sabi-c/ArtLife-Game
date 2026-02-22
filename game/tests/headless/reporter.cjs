@@ -1,148 +1,295 @@
 /**
- * TestReporter.cjs
- * Comprehensive test reporter and error handler for Playwright.
- * Captures screenshots, console logs, network errors, and outputs structured JSON reports.
+ * TestReporter.cjs — Comprehensive test reporter for ArtLife Playwright tests
+ *
+ * Features:
+ * - Hard assertions (throw on fail) and soft assertions (log + continue)
+ * - Automatic screenshot on failure with game state capture
+ * - Browser console error / warning / page error aggregation
+ * - Network failure tracking
+ * - Structured JSON + Markdown report output
+ * - Per-test timing, per-suite summary
+ * - Section grouping for organized output
  */
 const fs = require('fs');
 const path = require('path');
+
+const C = {
+    reset: '\x1b[0m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    cyan: '\x1b[36m',
+    dim: '\x1b[90m',
+    bold: '\x1b[1m',
+};
 
 class TestReporter {
     constructor(page, reportDir = 'reports') {
         this.page = page;
         this.reportDir = path.resolve(__dirname, '../../', reportDir);
         this.screenshotsDir = path.join(this.reportDir, 'screenshots');
+        this.startTime = Date.now();
+        this.currentSection = null;
         this.results = {
             total: 0,
             passed: 0,
             failed: 0,
+            warned: 0,
+            sections: [],
             tests: [],
-            browserLogs: [],
-            networkErrors: []
+            browserErrors: [],
+            browserWarnings: [],
+            networkErrors: [],
+            pageErrors: [],
         };
 
         // Ensure directories exist
         if (!fs.existsSync(this.reportDir)) fs.mkdirSync(this.reportDir, { recursive: true });
         if (!fs.existsSync(this.screenshotsDir)) fs.mkdirSync(this.screenshotsDir, { recursive: true });
 
-        // Set up listeners
+        // Browser log listeners
         this.page.on('console', msg => {
             const text = msg.text();
-            this.results.browserLogs.push({ type: msg.type(), text });
             if (msg.type() === 'error') {
-                console.log(`\x1b[31m[BROWSER ERROR]\x1b[0m ${text}`);
+                this.results.browserErrors.push({ text, ts: Date.now() });
+                if (!text.includes('Failed to process file') && !text.includes('404')) {
+                    console.log(`  ${C.red}[BROWSER ERROR]${C.reset} ${text.slice(0, 150)}`);
+                }
             } else if (msg.type() === 'warning') {
-                // Ignore verbose warnings unless debugging
-            } else {
-                console.log(`\x1b[90m[BROWSER LOG]\x1b[0m ${text}`);
+                this.results.browserWarnings.push({ text, ts: Date.now() });
             }
         });
 
         this.page.on('pageerror', err => {
-            console.log(`\x1b[31m[PAGE ERROR]\x1b[0m ${err.message}`);
-            this.results.browserLogs.push({ type: 'pageerror', text: err.message, stack: err.stack });
+            this.results.pageErrors.push({ message: err.message, stack: err.stack, ts: Date.now() });
+            console.log(`  ${C.red}[PAGE ERROR]${C.reset} ${err.message}`);
         });
 
         this.page.on('requestfailed', request => {
             const url = request.url();
-            const failure = request.failure()?.errorText || 'Unknown failure';
-            console.log(`\x1b[31m[NETWORK FAILURE]\x1b[0m ${url}: ${failure}`);
-            this.results.networkErrors.push({ url, failure });
+            const failure = request.failure()?.errorText || 'Unknown';
+            // Ignore known missing assets
+            if (url.includes('/sprites/') || url.includes('/backgrounds/')) return;
+            this.results.networkErrors.push({ url, failure, ts: Date.now() });
         });
     }
 
+    /**
+     * Start a named section for grouping tests in the report.
+     */
+    section(name) {
+        this.currentSection = name;
+        this.results.sections.push({ name, startedAt: Date.now() });
+        console.log(`\n${C.bold}${C.cyan}── ${name} ──${C.reset}`);
+    }
+
+    /**
+     * Run a test with hard assertions (first failure stops the test).
+     * Captures screenshots + game state on failure.
+     */
     async runTest(testName, testFn) {
-        console.log(`\n\x1b[36m${testName}\x1b[0m`);
+        const fullName = this.currentSection ? `${this.currentSection} > ${testName}` : testName;
+        console.log(`\n${C.cyan}${testName}${C.reset}`);
         const startTime = Date.now();
         this.results.total++;
 
         const testRecord = {
-            name: testName,
+            name: fullName,
+            section: this.currentSection,
             status: 'pending',
             durationMs: 0,
             assertions: [],
             error: null,
-            screenshotPath: null
+            screenshotPath: null,
+            stateSnapshot: null,
         };
 
-        const localAssert = (condition, label) => {
+        // Hard assert: throws on failure
+        const assert = (condition, label) => {
             if (condition) {
-                console.log(`  ✅ ${label}`);
+                console.log(`  ${C.green}✅${C.reset} ${label}`);
                 testRecord.assertions.push({ status: 'pass', label });
             } else {
-                console.log(`  ❌ ${label}`);
+                console.log(`  ${C.red}❌${C.reset} ${label}`);
                 testRecord.assertions.push({ status: 'fail', label });
                 throw new Error(`Assertion Failed: ${label}`);
             }
         };
 
+        // Soft assert: logs warning but doesn't stop test
+        assert.soft = (condition, label) => {
+            if (condition) {
+                console.log(`  ${C.green}✅${C.reset} ${label}`);
+                testRecord.assertions.push({ status: 'pass', label });
+            } else {
+                console.log(`  ${C.yellow}⚠️${C.reset}  ${label}`);
+                testRecord.assertions.push({ status: 'warn', label });
+                this.results.warned++;
+            }
+        };
+
+        // Info log (no pass/fail)
+        assert.info = (label) => {
+            console.log(`  ${C.dim}ℹ${C.reset}  ${label}`);
+            testRecord.assertions.push({ status: 'info', label });
+        };
+
         try {
-            await testFn(localAssert);
-            testRecord.status = 'pass';
+            await testFn(assert);
+            const hasWarns = testRecord.assertions.some(a => a.status === 'warn');
+            testRecord.status = hasWarns ? 'warn' : 'pass';
             this.results.passed++;
         } catch (error) {
             testRecord.status = 'fail';
             testRecord.error = error.message || error.toString();
             this.results.failed++;
-            console.log(`  💥 \x1b[31mTest Failed: ${testRecord.error}\x1b[0m`);
+            console.log(`  ${C.red}💥 Test Failed: ${testRecord.error}${C.reset}`);
 
-            // Capture Screenshot
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const safeName = testName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const filename = `fail_${safeName}_${timestamp}.png`;
-            const screenshotPath = path.join(this.screenshotsDir, filename);
-
-            try {
-                await this.page.screenshot({ path: screenshotPath, fullPage: true });
-                console.log(`  📸 Screenshot saved: ${filename}`);
-                testRecord.screenshotPath = screenshotPath;
-            } catch (snapErr) {
-                console.log(`  📸 Screenshot failed: ${snapErr.message}`);
-            }
-
-            // Attempt to capture React/Phaser state logic if window.game API is available
-            try {
-                const debugState = await this.page.evaluate(() => {
-                    if (window.game && window.game.debug) {
-                        return window.game.debug();
-                    }
-                    return null;
-                });
-                if (debugState) {
-                    testRecord.stateSnapshot = debugState;
-                }
-            } catch (stateErr) {
-                // Not all pages will have the game API
-            }
+            // Screenshot on failure
+            await this._captureFailureState(testName, testRecord);
         } finally {
             testRecord.durationMs = Date.now() - startTime;
             this.results.tests.push(testRecord);
         }
     }
 
-    generateReport() {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const reportPath = path.join(this.reportDir, `test_run_${timestamp}.json`);
+    async _captureFailureState(testName, testRecord) {
+        const safeName = testName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const filename = `fail_${safeName}.png`;
+        const screenshotPath = path.join(this.screenshotsDir, filename);
 
-        const output = {
-            timestamp: new Date().toISOString(),
+        try {
+            await this.page.screenshot({ path: screenshotPath, fullPage: true });
+            console.log(`  📸 Screenshot: ${filename}`);
+            testRecord.screenshotPath = filename;
+        } catch (e) {
+            console.log(`  ${C.dim}📸 Screenshot failed: ${e.message}${C.reset}`);
+        }
+
+        try {
+            const snapshot = await this.page.evaluate(() => {
+                const out = {};
+                if (window.game?.debug) out.debug = window.game.debug();
+                if (window.game?.state) out.gameState = window.game.state();
+                if (window.game?.scene) out.scenes = window.game.scene();
+                if (window.game?.uiState) out.ui = window.game.uiState();
+                if (window.game?.haggleState) out.haggle = window.game.haggleState();
+                if (window.game?.dialogueState) out.dialogue = window.game.dialogueState();
+                return out;
+            });
+            testRecord.stateSnapshot = snapshot;
+        } catch (e) { /* page may have navigated */ }
+    }
+
+    /**
+     * Generate both JSON and Markdown reports. Returns true if all tests passed.
+     */
+    generateReport() {
+        const totalTime = Date.now() - this.startTime;
+        const ts = new Date().toISOString();
+
+        // ── JSON Report ──
+        const jsonOutput = {
+            timestamp: ts,
+            durationMs: totalTime,
             summary: {
                 total: this.results.total,
                 passed: this.results.passed,
                 failed: this.results.failed,
-                successRate: this.results.total > 0 ? (this.results.passed / this.results.total * 100).toFixed(1) + '%' : '0%'
+                warned: this.results.warned,
+                successRate: this.results.total > 0
+                    ? (this.results.passed / this.results.total * 100).toFixed(1) + '%' : '0%',
             },
             tests: this.results.tests,
-            browserLogs: this.results.browserLogs.filter(log => log.type === 'error' || log.type === 'pageerror'),
-            networkErrors: this.results.networkErrors
+            browserErrors: this.results.browserErrors,
+            pageErrors: this.results.pageErrors,
+            networkErrors: this.results.networkErrors,
         };
 
-        fs.writeFileSync(reportPath, JSON.stringify(output, null, 2));
+        const jsonPath = path.join(this.reportDir, 'test_report.json');
+        fs.writeFileSync(jsonPath, JSON.stringify(jsonOutput, null, 2));
 
-        console.log('\n═══════════════════════════════════════');
-        console.log(`  Test Run Complete.`);
-        console.log(`  Passed: \x1b[32m${this.results.passed}\x1b[0m | Failed: ${this.results.failed > 0 ? '\x1b[31m' : '\x1b[32m'}${this.results.failed}\x1b[0m | Total: ${this.results.total}`);
-        console.log(`  Detailed report saved to: \n  ${reportPath}`);
-        console.log('═══════════════════════════════════════\n');
+        // ── Markdown Report ──
+        const allPass = this.results.failed === 0;
+        const statusBadge = allPass ? '✅ ALL PASS' : `❌ ${this.results.failed} FAILED`;
+        const warnNote = this.results.warned > 0 ? ` (${this.results.warned} warnings)` : '';
+
+        const md = [
+            '# ArtLife — Test Report',
+            '',
+            `**Date:** ${ts}`,
+            `**Duration:** ${(totalTime / 1000).toFixed(1)}s`,
+            `**Result:** ${statusBadge}${warnNote}  (${this.results.passed}/${this.results.total})`,
+            '',
+            '## Test Results',
+            '',
+            '| # | Section | Test | Status | Time | Notes |',
+            '|---|---------|------|--------|------|-------|',
+        ];
+
+        this.results.tests.forEach((t, i) => {
+            const icon = t.status === 'pass' ? '✅' : t.status === 'warn' ? '⚠️' : '❌';
+            const time = `${t.durationMs}ms`;
+            const notes = t.error ? t.error.slice(0, 80) : '';
+            const warns = t.assertions.filter(a => a.status === 'warn').map(a => a.label).join('; ');
+            md.push(`| ${i + 1} | ${t.section || ''} | ${t.name.split(' > ').pop()} | ${icon} | ${time} | ${notes || warns || ''} |`);
+        });
+
+        // Failures detail
+        const failures = this.results.tests.filter(t => t.status === 'fail');
+        if (failures.length > 0) {
+            md.push('', '## Failure Details', '');
+            failures.forEach(f => {
+                md.push(`### ${f.name}`);
+                md.push(`- **Error:** ${f.error}`);
+                if (f.screenshotPath) md.push(`- **Screenshot:** \`${f.screenshotPath}\``);
+                if (f.stateSnapshot) {
+                    md.push('- **State Snapshot:**');
+                    md.push('```json', JSON.stringify(f.stateSnapshot, null, 2).slice(0, 1000), '```');
+                }
+                md.push('');
+            });
+        }
+
+        // Browser errors
+        const errors = this.results.browserErrors.filter(e =>
+            !e.text.includes('Failed to process file') && !e.text.includes('404')
+        );
+        md.push('', '## Browser Errors', '');
+        if (errors.length > 0) {
+            errors.slice(0, 10).forEach(e => md.push(`- ${e.text.slice(0, 150)}`));
+        } else {
+            md.push('_None_');
+        }
+
+        // Page errors
+        md.push('', '## Page Errors (Uncaught Exceptions)', '');
+        if (this.results.pageErrors.length > 0) {
+            this.results.pageErrors.forEach(e => md.push(`- \`${e.message.slice(0, 150)}\``));
+        } else {
+            md.push('_None_');
+        }
+
+        // Network
+        md.push('', '## Network Failures', '');
+        if (this.results.networkErrors.length > 0) {
+            this.results.networkErrors.forEach(e => md.push(`- \`${e.url}\` — ${e.failure}`));
+        } else {
+            md.push('_None_');
+        }
+
+        const mdPath = path.join(this.reportDir, 'test_report.md');
+        fs.writeFileSync(mdPath, md.join('\n'));
+
+        // Console summary
+        console.log(`\n${C.bold}═══════════════════════════════════════${C.reset}`);
+        console.log(`  ${C.bold}Test Run Complete${C.reset}  (${(totalTime / 1000).toFixed(1)}s)`);
+        console.log(`  Passed: ${C.green}${this.results.passed}${C.reset} | Failed: ${this.results.failed > 0 ? C.red : C.green}${this.results.failed}${C.reset} | Warnings: ${C.yellow}${this.results.warned}${C.reset} | Total: ${this.results.total}`);
+        if (errors.length > 0) console.log(`  Browser errors: ${C.red}${errors.length}${C.reset}`);
+        if (this.results.pageErrors.length > 0) console.log(`  Page errors: ${C.red}${this.results.pageErrors.length}${C.reset}`);
+        console.log(`  📄 Reports: ${C.dim}${mdPath}${C.reset}`);
+        console.log(`              ${C.dim}${jsonPath}${C.reset}`);
+        console.log(`${C.bold}═══════════════════════════════════════${C.reset}\n`);
 
         return this.results.failed === 0;
     }

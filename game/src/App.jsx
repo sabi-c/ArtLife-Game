@@ -11,6 +11,7 @@ import InventoryDashboard from './ui/InventoryDashboard.jsx';
 import TerminalLogin from './ui/TerminalLogin.jsx';
 import AdminDashboard, { AdminFAB } from './ui/AdminDashboard.jsx';
 import SettingsOverlay from './ui/SettingsOverlay.jsx';
+import MobileJoypad from './ui/MobileJoypad.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
@@ -26,6 +27,7 @@ export default function App() {
     });
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
+    const [isWorldSceneActive, setIsWorldSceneActive] = useState(false);
     const autoResumedRef = useRef(false);
 
     useEffect(() => {
@@ -155,7 +157,16 @@ export default function App() {
             setActiveView(viewKey);
             setViewPayload(payload);
         };
+        const sceneReadyHandler = (sceneName) => {
+            if (sceneName === 'WorldScene') setIsWorldSceneActive(true);
+        };
+        const sceneExitHandler = (sceneName) => {
+            if (sceneName === 'WorldScene') setIsWorldSceneActive(false);
+        };
+
         GameEventBus.on(GameEvents.UI_ROUTE, handler);
+        GameEventBus.on(GameEvents.SCENE_READY, sceneReadyHandler);
+        GameEventBus.on(GameEvents.SCENE_EXIT, sceneExitHandler);
 
         // Also map legacy TOGGLE_DASHBOARD to UI_ROUTE for now just in case
         const legacyHandler = (data) => {
@@ -171,6 +182,8 @@ export default function App() {
 
         return () => {
             GameEventBus.off(GameEvents.UI_ROUTE, handler);
+            GameEventBus.off(GameEvents.SCENE_READY, sceneReadyHandler);
+            GameEventBus.off(GameEvents.SCENE_EXIT, sceneExitHandler);
             GameEventBus.off(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
             GameEventBus.off(GameEvents.UI_TOGGLE_OVERLAY, overlayHandler);
         };
@@ -247,6 +260,8 @@ export default function App() {
             {activeOverlay === OVERLAY.INVENTORY && (
                 <InventoryDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
+
+            {isWorldSceneActive && <MobileJoypad />}
 
             {/* The Phaser Canvas Layer sets up in this div */}
             <div id="phaser-game-container" style={{ position: 'fixed', inset: 0, zIndex: 0 }} />

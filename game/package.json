@@ -15,6 +15,7 @@
     "launch:open": "node tests/headless/launch.cjs --open",
     "report": "node tests/headless/launch.cjs --report",
     "test:flow": "node tests/headless/test_flow.cjs",
+    "test:all": "node tests/headless/test_comprehensive.cjs",
     "expose": "npx localtunnel --port 5173 --subdomain artlife",
     "tunnel": "npx cloudflared tunnel --url http://localhost:5173"
   },

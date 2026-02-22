@@ -59,6 +59,8 @@ export const GameEvents = {
 
     // Game lifecycle
     GAME_OVER: 'game:over',
+    SCENE_READY: 'scene:ready',
+    SCENE_EXIT: 'scene:exit',
 
     // Debug & Admin
     DEBUG_LAUNCH_SCENE: 'debug:launch:scene',

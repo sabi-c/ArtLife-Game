@@ -68,6 +68,15 @@ export const useNPCStore = create(
                 }
             }),
 
+            setLastContactStatus: (npcId, week) => set((state) => {
+                const contact = state.contacts.find(c => c.id === npcId);
+                if (contact) {
+                    if (!contact.memory) contact.memory = { witnessed: [], grudges: [], favors: [], lastContact: 0 };
+                    contact.memory.lastContact = week;
+                    contact.lastContact = week;
+                }
+            }),
+
             addFavor: (npcId, event) => set((state) => {
                 const contact = state.contacts.find(c => c.id === npcId);
                 if (contact) {

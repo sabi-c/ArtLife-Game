@@ -17,6 +17,7 @@
 - **Events should feel like short stories** — 3+ layers of branching choices with NPC callbacks and consequences that ripple for weeks.
 - **NPCs should feel alive** — they remember, they scheme, they reach out unprompted.
 - **The market should be a character** — bull runs that tempt you, crashes that punish greed, artists who blow up or flame out.
+- **Spatial Exploration** — Grid-based overworld walking (GridEngine) allowing players to physically navigate venues and interact with objects/NPCs to anchor the roleplaying.
 - **Every playthrough should feel different** — the 3 character classes should unlock genuinely different storylines.
 - **The endgame should mean something** — Week 26 reckoning: museum retrospective, SEC investigation, legacy judgement.
 
@@ -238,12 +239,10 @@ npm run build        # Vite production build → dist/
 
 | Layer | Technology |
 |---|---|
-| **Engine** | Phaser 3 (scene management, Canvas rendering, physics) |
-| **Rendering** | Dual: DOM `TerminalUI.js` (menus/dashboard) + Phaser Canvas (haggle, overworld, dialogue) |
-| **Language** | JavaScript (vanilla ES modules) |
-| **Data** | JS modules exporting `const` arrays/objects |
-| **State** | Static class singletons (`GameState.state`, `PhoneManager.contacts`) |
-| **Styling** | CSS in `style.css` |
+| **Engine** | Phaser 3 + GridEngine (scene management, Tilemap rendering, top-down movement) |
+| **Rendering** | Dual: React 19 UI Overlays (HUD, Dialogue, Admin) + Phaser Canvas (Overworld, Haggle) |
+| **State Bridge** | Zustand 5 (Single source of truth syncing React DOM and Phaser Canvas) |
+| **Formatting** | Vanilla ES Modules + JSON Content Pipelines |
 | **Build** | Vite |
 
 ---
