@@ -108,7 +108,8 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 | **Open-Source Research** | `Reference_Tools_Research.md` | Audit of narrative engines, CMS tools, and market sims with INTEGRATE vs REFERENCE recommendations. |
 | **Implementation Blueprints** | `Implementation_Plan.md` | Production-grade code patterns, error handling tables, and critical-path build order for all V2 systems. |
 | **Dialogue Tree Template** | `Dialogue_Tree_Template.md` | AI content pipeline: JSON schema, field docs, stat/NPC/venue reference, design guidelines, minimal + complex examples. Give to AI to generate new scenes. |
-| **Code Audit** | `Code_Audit.md` | 15 issues found (4 critical), refactoring priorities, and educational explanations for each fix. |
+| **V1 Code Audit** | `Code_Audit.md` | 15 issues found (4 critical), refactoring priorities, and educational explanations for each fix. |
+| **Phase 4 Code Audit** | `Code_Audit_and_Refactoring_Plan.md` | Assessment of Technical Debt (Zustand transition, Data Hardcoding, React UI Routing) to fix before Week 26 Endgame. |
 | **Game Design Philosophy** | `Fundamentals_of_Play.md` | Core psychological tenets and mechanics ensuring the game remains fun and unpredictable. |
 | **Project Scheduling** | `Roadmap.md` | The current phase timeline. |
 | **Historical Logs** | `README_ARCHIVE.md` | Completed work from V1 Prototype. |
@@ -359,6 +360,7 @@ game/
 | Variable action costs (1-2 AP per action type) | ✅ |
 | Progressive disclosure (early/mid/late game phases) | ✅ |
 | Calendar event attendance (fairs, auctions, biennales) | ✅ |
+| Venue Dialogue Cutscenes (Gallery, Fair, Freeport etc.) | ✅ |
 | Rooms wired into game loop (full B4/C1) | ❌ TODO |
 | Tone system for dialogues | ❌ TODO |
 | Admin Narrative Dashboard | ❌ TODO |

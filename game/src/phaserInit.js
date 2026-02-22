@@ -86,10 +86,24 @@ const config = {
     plugins: {
         scene: [
             { key: 'gridEngine', plugin: GridEngine, mapping: 'gridEngine' }
-        ]
+        ],
+        global: []
     },
     scene: sceneList
 };
+
+// Dev-only: Phaser Plugin Inspector for real-time game object inspection
+if (import.meta.env.DEV) {
+    import('phaser-plugin-inspector').then(({ PhaserPluginInspector }) => {
+        config.plugins.global.push({
+            key: 'PhaserPluginInspector',
+            plugin: PhaserPluginInspector,
+            start: true
+        });
+    }).catch(() => {
+        // Inspector not installed or failed to load — no-op
+    });
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Factory — called once from App.jsx useEffect
@@ -140,7 +154,10 @@ GameEventBus.on(GameEvents.UI_NOTIFICATION, (msg) => {
 GameEventBus.on(GameEvents.GAME_OVER, () => {
     if (window.phaserGame) {
         if (container) container.style.display = 'none';
-        if (window.phaserGame.canvas) window.phaserGame.canvas.style.display = 'block';
+        if (window.phaserGame.canvas) {
+            window.phaserGame.canvas.style.visibility = 'visible';
+            window.phaserGame.canvas.style.pointerEvents = 'auto';
+        }
         window.phaserGame.scene.start('EndScene', { ui });
     }
 });
@@ -149,7 +166,10 @@ GameEventBus.on(GameEvents.GAME_OVER, () => {
 GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
     if (window.phaserGame) {
         if (container) container.style.display = 'none';
-        if (window.phaserGame.canvas) window.phaserGame.canvas.style.display = 'block';
+        if (window.phaserGame.canvas) {
+            window.phaserGame.canvas.style.visibility = 'visible';
+            window.phaserGame.canvas.style.pointerEvents = 'auto';
+        }
 
         // Stop all ACTIVE scenes first so we don't have overlapped updates
         window.phaserGame.scene.scenes.forEach(scene => {

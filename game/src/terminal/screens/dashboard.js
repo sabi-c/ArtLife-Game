@@ -1220,6 +1220,11 @@ export function dashboardScreen(ui) {
             action: () => safePush(pauseMenuScreen)
         });
 
+        options.push({
+            label: '💻  System Admin (God Mode)',
+            action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'ADMIN') // Using raw string to match OVERLAY.ADMIN in views.js
+        });
+
         // ──────────
         // Retire option after week 26
         if (s.week >= 26) {

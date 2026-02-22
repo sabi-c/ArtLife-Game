@@ -192,61 +192,70 @@
 | Build `CalendarStore.js` | COMPLETE | Timeline engine that fires `ScheduledEvents` on week advance |
 | Build `SceneEngine.js` | COMPLETE | Generic React component rendering JSON narratives (bg, npcs, choices) |
 | Build `NPCRegistry.js` | ✅ Done | Expanded into `npcStore.js` (Zustand), subsuming `NPCMemory.js` & `PhoneManager` contacts |
-| Build `EventRegistry.js` | TODO | Event trigger conditions, consequences, and follow-up scheduling |
+| Build `EventRegistry.js` | ✅ Done | Event trigger conditions, consequences, and follow-up scheduling |
 | Build `InventoryStore.js` | ✅ Done | Tracks owned items (artworks, documents, contraband) with provenance |
 | Build `MarketEngine.js` | TODO | Weekly price recalculation: artist heat × era modifiers × economic state |
 
 ---
 
-## Phase 4 — Content & Narrative Depth
+## Phase 4 — Architecture & Endgame Buildout (CURRENT HORIZON)
 
-> **Goal:** Fill the skeleton with real stories. Use `01_Overview` through `06_Economy` docs as source material.
-> **Multi-Agent Orders:** See `Phase_4_Multi_Agent_Orders.md` for parallelized execution plan.
-> - **Agent 1 (Negotiator):** Haggle Battle expansion — SceneEngine bridge, state resolution, juice
-> - **Agent 2 (Director):** Scene Engine visuals — background/NPC rendering, narrative rewards, toast UI
-> - **Agent 3 (Architect):** Dialogue & Inventory UI — InventoryDashboard, DialogueBox refactor, phone interrupts
+> **Goal:** Transition from a prototype into a robust, scalable game engine that can support massive endgame narratives and procedural content layers without breaking.
 
-### 4A. Characters & Classes
-| Task | Status | Source Doc |
+### 4A. The Zustand Bedrock & Strict UI Routing
+| Task | Status | Notes |
 |---|---|---|
-| Expand artist pool to 15-20 | ✅ Done | 28 artworks across 3 tiers. New artists: Richter, Fontana, Soulages, Okafor, Dao, Voss, Molina, Zhang, Reyes. |
-| Add provenance & rarity to valuation formula | TODO | `06_Economy/Art_Valuation.md` |
-| Implement perk system (unlockable abilities) | TODO | `03_Characters/Perks_and_Bonuses.md` |
-| Character-specific event arcs | TODO | `03_Characters/Character_Classes.md` |
-| Gallery Insider + Speculator + Curator classes | TODO | `03_Characters/Character_Classes.md` |
+| Create `gameStore.js` (Full State Migration) | TODO | Replace `GameState` singleton block |
+| Convert `MarketManager` & `HaggleManager` | TODO | Pure utility functions mapping to Zustand |
+| Refactor `App.jsx` React UI Router | TODO | Enforce `activeView` instead of raw DOM manipulations |
+| Save/Load Centralization | TODO | A master payload bundling all Zustand stores into localstorage |
 
-### 4B. Events & Narrative
-| Task | Status | Source Doc |
+### 4B. The Content Asset Pipeline
+| Task | Status | Notes |
 |---|---|---|
-| Convert 10+ events to deep branching (3+ layers) | TODO | `04_Events/Event_Types.md`, `Scenarios.md` |
-| Write 10 venue encounters (scripted room+condition triggers) | TODO | `04_Events/Venue_Encounters.md` |
-| Multi-turn event chains (Breakout Artist, Market Crash, Rival) | TODO | `04_Events/Scenarios.md` |
-| Dialogue trees for remaining key NPCs | TODO | `04_Events/Dialogue_Trees_V2.md` |
-| Elena Ross conflict tree (if player flipped her artist) | TODO | |
-| Philippe Noir dinner + collaboration trees | TODO | |
-| Lorenzo Gallo, Charles Vandermeer, Kwame Asante, Marcus Price trees | ✅ Done | 4 deep trees with item rewards, scheduled messages, cross-NPC references. Kwame tree is gold standard (15+ nodes, 3 item rewards, trial period mechanic). |
+| JSON Asset Migration | TODO | Convert massive `.js` arrays (`artworks.js`, `events.js`) into `.json` files |
+| The Boot Loader (`BootScene.js`) | TODO | Asynchronously parse and validate JSON payloads before `TitleScene` mounts |
 
-### 4C. World Building
-| Task | Status | Source Doc |
+### 4C. Narrative Depth (Pacing & Tones)
+| Task | Status | Notes |
 |---|---|---|
-| Remaining venue data files → JS (Auction House, Art Fair, Studio, Freeport) | PARTIAL | `05_World/Rooms/` — markdown exists, partial JS |
-| Freeport mechanics (store, defer tax, freeport-to-freeport) | TODO | `05_World/Free_Ports.md` |
-| Advanced auction system (English, Sealed Bid, One-Offer) | TODO | `02_Mechanics/Market_System.md` |
-| City-specific content per location | TODO | `05_World/Locations.md` |
+| The 4-Tone Dialogue System | TODO | Aggressive, Professional, Casual, Mysterious player stances |
+| The Memory Matrix Wiring | TODO | Connect `npcStore` Favors/Grudges dynamically into node text |
+| Variable Text Parsing | TODO | Support syntax like `{last_purchased_art}` directly in narrative strings |
+| Interpretible `WeekEngine.js` Pacing | TODO | Visual day-by-day week transitions that pause for emergency events |
+
+### 4D. The Week 26 Reckoning (Endgame)
+| Task | Status | Notes |
+|---|---|---|
+| Week 26 Cutoff Trigger | TODO | Hard cap the sandbox loop at Week 26 |
+| The Museum Retrospective | TODO | Prestige narrative sequence (requires high Rep/Taste) |
+| The SEC Investigation | TODO | Prison sequence (requires high Cash/Heat) |
+| The Shadow Broker | TODO | Underground syndicate sequence (requires high Intel) |
 
 ---
 
-## Phase 5 — The 40-Year Career (Historical Eras)
+## Phase 5 — The Content Factory & Procedural Ecosystems
 
-> **Goal:** Transform the game from a single-year sprint into a multi-decade career simulation.
+> **Goal:** Once the JSON pipeline is solid, we need tooling and dynamic simulation to make the world breathe and feel infinite.
 
-| Task | Status | Source Doc |
+| Task | Status | Notes |
 |---|---|---|
-| Build `EventEngine.js` (time-based trigger system) | TODO | `UI_and_Dynamic_Systems_Spec.md` §3 |
-| Draft era events: 70s Minimalism, 80s Neo-Expressionism, YBA 90s, 2008 crash | TODO | |
-| Connect era events to market modifiers (artist tags × multipliers) | TODO | |
-| Diegetic Desk UI (visual desk evolution based on stats/era) | TODO | `UI_and_Dynamic_Systems_Spec.md` §2 |
-| ThemeProvider for swappable UI shells | TODO | `UI_and_Dynamic_Systems_Spec.md` §1 |
+| Visual Node CMS Editor | TODO | React Flow-based desktop tool to auth & export dialogue JSONs visually |
+| Dynamic AI Rival Collectors | TODO | AI NPCs that bid on and remove global market artworks during the tick |
+| The Scandal & Hype Engine | TODO | News events that dynamically multiply/tank base modifier values |
+| Procedural SVG Art Certificates | TODO | Algorithmic "Certificates of Authenticity" graphics for artworks |
+
+---
+
+## Phase 6 — Polish, Audio & Analytics
+
+> **Goal:** Final polish layer before sharing the MVP with external playtesters.
+
+| Task | Status | Notes |
+|---|---|---|
+| Tactile Audio Implementation | TODO | `WebAudioService` for typewriter clacks, auction gavels, startup hums |
+| Keyboard-First Navigation | TODO | Arrow Key + Enter mapping across the Ego Dashboard and Terminal |
+| Asynchronous Leaderboards | TODO | Firebase POST integration to upload Week 26 final values globally |
 
 ---
 

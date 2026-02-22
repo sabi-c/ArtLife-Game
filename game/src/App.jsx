@@ -9,7 +9,7 @@ import { GameEventBus, GameEvents } from './managers/GameEventBus.js';
 import ScenePlayer from './ui/ScenePlayer.jsx';
 import InventoryDashboard from './ui/InventoryDashboard.jsx';
 import TerminalLogin from './ui/TerminalLogin.jsx';
-import AdminDashboard from './ui/AdminDashboard.jsx';
+import AdminDashboard, { AdminFAB } from './ui/AdminDashboard.jsx';
 import SettingsOverlay from './ui/SettingsOverlay.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
@@ -108,7 +108,8 @@ export default function App() {
                             });
                             // Hide canvas — terminal only
                             if (phaserInstance?.canvas) {
-                                phaserInstance.canvas.style.display = 'none';
+                                phaserInstance.canvas.style.visibility = 'hidden';
+                                phaserInstance.canvas.style.pointerEvents = 'none';
                             }
                             setActiveView(VIEW.TERMINAL);
                         }
@@ -126,7 +127,6 @@ export default function App() {
         };
     }, []);
 
-    // When Terminal Login finishes, we start the game pipeline
     const handleLoginComplete = ({ action }) => {
         if (action === 'load') {
             // Load path: show terminal dashboard (not React PlayerDashboard)
@@ -140,10 +140,12 @@ export default function App() {
             setActiveView(VIEW.TERMINAL);
         } else {
             // New game: launch Phaser intro sequence
-            if (window.startPhaserGame) {
-                window.startPhaserGame(action);
-            }
             setActiveView(VIEW.PHASER);
+            if (window.startPhaserGame) {
+                setTimeout(() => {
+                    window.startPhaserGame(action);
+                }, 50); // delay to ensure React un-hides the canvas container
+            }
         }
     };
 
@@ -180,7 +182,8 @@ export default function App() {
         const container = document.getElementById('phaser-game-container');
         if (container) {
             // Canvas visible only when a Phaser scene is active
-            container.style.display = (activeView === VIEW.PHASER) ? 'block' : 'none';
+            container.style.visibility = (activeView === VIEW.PHASER) ? 'visible' : 'hidden';
+            container.style.pointerEvents = (activeView === VIEW.PHASER) ? 'auto' : 'none';
         }
         // Terminal visibility: show when in TERMINAL view, hide when Phaser takes over
         const termContainer = document.getElementById('terminal');
@@ -229,8 +232,10 @@ export default function App() {
             )}
 
             {/* ── OVERLAY REGISTRY ── */}
-            {activeOverlay === OVERLAY.ADMIN && (
+            {activeOverlay === OVERLAY.ADMIN ? (
                 <AdminDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            ) : (
+                <AdminFAB onClick={() => { setActiveOverlay(OVERLAY.ADMIN); WebAudioService.select(); }} />
             )}
 
             {activeOverlay === OVERLAY.SETTINGS && (

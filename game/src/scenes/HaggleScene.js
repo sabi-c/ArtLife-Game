@@ -14,6 +14,7 @@ export class HaggleScene extends BaseScene {
         this.state = HaggleManager.getState() || data.haggleInfo?.state || this.haggleInfo;
         this.returnScene = data.returnScene || null;
         this.returnArgs = data.returnArgs || {};
+        this.returnCallback = data.returnCallback || null;
     }
 
     preload() {
@@ -526,7 +527,7 @@ export class HaggleScene extends BaseScene {
                 this.dealer.setTint(0xffffff);
                 this.time.delayedCall(100, () => {
                     this.dealer.setTint(isSuperEffective ? 0xff4444 : 0xff8888);
-                    this.time.delayedCall(400, () => { try { this.dealer.clearTint(); } catch(e) {} });
+                    this.time.delayedCall(400, () => { try { this.dealer.clearTint(); } catch (e) { } });
                 });
             }
         } else {
@@ -930,7 +931,11 @@ export class HaggleScene extends BaseScene {
             this.showTerminalUI();
             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
             if (this.ui) {
-                this.ui.popScreen();
+                if (this.returnCallback) {
+                    this.returnCallback(this.ui);
+                } else {
+                    this.ui.popScreen();
+                }
             }
             this.scene.stop();
         });
@@ -958,8 +963,12 @@ export class HaggleScene extends BaseScene {
                 this.showTerminalUI();
                 GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                 if (this.ui) {
-                    const { dashboardScreen } = await import('../terminal/screens/dashboard.js');
-                    this.ui.replaceScreen(dashboardScreen(this.ui));
+                    if (this.returnCallback) {
+                        this.returnCallback(this.ui);
+                    } else {
+                        const { dashboardScreen } = await import('../terminal/screens/dashboard.js');
+                        this.ui.replaceScreen(dashboardScreen(this.ui));
+                    }
                 }
                 this.scene.stop();
             }

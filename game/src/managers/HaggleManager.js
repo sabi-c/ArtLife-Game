@@ -365,32 +365,35 @@ class _HaggleManager {
 
         if (h.result === 'deal') {
             if (h.mode === 'buy') {
-                // Buy: deduct cash, add to portfolio with full provenance record
+                // Buy: deduct cash, update work in place to sync with globalWorks
                 GameState.state.cash -= h.finalPrice;
-                const acquiredWork = {
-                    ...h.work,
-                    onMarket: false,
-                    purchasePrice: h.finalPrice,
-                    purchaseWeek: GameState.state.week,
-                    purchaseCity: GameState.state.currentCity,
-                    storage: 'home',
-                    insured: false,
-                    provenance: [{
-                        type: 'acquired (haggle)',
-                        week: GameState.state.week,
-                        city: GameState.state.currentCity,
-                        price: h.finalPrice,
-                        source: h.dealerName,
-                    }],
-                };
-                GameState.state.portfolio.push(acquiredWork);
+
+                h.work.onMarket = false;
+                h.work.owner = 'player';
+                h.work.purchasePrice = h.finalPrice;
+                h.work.purchaseWeek = GameState.state.week;
+                h.work.purchaseCity = GameState.state.currentCity;
+                h.work.storage = 'home';
+                h.work.insured = false;
+                h.work.provenance = h.work.provenance || [];
+                h.work.provenance.push({
+                    type: 'acquired (haggle)',
+                    week: GameState.state.week,
+                    city: GameState.state.currentCity,
+                    price: h.finalPrice,
+                    source: h.dealerName,
+                });
+
+                GameState.state.portfolio.push(h.work);
                 GameState.state.totalWorksBought = (GameState.state.totalWorksBought || 0) + 1;
                 GameState.addNews(`🤝 Haggled and bought "${h.work.title}" for $${h.finalPrice.toLocaleString()} (saved $${(h.askingPrice - h.finalPrice).toLocaleString()})`);
             } else {
-                // Sell: add cash, remove from portfolio, track flip history
+                // Sell: add cash, remove from portfolio, change global owner
                 GameState.state.cash += h.finalPrice;
                 GameState.state.portfolio = GameState.state.portfolio.filter(w => w.id !== h.work.id);
                 GameState.state.totalWorksSold = (GameState.state.totalWorksSold || 0) + 1;
+                h.work.owner = 'dealer';
+                h.work.onMarket = false;
 
                 // Flip tracking — mirrors GameState.sellWork() logic
                 const holdTime = GameState.state.week - (h.work.purchaseWeek || 0);

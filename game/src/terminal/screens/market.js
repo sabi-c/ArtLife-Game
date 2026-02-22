@@ -6,6 +6,8 @@
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, DIM, GOLD, RED, BLANK, STAT } from './shared.js';
 import { dashboardScreen, hasActions, useAction } from './dashboard.js';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { VIEW } from '../../constants/views.js';
 // ════════════════════════════════════════════
 // SCREEN: Market List
 // ════════════════════════════════════════════
@@ -187,20 +189,30 @@ export function inspectScreen(ui, work) {
                         askingPrice: work.price,
                     });
                     const state = TerminalAPI.haggle.getState();
-                    if (window.game?.startTestScene) {
-                        // Push a "return" screen so popScreen() on haggle exit lands cleanly
-                        ui.pushScreen(() => ({
-                            lines: [{ text: 'Returning from haggle...', style: 'dim' }],
-                            options: [{ label: 'Back to Market', action: () => { ui.popScreen(); ui.popScreen(); } }]
-                        }));
-                        // Must hide terminal before showing canvas, otherwise haggle renders behind it
-                        const termEl = document.getElementById('terminal');
-                        if (termEl) termEl.style.display = 'none';
-                        window.game.startTestScene('HaggleScene', {
-                            ui,
-                            haggleInfo: { ...info, state, bgKey: 'bg_gallery_main_1bit_1771587911969.png' }
-                        });
-                    }
+
+                    // Push a "return" screen so popScreen() on haggle exit lands cleanly
+                    ui.pushScreen(() => ({
+                        lines: [{ text: 'Returning from haggle...', style: 'dim' }],
+                        options: [{ label: 'Back to Market', action: () => { ui.popScreen(); ui.popScreen(); } }]
+                    }));
+
+                    // Route to Phaser view and launch the HaggleScene
+                    GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.PHASER);
+                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'HaggleScene', {
+                        ui,
+                        returnCallback: (ui) => {
+                            ui.popScreen(); // Removes the "Returning from haggle..."
+
+                            // Check if the piece was bought (player owns it now). 
+                            // If bought, pop once more to return to Market List instead of the item's Inspect Screen
+                            const ownsItem = TerminalAPI.state().portfolio.find(w => w.id === work.id);
+                            if (ownsItem) {
+                                ui.popScreen();
+                            }
+                            ui.render();
+                        },
+                        haggleInfo: { ...info, state, bgKey: 'bg_gallery_main_1bit_1771587911969.png' }
+                    });
                 }
             });
 
