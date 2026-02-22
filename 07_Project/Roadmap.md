@@ -13,6 +13,7 @@
 **Deployed:** Cloudflare Pages
 
 ### Recently Completed
+- **Admin Scene Cleanup + Intro Settings** — Reorganized SCENES tab (clear labels + descriptions, legacy OverworldScene dimmed, added CharacterCreator + MacDialogue launchers). Added `introStyle` setting (Cinematic Briefing / Skip to Creator) to SettingsManager + SettingsOverlay. TitleScene respects setting. Scene transition sounds (sceneEnter/sceneExit/doorEnter/itemPickup) added to WebAudioService and wired into WorldScene. CityScene exit fixed with proper event emission. Added WORLD/MENU to scene-keys.js.
 - **WorldScene v2 — Full Pokemon-style overworld** — Complete rewrite with NPC spawning from Tiled objects (tinted sprites, random wandering, face-player-on-interact), full dialog box system (typewriter text, player freeze, SPACE to advance/dismiss, speaker labels), door transitions with camera fade, grass encounter zones (8 art-world themed random events with stat effects), item pickup with tween animations, daylight overlay based on in-game week, sprint mode (SHIFT key + mobile B button), wipe transition on entry, Y-depth sorting for all characters, position persistence to GameState. MobileJoypad v2 with B sprint button + A interact button. Comprehensive 450+ LOC scene.
 - **Sprint: WorldScene + MobileJoypad Integration** — Pokemon-style grid walking with Tiled maps (pallet_town.json, 26x27, 48px tiles), 4 tilesets, proper layer depth ordering, GridEngine collision from tile properties, spawn from Tiled objects, door/dialog interactions, ESC exit. MobileJoypad D-pad overlay with 56px touch targets, action button, exit button. Admin Dashboard + late-game terminal launch. Systemic Lattice Triggers (4 fail-state arcs). Haggle + stat change sound effects.
 - **Sprint 0.5: QA & Testing Pipeline** — Wrote `TestReporter.js` for Playwright, ensuring headless tests cleanly isolate blocks, trap browser/network `console.error` anomalies, generate state-dump JSON artifacts upon failure, and instantly capture visual `page.screenshot()` proof. Fixed cross-contamination across async `page.evaluate` runs. Test suite is robust 5/5.
@@ -148,7 +149,7 @@
 |---|---|---|
 | Wire `dialogue_trees.js` into full venue flow (B4) | ✅ Done | NPC talk screen shows dialogue tree topics, launches DialogueScene or fallback terminal renderer. Topic-based small talk with favor gain. NPC met tracking. |
 | Wire rooms into EventManager + GameState (C1) | ✅ Done | Time budget system: venues have `timeLimit`, rooms have `timeCost`, time bar displayed in header. Action cost on venue entry. onEnter effects, eavesdrop unlocks, flags all wired. |
-| Full venue flow test (Dashboard→Venue→Dialogue→Haggle→Dashboard) (C2) | IN PROGRESS | Venue picker → venue detail → room explore → NPC talk → dialogue tree all working. Manual testing ready. |
+| Full venue flow test (Dashboard→Venue→Dialogue→Haggle→Dashboard) (C2) | ✅ Done | Venue picker → venue detail → room explore → NPC talk → dialogue tree all working. CityScene exit emits proper events. |
 | **Weekly Report Screen** — show summary after advancing week | ✅ Done | `weekReportScreen()` in dashboard.js. Shows financial deltas, market shifts, headlines, new messages, anti-resource warnings. Powered by `WeekEngine.lastReport`. |
 | Overworld refactor: extract `Player.js`, `NPC.js`, `MapManager.js` | ✅ Done | Player/NPC classes exist. WorldScene v2 uses GridEngine directly with NPCs spawned from Tiled objects. |
 | Doorway warps (OverworldScene → LocationScene interiors) | ✅ Done | WorldScene v2 has door transitions with camera fade. Interior maps pending (placeholder dialog). |
@@ -185,7 +186,7 @@
 | **Dialogue Scene Visual Upgrade** | ✅ Done | Pokemon-style dual portrait layout (player L, NPC R), typewriter text, speaker name labels. DialogueBox.jsx rewritten with inline styles. Back buttons on both HaggleScene and MacDialogueScene. |
 | **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
 | **Haggle Battle Animations** | ✅ Done | Multi-step tactic animations per type: coin rain (financial), hex-shield (logical), slash lines + sparks (aggressive), heart cascade (emotional), shadow eyes (bluff). Player lunge, dealer hit reactions, type effectiveness flashes ("SUPER EFFECTIVE!"), smooth bar tweening. |
-| **Juice & Sound Design** | PARTIAL | Terminal SFX (hover/select/typewriter), Haggle scene SFX (tactic/hit/miss/superEffective/dealSuccess/dealFail/penalty), stat change audio feedback (success/penalty via applyEffects). Remaining: ambient gallery noise, scene transition sounds. |
+| **Juice & Sound Design** | ✅ Done | Terminal SFX (hover/select/typewriter), Haggle scene SFX (tactic/hit/miss/superEffective/dealSuccess/dealFail/penalty), stat change audio (success/penalty), scene transitions (sceneEnter/sceneExit/doorEnter/itemPickup). Remaining: ambient gallery noise. |
 | **Variable Text Interpolation** | ✅ Done | `{variable}` placeholders in dialogue text resolved at render time. Supports game state, NPC memory vars, portfolio data. |
 | **InkBridge (inkjs integration)** | ✅ Done | `InkBridge.js` bridges inkjs stories to DialogueEngine. Bidirectional GameState sync, tone tracking from `[tone]` tags, save/restore. |
 | **Oregon Trail Week Transition** | ✅ Done | Animated day-by-day ticker screen before week report. Shows activities, auto-advances after 2.8s, skip option. CSS: `wt-*` classes. |
@@ -293,7 +294,24 @@
 
 ---
 
-## Phase 6 — Polish, Audio & Analytics
+## Phase 7 — Content Management Studio (Planned)
+
+### Sprint 7A: React Flow Integration
+- `npm install @xyflow/react`.
+- Create `/editor` DEV-only route.
+- Implement canvas with panning, zooming, and a library sidebar.
+
+### Sprint 7B: Custom Node Creation
+- Build functional React node components mapped to game logic (`TriggerNode`, `DialogueNode`, `StatConditionNode`, `SceneLaunchNode`).
+- Ensure WYSIWYG parity (e.g., node looks like the actual terminal).
+
+### Sprint 7C: Serialization & Engine Bridge
+- Write compiler traversing node edges.
+- Translate graphical schema to `events.json` state machine object.
+
+---
+
+## Phase 8 — Polish, Audio & Analytics
 
 > **Goal:** Final polish layer before sharing the MVP with external playtesters.
 

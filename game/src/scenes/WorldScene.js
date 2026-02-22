@@ -319,6 +319,9 @@ export default class WorldScene extends BaseScene {
         // Mobile joypad support
         window.joypadState = null;
 
+        // ── Scene entry sound ──
+        WebAudioService.sceneEnter();
+
         // ── Notify React ──
         GameEventBus.emit(GameEvents.SCENE_READY, 'WorldScene');
         console.log('[WorldScene] Ready. NPCs:', this.npcData.length, 'Items:', this.items.length);
@@ -494,7 +497,7 @@ export default class WorldScene extends BaseScene {
         // ── Check door interaction ──
         const door = this.doors.find(d => d.x === target.x && d.y === target.y);
         if (door) {
-            WebAudioService.select();
+            WebAudioService.doorEnter();
             this._enterDoor(door);
             return;
         }
@@ -689,7 +692,7 @@ export default class WorldScene extends BaseScene {
                     onComplete: () => item.sprite.destroy(),
                 });
 
-                WebAudioService.dealSuccess();
+                WebAudioService.itemPickup();
                 this._showDialog('Found Item', `You found: ${item.name}!`);
 
                 this.itemSprites.splice(i, 1);
@@ -760,6 +763,7 @@ export default class WorldScene extends BaseScene {
 
         window.joypadState = null;
         window.joypadSprint = false;
+        WebAudioService.sceneExit();
 
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {

@@ -147,4 +147,28 @@ export class WebAudioService {
         setTimeout(() => this.playTone('square', 659, 0.2, 0.05), 150);
         setTimeout(() => this.playTone('sine', 784, 0.4, 0.06, 100), 300);
     }
+
+    static sceneEnter() {
+        // Soft ascending whoosh — entering a new scene
+        this.playTone('sine', 200, 0.15, 0.04, 400);
+        setTimeout(() => this.playTone('sine', 400, 0.1, 0.03), 100);
+    }
+
+    static sceneExit() {
+        // Soft descending — leaving a scene
+        this.playTone('sine', 400, 0.12, 0.04, -200);
+    }
+
+    static doorEnter() {
+        // Two quick taps — entering a building
+        this.playTone('triangle', 300, 0.08, 0.05);
+        setTimeout(() => this.playTone('triangle', 450, 0.12, 0.04), 100);
+    }
+
+    static itemPickup() {
+        // Quick sparkle — found an item
+        this.playTone('sine', 600, 0.08, 0.06);
+        setTimeout(() => this.playTone('sine', 800, 0.08, 0.05), 60);
+        setTimeout(() => this.playTone('sine', 1000, 0.12, 0.04), 120);
+    }
 }
