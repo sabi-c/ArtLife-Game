@@ -356,6 +356,13 @@ class DialogueEngineManager {
 
         const lastPurchase = (s.portfolio || []).slice(-1)[0];
 
+        // NPC memory context (if in a conversation with a specific NPC)
+        const npcStore = useNPCStore.getState();
+        const npc = this.conversationNpcId
+            ? npcStore.contacts?.find(c => c.id === this.conversationNpcId)
+            : null;
+        const npcMemory = npc?.memory || { witnessed: [], grudges: [], favors: [] };
+
         const vars = {
             cash: `$${(s.cash || 0).toLocaleString()}`,
             reputation: s.reputation || 0,
@@ -377,7 +384,20 @@ class DialogueEngineManager {
             last_purchased_price: lastPurchase ? `$${(lastPurchase.purchasePrice || lastPurchase.price || 0).toLocaleString()}` : '$0',
             last_purchased_artist: lastPurchase?.artist || 'nobody',
             archetype: s.archetype || 'dealer',
-            npc: this.conversationNpcId || 'someone',
+            // NPC-specific vars
+            npc: npc?.name || this.conversationNpcId || 'someone',
+            npc_favor: npc?.favor || 0,
+            npc_grudge_count: npcMemory.grudges.length,
+            npc_favor_count: npcMemory.favors.length,
+            npc_last_grudge: npcMemory.grudges.length > 0
+                ? npcMemory.grudges[npcMemory.grudges.length - 1].reason || 'something'
+                : 'nothing',
+            npc_relationship: !npc ? 'stranger'
+                : (npc.favor || 0) >= 20 ? 'friend'
+                : (npc.favor || 0) >= 5 ? 'acquaintance'
+                : (npc.favor || 0) <= -10 ? 'enemy'
+                : (npc.favor || 0) < 0 ? 'suspicious'
+                : 'neutral',
         };
 
         return text.replace(/\{(\w+)\}/g, (match, key) => {

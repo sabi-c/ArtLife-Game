@@ -3,6 +3,40 @@ import { PhoneManager } from './PhoneManager.js';
 import { useEventStore } from '../stores/eventStore.js';
 import { generateId } from '../utils/id.js';
 
+// Atmospheric tease lines shown when a consequence is scheduled
+const TEASE_LINES = {
+    phone_message: [
+        'You have a feeling your phone will ring soon...',
+        'Someone will be in touch...',
+        'This conversation isn\'t over.',
+    ],
+    stat_change: [
+        'The consequences of your actions will become clear...',
+        'Something shifts in the balance...',
+        'This will leave a mark.',
+    ],
+    news: [
+        'Word travels fast in this world...',
+        'The art world has a long memory...',
+        'People will talk about this.',
+    ],
+    event_unlock: [
+        'You sense something on the horizon...',
+        'Doors are opening — or closing.',
+        'This changes things.',
+    ],
+    scene: [
+        'You\'ll be hearing from them...',
+        'Something is being set in motion.',
+        'The wheels are turning.',
+    ],
+    default: [
+        'This isn\'t over.',
+        'You have a feeling about this...',
+        'Time will tell.',
+    ],
+};
+
 /**
  * ConsequenceScheduler — King of Dragon Pass-style delayed consequences
  *
@@ -36,6 +70,24 @@ export class ConsequenceScheduler {
             sourceEvent: consequence.sourceEvent || null,
             fired: false,
         });
+
+        // Show atmospheric tease if requested
+        if (consequence.tease !== false) {
+            const teaseText = consequence.teaseText || ConsequenceScheduler.getTeaseText(consequence.type);
+            if (teaseText) {
+                GameState.addNews(teaseText);
+            }
+        }
+    }
+
+    /**
+     * Get a random atmospheric tease line for a consequence type.
+     * @param {string} type
+     * @returns {string}
+     */
+    static getTeaseText(type) {
+        const lines = TEASE_LINES[type] || TEASE_LINES.default;
+        return lines[Math.floor(Math.random() * lines.length)];
     }
 
     /**
