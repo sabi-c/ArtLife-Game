@@ -84,12 +84,24 @@ export class WeekEngine {
         try { ConsequenceScheduler.tick(state.week); }
         catch (e) { console.error('[WeekEngine] Consequences failed:', e); }
 
+        // ── Storyline Events ──
+        try {
+            // Lazy import to avoid circular dependency
+            import('../stores/storylineStore.js').then(({ useStorylineStore }) => {
+                const storylinesToFire = useStorylineStore.getState().tickWeek(state.week, state, EventRegistry.getStorylines());
+                for (const s of storylinesToFire) {
+                    useEventStore.getState().addPriorityEvent(s.eventId);
+                    GameState.addNews(`Storyline Event Pending: ${s.storylineId}`);
+                }
+            });
+        }
+        catch (e) { console.error('[WeekEngine] Storyline tick failed:', e); }
+
         // ── Random / Narrative Events ──
         try {
             const ev = EventRegistry.checkForEvent();
             if (ev) {
                 // The EventRegistry recorded it, but we can also log a headline
-                GameState.addNews(`Something happened: ${ev.title}`);
                 useEventStore.getState().setPendingEvent(ev);
             }
         }

@@ -122,6 +122,7 @@ export default function AdminDashboard({ onClose }) {
         { key: 'ui', label: 'UIs' },
         { key: 'phaser', label: 'SCENES' },
         { key: 'cheats', label: 'TIME' },
+        { key: 'economy', label: 'ECONOMY' },
         { key: 'consequences', label: 'QUEUE' },
         { key: 'npcs', label: 'NPCs' },
         { key: 'flags', label: 'FLAGS' },
@@ -211,6 +212,10 @@ export default function AdminDashboard({ onClose }) {
                             <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.CMS)}>
                                 [ Content Management Studio ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Visual content wiring & timeline editor</div>
+                            </button>
+                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.STORYLINE_CMS)}>
+                                [ Storyline CMS ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Event chains, NPC arcs & narrative management</div>
                             </button>
 
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>BOOT FLOWS</div>
@@ -318,6 +323,57 @@ export default function AdminDashboard({ onClose }) {
                     </div>
                 )}
 
+                {/* ── ECONOMY / MARKET TOOLS ── */}
+                {activeTab === 'economy' && (
+                    <div>
+                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>MACRO ECONOMIC CONTROLS</div>
+                        {GameState.state ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '10px 20px' }}>
+                                <div>
+                                    <div style={{ marginBottom: 10, fontSize: 13, color: '#c9a84c' }}>Market Cycle: {GameState.state.marketState.toUpperCase()}</div>
+                                    <button style={btnStyle} onClick={() => { GameState.state.marketState = 'bull'; forceUpdate(); }}>[ Force BULL Market ]</button>
+                                    <button style={btnStyle} onClick={() => { GameState.state.marketState = 'bear'; forceUpdate(); }}>[ Force BEAR Market ]</button>
+                                    <button style={btnStyle} onClick={() => { GameState.state.marketState = 'flat'; forceUpdate(); }}>[ Force FLAT Market ]</button>
+
+                                    <div style={{ marginTop: 15, marginBottom: 10, fontSize: 13, color: '#c9a84c' }}>Era Modifier: x{GameState.state.eraModifier?.toFixed(1) || '1.0'}</div>
+                                    <button style={btnStyle} onClick={() => { GameState.state.eraModifier = 2.0; forceUpdate(); }}>[ 1980s Boom (x2.0) ]</button>
+                                    <button style={btnStyle} onClick={() => { GameState.state.eraModifier = 0.5; forceUpdate(); }}>[ 2008 Crash (x0.5) ]</button>
+                                    <button style={{ ...btnStyle, border: '1px solid #555', color: '#888' }} onClick={() => { GameState.state.eraModifier = 1.0; forceUpdate(); }}>[ Reset Era (x1.0) ]</button>
+                                </div>
+                                <div>
+                                    <div style={{ marginBottom: 10, fontSize: 13, color: '#c9a84c' }}>Micro / Artist Heat</div>
+                                    <div style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>Quick-jump artist heat to test price elasticity.</div>
+
+                                    <button style={btnStyle} onClick={async () => {
+                                        const { MarketManager } = await import('../managers/MarketManager.js');
+                                        MarketManager.boostRandomArtistHeat(50);
+                                        forceUpdate();
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Boosted random artist heat by 50');
+                                    }}>[ +50 Random Artist Heat ]</button>
+
+                                    <button style={btnStyle} onClick={async () => {
+                                        const { MarketManager } = await import('../managers/MarketManager.js');
+                                        MarketManager.artists.forEach(a => { a.heat = 100; });
+                                        forceUpdate();
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Set ALL Artists to 100 Heat');
+                                    }}>[ Max Heat (All Artists) ]</button>
+
+                                    <button style={{ ...btnStyle, border: '1px solid #555', color: '#888' }} onClick={async () => {
+                                        const { MarketManager } = await import('../managers/MarketManager.js');
+                                        MarketManager.artists.forEach(a => { a.heat = 0; });
+                                        forceUpdate();
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Set ALL Artists to 0 Heat');
+                                    }}>[ Crash Heat (All Artists) ]</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ color: '#c94040', fontSize: 13 }}>
+                                GameState not initialized. Start or load a game first.
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* ── CONSEQUENCE QUEUE ── */}
                 {activeTab === 'consequences' && (
                     <div>
@@ -347,52 +403,52 @@ export default function AdminDashboard({ onClose }) {
                 {activeTab === 'npcs' && (() => {
                     const npcContacts = useNPCStore.getState().contacts || [];
                     return (
-                    <div>
-                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NPC RELATIONAL DATA ({npcContacts.length} contacts)</div>
-                        {npcContacts.length === 0 ? (
-                            <div>
-                                <div style={{ padding: 20, border: '1px dashed #333', color: '#555', textAlign: 'center', marginBottom: 10 }}>
-                                    NPC store is empty. Start or load a game to populate NPCs.
-                                </div>
-                                <button style={btnStyle} onClick={() => { useNPCStore.getState().init(); forceUpdate(); }}>[ INIT NPC STORE ]</button>
-                            </div>
-                        ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
-                            {npcContacts.map((npc, i) => (
-                                <div key={i} style={{ padding: 12, border: '1px solid #333', background: '#0a0a0f' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed #222', paddingBottom: 8 }}>
-                                        <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{npc.name || npc.id} <span style={{ color: '#555', fontWeight: 'normal', fontSize: 11 }}>({npc.role || 'unknown'}){npc.met ? ' ✓ met' : ''}</span></div>
-                                        <div style={{ color: npc.favor > 0 ? '#4ade80' : npc.favor < 0 ? '#f87171' : '#888' }}>Favor: {npc.favor || 0}</div>
+                        <div>
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NPC RELATIONAL DATA ({npcContacts.length} contacts)</div>
+                            {npcContacts.length === 0 ? (
+                                <div>
+                                    <div style={{ padding: 20, border: '1px dashed #333', color: '#555', textAlign: 'center', marginBottom: 10 }}>
+                                        NPC store is empty. Start or load a game to populate NPCs.
                                     </div>
-                                    {!npc.memory ? (
-                                        <div style={{ color: '#555', fontSize: 11, fontStyle: 'italic' }}>No memory.</div>
-                                    ) : (
-                                        <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr 1fr', gap: 12, fontSize: 12 }}>
-                                            <div>
-                                                <strong style={{ color: '#c9a84c' }}>Grudges ({npc.memory.grudges?.length || 0})</strong>
-                                                <ul style={{ paddingLeft: 15, margin: '4px 0', color: '#f87171' }}>
-                                                    {(npc.memory.grudges || []).map((g, j) => <li key={j}>{g.reason} (Wk {g.week})</li>)}
-                                                </ul>
-                                            </div>
-                                            <div>
-                                                <strong style={{ color: '#c9a84c' }}>Favors ({npc.memory.favors?.length || 0})</strong>
-                                                <ul style={{ paddingLeft: 15, margin: '4px 0', color: '#4ade80' }}>
-                                                    {(npc.memory.favors || []).map((f, j) => <li key={j}>{f.reason} (Wk {f.week})</li>)}
-                                                </ul>
-                                            </div>
-                                            <div>
-                                                <strong style={{ color: '#c9a84c' }}>Witnessed ({npc.memory.witnessed?.length || 0})</strong>
-                                                <ul style={{ paddingLeft: 15, margin: '4px 0', color: '#93c5fd' }}>
-                                                    {(npc.memory.witnessed || []).map((w, j) => <li key={j}>{w.description || w.type} (Wk {w.week})</li>)}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    )}
+                                    <button style={btnStyle} onClick={() => { useNPCStore.getState().init(); forceUpdate(); }}>[ INIT NPC STORE ]</button>
                                 </div>
-                            ))}
+                            ) : (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
+                                    {npcContacts.map((npc, i) => (
+                                        <div key={i} style={{ padding: 12, border: '1px solid #333', background: '#0a0a0f' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px dashed #222', paddingBottom: 8 }}>
+                                                <div style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>{npc.name || npc.id} <span style={{ color: '#555', fontWeight: 'normal', fontSize: 11 }}>({npc.role || 'unknown'}){npc.met ? ' ✓ met' : ''}</span></div>
+                                                <div style={{ color: npc.favor > 0 ? '#4ade80' : npc.favor < 0 ? '#f87171' : '#888' }}>Favor: {npc.favor || 0}</div>
+                                            </div>
+                                            {!npc.memory ? (
+                                                <div style={{ color: '#555', fontSize: 11, fontStyle: 'italic' }}>No memory.</div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr 1fr', gap: 12, fontSize: 12 }}>
+                                                    <div>
+                                                        <strong style={{ color: '#c9a84c' }}>Grudges ({npc.memory.grudges?.length || 0})</strong>
+                                                        <ul style={{ paddingLeft: 15, margin: '4px 0', color: '#f87171' }}>
+                                                            {(npc.memory.grudges || []).map((g, j) => <li key={j}>{g.reason} (Wk {g.week})</li>)}
+                                                        </ul>
+                                                    </div>
+                                                    <div>
+                                                        <strong style={{ color: '#c9a84c' }}>Favors ({npc.memory.favors?.length || 0})</strong>
+                                                        <ul style={{ paddingLeft: 15, margin: '4px 0', color: '#4ade80' }}>
+                                                            {(npc.memory.favors || []).map((f, j) => <li key={j}>{f.reason} (Wk {f.week})</li>)}
+                                                        </ul>
+                                                    </div>
+                                                    <div>
+                                                        <strong style={{ color: '#c9a84c' }}>Witnessed ({npc.memory.witnessed?.length || 0})</strong>
+                                                        <ul style={{ paddingLeft: 15, margin: '4px 0', color: '#93c5fd' }}>
+                                                            {(npc.memory.witnessed || []).map((w, j) => <li key={j}>{w.description || w.type} (Wk {w.week})</li>)}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        )}
-                    </div>
                     );
                 })()}
 

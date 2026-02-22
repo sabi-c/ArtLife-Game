@@ -46,5 +46,322 @@
                 "isEnd": true
             }
         ]
+    },
+    {
+        "id": "event_elena_forgery_1",
+        "category": "storyline",
+        "title": "Elena's Warning",
+        "requirements": {
+            "intel": 3
+        },
+        "npcId": "elena_ross",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Elena Ross intercepts you outside her gallery. Her usual warmth is replaced by a tight expression.",
+                "characterId": "elena_ross"
+            },
+            {
+                "type": "narrative",
+                "text": "\"I need to tell you something. That digital artist everyone's talking about? The certificates of authenticity don't match. I've seen this before.\"",
+                "characterId": "elena_ross"
+            },
+            {
+                "type": "choice",
+                "text": "She glances around nervously. \"Will you help me investigate?\"",
+                "choices": [
+                    {
+                        "label": "\"I'll dig into it. Who else knows?\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "intel": 2
+                        }
+                    },
+                    {
+                        "label": "\"Not my problem, Elena. I'm here to make money.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "audacity": 1
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Elena relaxes slightly. \"Just us, for now. Meet me at the back room of the Wine Bar on 24th Street next week. I'll have documents.\"",
+                "characterId": "elena_ross",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Elena's face hardens. \"Fine. But when this breaks, don't say I didn't warn you.\" She disappears back into the gallery.",
+                "characterId": "elena_ross",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_elena_forgery_2",
+        "category": "storyline",
+        "title": "The Wine Bar Documents",
+        "requirements": {},
+        "npcId": "elena_ross",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "The back room of the Wine Bar is dim and smells of old cork. Elena is already there with a manila envelope.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "\"Provenance records for six works. Three of them list the same fictional gallery in Prague. They're manufacturing histories.\"",
+                "characterId": "elena_ross"
+            },
+            {
+                "type": "choice",
+                "text": "She slides the envelope toward you.",
+                "choices": [
+                    {
+                        "label": "Take the documents and study them.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "intel": 3
+                        }
+                    },
+                    {
+                        "label": "Photograph them and pass to your contacts.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "access": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "You pocket the envelope. The names on these documents lead somewhere deep. Time to follow the trail.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Your phone buzzes all week. Three different contacts confirm the Prague gallery doesn't exist. The net is tightening.",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_elena_forgery_climax",
+        "category": "storyline",
+        "title": "The Forgery Ring Exposed",
+        "requirements": {
+            "access": 8
+        },
+        "npcId": "elena_ross",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "A headline in ArtNews: \"Chelsea Forgery Ring Busted — Six Galleries Under Investigation.\" Your phone won't stop ringing.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "Elena calls first. \"We did it. The FBI raided their storage unit last night. Forty-two faked works. You should have seen their faces.\"",
+                "characterId": "elena_ross"
+            },
+            {
+                "type": "choice",
+                "text": "She pauses. \"There's going to be a void in the market now. Collectors need new sources they can trust.\"",
+                "choices": [
+                    {
+                        "label": "\"Let's fill that void. Together.\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "reputation": 10,
+                            "access": 5
+                        }
+                    },
+                    {
+                        "label": "\"I'll buy up the panic-sold inventory at discount.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "audacity": 5,
+                            "intel": 3
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Elena smiles for the first time in weeks. \"Partners in legitimacy. I like the sound of that.\" Your reputation soars.",
+                "characterId": "elena_ross",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "While others panic, you negotiate. Three major works at 40% below market. Ruthless, but profitable. Elena won't forget this.",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_vandermeer_scheme_1",
+        "category": "storyline",
+        "title": "Vandermeer's Proposition",
+        "requirements": {
+            "audacity": 5
+        },
+        "npcId": "charles_vandermeer",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "A black car pulls up beside you on West 26th Street. The window rolls down. Charles Vandermeer.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "\"Get in. I want to show you something.\" He doesn't wait for an answer. The door is already open.",
+                "characterId": "charles_vandermeer"
+            },
+            {
+                "type": "choice",
+                "text": "Inside the car, he shows you images on his phone. Fifteen works by an artist you've never heard of.",
+                "choices": [
+                    {
+                        "label": "\"Who is this? The work is extraordinary.\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "taste": 2
+                        }
+                    },
+                    {
+                        "label": "\"What's the play, Charles? I want the numbers.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "\"Nobody. Yet. That's the point. I'm buying the entire market before anyone knows the name. You want in?\" He smirks.",
+                "characterId": "charles_vandermeer",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "\"Smart. Average cost basis: $8,000 per work. I plan to sell at $200,000 each within 18 months. The math works if we control supply.\"",
+                "characterId": "charles_vandermeer",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_vandermeer_scheme_2",
+        "category": "storyline",
+        "title": "The Pump",
+        "requirements": {},
+        "npcId": "charles_vandermeer",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Magazine covers. Instagram posts from A-listers. A glowing review in Hyperallergic. Vandermeer's machine is running.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "\"Phase two complete.\" He texts you a screenshot: secondary market prices already up 400%. \"The artist doesn't even know what's coming.\"",
+                "characterId": "charles_vandermeer"
+            },
+            {
+                "type": "choice",
+                "text": "Your phone buzzes with offers from collectors wanting to buy your allocation.",
+                "choices": [
+                    {
+                        "label": "Hold. The price hasn't peaked yet.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "intel": 3
+                        }
+                    },
+                    {
+                        "label": "Sell half now to lock in gains.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "audacity": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "\"Patient. I like that.\" Vandermeer nods approvingly. The prices keep climbing. But how long can this last?",
+                "characterId": "charles_vandermeer",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "You bank $120,000 on the partial sale. Smart money, but Vandermeer looks at you like you just blinked in a poker game.",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_vandermeer_scheme_climax",
+        "category": "storyline",
+        "title": "The Dump",
+        "requirements": {
+            "intel": 6
+        },
+        "npcId": "charles_vandermeer",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "It happens overnight. Vandermeer dumps his entire position — 15 works — through three different auction houses simultaneously.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "The market price collapses 70% in a single day. Collectors are furious. The artist is devastated. Vandermeer is unreachable.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "choice",
+                "text": "Your remaining holdings are cratering. What do you do?",
+                "choices": [
+                    {
+                        "label": "Cut losses. Sell everything and distance yourself from Vandermeer.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "reputation": -5
+                        }
+                    },
+                    {
+                        "label": "Double down. Buy the crash. If the art is real, it'll recover.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "taste": 5,
+                            "audacity": 5
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "You walk away with your capital mostly intact and your reputation slightly singed. The art world has a long memory.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Eighteen months later, the artist wins the Turner Prize. Your contrarian bet pays off 10x. Vandermeer texts you: \"Not bad.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
     }
 ]

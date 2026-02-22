@@ -41,31 +41,49 @@ export const useMarketStore = create(
                         ? (artist.heat > prev.heat ? 'up' : artist.heat < prev.heat ? 'down' : 'flat')
                         : 'flat';
 
+                    // Record price history FIRST so we can calculate the Artist Index
+                    if (!state.priceHistory[artist.id]) {
+                        state.priceHistory[artist.id] = [];
+                    }
+
+                    const artistWorks = (works || []).filter(w => w.artistId === artist.id);
+                    const prices = artistWorks.map(w => w.price || w.basePrice);
+                    const volume = prices.length;
+
+                    let avgPrice = null;
+                    if (volume > 0) {
+                        avgPrice = Math.round(prices.reduce((sum, p) => sum + p, 0) / volume);
+                        const highPrice = Math.max(...prices);
+                        const lowPrice = Math.min(...prices);
+
+                        state.priceHistory[artist.id].push({ week, avgPrice, highPrice, lowPrice, volume });
+                        // Keep last 26 weeks
+                        if (state.priceHistory[artist.id].length > 26) {
+                            state.priceHistory[artist.id].shift();
+                        }
+                    }
+
+                    // Calculate Artist Index (Base 500 + heat*5 + velocity modifier)
+                    let indexDelta = 0;
+                    const history = state.priceHistory[artist.id] || [];
+                    if (history.length > 1 && avgPrice !== null) {
+                        const prevAvg = history[history.length - 2].avgPrice;
+                        if (prevAvg > 0) {
+                            // Weight the percentage change so a 10% jump adds +100 to the index
+                            indexDelta = ((avgPrice - prevAvg) / prevAvg) * 100 * 10;
+                        }
+                    }
+
+                    const artistIndex = Math.round(500 + (artist.heat * 5) + indexDelta);
+
                     state.artistSnapshots[artist.id] = {
                         heat: artist.heat,
                         name: artist.name,
                         tier: artist.tier,
                         trend,
                         buybackActive: artist.buybackActive || false,
+                        artistIndex,
                     };
-
-                    // Record price history
-                    if (!state.priceHistory[artist.id]) {
-                        state.priceHistory[artist.id] = [];
-                    }
-                    // Average price of this artist's works on market
-                    const artistWorks = (works || []).filter(w => w.artistId === artist.id);
-                    const avgPrice = artistWorks.length > 0
-                        ? Math.round(artistWorks.reduce((sum, w) => sum + (w.price || w.basePrice), 0) / artistWorks.length)
-                        : null;
-
-                    if (avgPrice !== null) {
-                        state.priceHistory[artist.id].push({ week, avgPrice });
-                        // Keep last 26 weeks
-                        if (state.priceHistory[artist.id].length > 26) {
-                            state.priceHistory[artist.id].shift();
-                        }
-                    }
                 });
 
                 // Update available works

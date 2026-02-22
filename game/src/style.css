@@ -2301,10 +2301,93 @@ button {
   color: var(--dim);
 }
 
+/* ═══════════════════════════════════════════
+   Calendar Timeline (db-cal-timeline)
+   ═══════════════════════════════════════════ */
+
+.db-cal-timeline {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 8px 0 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.db-cal-month {
+  flex: 0 0 auto;
+  min-width: 52px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.db-cal-month.current {
+  border-color: rgba(0, 229, 255, 0.4);
+  background: rgba(0, 229, 255, 0.04);
+}
+
+.db-cal-month-label {
+  font-size: 0.65em;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+  text-align: center;
+}
+
+.db-cal-month.current .db-cal-month-label {
+  color: #00e5ff;
+}
+
+.db-cal-bar {
+  height: 4px;
+  border-radius: 2px;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.db-cal-bar:hover {
+  opacity: 1;
+  transform: scaleY(1.5);
+}
+
+.db-cal-bar.tier1 {
+  height: 6px;
+  opacity: 0.9;
+  font-weight: bold;
+}
+
+.db-cal-bar.tier2 {
+  height: 3px;
+  opacity: 0.5;
+}
+
+.db-cal-more {
+  font-size: 0.6em;
+  color: var(--dim);
+  text-align: center;
+}
+
+.db-cal-name.tier1 {
+  color: var(--gold);
+  font-weight: 700;
+}
+
 /* Mobile: hide location, smaller pips, tappable CTA */
 @media (max-width: 600px) {
   .db-cal-loc {
     display: none;
+  }
+
+  .db-cal-month {
+    min-width: 40px;
+    padding: 3px 4px;
   }
 
   .db-action-pip {
@@ -2904,5 +2987,245 @@ button {
   100% {
     stroke-dashoffset: 0;
     opacity: 0.2;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SVG World Map (Uplink-style) — wm-svg-*
+   ═══════════════════════════════════════════ */
+
+.wm-svg-container {
+  background: linear-gradient(180deg, #0a0e1a 0%, #060812 100%);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 6px;
+  padding: 10px;
+  margin: 6px 0;
+  min-height: 180px;
+}
+
+.wm-svg-header {
+  color: #00e5ff;
+  font-size: 0.78em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+}
+
+.wm-svg-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.wm-svg-city {
+  fill: rgba(0, 229, 255, 0.6);
+  cursor: pointer;
+  transition: fill 0.2s;
+}
+
+.wm-svg-city:hover {
+  fill: #00e5ff;
+  filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.6));
+}
+
+.wm-svg-player {
+  fill: #c9a84c;
+  cursor: pointer;
+  animation: wmPulse 2s ease-in-out infinite;
+}
+
+.wm-svg-player-ring {
+  fill: none;
+  stroke: rgba(201, 168, 76, 0.4);
+  stroke-width: 1.5;
+  animation: wmPulse 2s ease-in-out infinite;
+}
+
+@keyframes wmPulse {
+  0%, 100% { opacity: 1; r: 5; }
+  50% { opacity: 0.6; r: 7; }
+}
+
+.wm-svg-event {
+  pointer-events: none;
+}
+
+.wm-svg-route {
+  fill: none;
+  stroke: rgba(0, 229, 255, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.wm-svg-route-active {
+  stroke: rgba(0, 229, 255, 0.35);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 3;
+  animation: routeTrace 2s linear infinite;
+}
+
+@keyframes routeTrace {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -18; }
+}
+
+.wm-svg-label {
+  fill: rgba(200, 200, 216, 0.5);
+  font-family: var(--font);
+  font-size: 9px;
+  text-anchor: middle;
+  cursor: pointer;
+  transition: fill 0.2s;
+}
+
+.wm-svg-label:hover {
+  fill: #00e5ff;
+}
+
+.wm-svg-legend {
+  fill: rgba(90, 90, 106, 0.6);
+  font-family: var(--font);
+  font-size: 8px;
+}
+
+/* ═══════════════════════════════════════════
+   Status Strip (Uplink-style) — db-ss-*
+   ═══════════════════════════════════════════ */
+
+.db-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 229, 255, 0.15);
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.03) 0%, transparent 100%);
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--dim);
+}
+
+.db-ss-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.db-ss-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.db-ss-dot.secure {
+  background: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+}
+
+.db-ss-worth {
+  margin-left: auto;
+  color: var(--gold);
+}
+
+/* ═══════════════════════════════════════════
+   Trace Bars (Uplink-style) — db-trace-*
+   ═══════════════════════════════════════════ */
+
+.db-trace-panel {
+  border: 1px solid rgba(201, 64, 64, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(201, 64, 64, 0.02);
+}
+
+.db-trace-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.db-trace-label {
+  color: var(--dim);
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  min-width: 72px;
+}
+
+.db-trace-track {
+  flex: 1;
+  height: 8px;
+  background: #1a1a2e;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.db-trace-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.db-trace-fill.critical {
+  animation: tracePulse 1s ease-in-out infinite;
+}
+
+@keyframes tracePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.db-trace-val {
+  color: var(--dim);
+  font-size: 0.72em;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════════
+   Uplink Panel Polish
+   ═══════════════════════════════════════════ */
+
+.db-panel {
+  border-color: rgba(0, 229, 255, 0.08);
+}
+
+.db-header-panel {
+  border-top-color: rgba(0, 229, 255, 0.3);
+}
+
+@media (max-width: 500px) {
+  .db-status-strip {
+    font-size: 0.65em;
+    gap: 4px 10px;
+    padding: 6px 8px;
+  }
+
+  .wm-svg-container {
+    min-height: 120px;
+    padding: 6px;
+  }
+
+  /* WorldScene mobile overrides */
+  .wm-svg-label {
+    font-size: 7px;
+  }
+
+  .db-trace-label {
+    min-width: 56px;
+    font-size: 0.65em;
+  }
+
+  .db-trace-val {
+    font-size: 0.65em;
+    min-width: 32px;
   }
 }

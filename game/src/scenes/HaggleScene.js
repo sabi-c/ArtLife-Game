@@ -40,13 +40,13 @@ export class HaggleScene extends BaseScene {
     preload() {
         // Dynamically load custom background or sprites if provided in State
         if (this.state.bgKey && !this.textures.exists(this.state.bgKey)) {
-            this.load.image(this.state.bgKey, `/backgrounds/${this.state.bgKey}`);
+            this.load.image(this.state.bgKey, `backgrounds/${this.state.bgKey}`);
         }
         if (this.state.dealerSpriteKey && !this.textures.exists(this.state.dealerSpriteKey)) {
-            this.load.image(this.state.dealerSpriteKey, `/sprites/${this.state.dealerSpriteKey}`);
+            this.load.image(this.state.dealerSpriteKey, `sprites/${this.state.dealerSpriteKey}`);
         }
         if (this.state.playerSpriteKey && !this.textures.exists(this.state.playerSpriteKey)) {
-            this.load.image(this.state.playerSpriteKey, `/sprites/${this.state.playerSpriteKey}`);
+            this.load.image(this.state.playerSpriteKey, `sprites/${this.state.playerSpriteKey}`);
         }
     }
 

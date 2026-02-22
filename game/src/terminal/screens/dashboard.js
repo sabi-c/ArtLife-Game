@@ -6,7 +6,9 @@
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, BLANK, DIM, GOLD, GREEN, RED, STAT, NEWS, WORLDMAP } from './shared.js';
 import { TickerSystem } from '../../ui/TickerSystem.js';
+import { dashboardScreen, hasActions, useAction } from './dashboard.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { VIEW, OVERLAY } from '../../constants/views.js';
 import { characterSelectScreen } from './character.js';
 import { marketScreen, portfolioScreen } from './market.js';
 import { phoneScreen } from './phone.js';
@@ -625,39 +627,65 @@ function actionBudgetPanelHtml(actionsLeft, maxActions, weekLabel) {
 // ════════════════════════════════════════════
 const CAL_ICONS = { fair: '◈', auction: '◆', biennale: '★', market: '▸', social: '●', exhibition: '○' };
 
-function calendarStripHtml(currentWeek, month, year) {
-    const events = getUpcomingEvents(currentWeek, 8);
+function calendarPanelHtml(currentWeek, month, year) {
+    const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const currentMonthIdx = Math.floor((currentWeek - 1) / 4) % 12;
+    const allEvents = getUpcomingEvents(currentWeek, 52);
 
-    const thisWeek = events.filter(e => e.weeksAway === 0);
-    const upcoming = events.filter(e => e.weeksAway > 0).slice(0, 3);
+    // This week section
+    const thisWeek = allEvents.filter(e => e.weeksAway === 0);
 
-    const eventRow = (ev) => {
-        const icon = CAL_ICONS[ev.type] || '▸';
-        const iconClass = ev.tier === 1 ? 'gold' : 'dim';
-        const distClass = ev.weeksAway === 0 ? 'now' : ev.weeksAway <= 2 ? 'soon' : 'future';
-        const distLabel = ev.weeksAway === 0 ? 'NOW' : `${ev.weeksAway}w`;
-        return `<div class="db-cal-event">`
-            + `<span class="db-cal-icon ${iconClass}">${icon}</span>`
-            + `<span class="db-cal-name">${ev.name}</span>`
-            + `<span class="db-cal-loc">${ev.location}</span>`
-            + `<span class="db-cal-dist ${distClass}">${distLabel}</span>`
-            + `</div>`;
-    };
+    // Group all events by month
+    const eventsByMonth = {};
+    allEvents.forEach(ev => {
+        const evWeek = currentWeek + ev.weeksAway;
+        const evMonthIdx = Math.floor((evWeek - 1) / 4) % 12;
+        if (!eventsByMonth[evMonthIdx]) eventsByMonth[evMonthIdx] = [];
+        eventsByMonth[evMonthIdx].push(ev);
+    });
 
     let html = `<div class="db-cal-panel">`;
     html += `<div class="db-panel-header">CALENDAR · ${month} ${year}</div>`;
 
+    // This Week section
     if (thisWeek.length > 0) {
         html += `<div class="db-cal-section-label">THIS WEEK</div>`;
-        thisWeek.forEach(ev => { html += eventRow(ev); });
+        thisWeek.forEach(ev => {
+            const icon = CAL_ICONS[ev.type] || '▸';
+            const tierCls = ev.tier === 1 ? 'tier1' : 'tier2';
+            html += `<div class="db-cal-event" data-event-id="${ev.id || ''}">`;
+            html += `<span class="db-cal-icon gold">${icon}</span>`;
+            html += `<span class="db-cal-name ${tierCls}">${ev.name}</span>`;
+            html += `<span class="db-cal-loc">${ev.location}</span>`;
+            html += `<span class="db-cal-dist now">NOW</span>`;
+            html += `</div>`;
+        });
     }
 
-    if (upcoming.length > 0) {
-        html += `<div class="db-cal-section-label">COMING UP</div>`;
-        upcoming.forEach(ev => { html += eventRow(ev); });
-    }
+    // 12-month horizontal timeline
+    html += `<div class="db-cal-timeline">`;
+    for (let i = 0; i < 12; i++) {
+        const mIdx = (currentMonthIdx + i) % 12;
+        const isCurrent = i === 0;
+        const monthEvents = eventsByMonth[mIdx] || [];
 
-    if (thisWeek.length === 0 && upcoming.length === 0) {
+        html += `<div class="db-cal-month${isCurrent ? ' current' : ''}">`;
+        html += `<div class="db-cal-month-label">${MONTHS[mIdx]}</div>`;
+
+        monthEvents.slice(0, 3).forEach(ev => {
+            const color = EVENT_COLORS[ev.type] || '#00e5ff';
+            const tierCls = ev.tier === 1 ? ' tier1' : ' tier2';
+            html += `<div class="db-cal-bar${tierCls}" style="background:${color}" data-event-id="${ev.id || ''}" title="${ev.name} — ${ev.location}"></div>`;
+        });
+
+        if (monthEvents.length > 3) {
+            html += `<div class="db-cal-more">+${monthEvents.length - 3}</div>`;
+        }
+        html += `</div>`;
+    }
+    html += `</div>`;
+
+    if (thisWeek.length === 0 && allEvents.length === 0) {
         html += `<div class="db-cal-event"><span class="db-cal-name" style="color:var(--dim)">No events on the horizon</span></div>`;
     }
 
@@ -684,12 +712,29 @@ const LOCATION_TO_CITY = {
 };
 const EVENT_ICONS = { fair: '◈', auction: '◆', biennale: '★', market: '▸', social: '●', exhibition: '○' };
 
-function generateWorldMap(currentWeek) {
+// ════════════════════════════════════════════
+// SVG World Map (Uplink-style)
+// ════════════════════════════════════════════
+const CITY_COORDS = {
+    'new-york': { x: 235, y: 155, label: 'New York' },
+    'london': { x: 380, y: 110, label: 'London' },
+    'paris': { x: 395, y: 135, label: 'Paris' },
+    'berlin': { x: 415, y: 115, label: 'Berlin' },
+    'hong-kong': { x: 670, y: 200, label: 'Hong Kong' },
+    'miami': { x: 215, y: 210, label: 'Miami' },
+    'los-angeles': { x: 140, y: 170, label: 'Los Angeles' },
+    'switzerland': { x: 400, y: 140, label: 'Basel' },
+};
+
+const EVENT_COLORS = { fair: '#00e5ff', auction: '#c9a84c', biennale: '#bb86fc', market: '#00e5ff', social: '#4caf50', exhibition: '#4caf50' };
+
+function generateWorldMapSVG(currentWeek) {
     const s = TerminalAPI.state();
     const currentCity = s.currentCity || 'new-york';
     const currentCityName = CITY_NAMES[currentCity] || currentCity;
+    const visitedCities = s.visitedCities || [currentCity];
 
-    // Gather events and group by city
+    // Gather events grouped by city
     const events = getUpcomingEvents(currentWeek, 4);
     const eventsByCity = {};
     events.forEach(e => {
@@ -700,31 +745,111 @@ function generateWorldMap(currentWeek) {
         }
     });
 
-    const cityMarker = (cityId, name) => {
-        const eventIcons = (eventsByCity[cityId] || [])
-            .map(e => `<span class="wm-event-marker">${EVENT_ICONS[e.type] || '▸'}</span>`)
-            .join('');
-        if (cityId === currentCity) {
-            return `<span class="wm-city-link wm-current" data-city="${cityId}">★ ${name}</span>${eventIcons}`;
-        } else {
-            return `<span class="wm-city-link wm-city" data-city="${cityId}">○ ${name}</span>${eventIcons}`;
+    // Build SVG elements
+    let svgContent = '';
+
+    // Background map image (subtle)
+    svgContent += `<image href="assets/world_map.svg" x="0" y="0" width="800" height="400" opacity="0.08" style="filter:hue-rotate(180deg) saturate(0.5) brightness(1.5)"/>`;
+
+    // Grid lines for Uplink feel
+    for (let x = 0; x <= 800; x += 100) {
+        svgContent += `<line x1="${x}" y1="0" x2="${x}" y2="400" stroke="rgba(0,229,255,0.04)" stroke-width="0.5"/>`;
+    }
+    for (let y = 0; y <= 400; y += 50) {
+        svgContent += `<line x1="0" y1="${y}" x2="800" y2="${y}" stroke="rgba(0,229,255,0.04)" stroke-width="0.5"/>`;
+    }
+
+    // Flight path arcs between visited cities
+    const visitedSet = new Set(visitedCities);
+    const visitedArr = [...visitedSet];
+    for (let i = 0; i < visitedArr.length - 1; i++) {
+        const from = CITY_COORDS[visitedArr[i]];
+        const to = CITY_COORDS[visitedArr[i + 1]];
+        if (from && to) {
+            const mx = (from.x + to.x) / 2;
+            const my = Math.min(from.y, to.y) - 30;
+            svgContent += `<path d="M${from.x},${from.y} Q${mx},${my} ${to.x},${to.y}" class="wm-svg-route"/>`;
         }
+    }
+    // Current travel line (from last visited to current)
+    if (visitedArr.length > 0) {
+        const last = CITY_COORDS[visitedArr[visitedArr.length - 1]];
+        const curr = CITY_COORDS[currentCity];
+        if (last && curr && last !== curr) {
+            const mx = (last.x + curr.x) / 2;
+            const my = Math.min(last.y, curr.y) - 30;
+            svgContent += `<path d="M${last.x},${last.y} Q${mx},${my} ${curr.x},${curr.y}" class="wm-svg-route wm-svg-route-active"/>`;
+        }
+    }
+
+    // City dots, labels, event markers
+    Object.entries(CITY_COORDS).forEach(([cityId, c]) => {
+        const isCurrent = cityId === currentCity;
+        const cityEvents = eventsByCity[cityId] || [];
+
+        // Event markers (offset rings)
+        cityEvents.forEach((ev, i) => {
+            const color = EVENT_COLORS[ev.type] || '#00e5ff';
+            const offset = 10 + i * 8;
+            svgContent += `<circle cx="${c.x + offset}" cy="${c.y - 6}" r="3" fill="${color}" class="wm-svg-event" opacity="0.8"/>`;
+        });
+
+        // City dot
+        if (isCurrent) {
+            svgContent += `<circle cx="${c.x}" cy="${c.y}" r="5" class="wm-svg-player" data-city="${cityId}"/>`;
+            svgContent += `<circle cx="${c.x}" cy="${c.y}" r="10" class="wm-svg-player-ring"/>`;
+        } else {
+            svgContent += `<circle cx="${c.x}" cy="${c.y}" r="3.5" class="wm-svg-city" data-city="${cityId}"/>`;
+        }
+
+        // City label
+        svgContent += `<text x="${c.x}" y="${c.y + 16}" class="wm-svg-label" data-city="${cityId}">${c.label}</text>`;
+    });
+
+    // Legend
+    svgContent += `<text x="10" y="390" class="wm-svg-legend">`;
+    svgContent += `<tspan fill="#00e5ff">●</tspan> Fair  `;
+    svgContent += `<tspan fill="#c9a84c">●</tspan> Auction  `;
+    svgContent += `<tspan fill="#bb86fc">●</tspan> Biennale  `;
+    svgContent += `<tspan fill="#4caf50">●</tspan> Social`;
+    svgContent += `</text>`;
+
+    return {
+        type: 'raw',
+        text: `<div class="wm-svg-container">`
+            + `<div class="wm-svg-header">WORLD MAP · ${currentCityName.toUpperCase()}</div>`
+            + `<svg viewBox="0 0 800 400" class="wm-svg-map">${svgContent}</svg>`
+            + `</div>`
     };
+}
 
-    const rows = [
-        `  ${cityMarker('london', 'London')}       ${cityMarker('berlin', 'Berlin')}`,
-        ``,
-        `  ${cityMarker('new-york', 'New York')}     ${cityMarker('paris', 'Paris')}     ${cityMarker('hong-kong', 'Hong Kong')}`,
-        `                          ${cityMarker('switzerland', 'Switzerland')}`,
-        ``,
-        `  ${cityMarker('miami', 'Miami')}         ${cityMarker('los-angeles', 'Los Angeles')}`,
-    ];
+// ════════════════════════════════════════════
+// Status Strip (Uplink-style top bar)
+// ════════════════════════════════════════════
+function statusStripHtml(s, month, year, netWorth) {
+    const cityDisplay = CITY_NAMES[s.currentCity] || 'New York';
+    return `<div class="db-status-strip">`
+        + `<span class="db-ss-item"><span class="db-ss-dot secure"></span>CONNECTION: SECURE</span>`
+        + `<span class="db-ss-item">WEEK ${s.week}</span>`
+        + `<span class="db-ss-item">${month} ${year}</span>`
+        + `<span class="db-ss-item">${cityDisplay.toUpperCase()}</span>`
+        + `<span class="db-ss-item db-ss-worth">NET WORTH: $${netWorth.toLocaleString()}</span>`
+        + `</div>`;
+}
 
-    return WORLDMAP(
-        `WORLD MAP · ${currentCityName.toUpperCase()}`,
-        rows,
-        '★ You are here  ○ City  ◈ Fair  ◆ Auction  ● Event'
-    );
+// ════════════════════════════════════════════
+// Trace Bar (Uplink-style progress bars)
+// ════════════════════════════════════════════
+function traceBarHtml(label, value, max, color) {
+    const pct = Math.min(100, Math.max(0, (value / max) * 100));
+    const severity = pct >= 80 ? 'critical' : pct >= 50 ? 'warning' : 'normal';
+    return `<div class="db-trace-bar">`
+        + `<span class="db-trace-label">${label}</span>`
+        + `<div class="db-trace-track">`
+        + `<div class="db-trace-fill ${severity}" style="width:${pct}%;background:${color}"></div>`
+        + `</div>`
+        + `<span class="db-trace-val">${Math.round(value)}/${max}</span>`
+        + `</div>`;
 }
 
 // ════════════════════════════════════════════
@@ -1085,6 +1210,9 @@ export function dashboardScreen(ui) {
 
         const lines = [];
 
+        // ── Status Strip (Uplink-style) ──
+        lines.push({ type: 'raw', text: statusStripHtml(s, month, year, netWorth) });
+
         // ── Rich Header Panel ──
         const charName = s.character?.name || 'UNKNOWN';
         const playerName = s.playerName || 'Agent';
@@ -1101,21 +1229,20 @@ export function dashboardScreen(ui) {
         // ── Action Budget Panel ──
         lines.push({ type: 'raw', text: actionBudgetPanelHtml(actionsLeft, MAX_ACTIONS, weekLabel) });
 
-        // ── Calendar Strip ──
-        lines.push({ type: 'raw', text: calendarStripHtml(s.week, month, year) });
+        // ── Calendar Timeline ──
+        lines.push({ type: 'raw', text: calendarPanelHtml(s.week, month, year) });
 
-        // ── Warning Bar (only when anti-resources elevated) ──
+        // ── Trace Bars (Uplink-style anti-resource meters) ──
         const showHeat = s.marketHeat >= 10;
         const showBurnout = s.burnout >= 3;
         const showSuspicion = (s.suspicion || 0) >= 3;
         if (showHeat || showBurnout || showSuspicion) {
-            let warningItems = [];
-            if (showHeat) warningItems.push(`HEAT ${s.marketHeat}`);
-            if (showBurnout) warningItems.push(`BURNOUT ${Math.round(s.burnout)}`);
-            if (showSuspicion) warningItems.push(`SUSPICION ${Math.round(s.suspicion)}`);
-            lines.push({
-                type: 'raw', text: `<div class="db-warning-bar">⚠ ${warningItems.join('  ·  ')}</div>`
-            });
+            let traceHtml = `<div class="db-trace-panel">`;
+            if (showHeat) traceHtml += traceBarHtml('HEAT', s.marketHeat, 100, 'var(--red)');
+            if (showBurnout) traceHtml += traceBarHtml('BURNOUT', s.burnout, 10, '#ff9800');
+            if (showSuspicion) traceHtml += traceBarHtml('SUSPICION', s.suspicion, 100, '#bb86fc');
+            traceHtml += `</div>`;
+            lines.push({ type: 'raw', text: traceHtml });
         }
 
         // ── HUD Row: Financials + Stats side-by-side on desktop ──
@@ -1160,7 +1287,7 @@ export function dashboardScreen(ui) {
         // ── World Map (unlocks at week 5) ──
         if (s.week > 4) {
             lines.push(DIV());
-            lines.push(generateWorldMap(s.week));
+            lines.push(generateWorldMapSVG(s.week));
         }
 
         // ── Progressive Disclosure Tease ──
@@ -1246,35 +1373,37 @@ export function dashboardScreen(ui) {
 
         // OPERATIONS card items
         const opsItems = [];
-        if (phase !== 'early') {
-            opsItems.push({ icon: '🎨', label: 'Visit Venue', ap: 1, disabled: !hasActions(1) });
-            options.push({
-                label: 'Visit Venue',
-                disabled: !hasActions(1),
-                action: hasActions(1) ? () => safePush(venuePickerScreen) : undefined
-            });
+        const venueLocked = phase === 'early';
+        opsItems.push({ icon: '🎨', label: venueLocked ? 'Visit Venue (Locked)' : 'Visit Venue', ap: 1, disabled: venueLocked || !hasActions(1) });
+        options.push({
+            label: venueLocked ? 'Visit Venue (Locked)' : 'Visit Venue',
+            disabled: venueLocked || !hasActions(1),
+            action: (!venueLocked && hasActions(1)) ? () => safePush(venuePickerScreen) : undefined
+        });
 
-            if (phase === 'late') {
-                opsItems.push({ icon: '🗺️', label: 'Walk the Neighborhood' });
-                options.push({
-                    label: 'Walk the Neighborhood',
-                    action: () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui })
-                });
-            }
+        const walkLocked = phase !== 'late';
+        opsItems.push({ icon: '🗺️', label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood', disabled: walkLocked });
+        options.push({
+            label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood',
+            disabled: walkLocked,
+            action: !walkLocked ? () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui }) : undefined
+        });
 
-            opsItems.push({ icon: '✈️', label: `Travel (${cityInfo.name})`, ap: 1, disabled: !hasActions(1) });
-            options.push({
-                label: `Travel (${cityInfo.name})`,
-                disabled: !hasActions(1),
-                action: hasActions(1) ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'GLOBAL_MAP') : undefined
-            });
+        const travelLocked = phase === 'early';
+        opsItems.push({ icon: '✈️', label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`, ap: 1, disabled: travelLocked || !hasActions(1) });
+        options.push({
+            label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`,
+            disabled: travelLocked || !hasActions(1),
+            action: (!travelLocked && hasActions(1)) ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'GLOBAL_MAP') : undefined
+        });
 
-            opsItems.push({ icon: '📊', label: `Market Intel`, badge: s.marketState.toUpperCase() });
-            options.push({
-                label: `Market Intel (${s.marketState})`,
-                action: () => safePush(newsScreen)
-            });
-        }
+        const intelLocked = phase === 'early';
+        opsItems.push({ icon: '📊', label: intelLocked ? 'Market Intel (Locked)' : `Market Intel`, badge: intelLocked ? undefined : s.marketState.toUpperCase(), disabled: intelLocked });
+        options.push({
+            label: intelLocked ? 'Market Intel (Locked)' : `Market Intel (${s.marketState})`,
+            disabled: intelLocked,
+            action: !intelLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.MARKET_DASHBOARD) : undefined
+        });
 
         if (pendingCount > 0) {
             opsItems.push({ icon: '💼', label: `Pending Offers`, badge: `${pendingCount}` });
@@ -1286,20 +1415,22 @@ export function dashboardScreen(ui) {
 
         // DOSSIER card items
         const dossierItems = [];
-        if (phase === 'late') {
-            dossierItems.push({ icon: '🧰', label: 'Inventory & Artifacts' });
-            options.push({
-                label: 'Inventory & Artifacts',
-                action: () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY')
-            });
-        }
-        if (phase !== 'early') {
-            dossierItems.push({ icon: '🪞', label: 'Ego Dashboard' });
-            options.push({
-                label: 'Ego Dashboard & Profile',
-                action: () => safePush(() => egoDashboardScreenLazy(ui))
-            });
-        }
+        const invLocked = phase !== 'late';
+        dossierItems.push({ icon: '🧰', label: invLocked ? 'Inventory & Artifacts (Locked)' : 'Inventory & Artifacts', disabled: invLocked });
+        options.push({
+            label: invLocked ? 'Inventory & Artifacts (Locked)' : 'Inventory & Artifacts',
+            disabled: invLocked,
+            action: !invLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY') : undefined
+        });
+
+        const egoLocked = phase === 'early';
+        dossierItems.push({ icon: '🪞', label: egoLocked ? 'Ego Dashboard (Locked)' : 'Ego Dashboard', disabled: egoLocked });
+        options.push({
+            label: egoLocked ? 'Ego Dashboard & Profile (Locked)' : 'Ego Dashboard & Profile',
+            disabled: egoLocked,
+            action: !egoLocked ? () => safePush(() => egoDashboardScreenLazy(ui)) : undefined
+        });
+
         dossierItems.push({
             icon: '📱', label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
             ap: 1, disabled: !hasActions(1),
@@ -1309,13 +1440,14 @@ export function dashboardScreen(ui) {
             disabled: !hasActions(1),
             action: hasActions(1) ? () => safePush(phoneScreen) : undefined
         });
-        if (phase !== 'early') {
-            dossierItems.push({ icon: '📓', label: 'Journal & Calendar' });
-            options.push({
-                label: 'Journal & Calendar',
-                action: () => safePush(journalScreen)
-            });
-        }
+
+        const journalLocked = phase === 'early';
+        dossierItems.push({ icon: '📓', label: journalLocked ? 'Journal & Calendar (Locked)' : 'Journal & Calendar', disabled: journalLocked });
+        options.push({
+            label: journalLocked ? 'Journal & Calendar (Locked)' : 'Journal & Calendar',
+            disabled: journalLocked,
+            action: !journalLocked ? () => safePush(journalScreen) : undefined
+        });
 
         // SYSTEM card items
         const systemItems = [];

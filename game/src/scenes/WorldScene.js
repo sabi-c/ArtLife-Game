@@ -74,19 +74,19 @@ export default class WorldScene extends BaseScene {
 
     preload() {
         // Tiled JSON map — always queue load; Phaser deduplicates internally
-        this.load.tilemapTiledJSON('pallet_town', '/content/maps/pallet_town.json');
+        this.load.tilemapTiledJSON('pallet_town', 'content/maps/pallet_town.json');
 
         // Tilesets
         const tilesets = ['world', 'world2', 'grounds', 'grounds2'];
         for (const ts of tilesets) {
             if (!this.textures.exists(ts)) {
-                this.load.image(ts, `/assets/tilesets/${ts}.png`);
+                this.load.image(ts, `assets/tilesets/${ts}.png`);
             }
         }
 
         // Player spritesheet — 216x384, 3 cols x 4 rows = 12 frames at 72x96
         if (!this.textures.exists('world_player')) {
-            this.load.spritesheet('world_player', '/assets/sprites/player.png', {
+            this.load.spritesheet('world_player', 'assets/sprites/player.png', {
                 frameWidth: 72,
                 frameHeight: 96,
             });
@@ -315,10 +315,19 @@ export default class WorldScene extends BaseScene {
 
         // ── Camera ──
         this.cameras.main.startFollow(this.playerSprite, true, 0.1, 0.1);
-        this.cameras.main.setZoom(2);
+        const vw = this.scale.width;
+        const zoom = vw < 500 ? 2.5 : vw < 800 ? 2 : 2;
+        this.cameras.main.setZoom(zoom);
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels, true);
         this.cameras.main.roundPixels = true;
         this.cameras.main.fadeIn(400, 0, 0, 0);
+
+        // Handle orientation/resize changes
+        this.scale.on('resize', (gameSize) => {
+            const w = gameSize.width;
+            const newZoom = w < 500 ? 2.5 : w < 800 ? 2 : 2;
+            this.cameras.main.setZoom(newZoom);
+        });
 
         // Vignette
         try {
@@ -626,28 +635,32 @@ export default class WorldScene extends BaseScene {
         this._onDialogDismiss = onDismiss || null;
 
         const { width, height } = this.scale;
-        const boxH = 80;
+        const isSmall = width < 500;
+        const boxH = isSmall ? 70 : 80;
         const boxY = height - boxH / 2 - 8;
-        const padding = 16;
+        const padding = isSmall ? 10 : 16;
+        const boxW = Math.min(width - 40, 500);
 
         // Background
-        const bg = this.add.rectangle(width / 2, boxY, width - 16, boxH, 0x000000, 0.92)
+        const bg = this.add.rectangle(width / 2, boxY, boxW, boxH, 0x000000, 0.92)
             .setScrollFactor(0).setDepth(DEPTH.DIALOG_BG)
             .setStrokeStyle(2, 0xffffff);
 
         // Speaker label
-        const label = this.add.text(padding + 8, boxY - boxH / 2 + 8, speaker.toUpperCase(), {
+        const fontSize = isSmall ? '7px' : '8px';
+        const textFontSize = isSmall ? '8px' : '10px';
+        const label = this.add.text(width / 2 - boxW / 2 + padding, boxY - boxH / 2 + 8, speaker.toUpperCase(), {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '8px',
+            fontSize,
             color: '#ffd700',
         }).setScrollFactor(0).setDepth(DEPTH.DIALOG_TEXT).setOrigin(0, 0);
 
         // Dialog text (typewriter)
-        const textObj = this.add.text(padding + 8, boxY - boxH / 2 + 24, '', {
+        const textObj = this.add.text(width / 2 - boxW / 2 + padding, boxY - boxH / 2 + 24, '', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '10px',
+            fontSize: textFontSize,
             color: '#ffffff',
-            wordWrap: { width: width - 48 },
+            wordWrap: { width: boxW - padding * 2 - 16 },
             lineSpacing: 6,
         }).setScrollFactor(0).setDepth(DEPTH.DIALOG_TEXT).setOrigin(0, 0);
 

@@ -39,11 +39,13 @@ export default function CalendarHUD({ visible }) {
     // Determine am/pm style formatting or thematic color changes based on time
     const isNight = timeState.hour >= 19 || timeState.hour < 6;
 
+    const isSmall = typeof window !== 'undefined' && window.innerWidth < 500;
+
     return (
         <div style={{
             position: 'absolute',
-            top: 20,
-            right: 20,
+            top: isSmall ? 10 : 20,
+            right: isSmall ? 10 : 20,
             zIndex: 1000,
             background: 'var(--bg)',
             // Fake scanlines via linear-gradient over the background
@@ -51,11 +53,12 @@ export default function CalendarHUD({ visible }) {
             backgroundSize: `100% 4px, 100% 100%`,
             border: '1px solid var(--border)',
             color: 'var(--gold)',
-            padding: '10px 20px',
+            padding: isSmall ? '6px 10px' : '10px 20px',
             fontFamily: 'var(--font)',
             display: 'flex',
             alignItems: 'center',
-            gap: '16px',
+            gap: isSmall ? '8px' : '16px',
+            fontSize: isSmall ? '0.85em' : '1em',
             pointerEvents: 'none',
             boxShadow: '0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(0, 255, 255, 0.05)',
             textShadow: '0 0 4px var(--gold)',

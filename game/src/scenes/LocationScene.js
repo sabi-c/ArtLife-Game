@@ -19,7 +19,7 @@ export class LocationScene extends BaseScene {
     // Initialize values during create() instead of init()
 
     preload() {
-        this.load.image('kenney_indoor', '/assets/tilesets/kenney_roguelike_indoors/Tilesheets/roguelikeIndoor_transparent.png');
+        this.load.image('kenney_indoor', 'assets/tilesets/kenney_roguelike_indoors/Tilesheets/roguelikeIndoor_transparent.png');
 
         const npcKeys = [
             'walk_legacy_gallerist_walk', 'walk_auction_house_type_walk', 'walk_elena_ross_walk',
@@ -34,7 +34,7 @@ export class LocationScene extends BaseScene {
             // Assume 4x4 grid. The images are typically 64x64 or 128x128 total.
             // If it's a 32x32 pixel character in a 4x4 sheet, the frame is usually 16x16, 24x24, or 32x32. 
             // We'll assume typical RPG Maker size or generic 32x32.
-            this.load.spritesheet(key, `/sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
+            this.load.spritesheet(key, `sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
         });
 
         if (!this.textures.exists('placeholder_exit')) {

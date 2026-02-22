@@ -156,6 +156,9 @@ export class GameState {
             dayOfWeek: 1,        // 1 = Monday, 7 = Sunday
             hour: 8,             // 0-23 (Starts at 8:00 AM)
             minute: 0,           // 0-59
+            // ── Macro Economic State ──
+            eraModifier: 1.0,    // Global price multiplier
+            activeModifiers: [], // Array of active event economic modifiers
         };
 
         // Expose reference for React UI components (PlayerDashboard etc.)

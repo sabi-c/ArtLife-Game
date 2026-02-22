@@ -57,7 +57,8 @@ export class BootScene extends Phaser.Scene {
         });
 
         // ── Event JSON Data ──
-        this.load.json('events_json', '/content/events.json');
+        this.load.json('events_json', 'content/events.json');
+        this.load.json('storylines_json', 'content/storylines.json');
     }
 
     create() {
@@ -85,6 +86,15 @@ export class BootScene extends Phaser.Scene {
             console.log(`[BootScene] Injected ${eventsData.length} decoupled events into EventRegistry`);
         } else {
             console.warn('[BootScene] No events.json data found or failed to parse.');
+        }
+
+        // Cache storyline data
+        const storylinesData = this.cache.json.get('storylines_json');
+        if (storylinesData && Array.isArray(storylinesData)) {
+            EventRegistry.jsonStorylines = storylinesData;
+            console.log(`[BootScene] Injected ${storylinesData.length} storylines into EventRegistry`);
+        } else {
+            console.warn('[BootScene] No storylines.json data found or failed to parse.');
         }
 
         const ui = window.game?.ui;

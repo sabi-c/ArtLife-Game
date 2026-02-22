@@ -9,6 +9,7 @@ import { QualityGate } from './QualityGate.js';
  */
 export class EventRegistry {
     static jsonEvents = [];
+    static jsonStorylines = [];
 
     static getEvent(id) {
         // Priority 1: Check the decoupled JSON file
@@ -100,5 +101,38 @@ export class EventRegistry {
 
     static getPendingEvent() {
         return useEventStore.getState().consumePendingEvent();
+    }
+
+    /**
+     * Check if a player choice in an event should activate a storyline.
+     * Called by DialogueScene when a choice is made.
+     * @param {string} eventId - the event the choice was made in
+     * @param {number} choiceIndex - the index of the chosen option
+     */
+    static checkStorylineTrigger(eventId, choiceIndex) {
+        if (!this.jsonStorylines?.length) return;
+
+        const matching = this.jsonStorylines.filter(
+            s => s.triggerEventId === eventId && s.triggerChoiceIndex === choiceIndex
+        );
+
+        if (matching.length === 0) return;
+
+        // Lazy import to avoid circular deps
+        import('../stores/storylineStore.js').then(({ useStorylineStore }) => {
+            const currentWeek = GameState.state?.week || 1;
+            for (const storyline of matching) {
+                useStorylineStore.getState().activateStoryline(
+                    storyline.id, currentWeek, storyline
+                );
+            }
+        });
+    }
+
+    /**
+     * Get all storyline definitions (for CMS and tickWeek).
+     */
+    static getStorylines() {
+        return this.jsonStorylines || [];
     }
 }

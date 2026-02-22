@@ -20,17 +20,17 @@ export class OverworldScene extends BaseScene {
 
     preload() {
         // Load Kenney Urban Tileset
-        this.load.image('ow_urban_tiles', '/assets/tilesets/kenney_rpg_urban_pack/Tilemap/tilemap_packed.png');
+        this.load.image('ow_urban_tiles', 'assets/tilesets/kenney_rpg_urban_pack/Tilemap/tilemap_packed.png');
 
         // Load spritesheets (idempotent)
         if (!this.textures.exists('player_walk')) {
-            this.load.spritesheet('player_walk', '/sprites/player_walk.png', { frameWidth: 160, frameHeight: 160 });
+            this.load.spritesheet('player_walk', 'sprites/player_walk.png', { frameWidth: 160, frameHeight: 160 });
         }
         if (!this.textures.exists('npc_elena')) {
-            this.load.spritesheet('npc_elena', '/sprites/walk_elena_ross_walk.png', { frameWidth: 160, frameHeight: 160 });
+            this.load.spritesheet('npc_elena', 'sprites/walk_elena_ross_walk.png', { frameWidth: 160, frameHeight: 160 });
         }
         if (!this.textures.exists('npc_margaux')) {
-            this.load.spritesheet('npc_margaux', '/sprites/walk_margaux_villiers_walk.png', { frameWidth: 160, frameHeight: 160 });
+            this.load.spritesheet('npc_margaux', 'sprites/walk_margaux_villiers_walk.png', { frameWidth: 160, frameHeight: 160 });
         }
     }
 

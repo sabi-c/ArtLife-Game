@@ -159,10 +159,10 @@ export default function TerminalLogin({ onComplete, previewStep }) {
     const handleKeydown = useCallback((e) => {
         if (step === 'BOOT' || step === 'AUTH') return;
 
-        // Profile Menu: [1] Existing [2] New [3] Guest
+        // Profile Menu: [1] Existing [2] New [3] Guest [4] Dev Mode
         if (step === 'PROFILE_MENU') {
             const hasProfiles = profiles.filter(p => !p.isGuest).length > 0;
-            const maxIdx = hasProfiles ? 2 : 1; // 0=existing(if exists), 1=new, 2=guest (or 0=new, 1=guest)
+            const maxIdx = hasProfiles ? 3 : 2; // +1 for dev mode option
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 setProfileMenuIndex(prev => {
                     if (e.key === 'ArrowUp') return Math.max(0, prev - 1);
@@ -278,6 +278,12 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
     // ─── Profile Menu Handlers ───
     const handleProfileMenuSelect = (idx, hasExisting) => {
+        const devModeIdx = hasExisting ? 3 : 2;
+        if (idx === devModeIdx) {
+            // Dev Mode — Content Studio
+            onComplete({ action: 'devmode' });
+            return;
+        }
         if (hasExisting) {
             if (idx === 0) {
                 // Existing agent login
@@ -485,6 +491,17 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                             style={optStyle(profileMenuIndex === (hasExistingProfiles ? 2 : 1), false)}
                         >
                             <span style={{ width: 20 }}>{profileMenuIndex === (hasExistingProfiles ? 2 : 1) ? '>' : ' '}</span> [{hasExistingProfiles ? '3' : '2'}] GUEST ACCESS — no password
+                        </div>
+                        <div
+                            onClick={() => {
+                                WebAudioService.select();
+                                const idx = hasExistingProfiles ? 3 : 2;
+                                setProfileMenuIndex(idx);
+                                handleProfileMenuSelect(idx, hasExistingProfiles);
+                            }}
+                            style={optStyle(profileMenuIndex === (hasExistingProfiles ? 3 : 2), false)}
+                        >
+                            <span style={{ width: 20 }}>{profileMenuIndex === (hasExistingProfiles ? 3 : 2) ? '>' : ' '}</span> [{hasExistingProfiles ? '4' : '3'}] DEV MODE — Content Studio
                         </div>
                     </div>
                 )}

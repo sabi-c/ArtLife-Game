@@ -14,10 +14,10 @@ export class MacDialogueScene extends BaseScene {
 
     preload() {
         if (this.dialogueData.bgKey && !this.textures.exists(this.dialogueData.bgKey)) {
-            this.load.image(this.dialogueData.bgKey, `/backgrounds/${this.dialogueData.bgKey}`);
+            this.load.image(this.dialogueData.bgKey, `backgrounds/${this.dialogueData.bgKey}`);
         }
         if (this.dialogueData.rewardItem && this.dialogueData.rewardItem.imageKey && !this.textures.exists(this.dialogueData.rewardItem.imageKey)) {
-            this.load.image(this.dialogueData.rewardItem.imageKey, `/sprites/${this.dialogueData.rewardItem.imageKey}`);
+            this.load.image(this.dialogueData.rewardItem.imageKey, `sprites/${this.dialogueData.rewardItem.imageKey}`);
         }
     }
 

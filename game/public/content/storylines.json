@@ -1,0 +1,69 @@
+[
+    {
+        "id": "storyline_elena_forgery",
+        "title": "The Forgery Ring",
+        "description": "Elena Ross discovers a network of forged artworks circulating in the Chelsea gallery scene. Help her expose it — or profit from the chaos.",
+        "npcId": "elena_ross",
+        "triggerEventId": "event_art_market_gossip",
+        "triggerChoiceIndex": 0,
+        "steps": [
+            {
+                "eventId": "event_elena_forgery_1",
+                "delayWeeks": 2,
+                "requirements": {
+                    "intel": 3
+                }
+            },
+            {
+                "eventId": "event_elena_forgery_2",
+                "delayWeeks": 1,
+                "requirements": {}
+            },
+            {
+                "eventId": "event_elena_forgery_climax",
+                "delayWeeks": 3,
+                "requirements": {
+                    "access": 8
+                }
+            }
+        ],
+        "rewards": {
+            "reputation": 10,
+            "intel": 5
+        }
+    },
+    {
+        "id": "storyline_vandermeer_scheme",
+        "title": "The Vandermeer Scheme",
+        "description": "Charles Vandermeer is quietly buying up works by an unknown artist. Is he a visionary or running a pump-and-dump? You're about to find out.",
+        "npcId": "charles_vandermeer",
+        "triggerEventId": "event_art_market_gossip",
+        "triggerChoiceIndex": 1,
+        "steps": [
+            {
+                "eventId": "event_vandermeer_scheme_1",
+                "delayWeeks": 1,
+                "requirements": {
+                    "audacity": 5
+                }
+            },
+            {
+                "eventId": "event_vandermeer_scheme_2",
+                "delayWeeks": 2,
+                "requirements": {}
+            },
+            {
+                "eventId": "event_vandermeer_scheme_climax",
+                "delayWeeks": 2,
+                "requirements": {
+                    "intel": 6
+                }
+            }
+        ],
+        "rewards": {
+            "cash": 50000,
+            "audacity": 5,
+            "marketHeat": 15
+        }
+    }
+]

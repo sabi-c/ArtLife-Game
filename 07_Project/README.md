@@ -98,6 +98,7 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 - Sound — WebAudioService (16 procedural SFX: type, hover, select, hit, miss, etc.) ✅
 - Progressive disclosure — early/mid/late game phases based on week thresholds ✅
 - Settings — intro style, color theme, sound toggle ✅
+- Storyline CMS — event chains, NPC arcs, storylineStore, active storyline testing ✅
 - Remaining: Tone system, MarketEngine, Zustand store completion
 
 ## Code Health Audit
@@ -327,6 +328,7 @@ game/
 | Calendar & Action Budget (event strip, AP pips, variable costs) | ✅ |
 | Progressive disclosure (early/mid/late game phases) | ✅ |
 | Admin Dashboard (God Mode — 6 tabs, mobile FAB) | ✅ |
+| Storyline CMS (Event Chains & NPC Arcs + Admin Visualizer) | ✅ |
 | Scene Engine (ink.js visual novel — 3 scenes) | ✅ |
 | Inventory Dashboard (React overlay) | ✅ |
 | Sound design (WebAudioService — 16 procedural SFX) | ✅ |

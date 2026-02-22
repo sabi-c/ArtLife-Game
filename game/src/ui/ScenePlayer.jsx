@@ -181,7 +181,7 @@ export default function ScenePlayer({ onClose, payload }) {
                     }}
                 >
                     <img
-                        src={`/sprites/${currentStep.stateTags.npc}.png`}
+                        src={`sprites/${currentStep.stateTags.npc}.png`}
                         alt="NPC"
                         style={{ height: '75vh', objectFit: 'contain', filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.8))' }}
                         className="pixelated"

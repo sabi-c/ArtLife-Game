@@ -97,7 +97,7 @@ export default function DialogueBox() {
                 }}>
                     {dialog.leftSprite && (
                         <img
-                            src={`/sprites/${dialog.leftSprite}`}
+                            src={`sprites/${dialog.leftSprite}`}
                             alt="Player"
                             style={styles.portraitImg}
                         />
@@ -162,7 +162,7 @@ export default function DialogueBox() {
                 }}>
                     {dialog.rightSprite && (
                         <img
-                            src={`/sprites/${dialog.rightSprite}`}
+                            src={`sprites/${dialog.rightSprite}`}
                             alt="NPC"
                             style={styles.portraitImg}
                         />

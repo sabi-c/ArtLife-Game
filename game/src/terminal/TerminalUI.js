@@ -399,18 +399,21 @@ export class TerminalUI {
             });
         });
 
-        // City links on world map — click to travel
-        this.container.querySelectorAll('.wm-city-link').forEach(el => {
+        // City links on world map — click to travel (ASCII + SVG)
+        this.container.querySelectorAll('.wm-city-link, [data-city]').forEach(el => {
             el.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const cityId = el.dataset.city;
                 if (!cityId) return;
-                // Emit a custom event the dashboard can listen for
                 if (this._onCityClick) {
                     WebAudioService.select();
                     this._onCityClick(cityId);
                 }
             });
+            // SVG elements need pointer cursor
+            if (el.tagName === 'circle' || el.tagName === 'text') {
+                el.style.cursor = 'pointer';
+            }
         });
     }
 

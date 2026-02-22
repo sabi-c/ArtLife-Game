@@ -18,6 +18,8 @@ import {
     MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { VIEW, OVERLAY } from '../constants/views.js';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
 
@@ -625,9 +627,69 @@ const LEGEND = [
     { color: GC.overlay, label: 'React Overlays' },
 ];
 
-function FlowMapPanel() {
+// ── Node click → navigation mapping ──
+const NODE_ACTIONS = {
+    // Terminal screens → push onto terminal stack
+    dashboard:       { type: 'terminal', screen: 'dashboardScreen' },
+    market:          { type: 'terminal', screen: 'marketScreen' },
+    collection:      { type: 'terminal', screen: 'portfolioScreen' },
+    phone:           { type: 'terminal', screen: 'phoneScreen' },
+    ego:             { type: 'terminal', screen: 'egoDashboardScreen' },
+    journal:         { type: 'terminal', screen: 'journalScreen' },
+    city:            { type: 'terminal', screen: 'cityScreen' },
+    news:            { type: 'terminal', screen: 'newsScreen' },
+    pause_menu:      { type: 'terminal', screen: 'pauseMenuScreen' },
+    save_load:       { type: 'terminal', screen: 'saveLoadScreen' },
+    settings_term:   { type: 'terminal', screen: 'settingsScreen' },
+    // Overlays
+    admin:           { type: 'overlay', key: 'ADMIN' },
+    settings:        { type: 'overlay', key: 'SETTINGS' },
+    inventory:       { type: 'overlay', key: 'INVENTORY' },
+    cms:             { type: 'overlay', key: 'CMS' },
+    // Phaser scenes
+    world:           { type: 'scene', name: 'WorldScene' },
+    haggle:          { type: 'scene', name: 'HaggleScene' },
+    // Boot steps
+    boot:            { type: 'boot', step: 'BOOT' },
+    profile_menu:    { type: 'boot', step: 'PROFILE_MENU' },
+    primary_menu:    { type: 'boot', step: 'PRIMARY_MENU' },
+};
+
+function navigateToNode(nodeId, onClose) {
+    const action = NODE_ACTIONS[nodeId];
+    if (!action) return;
+
+    if (action.type === 'terminal') {
+        onClose();
+        const ui = window.TerminalUIInstance;
+        if (ui) {
+            import('../terminal/screens/index.js').then(mod => {
+                const screenFn = mod[action.screen];
+                if (screenFn) {
+                    ui.pushScreen(screenFn(ui));
+                    GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
+                }
+            });
+        }
+    } else if (action.type === 'overlay') {
+        onClose();
+        GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, action.key);
+    } else if (action.type === 'scene') {
+        onClose();
+        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, action.name, {});
+    } else if (action.type === 'boot') {
+        onClose();
+        GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.BOOT, { previewStep: action.step });
+    }
+}
+
+function FlowMapPanel({ onClose }) {
     const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
     const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+
+    const handleNodeClick = useCallback((event, node) => {
+        navigateToNode(node.id, onClose);
+    }, [onClose]);
 
     const minimapStyle = {
         backgroundColor: '#0a0a14',
@@ -639,7 +701,7 @@ function FlowMapPanel() {
             <div style={headerStyle}>
                 FLOW MAP
                 <span style={{ color: '#555', fontSize: 10, marginLeft: 12, fontWeight: 'normal' }}>
-                    {nodes.length} pages &middot; {edges.length} connections &middot; Drag to rearrange
+                    {nodes.length} pages &middot; {edges.length} connections &middot; Click node to navigate &middot; Drag to rearrange
                 </span>
             </div>
 
@@ -665,6 +727,7 @@ function FlowMapPanel() {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
+                    onNodeClick={handleNodeClick}
                     fitView
                     fitViewOptions={{ padding: 0.2 }}
                     minZoom={0.2}
@@ -769,7 +832,7 @@ export default function ContentStudio({ onClose }) {
 
             {activeTab === 'flowmap' && (
                 <div style={{ flex: 1, padding: '8px', overflow: 'hidden' }}>
-                    <FlowMapPanel />
+                    <FlowMapPanel onClose={onClose} />
                 </div>
             )}
         </div>

@@ -125,7 +125,7 @@ export function MobileJoypad() {
             </div>
 
             {/* Exit button */}
-            <button style={exitBtnStyle} onClick={exitScene}>
+            <button style={exitBtnStyle} onPointerDown={exitScene}>
                 EXIT
             </button>
         </div>
@@ -143,14 +143,17 @@ const overlayStyle = {
 
 const padStyle = {
     position: 'absolute',
-    bottom: '28px',
+    bottom: 'calc(28px + env(safe-area-inset-bottom, 0px))',
     left: '20px',
     display: 'grid',
-    gridTemplateColumns: '56px 56px 56px',
-    gridTemplateRows: '56px 56px 56px',
+    gridTemplateColumns: 'clamp(44px, 12vw, 64px) clamp(44px, 12vw, 64px) clamp(44px, 12vw, 64px)',
+    gridTemplateRows: 'clamp(44px, 12vw, 64px) clamp(44px, 12vw, 64px) clamp(44px, 12vw, 64px)',
     gap: '3px',
     pointerEvents: 'auto',
     userSelect: 'none',
+    background: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: '12px',
+    padding: '4px',
 };
 
 const centerStyle = {
@@ -176,7 +179,7 @@ const dpadBtnStyle = (dir, active) => ({
 
 const actionGroupStyle = {
     position: 'absolute',
-    bottom: '36px',
+    bottom: 'calc(36px + env(safe-area-inset-bottom, 0px))',
     right: '20px',
     display: 'flex',
     gap: '12px',
@@ -186,10 +189,10 @@ const actionGroupStyle = {
 };
 
 const actionBtnBase = {
-    width: '60px',
-    height: '60px',
+    width: 'clamp(48px, 14vw, 64px)',
+    height: 'clamp(48px, 14vw, 64px)',
     borderRadius: '50%',
-    fontSize: '18px',
+    fontSize: 'clamp(14px, 4vw, 18px)',
     fontFamily: '"Press Start 2P", monospace',
     fontWeight: 'bold',
     cursor: 'pointer',
@@ -210,9 +213,9 @@ const actionBtnStyle = {
 
 const sprintBtnStyle = (active) => ({
     ...actionBtnBase,
-    width: '52px',
-    height: '52px',
-    fontSize: '14px',
+    width: 'clamp(40px, 12vw, 56px)',
+    height: 'clamp(40px, 12vw, 56px)',
+    fontSize: 'clamp(11px, 3vw, 14px)',
     background: active ? 'rgba(100, 200, 255, 0.4)' : 'rgba(10, 10, 15, 0.7)',
     border: active ? '2px solid rgba(100, 200, 255, 0.6)' : '2px solid rgba(255, 255, 255, 0.15)',
     color: active ? '#64c8ff' : '#999999',
@@ -220,7 +223,7 @@ const sprintBtnStyle = (active) => ({
 
 const exitBtnStyle = {
     position: 'absolute',
-    top: '16px',
+    top: 'calc(16px + env(safe-area-inset-top, 0px))',
     right: '16px',
     padding: '10px 20px',
     borderRadius: '6px',

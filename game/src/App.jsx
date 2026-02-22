@@ -14,10 +14,12 @@ import SettingsOverlay from './ui/SettingsOverlay.jsx';
 import ContentStudio from './ui/ContentStudio.jsx';
 import MobileJoypad from './ui/MobileJoypad.jsx';
 import CalendarHUD from './ui/CalendarHUD.jsx';
+import StorylineCMS from './ui/StorylineCMS.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
 import { SettingsManager } from './managers/SettingsManager.js';
+import './api/ContentAPI.js'; // Side-effect: registers window.ContentAPI
 
 export default function App() {
     const [game, setGame] = useState(null);
@@ -151,7 +153,19 @@ export default function App() {
     }, []);
 
     const handleLoginComplete = ({ action }) => {
-        if (action === 'load') {
+        if (action === 'devmode') {
+            // Dev Mode: initialize minimal state and open Content Studio
+            try { GameState.newGame({ name: 'Dev Agent', playerName: 'dev' }); } catch (e) { /* may already exist */ }
+            const ui = window.TerminalUIInstance;
+            if (ui?.container) {
+                ui.container.style.display = '';
+                import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
+                    ui.pushScreen(dashboardScreen(ui));
+                });
+            }
+            setActiveView(VIEW.TERMINAL);
+            setActiveOverlay(OVERLAY.CMS);
+        } else if (action === 'load') {
             // Load path: show terminal dashboard (not React PlayerDashboard)
             const ui = window.TerminalUIInstance;
             if (ui?.container) {
@@ -284,6 +298,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.CMS && (
                 <ContentStudio onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.STORYLINE_CMS && (
+                <StorylineCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {isWorldSceneActive && <MobileJoypad />}

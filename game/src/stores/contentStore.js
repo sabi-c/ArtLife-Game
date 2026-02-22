@@ -68,6 +68,12 @@ const useContentStore = create((set, get) => ({
         return counts;
     },
 
+    /** Force reload — resets loaded flag and re-imports all data */
+    reload: async () => {
+        set({ loaded: false, loading: false });
+        return get().load();
+    },
+
     /** One-time async load of all data files */
     load: async () => {
         if (get().loaded || get().loading) return;

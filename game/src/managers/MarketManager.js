@@ -58,7 +58,7 @@ export class MarketManager {
 
         // Update work prices
         MarketManager.works.forEach((work) => {
-            work.price = MarketManager.calculatePrice(work);
+            work.price = MarketManager.calculatePrice(work, true);
         });
 
         // Occasionally add new works to market
@@ -70,31 +70,37 @@ export class MarketManager {
         // MarketManager should only manage the market, not GameState anti-resources.
     }
 
-    static calculatePrice(work) {
+    static calculatePrice(work, includeJitter = false) {
         const artist = MarketManager.getArtist(work.artistId);
         if (!artist) return work.basePrice;
 
-        const heatMultiplier =
-            artist.heat < 20 ? 0.5 + (artist.heat / 20) * 0.3 :
-                artist.heat < 40 ? 0.9 + ((artist.heat - 20) / 20) * 0.3 :
-                    artist.heat < 60 ? 1.3 + ((artist.heat - 40) / 20) * 0.5 :
-                        artist.heat < 80 ? 2.0 + ((artist.heat - 60) / 20) * 2.0 :
-                            5.0 + ((artist.heat - 80) / 20) * 5.0;
+        // Continuous curve: Heat 0 = x0.5, Heat 50 = x2.9, Heat 100 = x10.2
+        const heatMultiplier = 0.5 + Math.pow(artist.heat / 32, 2);
 
         const state = GameState.state;
         const marketMultiplier =
-            state.marketState === 'bull' ? 1.2 + Math.random() * 0.3 :
-                state.marketState === 'bear' ? 0.6 + Math.random() * 0.2 :
+            state.marketState === 'bull' ? 1.2 :
+                state.marketState === 'bear' ? 0.8 :
                     1.0;
 
-        // Flipper penalty — known flippers pay 20% more (galleries mark them up)
-        const flipperPenalty = state.dealerBlacklisted ? 1.20 : 1.0;
+        const eraModifier = state?.eraModifier || 1.0;
 
-        return Math.round(work.basePrice * heatMultiplier * marketMultiplier * flipperPenalty);
+        // Flipper penalty — known flippers pay 20% more
+        const flipperPenalty = state?.dealerBlacklisted ? 1.20 : 1.0;
+
+        // Volatility Jitter
+        let jitter = 1.0;
+        if (includeJitter) {
+            const volatility = artist.heatVolatility || 0;
+            jitter = 1 + ((Math.random() * 2 - 1) * (volatility / 100));
+        }
+
+        return Math.round(work.basePrice * heatMultiplier * marketMultiplier * eraModifier * flipperPenalty * jitter);
     }
 
     static getWorkValue(work) {
-        return MarketManager.calculatePrice(work);
+        // Return cached weekly price to prevent UI jittering every frame
+        return work.price || MarketManager.calculatePrice(work, false);
     }
 
     static getArtist(artistId) {

@@ -5,7 +5,7 @@
  * Strategy: Cache-first for assets, network-first for HTML.
  */
 
-const CACHE_NAME = 'artlife-v1';
+const CACHE_NAME = 'artlife-v2';
 
 // Core assets to pre-cache on install
 const PRECACHE_ASSETS = [

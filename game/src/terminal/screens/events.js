@@ -9,11 +9,11 @@ import { dashboardScreen } from './dashboard.js';
 
 // Predefined backgrounds per category
 const CATEGORY_BACKGROUNDS = {
-    'gossip': '/assets/backgrounds/bar_pixel.png',
-    'deal': '/assets/backgrounds/office_pixel.png',
-    'intel': '/assets/backgrounds/gallery_pixel.png',
-    'scandal': '/assets/backgrounds/club_pixel.png',
-    'personal': '/assets/backgrounds/apartment_pixel.png',
+    'gossip': 'assets/backgrounds/bar_pixel.png',
+    'deal': 'assets/backgrounds/office_pixel.png',
+    'intel': 'assets/backgrounds/gallery_pixel.png',
+    'scandal': 'assets/backgrounds/club_pixel.png',
+    'personal': 'assets/backgrounds/apartment_pixel.png',
 };
 
 const CATEGORY_LOCATIONS = {
