@@ -14,6 +14,19 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
 
+### Room Management System (2026-02-22 Session 6)
+- **Museum Template** — New `museum` template in `tools/generate_room.js`: 18×14 showcase gallery with beige Interiors floors, picture rail molding on all walls, 9 paintings with real artwork data (Basquiat, Haring, Koons, Sherman, Tanaka, Asante, Liu Wei), gold sofa on Persian rug, reception desk with lamp/laptop, large plants, floor lamps, Elena Ross NPC. BFS-validated reachability.
+- **Chelsea Showcase** — Generated `chelsea_showcase.json`, wired into rooms.js (CHELSEA_SHOWCASE venue), BootScene preload, pallet_town.json door+sign. Playable from WorldScene.
+- **Room Pipeline CLI** — `tools/room_pipeline.js` with 5 commands:
+  - `npm run room:new <template> <id>` — generate + auto-wire rooms.js/BootScene/pallet_town in one command
+  - `npm run room:import <file> <id>` — import Tiled export with path fixing + auto-wire
+  - `npm run room:list` — table of all maps with size/painting/NPC/door counts
+  - `npm run room:open <id>` — open map in Tiled editor
+  - `npm run room:validate <id>` — BFS reachability check from spawn to all objects
+- **Room Watcher** — `tools/room_watcher.js` (`npm run room:watch`): watches `tools/tiled/` for modified JSON files, auto-fixes tileset paths, copies to `public/content/maps/` for Vite HMR. Debounced 500ms.
+- **CMS Room Manager** — `src/ui/cms/RoomManager.jsx`: 3-panel layout in Content Studio ROOMS tab. Left: venue list with Tiled badge + stats. Center: room inspector with properties table, object inventory (painting prices, NPC haggle status), ASCII mini-map (P/N/D/S symbols). Right: actions (Play Test Room, Open in Tiled CLI, Validate, Export JSON, Raw JSON viewer).
+- **8 Tiled maps total** — gallery_test, uptown_gallery, artist_studio_visit, soho_gallery (3 rooms), chelsea_gallery, chelsea_showcase. 49 paintings, 8 NPCs across all maps.
+
 ### Gallery Interior Test Room (2026-02-22 Session 5)
 - **Gallery Tiled Map** — `public/content/maps/gallery_test.json`: 12x10 room with floor/wall tiles, 5 painting objects, 1 NPC dealer, 1 dialog sign, spawn point, exit door. Uses grounds.png tileset (48px tiles).
 - **LocationScene Dual-Mode** — `src/scenes/LocationScene.js` rewritten with two modes:
