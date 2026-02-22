@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 /**
- * MobileJoypad — floating D-pad overlay for WorldScene grid movement.
- * Communicates via window.joypadState (read by WorldScene update loop).
- * Shows only when WorldScene is active (controlled by App.jsx).
+ * MobileJoypad v2 — floating D-pad + action buttons for WorldScene.
+ *
+ * Layout:
+ *   [D-pad bottom-left]     [B sprint] [A interact] [bottom-right]
+ *   [EXIT top-right]
+ *
+ * Communication:
+ *   - window.joypadState = 'UP'|'DOWN'|'LEFT'|'RIGHT'|null  (direction)
+ *   - window.joypadSprint = true|false  (B button held)
+ *   - A button dispatches SPACE KeyboardEvent (interact/advance dialog)
  */
 export function MobileJoypad() {
     const [activeDirection, setActiveDirection] = useState(null);
+    const [sprintHeld, setSprintHeld] = useState(false);
 
     const handleDown = (dir, e) => {
         if (e) e.preventDefault();
@@ -21,11 +28,25 @@ export function MobileJoypad() {
         setActiveDirection(null);
     };
 
-    // Global touch/mouse release failsafe
+    const handleSprintDown = (e) => {
+        if (e) e.preventDefault();
+        window.joypadSprint = true;
+        setSprintHeld(true);
+    };
+
+    const handleSprintUp = (e) => {
+        if (e) e.preventDefault();
+        window.joypadSprint = false;
+        setSprintHeld(false);
+    };
+
+    // Global release failsafe
     useEffect(() => {
         const reset = () => {
             window.joypadState = null;
+            window.joypadSprint = false;
             setActiveDirection(null);
+            setSprintHeld(false);
         };
         window.addEventListener('mouseup', reset);
         window.addEventListener('touchend', reset);
@@ -33,12 +54,13 @@ export function MobileJoypad() {
             window.removeEventListener('mouseup', reset);
             window.removeEventListener('touchend', reset);
             window.joypadState = null;
+            window.joypadSprint = false;
         };
     }, []);
 
     const exitScene = () => {
         window.joypadState = null;
-        // Try scene's own exit, then fall back to debug API
+        window.joypadSprint = false;
         if (window.phaserGame) {
             const scene = window.phaserGame.scene.getScene('WorldScene');
             if (scene?.exitScene) {
@@ -50,7 +72,7 @@ export function MobileJoypad() {
     };
 
     const btnProps = (dir) => ({
-        style: btnStyle(dir, activeDirection),
+        style: dpadBtnStyle(dir, activeDirection),
         onPointerDown: (e) => handleDown(dir, e),
         onPointerUp: handleUp,
         onPointerCancel: handleUp,
@@ -62,30 +84,45 @@ export function MobileJoypad() {
             {/* D-pad — 3x3 grid, arrows in cross pattern */}
             <div style={padStyle}>
                 <div />
-                <button {...btnProps('UP')}>&#9650;</button>
+                <button {...btnProps('UP')}>{'\u25B2'}</button>
                 <div />
-                <button {...btnProps('LEFT')}>&#9664;</button>
+                <button {...btnProps('LEFT')}>{'\u25C0'}</button>
                 <div style={centerStyle} />
-                <button {...btnProps('RIGHT')}>&#9654;</button>
+                <button {...btnProps('RIGHT')}>{'\u25B6'}</button>
                 <div />
-                <button {...btnProps('DOWN')}>&#9660;</button>
+                <button {...btnProps('DOWN')}>{'\u25BC'}</button>
                 <div />
             </div>
 
-            {/* Action button (SPACE / interact) */}
-            <button
-                style={actionBtnStyle}
-                onPointerDown={(e) => {
-                    e.preventDefault();
-                    window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32 }));
-                }}
-                onPointerUp={(e) => {
-                    e.preventDefault();
-                    window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32 }));
-                }}
-            >
-                A
-            </button>
+            {/* Action buttons — B (sprint) + A (interact) */}
+            <div style={actionGroupStyle}>
+                <button
+                    style={sprintBtnStyle(sprintHeld)}
+                    onPointerDown={handleSprintDown}
+                    onPointerUp={handleSprintUp}
+                    onPointerCancel={handleSprintUp}
+                    onPointerLeave={handleSprintUp}
+                >
+                    B
+                </button>
+                <button
+                    style={actionBtnStyle}
+                    onPointerDown={(e) => {
+                        e.preventDefault();
+                        window.dispatchEvent(new KeyboardEvent('keydown', {
+                            key: ' ', code: 'Space', keyCode: 32,
+                        }));
+                    }}
+                    onPointerUp={(e) => {
+                        e.preventDefault();
+                        window.dispatchEvent(new KeyboardEvent('keyup', {
+                            key: ' ', code: 'Space', keyCode: 32,
+                        }));
+                    }}
+                >
+                    A
+                </button>
+            </div>
 
             {/* Exit button */}
             <button style={exitBtnStyle} onClick={exitScene}>
@@ -121,7 +158,7 @@ const centerStyle = {
     borderRadius: '4px',
 };
 
-const btnStyle = (dir, active) => ({
+const dpadBtnStyle = (dir, active) => ({
     background: active === dir ? 'rgba(255, 215, 0, 0.4)' : 'rgba(10, 10, 15, 0.7)',
     border: active === dir ? '2px solid rgba(255, 215, 0, 0.6)' : '2px solid rgba(255, 255, 255, 0.15)',
     color: active === dir ? '#ffd700' : '#cccccc',
@@ -137,25 +174,49 @@ const btnStyle = (dir, active) => ({
     transition: 'background 0.1s, border-color 0.1s',
 });
 
-const actionBtnStyle = {
+const actionGroupStyle = {
     position: 'absolute',
-    bottom: '48px',
-    right: '28px',
-    width: '64px',
-    height: '64px',
+    bottom: '36px',
+    right: '20px',
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'flex-end',
+    pointerEvents: 'auto',
+    userSelect: 'none',
+};
+
+const actionBtnBase = {
+    width: '60px',
+    height: '60px',
     borderRadius: '50%',
-    background: 'rgba(10, 10, 15, 0.7)',
-    border: '2px solid rgba(255, 215, 0, 0.3)',
-    color: '#ffd700',
-    fontSize: '20px',
+    fontSize: '18px',
     fontFamily: '"Press Start 2P", monospace',
     fontWeight: 'bold',
     cursor: 'pointer',
     touchAction: 'none',
-    pointerEvents: 'auto',
     WebkitTapHighlightColor: 'transparent',
     boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
 };
+
+const actionBtnStyle = {
+    ...actionBtnBase,
+    background: 'rgba(10, 10, 15, 0.7)',
+    border: '2px solid rgba(255, 215, 0, 0.3)',
+    color: '#ffd700',
+};
+
+const sprintBtnStyle = (active) => ({
+    ...actionBtnBase,
+    width: '52px',
+    height: '52px',
+    fontSize: '14px',
+    background: active ? 'rgba(100, 200, 255, 0.4)' : 'rgba(10, 10, 15, 0.7)',
+    border: active ? '2px solid rgba(100, 200, 255, 0.6)' : '2px solid rgba(255, 255, 255, 0.15)',
+    color: active ? '#64c8ff' : '#999999',
+});
 
 const exitBtnStyle = {
     position: 'absolute',

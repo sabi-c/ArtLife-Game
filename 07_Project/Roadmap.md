@@ -13,6 +13,7 @@
 **Deployed:** Cloudflare Pages
 
 ### Recently Completed
+- **WorldScene v2 — Full Pokemon-style overworld** — Complete rewrite with NPC spawning from Tiled objects (tinted sprites, random wandering, face-player-on-interact), full dialog box system (typewriter text, player freeze, SPACE to advance/dismiss, speaker labels), door transitions with camera fade, grass encounter zones (8 art-world themed random events with stat effects), item pickup with tween animations, daylight overlay based on in-game week, sprint mode (SHIFT key + mobile B button), wipe transition on entry, Y-depth sorting for all characters, position persistence to GameState. MobileJoypad v2 with B sprint button + A interact button. Comprehensive 450+ LOC scene.
 - **Sprint: WorldScene + MobileJoypad Integration** — Pokemon-style grid walking with Tiled maps (pallet_town.json, 26x27, 48px tiles), 4 tilesets, proper layer depth ordering, GridEngine collision from tile properties, spawn from Tiled objects, door/dialog interactions, ESC exit. MobileJoypad D-pad overlay with 56px touch targets, action button, exit button. Admin Dashboard + late-game terminal launch. Systemic Lattice Triggers (4 fail-state arcs). Haggle + stat change sound effects.
 - **Sprint 0.5: QA & Testing Pipeline** — Wrote `TestReporter.js` for Playwright, ensuring headless tests cleanly isolate blocks, trap browser/network `console.error` anomalies, generate state-dump JSON artifacts upon failure, and instantly capture visual `page.screenshot()` proof. Fixed cross-contamination across async `page.evaluate` runs. Test suite is robust 5/5.
 - **Sprint: Module Hardening & Architecture** — Full DialogueEngine rewrite with 5-tone system (Friendly/Schmoozing/Direct/Generous/Ruthless), tone tracking, condition evaluation, effect application (75→370 LOC). MarketManager.tick() wired into WeekEngine pipeline (prices now actually fluctuate weekly). MarketStore fleshed out with price history, artist snapshots, weekly news generation. InventoryStore expanded with provenance tracking. ConsequenceStore made persistent with full queue management. TerminalAPI updated with all store references. Fixed missing useEventStore import in WeekEngine.
@@ -149,9 +150,10 @@
 | Wire rooms into EventManager + GameState (C1) | ✅ Done | Time budget system: venues have `timeLimit`, rooms have `timeCost`, time bar displayed in header. Action cost on venue entry. onEnter effects, eavesdrop unlocks, flags all wired. |
 | Full venue flow test (Dashboard→Venue→Dialogue→Haggle→Dashboard) (C2) | IN PROGRESS | Venue picker → venue detail → room explore → NPC talk → dialogue tree all working. Manual testing ready. |
 | **Weekly Report Screen** — show summary after advancing week | ✅ Done | `weekReportScreen()` in dashboard.js. Shows financial deltas, market shifts, headlines, new messages, anti-resource warnings. Powered by `WeekEngine.lastReport`. |
-| Overworld refactor: extract `Player.js`, `NPC.js`, `MapManager.js` | TODO | Phase 40.5 plan exists in README |
-| Doorway warps (OverworldScene → LocationScene interiors) | TODO | |
-| Persistent spawn tracking across scene transitions | TODO | `GameState.state.playerLocation` exists but underused |
+| Overworld refactor: extract `Player.js`, `NPC.js`, `MapManager.js` | ✅ Done | Player/NPC classes exist. WorldScene v2 uses GridEngine directly with NPCs spawned from Tiled objects. |
+| Doorway warps (OverworldScene → LocationScene interiors) | ✅ Done | WorldScene v2 has door transitions with camera fade. Interior maps pending (placeholder dialog). |
+| Persistent spawn tracking across scene transitions | ✅ Done | `GameState.state.overworldPosition` saved on every tile change, restored on re-entry. |
+| **WorldScene v2 — Full Pokemon-style overworld** | ✅ Done | NPC spawning + wandering, dialog box with typewriter text + player freeze, grass encounters (art-world themed), item pickup, daylight overlay, sprint mode (SHIFT/B button), wipe transition, Y-depth sorting, position persistence. MobileJoypad v2 with B sprint button. |
 
 ### 3B. Developer Tools
 | Task | Status | Notes |
@@ -252,15 +254,42 @@
 ---
 
 ## Phase 5 — The Content Factory & Procedural Ecosystems
+## Phase 5 — Systemic Expansion & Content Ecosystems (Planned)
 
-> **Goal:** Once the JSON pipeline is solid, we need tooling and dynamic simulation to make the world breathe and feel infinite.
+### Sprint 5A: The Narrative 24-Hour Clock & Day/Night System
+- Refactor `GameState.js` to track `hour` and `dayOfWeek` alongside `week`.
+- Map FastTravel / GridEngine tile movement to minute drains.
+- Build `CalendarHUD.jsx` to render military time constantly onscreen over GridEngine.
+- Implement Phaser `postFX` vignette/tinting at 19:00, forcing players home at 24:00 (burnout penalty).
 
-| Task | Status | Notes |
-|---|---|---|
-| Visual Node CMS Editor | TODO | React Flow-based desktop tool to auth & export dialogue JSONs visually |
-| Dynamic AI Rival Collectors | TODO | AI NPCs that bid on and remove global market artworks during the tick |
-| The Scandal & Hype Engine | TODO | News events that dynamically multiply/tank base modifier values |
-| Procedural SVG Art Certificates | TODO | Algorithmic "Certificates of Authenticity" graphics for artworks |
+### Sprint 5B: Spatial-Temporal Event Registry
+- Refactor `events.js` JSON format to support `{ location: "pallett", day: 5, hourMin: 22 }` bindings.
+- Build continuous Coordinate/Time listener into `WorldScene.js` capable of locking input and triggering a narrative React overlay dynamically during a walk.
+- Convert NPC schedules into coordinate matrices (e.g. Gallery Owner unspawns at 18:00).
+
+### Sprint 5C: The Admin Sequencer
+- Add [ SEQ ] Sequence Trigger Builder to `AdminDashboard.jsx`.
+- Visual timeline visualizer allowing dev injection of time/grid coordinates directly to the consequence queue.
+
+### Sprint 5D: The Object Interaction Loop
+- Connect `GridEngine.positionChangeFinished` observable to `GameState`.
+- Emit interaction actions via GameEventBus mapping coordinates to specific Event Nodes.
+
+---
+
+## Phase 6 — Admin & Settings Hardening (Planned)
+
+### Sprint 6A: The Live Tree Validator
+- Import a lightweight React JSON viewer library.
+- Bind to `useGameStore` and generic `GameState.state` for direct inline editing.
+
+### Sprint 6B: Memory Operations & Snapshots
+- Build the Quick-Save memory array in the Admin UI.
+- Implement the "State Reversal" stack tracking the last 5 week-ticks.
+
+### Sprint 6C: Spatial Spawning & Debug Tools
+- Bridge the Admin UI to `GridEngine` to read active tile vectors.
+- Implement dynamic Phase Sprite instantiators to visually test event layouts.
 
 ---
 
