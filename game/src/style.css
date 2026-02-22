@@ -2479,3 +2479,53 @@ button {
 .admin-fab:active {
   background: rgba(201, 168, 76, 0.3);
 }
+
+/* ── Week Transition (Oregon Trail ticker) ── */
+.wt-container {
+  padding: 20px 0;
+  font-family: inherit;
+}
+.wt-header {
+  color: var(--gold, #c9a84c);
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+.wt-divider {
+  color: rgba(122, 122, 138, 0.4);
+  margin: 8px 0;
+  opacity: 0;
+  animation: wt-fade-in 0.3s ease forwards;
+}
+.wt-day {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  opacity: 0;
+  animation: wt-fade-in 0.3s ease forwards;
+}
+.wt-day-name {
+  color: var(--gold, #c9a84c);
+  min-width: 90px;
+  font-weight: bold;
+}
+.wt-day-dots {
+  color: rgba(122, 122, 138, 0.3);
+  letter-spacing: 2px;
+}
+.wt-day-activity {
+  color: rgba(122, 122, 138, 0.7);
+  font-style: italic;
+}
+.wt-summary {
+  color: var(--gold, #c9a84c);
+  margin-top: 12px;
+  opacity: 0;
+  animation: wt-fade-in 0.3s ease forwards;
+}
+@keyframes wt-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

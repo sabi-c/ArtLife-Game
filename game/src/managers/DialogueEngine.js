@@ -101,7 +101,7 @@ class DialogueEngineManager {
 
         return {
             ...node,
-            text: resolvedText,
+            text: this._interpolate(resolvedText),
             availableTopics: this.getAvailableTopics(node),
         };
     }
@@ -338,6 +338,51 @@ class DialogueEngineManager {
             }
         }
         return null;
+    }
+
+    // ── Variable Text Interpolation ─────────────────────────────────────────
+
+    /**
+     * Replace {variable} placeholders in text with live game state values.
+     * Supports: {cash}, {reputation}, {name}, {city}, {week},
+     * {last_purchased_art}, {portfolio_count}, {market_state}, etc.
+     * @param {string} text
+     * @returns {string}
+     */
+    _interpolate(text) {
+        if (!text || !text.includes('{')) return text;
+        const s = GameState.state;
+        if (!s) return text;
+
+        const lastPurchase = (s.portfolio || []).slice(-1)[0];
+
+        const vars = {
+            cash: `$${(s.cash || 0).toLocaleString()}`,
+            reputation: s.reputation || 0,
+            taste: s.taste || 0,
+            intel: s.intel || 0,
+            access: s.access || 0,
+            hype: s.hype || 0,
+            audacity: s.audacity || 0,
+            name: s.name || 'Player',
+            city: s.currentCity || 'New York',
+            week: s.week || 1,
+            market_state: s.marketState || 'flat',
+            suspicion: s.suspicion || 0,
+            market_heat: s.marketHeat || 0,
+            burnout: s.burnout || 0,
+            portfolio_count: (s.portfolio || []).length,
+            net_worth: `$${((s.cash || 0) + (s.portfolio || []).reduce((sum, w) => sum + (w.price || w.basePrice || 0), 0)).toLocaleString()}`,
+            last_purchased_art: lastPurchase?.title || 'nothing yet',
+            last_purchased_price: lastPurchase ? `$${(lastPurchase.purchasePrice || lastPurchase.price || 0).toLocaleString()}` : '$0',
+            last_purchased_artist: lastPurchase?.artist || 'nobody',
+            archetype: s.archetype || 'dealer',
+            npc: this.conversationNpcId || 'someone',
+        };
+
+        return text.replace(/\{(\w+)\}/g, (match, key) => {
+            return vars[key] !== undefined ? String(vars[key]) : match;
+        });
     }
 
     // ── Legacy Compat ────────────────────────────────────────────────────────

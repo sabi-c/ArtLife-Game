@@ -698,6 +698,75 @@ function generateWorldMap(currentWeek) {
 }
 
 // ════════════════════════════════════════════
+// SCREEN: Week Transition (Oregon Trail ticker)
+// ════════════════════════════════════════════
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_ACTIVITIES = [
+    'Gallery visits...', 'Coffee with contacts...', 'Reviewing portfolios...',
+    'Attending a viewing...', 'Market research...', 'Studio visits...',
+    'Phone calls...', 'Reading the reviews...', 'Auction catalogues...',
+    'Networking...', 'Paperwork...', 'Walking the neighborhood...',
+    'Checking prices...', 'Running the numbers...', 'Making connections...',
+];
+
+function weekTransitionScreen(ui) {
+    return () => {
+        const s = TerminalAPI.state();
+        const weekNum = (s?.week || 1);
+        const month = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][Math.floor((weekNum - 1) / 4) % 12];
+
+        // Pick random activities for each day
+        const shuffled = [...DAY_ACTIVITIES].sort(() => Math.random() - 0.5);
+
+        // Build the day-by-day ticker HTML
+        let tickerHtml = `<div class="wt-container">`;
+        tickerHtml += `<div class="wt-header">WEEK ${weekNum} — ${month}</div>`;
+        tickerHtml += `<div class="wt-divider">─────────────────────────────</div>`;
+
+        DAYS.forEach((day, i) => {
+            const activity = shuffled[i % shuffled.length];
+            const delay = i * 0.3;
+            tickerHtml += `<div class="wt-day" style="animation-delay: ${delay}s">`;
+            tickerHtml += `<span class="wt-day-name">${day}</span>`;
+            tickerHtml += `<span class="wt-day-dots">·····</span>`;
+            tickerHtml += `<span class="wt-day-activity">${activity}</span>`;
+            tickerHtml += `</div>`;
+        });
+
+        tickerHtml += `<div class="wt-divider" style="animation-delay: 2.1s">─────────────────────────────</div>`;
+        tickerHtml += `<div class="wt-summary" style="animation-delay: 2.4s">Week complete. Processing results...</div>`;
+        tickerHtml += `</div>`;
+
+        // Auto-advance to week report after animation
+        setTimeout(() => {
+            try {
+                TerminalAPI.advanceWeek();
+                ui.replaceScreen(weekReportScreen(ui));
+            } catch (err) {
+                window.lastError = err.message;
+                ui.render();
+            }
+        }, 2800);
+
+        return {
+            lines: [{ type: 'raw', text: tickerHtml }],
+            options: [
+                { label: '⏩  Skip →', action: () => {
+                    try {
+                        TerminalAPI.advanceWeek();
+                        ui.replaceScreen(weekReportScreen(ui));
+                    } catch (err) {
+                        window.lastError = err.message;
+                        ui.render();
+                    }
+                }},
+            ],
+        };
+    };
+}
+
+// ════════════════════════════════════════════
 // SCREEN: Weekly Report (post-advance notification)
 // ════════════════════════════════════════════
 function weekReportScreen(ui) {
@@ -1091,15 +1160,7 @@ export function dashboardScreen(ui) {
         if (actionsLeft === 0) {
             options.push({
                 label: '⏩  WEEK COMPLETE — Advance Week →',
-                action: () => {
-                    try {
-                        TerminalAPI.advanceWeek();
-                        ui.replaceScreen(weekReportScreen(ui));
-                    } catch (err) {
-                        window.lastError = err.message;
-                        ui.render();
-                    }
-                }
+                action: () => ui.replaceScreen(weekTransitionScreen(ui)),
             });
         }
 
@@ -1236,15 +1297,8 @@ export function dashboardScreen(ui) {
 
         if (actionsLeft > 0) {
             options.push({
-                label: '⏩  Advance Week →', action: () => {
-                    try {
-                        TerminalAPI.advanceWeek();
-                        ui.replaceScreen(weekReportScreen(ui));
-                    } catch (err) {
-                        window.lastError = err.message;
-                        ui.render();
-                    }
-                }
+                label: '⏩  Advance Week →',
+                action: () => ui.replaceScreen(weekTransitionScreen(ui)),
             });
         }
 
