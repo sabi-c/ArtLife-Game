@@ -9,9 +9,10 @@
  * Wired into ContentStudio.jsx as the "ROOMS" tab.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { VENUES, VENUE_MAP, ROOM_MAP } from '../../data/rooms.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import MapEditor from './MapEditor.jsx';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
 
@@ -457,7 +458,7 @@ function RoomInspector({ venue, mapData }) {
 // Right Panel — Actions
 // ════════════════════════════════════════════════════════════════
 
-function ActionsPanel({ venue, mapData, onClose }) {
+function ActionsPanel({ venue, mapData, onClose, onEditMap }) {
     const [showJSON, setShowJSON] = useState(false);
     const [notification, setNotification] = useState(null);
 
@@ -539,6 +540,16 @@ function ActionsPanel({ venue, mapData, onClose }) {
                 <button onClick={handleTestRoom} style={{ ...greenBtnStyle, width: '100%', padding: '10px 12px', fontSize: 11 }}>
                     PLAY TEST ROOM
                 </button>
+
+                {/* Visual Map Editor */}
+                {firstTiledRoom && mapJSON && (
+                    <button
+                        onClick={() => onEditMap && onEditMap(firstTiledRoom.tiledMap)}
+                        style={{ ...goldBtnStyle, width: '100%', padding: '10px 12px', fontSize: 11 }}
+                    >
+                        EDIT MAP
+                    </button>
+                )}
 
                 {/* Open in Tiled */}
                 {firstTiledRoom && (
@@ -653,6 +664,7 @@ function ActionsPanel({ venue, mapData, onClose }) {
 export default function RoomManager({ onClose }) {
     const [selectedVenueId, setSelectedVenueId] = useState(null);
     const [mapData, setMapData] = useState({});
+    const [editingMapId, setEditingMapId] = useState(null);
 
     // Fetch all Tiled map JSONs on mount
     useEffect(() => {
@@ -679,6 +691,41 @@ export default function RoomManager({ onClose }) {
 
     const selectedVenue = selectedVenueId ? VENUE_MAP[selectedVenueId] : null;
 
+    // Find the room data for the editing map
+    const editingRoom = editingMapId
+        ? VENUES.flatMap(v => v.rooms).find(r => r.tiledMap === editingMapId)
+        : null;
+
+    // Handle saving edited map JSON back
+    const handleSaveMap = useCallback((updatedJSON) => {
+        // Update in-memory cache so inspector refreshes
+        setMapData(prev => ({ ...prev, [editingMapId]: updatedJSON }));
+        mapCache[editingMapId] = updatedJSON;
+
+        // Download the file — in a real setup this would write to disk via dev server
+        const blob = new Blob([JSON.stringify(updatedJSON, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${editingMapId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [editingMapId]);
+
+    // If editing a map, show the MapEditor full-screen
+    if (editingMapId && mapData[editingMapId]) {
+        return (
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                <MapEditor
+                    mapJSON={mapData[editingMapId]}
+                    roomData={editingRoom}
+                    onClose={() => setEditingMapId(null)}
+                    onSave={handleSaveMap}
+                />
+            </div>
+        );
+    }
+
     return (
         <div style={{
             flex: 1, display: 'flex', gap: 1, overflow: 'hidden',
@@ -699,7 +746,12 @@ export default function RoomManager({ onClose }) {
             </div>
 
             {/* Right: Actions */}
-            <ActionsPanel venue={selectedVenue} mapData={mapData} onClose={onClose} />
+            <ActionsPanel
+                venue={selectedVenue}
+                mapData={mapData}
+                onClose={onClose}
+                onEditMap={setEditingMapId}
+            />
         </div>
     );
 }
