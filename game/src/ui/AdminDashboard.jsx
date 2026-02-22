@@ -194,11 +194,12 @@ export default function AdminDashboard({ onClose }) {
                 {activeTab === 'ui' && (
                     <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
                         <div>
-                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>REACT DOM OVERLAYS</div>
-                            <button style={btnStyle} onClick={() => triggerUI(VIEW.BOOT)}>[ Mount Terminal Login ]</button>
-                            <button style={btnStyle} onClick={() => triggerUI(VIEW.SCENE_ENGINE)}>[ Mount Scene Engine ]</button>
-                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.INVENTORY)}>[ Mount Inventory Dashboard ]</button>
-                            <button style={btnStyle} onClick={() => triggerUI(VIEW.DASHBOARD)}>[ Mount Player Dashboard ]</button>
+                            <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>SYSTEM TOOLS</h3>
+                            <button style={btnStyle} onClick={() => triggerUI(VIEW.TERMINAL)}>■ TERMINAL INTERFACE</button>
+                            <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => triggerOverlay(OVERLAY.MASTER_CMS)}>🏗️ MASTER CMS & VISUAL EDITOR</button>
+                            <button style={{ ...btnStyle, borderColor: '#555', color: '#888' }} onClick={() => triggerOverlay(OVERLAY.STORYLINE_CMS)}>⛓️ Storyline Visualizer (Legacy)</button>
+                            <button style={{ ...btnStyle, borderColor: '#555', color: '#888' }} onClick={() => triggerOverlay(OVERLAY.EVENT_CMS)}>🌳 Event JSON Visualizer (Legacy)</button>
+                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.MARKET_DASHBOARD)}>📈 Market Dashboard</button>
                         </div>
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>SYSTEM DIALOGUES</div>

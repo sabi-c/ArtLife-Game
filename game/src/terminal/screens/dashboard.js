@@ -1348,105 +1348,120 @@ export function dashboardScreen(ui) {
         });
 
         // THIS WEEK card items
-        const thisWeekEvents = getUpcomingEvents(s.week, 1).filter(e => e.weeksAway === 0);
         const weekItems = [];
-        if (thisWeekEvents.length > 0 && phase !== 'early') {
-            thisWeekEvents.forEach(ev => {
-                const evIcon = CAL_ICONS[ev.type] || '▸';
-                const cost = ev.cost > 0 ? ev.cost : 0;
-                const apCost = ev.tier === 1 ? 2 : 1;
-                const canAfford = s.cash >= cost;
-                const canAttend = hasActions(apCost) && canAfford;
-                const costLabel = cost > 0 ? ` · $${cost.toLocaleString()}` : '';
-                weekItems.push({
-                    icon: evIcon, label: `${ev.name} (${ev.location}${costLabel})`, ap: apCost,
-                    disabled: !canAttend,
+        try {
+            const thisWeekEvents = getUpcomingEvents(s.week, 1).filter(e => e.weeksAway === 0);
+            if (thisWeekEvents.length > 0 && phase !== 'early') {
+                thisWeekEvents.forEach(ev => {
+                    const evIcon = CAL_ICONS[ev.type] || '▸';
+                    const cost = ev.cost > 0 ? ev.cost : 0;
+                    const apCost = ev.tier === 1 ? 2 : 1;
+                    const canAfford = s.cash >= cost;
+                    const canAttend = hasActions(apCost) && canAfford;
+                    const costLabel = cost > 0 ? ` · $${cost.toLocaleString()}` : '';
+                    weekItems.push({
+                        icon: evIcon, label: `${ev.name} (${ev.location}${costLabel})`, ap: apCost,
+                        disabled: !canAttend,
+                    });
+                    options.push({
+                        label: `${ev.name} (${ev.location})`,
+                        disabled: !canAttend,
+                        action: canAttend ? () => ui.pushScreen(calendarEventScreen(ui, ev, apCost)) : undefined
+                    });
                 });
-                options.push({
-                    label: `${ev.name} (${ev.location})`,
-                    disabled: !canAttend,
-                    action: canAttend ? () => ui.pushScreen(calendarEventScreen(ui, ev, apCost)) : undefined
-                });
-            });
+            }
+        } catch (e) {
+            window.ArtLife?.recordError('Dashboard.ThisWeek', e);
+            weekItems.push({ icon: '⚠️', label: 'Error loading calendar', disabled: true });
         }
 
         // OPERATIONS card items
         const opsItems = [];
-        const venueLocked = phase === 'early';
-        opsItems.push({ icon: '🎨', label: venueLocked ? 'Visit Venue (Locked)' : 'Visit Venue', ap: 1, disabled: venueLocked || !hasActions(1) });
-        options.push({
-            label: venueLocked ? 'Visit Venue (Locked)' : 'Visit Venue',
-            disabled: venueLocked || !hasActions(1),
-            action: (!venueLocked && hasActions(1)) ? () => safePush(venuePickerScreen) : undefined
-        });
-
-        const walkLocked = phase !== 'late';
-        opsItems.push({ icon: '🗺️', label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood', disabled: walkLocked });
-        options.push({
-            label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood',
-            disabled: walkLocked,
-            action: !walkLocked ? () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui }) : undefined
-        });
-
-        const travelLocked = phase === 'early';
-        opsItems.push({ icon: '✈️', label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`, ap: 1, disabled: travelLocked || !hasActions(1) });
-        options.push({
-            label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`,
-            disabled: travelLocked || !hasActions(1),
-            action: (!travelLocked && hasActions(1)) ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'GLOBAL_MAP') : undefined
-        });
-
-        const intelLocked = phase === 'early';
-        opsItems.push({ icon: '📊', label: intelLocked ? 'Market Intel (Locked)' : `Market Intel`, badge: intelLocked ? undefined : s.marketState.toUpperCase(), disabled: intelLocked });
-        options.push({
-            label: intelLocked ? 'Market Intel (Locked)' : `Market Intel (${s.marketState})`,
-            disabled: intelLocked,
-            action: !intelLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.MARKET_DASHBOARD) : undefined
-        });
-
-        if (pendingCount > 0) {
-            opsItems.push({ icon: '💼', label: `Pending Offers`, badge: `${pendingCount}` });
+        try {
+            const venueLocked = phase === 'early';
+            opsItems.push({ icon: '🎨', label: venueLocked ? 'Visit Venue (Locked)' : 'Visit Venue', ap: 1, disabled: venueLocked || !hasActions(1) });
             options.push({
-                label: `Pending Offers (${pendingCount})`,
-                action: () => safePush(phoneScreen)
+                label: venueLocked ? 'Visit Venue (Locked)' : 'Visit Venue',
+                disabled: venueLocked || !hasActions(1),
+                action: (!venueLocked && hasActions(1)) ? () => safePush(venuePickerScreen) : undefined
             });
+
+            const walkLocked = phase !== 'late';
+            opsItems.push({ icon: '🗺️', label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood', disabled: walkLocked });
+            options.push({
+                label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood',
+                disabled: walkLocked,
+                action: !walkLocked ? () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui }) : undefined
+            });
+
+            const travelLocked = phase === 'early';
+            opsItems.push({ icon: '✈️', label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`, ap: 1, disabled: travelLocked || !hasActions(1) });
+            options.push({
+                label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`,
+                disabled: travelLocked || !hasActions(1),
+                action: (!travelLocked && hasActions(1)) ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'GLOBAL_MAP') : undefined
+            });
+
+            const intelLocked = phase === 'early';
+            opsItems.push({ icon: '📊', label: intelLocked ? 'Market Intel (Locked)' : `Market Intel`, badge: intelLocked ? undefined : s.marketState.toUpperCase(), disabled: intelLocked });
+            options.push({
+                label: intelLocked ? 'Market Intel (Locked)' : `Market Intel (${s.marketState})`,
+                disabled: intelLocked,
+                action: !intelLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.MARKET_DASHBOARD) : undefined
+            });
+
+            if (pendingCount > 0) {
+                opsItems.push({ icon: '💼', label: `Pending Offers`, badge: `${pendingCount}` });
+                options.push({
+                    label: `Pending Offers (${pendingCount})`,
+                    action: () => safePush(phoneScreen)
+                });
+            }
+        } catch (e) {
+            window.ArtLife?.recordError('Dashboard.Operations', e);
+            opsItems.push({ icon: '⚠️', label: 'Error loading operations', disabled: true });
         }
 
         // DOSSIER card items
         const dossierItems = [];
-        const invLocked = phase !== 'late';
-        dossierItems.push({ icon: '🧰', label: invLocked ? 'Inventory & Artifacts (Locked)' : 'Inventory & Artifacts', disabled: invLocked });
-        options.push({
-            label: invLocked ? 'Inventory & Artifacts (Locked)' : 'Inventory & Artifacts',
-            disabled: invLocked,
-            action: !invLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY') : undefined
-        });
+        try {
+            const invLocked = phase !== 'late';
+            dossierItems.push({ icon: '🧰', label: invLocked ? 'Inventory & Artifacts (Locked)' : 'Inventory & Artifacts', disabled: invLocked });
+            options.push({
+                label: invLocked ? 'Inventory & Artifacts (Locked)' : 'Inventory & Artifacts',
+                disabled: invLocked,
+                action: !invLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'INVENTORY') : undefined
+            });
 
-        const egoLocked = phase === 'early';
-        dossierItems.push({ icon: '🪞', label: egoLocked ? 'Ego Dashboard (Locked)' : 'Ego Dashboard', disabled: egoLocked });
-        options.push({
-            label: egoLocked ? 'Ego Dashboard & Profile (Locked)' : 'Ego Dashboard & Profile',
-            disabled: egoLocked,
-            action: !egoLocked ? () => safePush(() => egoDashboardScreenLazy(ui)) : undefined
-        });
+            const egoLocked = phase === 'early';
+            dossierItems.push({ icon: '🪞', label: egoLocked ? 'Ego Dashboard (Locked)' : 'Ego Dashboard', disabled: egoLocked });
+            options.push({
+                label: egoLocked ? 'Ego Dashboard & Profile (Locked)' : 'Ego Dashboard & Profile',
+                disabled: egoLocked,
+                action: !egoLocked ? () => safePush(() => egoDashboardScreenLazy(ui)) : undefined
+            });
 
-        dossierItems.push({
-            icon: '📱', label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
-            ap: 1, disabled: !hasActions(1),
-        });
-        options.push({
-            label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
-            disabled: !hasActions(1),
-            action: hasActions(1) ? () => safePush(phoneScreen) : undefined
-        });
+            dossierItems.push({
+                icon: '📱', label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
+                ap: 1, disabled: !hasActions(1),
+            });
+            options.push({
+                label: unreadMessages > 0 ? `Phone (${unreadMessages} unread)` : 'Phone',
+                disabled: !hasActions(1),
+                action: hasActions(1) ? () => safePush(phoneScreen) : undefined
+            });
 
-        const journalLocked = phase === 'early';
-        dossierItems.push({ icon: '📓', label: journalLocked ? 'Journal & Calendar (Locked)' : 'Journal & Calendar', disabled: journalLocked });
-        options.push({
-            label: journalLocked ? 'Journal & Calendar (Locked)' : 'Journal & Calendar',
-            disabled: journalLocked,
-            action: !journalLocked ? () => safePush(journalScreen) : undefined
-        });
+            const journalLocked = phase === 'early';
+            dossierItems.push({ icon: '📓', label: journalLocked ? 'Journal & Calendar (Locked)' : 'Journal & Calendar', disabled: journalLocked });
+            options.push({
+                label: journalLocked ? 'Journal & Calendar (Locked)' : 'Journal & Calendar',
+                disabled: journalLocked,
+                action: !journalLocked ? () => safePush(journalScreen) : undefined
+            });
+        } catch (e) {
+            window.ArtLife?.recordError('Dashboard.Dossier', e);
+            dossierItems.push({ icon: '⚠️', label: 'Error loading dossier', disabled: true });
+        }
 
         // SYSTEM card items
         const systemItems = [];

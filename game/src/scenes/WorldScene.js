@@ -70,6 +70,8 @@ export default class WorldScene extends BaseScene {
         this.lastGrassCheck = { x: -1, y: -1 };
         this.grassCooldown = 0;
         this.itemsCollected = new Set();
+        this._sceneReady = false;
+        this._createFailed = false;
     }
 
     preload() {
@@ -95,6 +97,13 @@ export default class WorldScene extends BaseScene {
 
     create(data) {
         super.create({ ...data, hideUI: true });
+        this._sceneReady = false;
+        this._createFailed = false;
+
+        // Initialize joypad globals immediately so update() never reads undefined
+        window.joypadState = window.joypadState ?? null;
+        window.joypadSprint = window.joypadSprint ?? false;
+        window.joypadAction = window.joypadAction ?? false;
 
         const { width, height } = this.scale;
 
@@ -102,18 +111,31 @@ export default class WorldScene extends BaseScene {
         this.add.rectangle(width / 2, height / 2, width, height, 0x2d6b30)
             .setDepth(-1).setScrollFactor(0);
 
-        // Verify GridEngine plugin
+        // Verify GridEngine plugin — retry once after a frame if not ready
         if (!this.gridEngine) {
-            console.error('[WorldScene] GridEngine plugin not found!');
-            this._showError('GridEngine plugin not available');
+            console.warn('[WorldScene] GridEngine not ready, retrying next frame...');
+            this.time.delayedCall(50, () => {
+                if (!this.gridEngine) {
+                    console.error('[WorldScene] GridEngine plugin not found after retry!');
+                    this._createFailed = true;
+                    this._showError('GridEngine plugin not available');
+                    return;
+                }
+                this._initScene(data);
+            });
             return;
         }
 
+        this._initScene(data);
+    }
+
+    _initScene(data) {
         try {
             this._buildScene(data);
             this._playWipeTransition();
         } catch (err) {
             console.error('[WorldScene] create() error:', err);
+            this._createFailed = true;
             window.ArtLife?.recordSceneError?.('WorldScene', err);
             this._showError(err.message);
         }
@@ -360,15 +382,19 @@ export default class WorldScene extends BaseScene {
 
         this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
 
-        // Mobile joypad support
-        window.joypadState = null;
+        // Mobile joypad support — globals already initialized in create()
+        this._joypadActionConsumed = false;
+
+        // ── Location name toast ──
+        this._showLocationToast('PALLET TOWN');
 
         // ── Scene entry sound ──
         WebAudioService.sceneEnter();
 
-        // ── Notify React ──
-        GameEventBus.emit(GameEvents.SCENE_READY, 'WorldScene');
-        console.log('[WorldScene] Ready.',
+        // Mark scene as ready — SCENE_READY event deferred to first update() frame
+        // so React overlays have time to mount before we signal readiness
+        this._sceneReady = true;
+        console.log('[WorldScene] Built successfully.',
             'charLayer:', charLayer || '(implicit)',
             'NPCs:', this.npcData.length,
             'Items:', this.items.length,
@@ -441,7 +467,15 @@ export default class WorldScene extends BaseScene {
     // ════════════════════════════════════════════════════
 
     update(time, delta) {
+        if (this._createFailed) return;
         if (!this.gridEngine) return;
+
+        // Emit SCENE_READY on first update frame — ensures Phaser is fully initialized
+        if (this._sceneReady && !this._readyEmitted) {
+            this._readyEmitted = true;
+            GameEventBus.emit(GameEvents.SCENE_READY, 'WorldScene');
+        }
+
         if (this.dialogActive) return; // Freeze movement during dialog
 
         // Sprint detection
@@ -464,6 +498,13 @@ export default class WorldScene extends BaseScene {
         else if (right) this.gridEngine.move('player', 'right');
         else if (up) this.gridEngine.move('player', 'up');
         else if (down) this.gridEngine.move('player', 'down');
+
+        // Mobile A button interaction (polls global flag each frame)
+        if (window.joypadAction && !this._joypadActionConsumed) {
+            this._joypadActionConsumed = true;
+            this._onInteractPress();
+        }
+        if (!window.joypadAction) this._joypadActionConsumed = false;
 
         // Daylight refresh every ~5s
         if (time % 5000 < 20) this._applyDaylight();
@@ -737,14 +778,22 @@ export default class WorldScene extends BaseScene {
         if (door.nextMap) {
             this.cameras.main.fadeOut(300, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                // Save position for when we return
                 const pos = this.gridEngine.getPosition('player');
                 GameState.state.overworldPosition = { x: pos.x, y: pos.y };
 
-                // For now, show a dialog about the door (no interior maps yet)
-                // When interior maps are added, switch to: this.scene.start('InteriorScene', { map: door.nextMap })
-                this.cameras.main.fadeIn(300, 0, 0, 0);
-                this._showDialog('Door', `The door to ${door.nextMap || 'this building'} is locked. (Interior maps coming soon!)`);
+                GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
+                this.scene.stop();
+
+                // Launch LocationScene with venue data
+                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'LocationScene', {
+                    venueId: door.nextMap,
+                    roomId: door.nextMapRoom || null,
+                    returnScene: 'WorldScene',
+                    returnArgs: {
+                        spawnX: pos.x,
+                        spawnY: pos.y + 1, // spawn below the door
+                    },
+                });
             });
         } else {
             this._showDialog('Door', 'This door appears to be locked.');
@@ -897,6 +946,47 @@ export default class WorldScene extends BaseScene {
     }
 
     // ════════════════════════════════════════════════════
+    // Location Name Toast
+    // ════════════════════════════════════════════════════
+
+    _showLocationToast(name) {
+        const { width } = this.scale;
+        const barH = 40;
+
+        const bg = this.add.rectangle(width / 2, -barH / 2, width, barH, 0x000000, 0.75)
+            .setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        const text = this.add.text(width / 2, -barH / 2, name, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '12px',
+            color: '#ffffff',
+            letterSpacing: 4,
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD + 1);
+
+        // Slide down
+        this.tweens.add({
+            targets: [bg, text],
+            y: barH / 2,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => {
+                // Hold, then fade out
+                this.time.delayedCall(2000, () => {
+                    this.tweens.add({
+                        targets: [bg, text],
+                        alpha: 0,
+                        duration: 600,
+                        onComplete: () => {
+                            bg.destroy();
+                            text.destroy();
+                        },
+                    });
+                });
+            },
+        });
+    }
+
+    // ════════════════════════════════════════════════════
     // Exit
     // ════════════════════════════════════════════════════
 
@@ -913,6 +1003,7 @@ export default class WorldScene extends BaseScene {
 
         window.joypadState = null;
         window.joypadSprint = false;
+        window.joypadAction = false;
         WebAudioService.sceneExit();
 
         this.cameras.main.fadeOut(300, 0, 0, 0);
@@ -931,6 +1022,7 @@ export default class WorldScene extends BaseScene {
     cleanup() {
         window.joypadState = null;
         window.joypadSprint = false;
+        window.joypadAction = false;
         this.npcSprites = [];
         this.npcData = [];
         this.dialogElements = [];

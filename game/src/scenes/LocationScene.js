@@ -394,8 +394,16 @@ export class LocationScene extends BaseScene {
     leaveLocation() {
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            if (this.returnScene) {
-                // Return to previous visual scene (e.g., CityScene)
+            if (this.returnScene === 'WorldScene') {
+                // Return to WorldScene at the door position
+                GameEventBus.emit(GameEvents.SCENE_EXIT, 'LocationScene');
+                this.scene.stop();
+                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', {
+                    spawnX: this.returnArgs?.spawnX,
+                    spawnY: this.returnArgs?.spawnY,
+                });
+            } else if (this.returnScene) {
+                // Return to other visual scene
                 this.scene.start(this.returnScene, {
                     ...this.returnArgs,
                     ui: this.ui
@@ -406,7 +414,7 @@ export class LocationScene extends BaseScene {
                 GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                 this.showTerminalUI();
                 if (this.ui) {
-                    this.ui.popScreen(); // Remove empty trap screen
+                    this.ui.popScreen();
                     this.ui.render();
                 }
                 this.scene.stop();

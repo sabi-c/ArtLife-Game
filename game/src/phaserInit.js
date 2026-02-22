@@ -214,24 +214,30 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
         }
 
         // Stop all ACTIVE scenes first so we don't have overlapped updates
+        const activeScenes = [];
         window.phaserGame.scene.scenes.forEach(scene => {
             if (scene.sys.isActive() && scene.sys.settings.key !== 'BootScene') {
+                activeScenes.push(scene.sys.settings.key);
                 window.phaserGame.scene.stop(scene.sys.settings.key);
             }
         });
 
-        // Launch the requested scene
-        console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}`, data);
-        window.phaserGame.scene.start(sceneKey, { ui, ...data });
-
-        // Give canvas keyboard focus so WASD/arrows work immediately
-        if (window.phaserGame.canvas) {
-            window.phaserGame.canvas.setAttribute('tabindex', '0');
-            window.phaserGame.canvas.focus();
-        }
-
-        // Sync React state so activeView effect stays consistent
+        // Sync React state FIRST so overlays mount before scene starts
         GameEventBus.emit(GameEvents.UI_ROUTE, 'PHASER');
+
+        // Delay scene start to let stopped scenes clean up and React overlays mount
+        const startDelay = activeScenes.length > 0 ? 100 : 50;
+        setTimeout(() => {
+            if (!window.phaserGame) return;
+            console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}`, data);
+            window.phaserGame.scene.start(sceneKey, { ui, ...data });
+
+            // Give canvas keyboard focus so WASD/arrows work immediately
+            if (window.phaserGame.canvas) {
+                window.phaserGame.canvas.setAttribute('tabindex', '0');
+                window.phaserGame.canvas.focus();
+            }
+        }, startDelay);
     } catch (err) {
         console.error(`[DEBUG_LAUNCH_SCENE] Failed to launch ${sceneKey}:`, err);
         GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene launch failed: ${err.message}`);

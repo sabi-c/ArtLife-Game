@@ -111,12 +111,12 @@ export default function ArtworkDashboard({ onClose, payload }) {
 
     // Calculate the index chart based on the artist
     const chartData = useMemo(() => {
-        if (!work.artistId || !priceHistory[work.artistId]) return [];
+        if (!work?.artistId || !priceHistory?.[work.artistId]) return [];
         return priceHistory[work.artistId].map(doc => {
             // Re-calculate the index for the graph if needed, or just plot avg price
-            return { week: doc.week, index: doc.avgPrice };
+            return { week: doc.week, index: doc.avgPrice || 0 };
         });
-    }, [work.artistId, priceHistory]);
+    }, [work?.artistId, priceHistory]);
 
     return (
         <div style={overlayStyle}>
@@ -159,7 +159,7 @@ export default function ArtworkDashboard({ onClose, payload }) {
                         </div>
                         {artistData && canSeeFull && (
                             <div style={{ marginTop: '5px', fontSize: '12px', color: artistData.trend === 'up' ? '#4caf50' : artistData.trend === 'down' ? '#f44336' : '#888' }}>
-                                Artist Heat: {Math.round(artistData.heat)}/100
+                                Artist Heat: {Math.round(artistData.heat || 0)}/100
                             </div>
                         )}
                     </div>
@@ -175,13 +175,13 @@ export default function ArtworkDashboard({ onClose, payload }) {
                     )}
 
                     {/* Flavor Notes */}
-                    {canSeeFull && work.notes && work.notes.length > 0 && (
+                    {canSeeFull && work?.notes && work.notes.length > 0 && (
                         <div style={{ marginTop: '20px' }}>
                             <div style={{ color: '#666', fontSize: '10px', letterSpacing: '0.1em', marginBottom: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '5px' }}>CONDITION & RUMORS</div>
                             {work.notes.map((note, idx) => (
                                 <div key={idx} style={{ marginBottom: '10px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderLeft: '2px solid #555' }}>
-                                    <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>{note.author}:</div>
-                                    <div style={{ fontSize: '13px', color: '#ccc', fontStyle: 'italic' }}>"{note.text}"</div>
+                                    <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>{note?.author || 'Unknown'}:</div>
+                                    <div style={{ fontSize: '13px', color: '#ccc', fontStyle: 'italic' }}>"{note?.text || '...'}"</div>
                                 </div>
                             ))}
                         </div>
@@ -209,14 +209,14 @@ export default function ArtworkDashboard({ onClose, payload }) {
                     <div style={{ width: '100%', maxWidth: '800px', display: 'flex', gap: '2rem' }}>
 
                         {/* Provenance */}
-                        {canSeeFull && work.provenanceHistory && (
+                        {canSeeFull && work?.provenanceHistory && work.provenanceHistory.length > 0 && (
                             <div style={{ flex: 1 }}>
                                 <div style={{ color: '#666', fontSize: '10px', letterSpacing: '0.1em', marginBottom: '10px' }}>PROVENANCE HISTORY</div>
                                 <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', padding: '15px' }}>
                                     {work.provenanceHistory.map((prov, i) => (
                                         <div key={i} style={{ display: 'flex', marginBottom: i < work.provenanceHistory.length - 1 ? '10px' : '0', fontSize: '12px' }}>
-                                            <div style={{ width: '50px', color: '#888' }}>{prov.year}</div>
-                                            <div style={{ color: '#ccc' }}>{prov.owner}</div>
+                                            <div style={{ width: '50px', color: '#888' }}>{prov?.year || '????'}</div>
+                                            <div style={{ color: '#ccc' }}>{prov?.owner || 'Unknown'}</div>
                                         </div>
                                     ))}
                                 </div>

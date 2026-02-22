@@ -285,7 +285,7 @@
             {
               "name": "nextMap",
               "type": "string",
-              "value": "big_house"
+              "value": "gallery_opening"
             }
           ],
           "rotation": 0,
@@ -304,7 +304,7 @@
             {
               "name": "nextMap",
               "type": "string",
-              "value": "small_house"
+              "value": "cocktail_party"
             }
           ],
           "rotation": 0,

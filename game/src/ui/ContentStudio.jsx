@@ -15,6 +15,7 @@ import {
     MiniMap,
     useNodesState,
     useEdgesState,
+    addEdge,
     MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -683,70 +684,413 @@ function navigateToNode(nodeId, onClose) {
     }
 }
 
-function FlowMapPanel({ onClose }) {
-    const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+const STORAGE_KEY_POSITIONS = 'artlife_flow_positions';
+const STORAGE_KEY_EDGES = 'artlife_flow_edges';
+const STORAGE_KEY_NODES = 'artlife_flow_custom_nodes';
 
+const GROUP_TYPES = Object.keys(GC); // ['boot', 'core', 'terminal', 'info', 'scene', 'overlay']
+
+function loadSavedPositions() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY_POSITIONS);
+        return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+}
+
+function loadSavedEdges() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY_EDGES);
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function loadCustomNodes() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY_NODES);
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+}
+
+function getInitialNodes() {
+    const saved = loadSavedPositions();
+    const base = INITIAL_NODES.map(n => {
+        if (saved[n.id]) {
+            return { ...n, position: saved[n.id] };
+        }
+        return n;
+    });
+    // Merge custom nodes
+    const custom = loadCustomNodes();
+    return [...base, ...custom];
+}
+
+function getInitialEdges() {
+    return loadSavedEdges() || INITIAL_EDGES;
+}
+
+// ── Node Properties Panel ──
+function NodePropertiesPanel({ node, onUpdate, onDelete, onNavigate }) {
+    if (!node) {
+        return (
+            <div style={{
+                width: 260, background: '#0a0a14', borderLeft: '1px solid #2a2a3e',
+                padding: 16, fontSize: 11, color: '#555', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', textAlign: 'center',
+            }}>
+                Click a node to inspect
+            </div>
+        );
+    }
+
+    const data = node.data || {};
+    const inputStyle = {
+        width: '100%', background: '#111', border: '1px solid #333',
+        color: '#eaeaea', padding: '6px 8px', fontFamily: mono, fontSize: 11,
+        outline: 'none', boxSizing: 'border-box', marginTop: 4,
+    };
+
+    return (
+        <div style={{
+            width: 260, background: '#0a0a14', borderLeft: '1px solid #2a2a3e',
+            padding: 12, fontSize: 11, overflowY: 'auto', display: 'flex',
+            flexDirection: 'column', gap: 10,
+        }}>
+            <div style={{ color: '#c9a84c', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>
+                NODE INSPECTOR
+            </div>
+
+            <div>
+                <label style={{ color: '#888' }}>ID</label>
+                <input value={node.id} readOnly style={{ ...inputStyle, color: '#555' }} />
+            </div>
+
+            <div>
+                <label style={{ color: '#888' }}>Label</label>
+                <input
+                    value={data.label || ''}
+                    onChange={e => onUpdate(node.id, { label: e.target.value })}
+                    style={inputStyle}
+                />
+            </div>
+
+            <div>
+                <label style={{ color: '#888' }}>Type</label>
+                <select
+                    value={data.group || 'core'}
+                    onChange={e => onUpdate(node.id, { group: e.target.value, color: GC[e.target.value] })}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                >
+                    {GROUP_TYPES.map(g => (
+                        <option key={g} value={g}>{g}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div>
+                <label style={{ color: '#888' }}>Description</label>
+                <textarea
+                    value={data.description || ''}
+                    onChange={e => onUpdate(node.id, { description: e.target.value })}
+                    rows={3}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                />
+            </div>
+
+            <div style={{ display: 'flex', gap: 6 }}>
+                {NODE_ACTIONS[node.id] && (
+                    <button
+                        onClick={() => onNavigate(node.id)}
+                        style={{
+                            flex: 1, background: '#1a3a2a', border: '1px solid #3a8a5c',
+                            color: '#4ade80', padding: '6px', cursor: 'pointer',
+                            fontFamily: mono, fontSize: 10,
+                        }}
+                    >NAVIGATE</button>
+                )}
+                <button
+                    onClick={() => { if (confirm(`Delete node "${data.label}"?`)) onDelete(node.id); }}
+                    style={{
+                        flex: 1, background: '#3a1a1a', border: '1px solid #c94040',
+                        color: '#f87171', padding: '6px', cursor: 'pointer',
+                        fontFamily: mono, fontSize: 10,
+                    }}
+                >DELETE</button>
+            </div>
+        </div>
+    );
+}
+
+// ── Add Node Form ──
+function AddNodeForm({ onAdd, onCancel }) {
+    const [label, setLabel] = useState('');
+    const [group, setGroup] = useState('core');
+
+    const inputStyle = {
+        width: '100%', background: '#111', border: '1px solid #333',
+        color: '#eaeaea', padding: '6px 8px', fontFamily: mono, fontSize: 11,
+        outline: 'none', boxSizing: 'border-box', marginTop: 4,
+    };
+
+    return (
+        <div style={{
+            position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50)',
+            background: '#0a0a14', border: '1px solid #c9a84c', padding: 16,
+            zIndex: 10, minWidth: 240, borderRadius: 4,
+        }}>
+            <div style={{ color: '#c9a84c', fontWeight: 'bold', marginBottom: 10, fontSize: 12 }}>ADD NODE</div>
+            <div style={{ marginBottom: 8 }}>
+                <label style={{ color: '#888', fontSize: 11 }}>Label</label>
+                <input value={label} onChange={e => setLabel(e.target.value)} style={inputStyle} autoFocus />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+                <label style={{ color: '#888', fontSize: 11 }}>Type</label>
+                <select value={group} onChange={e => setGroup(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                    {GROUP_TYPES.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                    onClick={() => { if (label.trim()) onAdd(label.trim(), group); }}
+                    style={{
+                        flex: 1, background: '#c9a84c', border: 'none', color: '#000',
+                        padding: '6px', cursor: 'pointer', fontFamily: mono, fontSize: 10, fontWeight: 'bold',
+                    }}
+                >CREATE</button>
+                <button
+                    onClick={onCancel}
+                    style={{
+                        flex: 1, background: 'none', border: '1px solid #444', color: '#888',
+                        padding: '6px', cursor: 'pointer', fontFamily: mono, fontSize: 10,
+                    }}
+                >CANCEL</button>
+            </div>
+        </div>
+    );
+}
+
+function FlowMapPanel({ onClose }) {
+    const [nodes, setNodes, onNodesChange] = useNodesState(getInitialNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(getInitialEdges);
+    const [selectedNode, setSelectedNode] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
+
+    // Persist node positions on drag stop
+    const handleNodeDragStop = useCallback((event, node) => {
+        const saved = loadSavedPositions();
+        saved[node.id] = node.position;
+        localStorage.setItem(STORAGE_KEY_POSITIONS, JSON.stringify(saved));
+    }, []);
+
+    // Persist edges whenever they change
+    const persistEdges = useCallback((newEdges) => {
+        localStorage.setItem(STORAGE_KEY_EDGES, JSON.stringify(newEdges));
+    }, []);
+
+    // Connect handler — create new edges
+    const handleConnect = useCallback((params) => {
+        const newEdge = {
+            ...params,
+            id: `${params.source}-${params.target}`,
+            style: { stroke: '#3a3a5e' },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#3a3a5e' },
+        };
+        setEdges(eds => {
+            const updated = addEdge(newEdge, eds);
+            persistEdges(updated);
+            return updated;
+        });
+    }, [setEdges, persistEdges]);
+
+    // Edge click → delete
+    const handleEdgeClick = useCallback((event, edge) => {
+        if (confirm(`Delete connection ${edge.source} → ${edge.target}?`)) {
+            setEdges(eds => {
+                const updated = eds.filter(e => e.id !== edge.id);
+                persistEdges(updated);
+                return updated;
+            });
+        }
+    }, [setEdges, persistEdges]);
+
+    // Node click → select for properties panel (double-click to navigate)
     const handleNodeClick = useCallback((event, node) => {
+        setSelectedNode(node);
+    }, []);
+
+    const handleNodeDoubleClick = useCallback((event, node) => {
         navigateToNode(node.id, onClose);
     }, [onClose]);
+
+    // Update node data from properties panel
+    const handleUpdateNode = useCallback((nodeId, updates) => {
+        setNodes(nds => nds.map(n => {
+            if (n.id !== nodeId) return n;
+            const newData = { ...n.data, ...updates };
+            const color = updates.color || newData.color;
+            return {
+                ...n,
+                data: newData,
+                style: {
+                    ...n.style,
+                    background: color + '22',
+                    border: `2px solid ${color}`,
+                },
+            };
+        }));
+        // Update selected node reference
+        setSelectedNode(prev => prev?.id === nodeId ? { ...prev, data: { ...prev.data, ...updates } } : prev);
+    }, [setNodes]);
+
+    // Delete node
+    const handleDeleteNode = useCallback((nodeId) => {
+        setNodes(nds => nds.filter(n => n.id !== nodeId));
+        setEdges(eds => {
+            const updated = eds.filter(e => e.source !== nodeId && e.target !== nodeId);
+            persistEdges(updated);
+            return updated;
+        });
+        setSelectedNode(null);
+        // Remove from saved positions
+        const saved = loadSavedPositions();
+        delete saved[nodeId];
+        localStorage.setItem(STORAGE_KEY_POSITIONS, JSON.stringify(saved));
+        // Remove from custom nodes if applicable
+        const custom = loadCustomNodes().filter(n => n.id !== nodeId);
+        localStorage.setItem(STORAGE_KEY_NODES, JSON.stringify(custom));
+    }, [setNodes, setEdges, persistEdges]);
+
+    // Add new node
+    const handleAddNode = useCallback((label, group) => {
+        const id = 'custom_' + Date.now().toString(36);
+        const color = GC[group] || GC.core;
+        const newNode = flowNode(id, label, 0, 0, color, group);
+        setNodes(nds => [...nds, newNode]);
+        // Persist custom node
+        const custom = loadCustomNodes();
+        custom.push(newNode);
+        localStorage.setItem(STORAGE_KEY_NODES, JSON.stringify(custom));
+        setShowAddForm(false);
+    }, [setNodes]);
+
+    // Reset layout
+    const handleResetLayout = useCallback(() => {
+        if (!confirm('Reset all node positions to defaults?')) return;
+        localStorage.removeItem(STORAGE_KEY_POSITIONS);
+        localStorage.removeItem(STORAGE_KEY_EDGES);
+        localStorage.removeItem(STORAGE_KEY_NODES);
+        setNodes(INITIAL_NODES);
+        setEdges(INITIAL_EDGES);
+        setSelectedNode(null);
+    }, [setNodes, setEdges]);
+
+    // Export JSON
+    const handleExport = useCallback(() => {
+        const data = {
+            nodes: nodes.map(n => ({
+                id: n.id, label: n.data?.label, group: n.data?.group,
+                x: Math.round(n.position.x), y: Math.round(n.position.y),
+                description: n.data?.description,
+            })),
+            edges: edges.map(e => ({
+                source: e.source, target: e.target, animated: e.animated || false,
+            })),
+        };
+        navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+        alert('Flow JSON copied to clipboard!');
+    }, [nodes, edges]);
 
     const minimapStyle = {
         backgroundColor: '#0a0a14',
         maskColor: 'rgba(0,0,0,0.6)',
     };
 
+    const toolBtnStyle = {
+        background: '#111', border: '1px solid #333', color: '#888',
+        padding: '4px 10px', cursor: 'pointer', fontFamily: mono, fontSize: 10,
+    };
+
     return (
-        <div style={{ ...panelStyle, flex: 1, position: 'relative' }}>
-            <div style={headerStyle}>
-                FLOW MAP
-                <span style={{ color: '#555', fontSize: 10, marginLeft: 12, fontWeight: 'normal' }}>
-                    {nodes.length} pages &middot; {edges.length} connections &middot; Click node to navigate &middot; Drag to rearrange
-                </span>
-            </div>
-
-            {/* Legend */}
-            <div style={{
-                display: 'flex', gap: 12, padding: '6px 16px', borderBottom: '1px solid #1a1a2e',
-                flexWrap: 'wrap',
-            }}>
-                {LEGEND.map(({ color, label }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <div style={{
-                            width: 10, height: 10, borderRadius: 2,
-                            background: color + '44', border: `1px solid ${color}`,
-                        }} />
-                        <span style={{ fontSize: 9, color: '#888' }}>{label}</span>
+        <div style={{ ...panelStyle, flex: 1, position: 'relative', flexDirection: 'row' }}>
+            {/* Main flow area */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ ...headerStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        FLOW MAP
+                        <span style={{ color: '#555', fontSize: 10, marginLeft: 12, fontWeight: 'normal' }}>
+                            {nodes.length} nodes &middot; {edges.length} edges &middot; Double-click to navigate &middot; Click edge to delete
+                        </span>
                     </div>
-                ))}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => setShowAddForm(true)} style={{ ...toolBtnStyle, color: '#4ade80', borderColor: '#3a8a5c' }}>+ ADD NODE</button>
+                        <button onClick={handleExport} style={toolBtnStyle}>EXPORT</button>
+                        <button onClick={handleResetLayout} style={{ ...toolBtnStyle, color: '#f87171', borderColor: '#c94040' }}>RESET</button>
+                    </div>
+                </div>
+
+                {/* Legend */}
+                <div style={{
+                    display: 'flex', gap: 12, padding: '6px 16px', borderBottom: '1px solid #1a1a2e',
+                    flexWrap: 'wrap',
+                }}>
+                    {LEGEND.map(({ color, label }) => (
+                        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <div style={{
+                                width: 10, height: 10, borderRadius: 2,
+                                background: color + '44', border: `1px solid ${color}`,
+                            }} />
+                            <span style={{ fontSize: 9, color: '#888' }}>{label}</span>
+                        </div>
+                    ))}
+                </div>
+
+                <div style={{ flex: 1, position: 'relative' }}>
+                    {showAddForm && (
+                        <AddNodeForm
+                            onAdd={handleAddNode}
+                            onCancel={() => setShowAddForm(false)}
+                        />
+                    )}
+                    <ReactFlow
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={(changes) => {
+                            onEdgesChange(changes);
+                        }}
+                        onNodeClick={handleNodeClick}
+                        onNodeDoubleClick={handleNodeDoubleClick}
+                        onNodeDragStop={handleNodeDragStop}
+                        onConnect={handleConnect}
+                        onEdgeClick={handleEdgeClick}
+                        fitView
+                        fitViewOptions={{ padding: 0.2 }}
+                        minZoom={0.2}
+                        maxZoom={2}
+                        proOptions={{ hideAttribution: true }}
+                        style={{ background: '#08080e' }}
+                        connectionLineStyle={{ stroke: '#c9a84c' }}
+                    >
+                        <Background color="#1a1a2e" gap={20} size={1} />
+                        <Controls
+                            style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 4 }}
+                        />
+                        <MiniMap
+                            style={minimapStyle}
+                            nodeColor={(node) => node.data?.color || '#555'}
+                            nodeStrokeWidth={0}
+                            nodeBorderRadius={3}
+                        />
+                    </ReactFlow>
+                </div>
             </div>
 
-            <div style={{ flex: 1 }}>
-                <ReactFlow
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onNodeClick={handleNodeClick}
-                    fitView
-                    fitViewOptions={{ padding: 0.2 }}
-                    minZoom={0.2}
-                    maxZoom={2}
-                    proOptions={{ hideAttribution: true }}
-                    style={{ background: '#08080e' }}
-                >
-                    <Background color="#1a1a2e" gap={20} size={1} />
-                    <Controls
-                        style={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 4 }}
-                    />
-                    <MiniMap
-                        style={minimapStyle}
-                        nodeColor={(node) => node.data?.color || '#555'}
-                        nodeStrokeWidth={0}
-                        nodeBorderRadius={3}
-                    />
-                </ReactFlow>
-            </div>
+            {/* Properties Panel */}
+            <NodePropertiesPanel
+                node={selectedNode}
+                onUpdate={handleUpdateNode}
+                onDelete={handleDeleteNode}
+                onNavigate={(id) => navigateToNode(id, onClose)}
+            />
         </div>
     );
 }

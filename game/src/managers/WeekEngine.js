@@ -61,7 +61,7 @@ export class WeekEngine {
 
         // ── Pipeline / Active Deals ──
         try { DealResolver.resolveDeals(state); }
-        catch (e) { console.error('[WeekEngine] Deal resolution failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Deal resolution failed:', e); }
 
         // ── Market Tick (artist heat, prices, new works) ──
         try {
@@ -71,19 +71,19 @@ export class WeekEngine {
             mStore.syncFromManager(MarketManager.artists, MarketManager.works, state.marketState, state.week);
             mStore.generateWeeklyNews(MarketManager.artists);
         }
-        catch (e) { console.error('[WeekEngine] Market tick failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Market tick failed:', e); }
 
         // ── Phone Messages ──
         try { PhoneManager.generateTurnMessages(); }
-        catch (e) { console.error('[WeekEngine] Phone messages failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Phone messages failed:', e); }
 
         // ── NPC Autonomous Tick ──
         try { useNPCStore.getState().autonomousTick(state.week); }
-        catch (e) { console.error('[WeekEngine] NPC tick failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] NPC tick failed:', e); }
 
         // ── Scheduled Consequences ──
         try { ConsequenceScheduler.tick(state.week); }
-        catch (e) { console.error('[WeekEngine] Consequences failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Consequences failed:', e); }
 
         // ── Storyline Events ──
         try {
@@ -93,7 +93,7 @@ export class WeekEngine {
                 GameState.addNews(`Storyline Event Pending: ${s.storylineId}`);
             }
         }
-        catch (e) { console.error('[WeekEngine] Storyline tick failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Storyline tick failed:', e); }
 
         // ── Random / Narrative Events ──
         try {
@@ -103,27 +103,27 @@ export class WeekEngine {
                 useEventStore.getState().setPendingEvent(ev);
             }
         }
-        catch (e) { console.error('[WeekEngine] EventRegistry failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] EventRegistry failed:', e); }
 
         // ── Pending Offers ──
         try { DealResolver.resolvePendingOffers(state); }
-        catch (e) { console.error('[WeekEngine] Pending offers failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Pending offers failed:', e); }
 
         // ── Freeport Storage Costs (every 4 weeks) ──
         try { WeekEngine._processFreeportCosts(state); }
-        catch (e) { console.error('[WeekEngine] Freeport costs failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Freeport costs failed:', e); }
 
         // ── Insurance / Theft Risk ──
         try { WeekEngine._processTheftRisk(state); }
-        catch (e) { console.error('[WeekEngine] Theft risk failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Theft risk failed:', e); }
 
         // ── Anti-Resource Decay (moved from MarketManager) ──
         try { WeekEngine._decayAntiResources(state); }
-        catch (e) { console.error('[WeekEngine] Anti-resource decay failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Anti-resource decay failed:', e); }
 
         // ── Burnout Tracking ──
         try { WeekEngine._processBurnout(state); }
-        catch (e) { console.error('[WeekEngine] Burnout failed:', e); }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Burnout failed:', e); }
 
         // ── Systemic Lattice Triggers (fail state arcs) ──
         try {

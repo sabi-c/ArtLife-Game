@@ -181,6 +181,10 @@ export function pauseMenuScreen(ui) {
                 action: () => ui.pushScreen(_settings(ui))
             },
             {
+                label: '⚠️ System Error Log',
+                action: () => ui.pushScreen(errorLogScreen(ui))
+            },
+            {
                 label: '🔄 Restart (New Character)',
                 action: () => ui.pushScreen(restartConfirmScreen(ui))
             },
@@ -251,6 +255,79 @@ export function settingsScreen(ui) {
             { label: `Text Speed: [${s.settings.textSpeed.toUpperCase()}]`, action: toggleSpeed },
             { label: `CRT Scanlines: [${s.settings.scanlines ? 'ON' : 'OFF'}]`, action: toggleScanlines },
             { label: `Screen Flicker: [${s.settings.crtFlicker ? 'ON' : 'OFF'}]`, action: toggleFlicker },
+            { label: '← Back', action: () => ui.popScreen() }
+        ];
+
+        return { lines, options };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: System Error Log
+// ════════════════════════════════════════════
+export function errorLogScreen(ui) {
+    return () => {
+        const report = window.ArtLife?.report() || { errors: [], sceneErrors: [], missingAssets: [] };
+
+        const lines = [
+            H('⚠️ SYSTEM ERROR LOG'),
+            DIV()
+        ];
+
+        const totalErrors = report.errors.length + report.sceneErrors.length + report.missingAssets.length;
+
+        if (totalErrors === 0) {
+            lines.push(GREEN('✓ System stable. No errors recorded in this session.'));
+            lines.push(BLANK());
+        } else {
+            lines.push(RED(`Total anomalies detected: ${totalErrors}`));
+            lines.push(DIM('Check browser dev console for full stack traces.'));
+            lines.push(DIV());
+
+            // App & Engine Errors
+            if (report.errors.length > 0) {
+                lines.push(SUB('ENGINE FAULTS'));
+                report.errors.slice().reverse().slice(0, 5).forEach((err, i) => { // Show last 5
+                    const time = new Date(err.t).toLocaleTimeString();
+                    lines.push(`[${time}] ${err.context} — ${RED(err.msg)}`);
+                });
+                if (report.errors.length > 5) lines.push(DIM(`...and ${report.errors.length - 5} more.`));
+                lines.push(BLANK());
+            }
+
+            // Scene Errors
+            if (report.sceneErrors.length > 0) {
+                lines.push(SUB('SCENE CRASHES'));
+                report.sceneErrors.slice().reverse().slice(0, 5).forEach((err, i) => {
+                    const time = new Date(err.t).toLocaleTimeString();
+                    lines.push(`[${time}] Scene: ${err.sceneKey} — ${RED(err.msg)}`);
+                });
+                if (report.sceneErrors.length > 5) lines.push(DIM(`...and ${report.sceneErrors.length - 5} more.`));
+                lines.push(BLANK());
+            }
+
+            // Missing Assets
+            if (report.missingAssets.length > 0) {
+                lines.push(SUB('MISSING ASSETS (404)'));
+                report.missingAssets.slice().reverse().slice(0, 5).forEach((err, i) => {
+                    lines.push(`Key: ${err.key} -> ${DIM(err.url)}`);
+                });
+                if (report.missingAssets.length > 5) lines.push(DIM(`...and ${report.missingAssets.length - 5} more.`));
+                lines.push(BLANK());
+            }
+        }
+
+        const options = [
+            {
+                label: 'Clear System Log',
+                action: () => {
+                    if (window.ArtLife?.clearErrors) {
+                        window.ArtLife.clearErrors();
+                        ui.replaceScreen(errorLogScreen(ui));
+                    }
+                },
+                disabled: totalErrors === 0
+            },
             { label: '← Back', action: () => ui.popScreen() }
         ];
 

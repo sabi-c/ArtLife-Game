@@ -106,16 +106,16 @@ export default function MarketDashboard({ onClose }) {
     }, [artistSnapshots]);
 
     // Select first artist by default if none selected
-    if (!selectedId && artists.length > 0) {
+    if (!selectedId && artists?.length > 0) {
         setSelectedId(artists[0].id);
     }
 
     const selectedData = selectedId ? artistSnapshots[selectedId] : null;
     const chartData = useMemo(() => {
-        if (!selectedId || !priceHistory[selectedId]) return [];
+        if (!selectedId || !priceHistory?.[selectedId]) return [];
         return priceHistory[selectedId].map(doc => ({
             ...doc,
-            displayRange: [doc.lowPrice, doc.highPrice]
+            displayRange: [doc.lowPrice || 0, doc.highPrice || 0]
         }));
     }, [selectedId, priceHistory]);
 
@@ -145,7 +145,7 @@ export default function MarketDashboard({ onClose }) {
                         ARTIST INDEX RANKING
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto' }}>
-                        {artists.map(artist => (
+                        {artists?.map(artist => (
                             <div
                                 key={artist.id}
                                 style={artistItemStyle(selectedId === artist.id)}
@@ -156,9 +156,9 @@ export default function MarketDashboard({ onClose }) {
                                     <div style={{ color: '#c9a84c', fontSize: '14px', fontWeight: 'bold' }}>{artist.artistIndex}</div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px' }}>
-                                    <span style={{ color: '#888' }}>Tier {artist.tier}</span>
+                                    <span style={{ color: '#888' }}>Tier {artist.tier || '?'}</span>
                                     <span style={{ color: artist.trend > 0 ? '#4caf50' : artist.trend < 0 ? '#f44336' : '#888' }}>
-                                        Heat: {Math.round(artist.heat)} {artist.trend > 0 ? '↑' : artist.trend < 0 ? '↓' : '→'}
+                                        Heat: {Math.round(artist.heat || 0)} {artist.trend > 0 ? '↑' : artist.trend < 0 ? '↓' : '→'}
                                     </span>
                                 </div>
                             </div>
@@ -171,15 +171,15 @@ export default function MarketDashboard({ onClose }) {
                     {selectedData && (
                         <div>
                             <div style={{ marginBottom: '2rem' }}>
-                                <h2 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '28px', letterSpacing: '-0.02em' }}>{selectedData.name}</h2>
+                                <h2 style={{ margin: '0 0 10px 0', color: '#fff', fontSize: '28px', letterSpacing: '-0.02em' }}>{selectedData.name || 'Unknown Artist'}</h2>
                                 <div style={{ display: 'flex', gap: '20px', fontSize: '13px', color: '#aaa' }}>
                                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 15px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                         <div style={{ color: '#666', marginBottom: '4px', letterSpacing: '0.1em', fontSize: '10px' }}>ARTIST INDEX</div>
-                                        <div style={{ fontSize: '20px', color: '#c9a84c', fontFamily: 'monospace' }}>{selectedData.artistIndex}</div>
+                                        <div style={{ fontSize: '20px', color: '#c9a84c', fontFamily: 'monospace' }}>{selectedData.artistIndex || 0}</div>
                                     </div>
                                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: '10px 15px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                         <div style={{ color: '#666', marginBottom: '4px', letterSpacing: '0.1em', fontSize: '10px' }}>HEAT PERCENTILE</div>
-                                        <div style={{ fontSize: '20px', color: '#fff', fontFamily: 'monospace' }}>{Math.round(selectedData.heat)}/100</div>
+                                        <div style={{ fontSize: '20px', color: '#fff', fontFamily: 'monospace' }}>{Math.round(selectedData.heat || 0)}/100</div>
                                     </div>
                                     {selectedData.buybackActive && (
                                         <div style={{ background: 'rgba(196, 60, 60, 0.1)', padding: '10px 15px', borderRadius: '4px', border: '1px solid rgba(196, 60, 60, 0.3)' }}>

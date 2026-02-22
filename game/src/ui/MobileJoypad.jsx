@@ -50,17 +50,13 @@ export function MobileJoypad() {
     const interactDown = useCallback((e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         setAPressed(true);
-        window.dispatchEvent(new KeyboardEvent('keydown', {
-            key: ' ', code: 'Space', keyCode: 32,
-        }));
+        window.joypadAction = true;
     }, []);
 
     const interactUp = useCallback((e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         setAPressed(false);
-        window.dispatchEvent(new KeyboardEvent('keyup', {
-            key: ' ', code: 'Space', keyCode: 32,
-        }));
+        window.joypadAction = false;
     }, []);
 
     // Global release failsafe
@@ -68,6 +64,7 @@ export function MobileJoypad() {
         const reset = () => {
             window.joypadState = null;
             window.joypadSprint = false;
+            window.joypadAction = false;
             setActiveDir(null);
             setSprintHeld(false);
             setAPressed(false);
@@ -79,6 +76,7 @@ export function MobileJoypad() {
             window.removeEventListener('touchend', reset);
             window.joypadState = null;
             window.joypadSprint = false;
+            window.joypadAction = false;
         };
     }, []);
 

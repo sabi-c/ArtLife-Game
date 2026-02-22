@@ -15,6 +15,8 @@ import ContentStudio from './ui/ContentStudio.jsx';
 import MobileJoypad from './ui/MobileJoypad.jsx';
 import CalendarHUD from './ui/CalendarHUD.jsx';
 import StorylineCMS from './ui/StorylineCMS.jsx';
+import EventCMS from './ui/CMSOverlay.jsx';
+import MasterCMS from './ui/MasterCMS.jsx';
 import MarketDashboard from './ui/MarketDashboard.jsx';
 import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
@@ -238,16 +240,19 @@ export default function App() {
             container.style.background = showPhaser ? '#0a0a0f' : '';
 
             // On mobile with WorldScene active, shrink canvas to top portion
-            // so the Game Boy control panel fits below
+            // so the Game Boy control panel fits below.
+            // Defer resize slightly to avoid racing with scene camera setup.
             const isMobile = window.innerWidth < 769;
             if (showPhaser && isWorldSceneActive && isMobile) {
-                const topH = Math.floor(window.innerHeight * 0.54);
-                container.style.height = topH + 'px';
-                container.style.bottom = 'auto';
-                if (game?.canvas) {
-                    game.canvas.style.height = topH + 'px';
-                }
-                game?.scale?.resize(window.innerWidth, topH);
+                requestAnimationFrame(() => {
+                    const topH = Math.floor(window.innerHeight * 0.54);
+                    container.style.height = topH + 'px';
+                    container.style.bottom = 'auto';
+                    if (game?.canvas) {
+                        game.canvas.style.height = topH + 'px';
+                    }
+                    game?.scale?.resize(window.innerWidth, topH);
+                });
             } else {
                 container.style.height = '';
                 container.style.bottom = '';
@@ -326,6 +331,14 @@ export default function App() {
 
             {activeOverlay === OVERLAY.STORYLINE_CMS && (
                 <StorylineCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.EVENT_CMS && (
+                <EventCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.MASTER_CMS && (
+                <MasterCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {activeOverlay === OVERLAY.MARKET_DASHBOARD && (
