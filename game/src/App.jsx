@@ -248,7 +248,6 @@ export default function App() {
 
             // On mobile with WorldScene active, shrink canvas to top portion
             // so the Game Boy control panel fits below.
-            // Defer resize slightly to avoid racing with scene camera setup.
             const isMobile = window.innerWidth < 769;
             if (showPhaser && isWorldSceneActive && isMobile) {
                 requestAnimationFrame(() => {
@@ -261,13 +260,18 @@ export default function App() {
                     game?.scale?.resize(window.innerWidth, topH);
                 });
             } else {
-                container.style.height = '';
+                // Reset container to fill viewport — Phaser Scale.RESIZE mode
+                // handles sizing automatically based on the parent element.
+                container.style.height = '100%';
                 container.style.bottom = '';
                 if (game?.canvas) {
                     game.canvas.style.height = '';
                 }
+                // Trigger Phaser's scale manager to recalculate from parent
                 if (showPhaser && game) {
-                    game.scale?.resize(window.innerWidth, window.innerHeight);
+                    requestAnimationFrame(() => {
+                        game?.scale?.refresh();
+                    });
                 }
             }
         }
