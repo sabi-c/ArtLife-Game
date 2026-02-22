@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="29" height="19" tilewidth="48" tileheight="48" infinite="0" nextlayerid="5" nextobjectid="12">
+ <tileset firstgid="1" source="Room_Builder_free_48x48.tsx"/>
+ <tileset firstgid="392" source="Interiors_free_48x48.tsx"/>
+ <tileset firstgid="1816" source="fossil_museum_48x48.tsx"/>
+ <layer id="1" name="below_player" width="29" height="19">
+  <data encoding="csv">
+2817,2818,2819,2820,2821,2822,2823,2824,2825,2826,2827,2828,2829,2830,2831,2832,2833,2834,2835,2836,2837,2838,2839,2840,2841,2842,2843,2844,2845,
+2860,2861,2862,2863,2864,2865,2866,2867,2868,2869,2870,2871,2872,2873,2874,2875,2876,2877,2878,2879,2880,2881,2882,2883,2884,2885,2886,2887,2888,
+2903,2904,2905,2906,2907,2908,2909,2910,2911,2912,2913,2914,2915,2916,2917,2918,2919,2920,2921,2922,2923,2924,2925,2926,2927,2928,2929,2930,2931,
+2946,2947,2948,2949,2950,2951,2952,2953,2954,2955,2956,2957,2958,2959,2960,2961,2962,2963,2964,2965,2966,2967,2968,2969,2970,2971,2972,2973,2974,
+2989,2990,2991,2992,2993,2994,2995,2996,2997,2998,2999,3000,3001,3002,3003,3004,3005,3006,3007,3008,3009,3010,3011,3012,3013,3014,3015,3016,3017,
+3032,3033,3034,3035,3036,3037,3038,3039,3040,3041,3042,3043,3044,3045,3046,3047,3048,3049,3050,3051,3052,3053,3054,3055,3056,3057,3058,3059,3060,
+3075,3076,3077,3078,3079,3080,3081,3082,3083,3084,3085,3086,3087,3088,3089,3090,3091,3092,3093,3094,3095,3096,3097,3098,3099,3100,3101,3102,3103,
+3118,3119,3120,3121,3122,3123,3124,3125,3126,3127,3128,3129,3130,3131,3132,3133,3134,3135,3136,3137,3138,3139,3140,3141,3142,3143,3144,3145,3146,
+3161,3162,3163,3164,3165,3166,3167,3168,3169,3170,3171,3172,3173,3174,3175,3176,3177,3178,3179,3180,3181,3182,3183,3184,3185,3186,3187,3188,3189,
+0,0,0,0,0,0,3210,3211,3212,3213,3214,3215,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3253,3254,3255,3256,3257,3258,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3296,3297,3298,3299,3300,3301,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3339,3340,3341,3342,3343,3344,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3382,3383,3384,3385,3386,3387,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3425,3426,3427,3428,3429,3430,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3468,3469,3470,3471,3472,3473,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3511,3512,3513,3514,3515,3516,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3554,3555,3556,3557,3558,3559,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,3597,3598,3599,3600,3601,3602,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="2" name="world" width="29" height="19">
+  <data encoding="csv">
+7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
+7,0,0,0,0,7,7,7,7,0,0,0,0,0,0,0,0,7,7,7,7,7,7,0,0,0,0,0,7,
+7,0,0,0,0,7,7,7,7,0,0,0,0,0,0,0,0,7,7,7,7,7,7,0,0,0,0,0,7,
+7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
+7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
+7,7,7,7,7,0,0,0,0,0,0,0,0,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,0,0,0,0,0,0,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,7,7,7,0,0,7,7,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="above_player" width="29" height="19">
+  <data encoding="csv">
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="4" name="objects">
+  <object id="1" name="spawn" x="456" y="840">
+   <point/>
+  </object>
+  <object id="2" name="door" x="432" y="888">
+   <properties>
+    <property name="nextMap" value="worldscene"/>
+    <property name="label" value="Exit Museum"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="3" name="painting" x="336" y="168">
+   <properties>
+    <property name="title" value="Tyrannosaurus Rex Skeleton"/>
+    <property name="artist" value="Natural History Collection"/>
+    <property name="price" value="2500000"/>
+    <property name="description" value="Complete T-Rex skeleton, Late Cretaceous period. 40 feet long. The crown jewel of the paleontology wing."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="4" name="painting" x="960" y="168">
+   <properties>
+    <property name="title" value="Velociraptor Pack Display"/>
+    <property name="artist" value="Natural History Collection"/>
+    <property name="price" value="1800000"/>
+    <property name="description" value="Three velociraptors in hunting formation. Articulated bones from the Gobi Desert expedition, 1993."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="5" name="dialog" x="168" y="168">
+   <properties>
+    <property name="content" value="Amber Specimen #47
+Prehistoric insect preserved in Baltic amber. 40 million years old. The detail is extraordinary."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="6" name="dialog" x="648" y="168">
+   <properties>
+    <property name="content" value="Pterodactyl Wing Fragment
+Partial wing from Pteranodon longiceps. Wingspan estimated at 23 feet. Found in Kansas chalk beds."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="7" name="dialog" x="1224" y="168">
+   <properties>
+    <property name="content" value="Trilobite Colony Slab
+Over 200 individual trilobites preserved in a single limestone slab. Ordovician period, 450 million years ago."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="8" name="dialog" x="168" y="360">
+   <properties>
+    <property name="content" value="Mammoth Tusk (Left)
+Woolly mammoth ivory tusk, 12 feet curved length. Permafrost-preserved from Siberia."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="9" name="dialog" x="1224" y="360">
+   <properties>
+    <property name="content" value="Ammonite Fossil Wall
+Polished cross-section revealing the golden spiral chambers. Jurassic period, found in the Dorset coast."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="10" name="dialog" x="432" y="696">
+   <properties>
+    <property name="content" value="FOSSIL MUSEUM — Paleontology Wing
+Admission: $25 | Members: Free"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="11" name="npc" x="696" y="312">
+   <properties>
+    <property name="id" value="dr_morton"/>
+    <property name="label" value="Dr. Morton"/>
+    <property name="dialogue" value="Welcome to the Paleontology Wing. Our T-Rex is one of only twelve complete specimens in the world. Take your time — each fossil has a story spanning millions of years."/>
+    <property name="canHaggle" value="false"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+</map>

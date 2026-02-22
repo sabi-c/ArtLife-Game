@@ -68,6 +68,9 @@ export class BootScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('map_chelsea_gallery', 'content/maps/chelsea_gallery.json');
         // Chelsea Showcase (museum gallery — 18×14, 9 paintings)
         this.load.tilemapTiledJSON('map_chelsea_showcase', 'content/maps/chelsea_showcase.json');
+        // Fossil Museum (Princess-Phoenix tileset, scaled 16→48px)
+        this.load.tilemapTiledJSON('map_fossil_museum', 'content/maps/fossil_museum.json');
+        this.load.image('fossil_museum_48x48', 'assets/tilesets/fossil_museum_48x48.png');
         this.load.image('gallery_tileset', 'assets/tilesets/gallery_tileset.png');
         this.load.image('Room_Builder_free_48x48', 'assets/tilesets/Room_Builder_free_48x48.png');
         this.load.image('Interiors_free_48x48', 'assets/tilesets/Interiors_free_48x48.png');

@@ -59,6 +59,10 @@ export class LocationScene extends BaseScene {
         if (!this.textures.exists('Interiors_free_48x48')) {
             this.load.image('Interiors_free_48x48', 'assets/tilesets/Interiors_free_48x48.png');
         }
+        // Fossil Museum tileset (Princess-Phoenix, scaled 16→48px)
+        if (!this.textures.exists('fossil_museum_48x48')) {
+            this.load.image('fossil_museum_48x48', 'assets/tilesets/fossil_museum_48x48.png');
+        }
 
         // Gallery sprite assets (furniture, paintings, decorations)
         const gallerySprites = [

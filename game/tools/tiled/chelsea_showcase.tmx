@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="18" height="14" tilewidth="48" tileheight="48" infinite="0" nextlayerid="5" nextobjectid="14">
+ <tileset firstgid="1" source="Room_Builder_free_48x48.tsx"/>
+ <tileset firstgid="392" source="Interiors_free_48x48.tsx"/>
+ <layer id="1" name="below_player" width="18" height="14">
+  <data encoding="csv">
+15,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,17,
+49,462,463,463,463,463,463,463,463,463,463,463,463,463,463,463,464,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,481,482,482,482,482,482,834,835,835,835,836,482,482,482,482,486,51,
+49,481,482,482,482,482,482,850,851,851,851,852,482,482,482,482,486,51,
+49,481,482,482,482,482,482,866,867,867,867,868,482,482,482,482,486,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,481,482,482,482,482,482,482,482,482,482,482,482,482,482,482,486,51,
+49,497,498,498,498,498,498,498,498,498,498,498,498,498,498,498,502,51,
+66,66,66,66,66,66,66,66,67,67,66,66,66,66,66,66,66,68
+</data>
+ </layer>
+ <layer id="2" name="world" width="18" height="14">
+  <data encoding="csv">
+0,7,6,7,6,7,6,7,6,7,6,7,6,7,6,7,6,0,
+7,581,583,0,0,0,0,0,0,0,0,0,0,0,0,0,1160,7,
+6,597,599,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
+7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
+6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
+7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,
+6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,
+7,0,0,0,0,0,1281,0,1099,1100,1101,0,1281,0,0,0,0,7,
+6,0,0,0,0,0,0,0,1115,1116,1117,0,0,0,0,0,0,6,
+7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1161,7,
+6,0,0,0,0,0,0,0,0,0,0,0,0,607,608,609,0,6,
+7,0,720,721,0,0,0,0,0,0,0,0,0,623,624,625,0,7,
+6,1160,736,737,0,0,0,0,0,0,0,0,0,0,616,0,0,6,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="above_player" width="18" height="14">
+  <data encoding="csv">
+0,24,1037,1038,23,1037,1038,24,23,1037,1038,24,1037,1038,23,24,23,0,
+24,0,1053,1054,0,1053,1054,0,0,1053,1054,0,1053,1054,0,0,0,24,
+23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,
+1041,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1040,
+23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,
+24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,
+23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,
+24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,
+1041,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1040,
+24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,
+23,0,0,0,0,0,0,0,0,0,0,0,0,1279,0,528,0,23,
+24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,24,
+23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,23,
+0,0,0,1035,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="4" name="objects">
+  <object id="1" name="spawn" x="432" y="576">
+   <point/>
+  </object>
+  <object id="2" name="door" x="432" y="624">
+   <properties>
+    <property name="nextMap" value="worldscene"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="3" name="painting" x="96" y="96">
+   <properties>
+    <property name="title" value="Untitled (Crown Study)"/>
+    <property name="artist" value="Jean-Michel Basquiat"/>
+    <property name="price" value="420000"/>
+    <property name="description" value="A fierce crown motif in oil paintstick. Neo-expressionism at its rawest."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="4" name="painting" x="240" y="96">
+   <properties>
+    <property name="title" value="Radiant Baby (Subway Drawing)"/>
+    <property name="artist" value="Keith Haring"/>
+    <property name="price" value="185000"/>
+    <property name="description" value="Chalk on black paper. The iconic crawling infant radiates energy lines."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="5" name="painting" x="432" y="96">
+   <properties>
+    <property name="title" value="Balloon Dog (Blue) — Ed. 2/5"/>
+    <property name="artist" value="Jeff Koons"/>
+    <property name="price" value="500000"/>
+    <property name="description" value="Mirror-polished steel. Pop culture as high art, literally reflecting the viewer."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="6" name="painting" x="576" y="96">
+   <properties>
+    <property name="title" value="Cowboy (Rephotograph)"/>
+    <property name="artist" value="Richard Prince"/>
+    <property name="price" value="290000"/>
+    <property name="description" value="Appropriation art — a Marlboro ad reframed as fine art photography."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="7" name="painting" x="768" y="144">
+   <properties>
+    <property name="title" value="Untitled Film Still #21"/>
+    <property name="artist" value="Cindy Sherman"/>
+    <property name="price" value="75000"/>
+    <property name="description" value="Gelatin silver print. Sherman as the arriving career woman, gazing upward."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="8" name="painting" x="768" y="384">
+   <properties>
+    <property name="title" value="Kyoto Study No. 4"/>
+    <property name="artist" value="Yuki Tanaka"/>
+    <property name="price" value="18000"/>
+    <property name="description" value="Oil on linen. Atmospheric layers of Kyoto light, contemporary minimalism."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="9" name="painting" x="48" y="144">
+   <properties>
+    <property name="title" value="Portrait of a Man with Red Dust (II)"/>
+    <property name="artist" value="Kwame Asante"/>
+    <property name="price" value="45000"/>
+    <property name="description" value="Mixed media on board. Texture and identity, the dust of home."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="10" name="painting" x="48" y="384">
+   <properties>
+    <property name="title" value="Architecture of Forgetting (III)"/>
+    <property name="artist" value="Liu Wei"/>
+    <property name="price" value="62000"/>
+    <property name="description" value="Ink and pigment on paper. Monumental scale, the weight of memory."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="11" name="painting" x="144" y="576">
+   <properties>
+    <property name="title" value="Meridian (Untitled)"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="35000"/>
+    <property name="description" value="Oil on linen. Six feet of confident impasto. The gallery card gives nothing away."/>
+   </properties>
+   <point/>
+  </object>
+  <object id="12" name="dialog" x="432" y="144">
+   <properties>
+    <property name="content" value="Chelsea Showcase — Contemporary Masters"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="13" name="npc" x="672" y="240">
+   <properties>
+    <property name="id" value="elena_ross"/>
+    <property name="label" value="Elena Ross"/>
+    <property name="dialogue" value="Welcome to the gallery. Everything on display is available — if you know how to ask."/>
+    <property name="canHaggle" value="true"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+</map>

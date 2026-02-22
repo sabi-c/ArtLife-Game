@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="10" height="8" tilewidth="48" tileheight="48" infinite="0" nextlayerid="5" nextobjectid="8">
+ <tileset firstgid="1" source="Room_Builder_free_48x48.tsx"/>
+ <tileset firstgid="392" source="Interiors_free_48x48.tsx"/>
+ <layer id="1" name="below_player" width="10" height="8">
+  <data encoding="csv">
+15,16,16,16,16,16,16,16,16,17,
+49,67,67,67,67,67,50,67,67,51,
+49,67,67,834,835,835,835,836,67,51,
+67,67,67,850,851,851,851,852,67,51,
+67,67,67,850,851,851,851,852,67,51,
+49,67,50,850,851,851,851,852,67,51,
+49,50,67,866,867,867,867,868,50,51,
+66,66,66,66,67,67,66,66,66,68
+</data>
+ </layer>
+ <layer id="2" name="world" width="10" height="8">
+  <data encoding="csv">
+0,7,6,7,6,7,6,7,6,0,
+0,1281,0,0,0,0,0,0,1160,0,
+0,0,0,0,0,0,0,0,776,0,
+0,0,0,0,607,608,609,0,792,0,
+0,0,0,0,623,624,625,0,0,0,
+0,0,0,0,616,0,617,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="above_player" width="10" height="8">
+  <data encoding="csv">
+0,24,23,24,23,1037,1038,24,23,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,528,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="4" name="objects">
+  <object id="1" name="spawn" x="240" y="288">
+   <point/>
+  </object>
+  <object id="2" name="door" x="240" y="336">
+   <properties>
+    <property name="nextMap" value="worldscene"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="3" name="painting" x="240" y="48">
+   <properties>
+    <property name="title" value="The Collection"/>
+    <property name="artist" value="Various"/>
+    <property name="price" value="0"/>
+    <property name="description" value="A rotating selection from the private collection."/>
+    <property name="sprite" value="painting_large_portrait"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="4" name="dialog" x="240" y="96">
+   <properties>
+    <property name="content" value="Back Office"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="5" name="npc" x="240" y="192">
+   <properties>
+    <property name="id" value="gallery_owner"/>
+    <property name="label" value="Gallery Owner"/>
+    <property name="dialogue" value="Ah, you found my office. Let's talk privately."/>
+    <property name="canHaggle" value="true"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="6" name="door" x="0" y="192">
+   <properties>
+    <property name="nextMap" value="soho_gallery"/>
+    <property name="nextMapRoom" value="soho_gallery_exhibition_main"/>
+    <property name="label" value="Exhibition Hall"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="7" name="dialog" x="48" y="144">
+   <properties>
+    <property name="content" value="→ Exhibition Hall"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+</map>

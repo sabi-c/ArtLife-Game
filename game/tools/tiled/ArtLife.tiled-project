@@ -1,0 +1,28 @@
+{
+    "automappingRulesFile": "",
+    "commands": [
+    ],
+    "compatibilityVersion": 1100,
+    "extensionsPath": "extensions",
+    "folders": [
+        "."
+    ],
+    "properties": [
+    ],
+    "propertyTypes": [
+        {
+            "id": 1,
+            "name": "GameObjectType",
+            "storageType": "string",
+            "type": "enum",
+            "values": [
+                "spawn",
+                "door",
+                "painting",
+                "npc",
+                "dialog"
+            ],
+            "valuesAsFlags": false
+        }
+    ]
+}

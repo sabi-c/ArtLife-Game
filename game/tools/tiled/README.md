@@ -1,27 +1,78 @@
-# Tiled Map Editor — Room Creation Guide
+# Tiled Map Editor — Room Editing Guide
 
-## Quick Start
+## Quick Start (3 Steps)
 
-1. **Open Tiled** (installed at `/Applications/Tiled.app` or run `tiled` in terminal)
-2. **Open the template**: `tools/tiled/room_template.tmx`
-3. **Save As** your new room name (e.g., `downtown_gallery.tmx`)
-4. **Design your room** using the two tilesets (see below)
-5. **Export as JSON**: File > Export As > JSON Map Files (`.json`)
-6. **Import into game**: `node tools/tiled/import_map.js exported_file.json my_room_id`
+```bash
+# 1. Start the room watcher (in one terminal)
+npm run room:watch
+
+# 2. Open a room in Tiled (in another terminal)
+npm run room:edit chelsea_showcase -- --open
+
+# 3. Edit in Tiled → Cmd+S to save → game auto-reloads!
+```
+
+The watcher detects your save, auto-exports to JSON, and Vite HMR reloads the game.
+
+## Opening the Tiled Project
+
+For the best experience, open the Tiled project file first:
+
+1. Open Tiled
+2. File > Open Project > navigate to `tools/tiled/ArtLife.tiled-project`
+3. This configures Tiled to find all tilesets and templates
+
+Then open any `.tmx` file from `tools/tiled/`.
+
+## Available Commands
+
+```bash
+# Convert a game map to editable TMX format
+npm run room:edit <map_id>
+npm run room:edit chelsea_showcase -- --open
+
+# Generate a new room from template
+npm run room:new museum my_gallery --title "My Gallery"
+
+# List all rooms
+npm run room:list
+
+# Validate room walkability
+npm run room:validate chelsea_showcase
+
+# Start the file watcher
+npm run room:watch
+```
+
+## Editable Maps
+
+All game maps have been converted to TMX for Tiled editing:
+
+| Map | Size | Description |
+|-----|------|-------------|
+| `chelsea_showcase` | 18×14 | Museum gallery — 9 paintings, Elena Ross NPC |
+| `chelsea_gallery` | 16×14 | Chelsea gallery with 9 paintings |
+| `soho_gallery_lobby` | 12×10 | SoHo gallery lobby |
+| `soho_gallery_exhibition` | 16×12 | Exhibition room with 8 paintings |
+| `soho_gallery_office` | 10×8 | Gallery office |
+| `uptown_gallery` | 12×10 | Uptown gallery |
+| `artist_studio_visit` | 14×10 | Artist's studio |
+| `gallery_test` | 12×10 | Test gallery |
+| `room_template` | 12×10 | Blank template for new rooms |
 
 ## Tilesets
 
 ### Room_Builder_free_48x48 (firstgid = 1)
 - **Walls**: Rows 0-4 (tiles 1-85) — tops, fronts, corners, sides
 - **Floors**: Rows 5+ (tiles 86-391) — wood, tile, concrete, carpet varieties
-- Set `collides: true` property on wall tiles
+- Wall tiles have `collides: true` set in the .tsx file
 
 ### Interiors_free_48x48 (firstgid = 392)
 - **Furniture**: Sofas, tables, desks, chairs, bookcases, beds
 - **Decorations**: Plants, lamps, vases, paintings, rugs
 - **Kitchen/Bath**: Counters, sinks, toilets, fridges
-- See `data/interior_tile_map.json` for full tile ID reference
-- Set `collides: true` on furniture that should block movement
+- See `src/data/interior_tile_map.json` for full tile ID reference
+- Add `collides: true` on furniture that should block movement
 
 ## Layer Structure (IMPORTANT)
 
@@ -80,6 +131,8 @@ In Tiled, set the `collides` custom property on tiles that should block movement
 2. Select wall/furniture tiles
 3. In Properties panel: Add Property > Name: `collides` > Type: `bool` > Value: `true`
 4. GridEngine uses `collisionTilePropertyName: 'collides'` to detect blocked tiles
+
+The Room_Builder wall tiles already have collision set in the .tsx file.
 
 ## Map Size Guidelines
 

@@ -936,6 +936,45 @@ const CHELSEA_SHOWCASE = {
 };
 
 // ─────────────────────────────────────────────
+// VENUE: FOSSIL MUSEUM — Natural History Wing
+// Tileset: fossil_museum_48x48 (Princess-Phoenix, DeviantArt)
+// ─────────────────────────────────────────────
+
+const FOSSIL_MUSEUM = {
+    id: 'fossil_museum',
+    name: 'Fossil Museum — Paleontology Wing',
+    desc: 'The natural history museum\'s paleontology wing. Two complete dinosaur skeletons tower over gray stone floors. The air smells like old rock and polished brass.',
+    startRoom: 'fossil_museum_main',
+    timeLimit: 3,
+    availableWeeks: 'any',
+    frequency: 'always',
+    requires: null,
+    rooms: [
+        {
+            id: 'fossil_museum_main',
+            venue: 'fossil_museum',
+            tiledMap: 'fossil_museum',
+            name: 'Paleontology Wing',
+            desc: 'A grand hall with vaulted arches. Two dinosaur skeletons — a T-Rex and a velociraptor pack — dominate the center. Display cases line the walls with amber, fossils, and geological specimens.',
+            look: 'The T-Rex skull alone is worth more than your apartment. The information plaques are written in that particular museum tone — confident, timeless, faintly condescending.',
+            items: [],
+            characters: [
+                { name: 'Dr. Morton', desc: 'The museum curator. Tweed jacket, reading glasses on a chain. Knows the provenance of every bone in this building.' }
+            ],
+            exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
+            eavesdrops: [
+                'A child tugs their parent\'s sleeve: "Is that one real?" The parent hesitates too long.',
+                'Two paleontology students argue about cladistics near the raptor display.',
+                'A security guard yawns. Night shifts in the fossil wing are quiet.',
+            ],
+            onEnter: { firstVisitOnly: true, text: 'You step into the paleontology wing and stop. The T-Rex skeleton is enormous — jaws open, frozen mid-roar. Across the hall, a pack of velociraptors seems to track your movement. Dr. Morton adjusts his glasses and walks over.', effects: null },
+            timeCost: 0,
+            tags: ['museum', 'tiled', 'fossil', 'cultural'],
+        }
+    ],
+};
+
+// ─────────────────────────────────────────────
 // EXPORTS
 // ─────────────────────────────────────────────
 
@@ -952,6 +991,7 @@ export const VENUES = [
     SOHO_GALLERY,
     CHELSEA_GALLERY,
     CHELSEA_SHOWCASE,
+    FOSSIL_MUSEUM,
 ];
 
 /**

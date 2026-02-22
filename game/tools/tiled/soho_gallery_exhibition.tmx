@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="16" height="12" tilewidth="48" tileheight="48" infinite="0" nextlayerid="5" nextobjectid="17">
+ <tileset firstgid="1" source="Room_Builder_free_48x48.tsx"/>
+ <tileset firstgid="392" source="Interiors_free_48x48.tsx"/>
+ <layer id="1" name="below_player" width="16" height="12">
+  <data encoding="csv">
+15,16,16,16,16,16,16,16,16,16,16,16,16,16,16,17,
+49,67,67,67,67,67,50,67,67,67,67,67,67,50,67,51,
+49,67,67,67,67,50,67,67,67,67,67,67,50,67,67,51,
+49,67,67,67,50,67,67,67,67,67,67,50,67,67,67,51,
+49,67,67,50,67,67,67,67,67,67,50,67,67,67,67,51,
+49,67,50,67,67,67,67,67,67,50,67,67,67,67,67,67,
+49,50,67,67,67,67,67,67,50,67,67,67,67,67,67,67,
+49,67,67,67,67,67,67,50,67,67,67,67,67,67,50,51,
+49,67,67,67,67,67,50,67,67,67,67,67,67,50,67,51,
+49,67,67,67,67,50,67,67,67,67,67,67,50,67,67,51,
+49,67,67,67,50,67,67,67,67,67,67,50,67,67,67,51,
+66,66,66,66,66,66,66,67,67,66,66,66,66,66,66,68
+</data>
+ </layer>
+ <layer id="2" name="world" width="16" height="12">
+  <data encoding="csv">
+0,7,6,7,6,7,6,7,6,7,6,7,6,7,6,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,1160,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,1281,0,0,0,0,0,688,689,690,0,0,0,0,0,0,
+0,0,0,0,0,0,0,704,705,706,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,607,608,609,0,
+0,1160,0,0,0,0,0,0,0,0,0,0,623,624,625,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <layer id="3" name="above_player" width="16" height="12">
+  <data encoding="csv">
+0,24,1040,24,23,1036,23,24,1035,24,23,1041,23,24,23,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,1279,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+</data>
+ </layer>
+ <objectgroup id="4" name="objects">
+  <object id="1" name="spawn" x="384" y="480">
+   <point/>
+  </object>
+  <object id="2" name="door" x="384" y="528">
+   <properties>
+    <property name="nextMap" value="worldscene"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="3" name="painting" x="96" y="48">
+   <properties>
+    <property name="title" value="Artwork 1"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="10000"/>
+    <property name="description" value="A striking work that demands attention."/>
+    <property name="sprite" value="painting_small_abstract"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="4" name="painting" x="192" y="48">
+   <properties>
+    <property name="title" value="Artwork 2"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="15000"/>
+    <property name="description" value="A striking work that demands attention."/>
+    <property name="sprite" value="painting_medium_landscape"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="5" name="painting" x="288" y="48">
+   <properties>
+    <property name="title" value="Artwork 3"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="20000"/>
+    <property name="description" value="A striking work that demands attention."/>
+    <property name="sprite" value="painting_large_portrait"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="6" name="painting" x="384" y="48">
+   <properties>
+    <property name="title" value="Artwork 4"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="25000"/>
+    <property name="description" value="A striking work that demands attention."/>
+    <property name="sprite" value="painting_large_modern"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="7" name="painting" x="480" y="48">
+   <properties>
+    <property name="title" value="Artwork 5"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="30000"/>
+    <property name="description" value="A striking work that demands attention."/>
+    <property name="sprite" value="painting_small_photo"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="8" name="painting" x="576" y="48">
+   <properties>
+    <property name="title" value="Artwork 6"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="35000"/>
+    <property name="description" value="A striking work that demands attention."/>
+    <property name="sprite" value="painting_small_abstract"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="9" name="painting" x="48" y="144">
+   <properties>
+    <property name="title" value="West Wall Piece 1"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="25000"/>
+    <property name="description" value="Hung on the west wall, catching the afternoon light."/>
+    <property name="sprite" value="painting_large_modern"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="10" name="painting" x="48" y="288">
+   <properties>
+    <property name="title" value="West Wall Piece 2"/>
+    <property name="artist" value="Unknown Artist"/>
+    <property name="price" value="35000"/>
+    <property name="description" value="A quieter work, meant for contemplation."/>
+    <property name="sprite" value="painting_small_photo"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="11" name="dialog" x="384" y="96">
+   <properties>
+    <property name="content" value="Main Exhibition"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="12" name="npc" x="624" y="336">
+   <properties>
+    <property name="id" value="gallery_dealer"/>
+    <property name="label" value="Gallery Dealer"/>
+    <property name="dialogue" value="Take your time. Everything here is available."/>
+    <property name="canHaggle" value="true"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="13" name="door" x="384" y="528">
+   <properties>
+    <property name="nextMap" value="soho_gallery"/>
+    <property name="nextMapRoom" value="soho_gallery_lobby_main"/>
+    <property name="label" value="Back to Lobby"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="14" name="dialog" x="384" y="480">
+   <properties>
+    <property name="content" value="→ Back to Lobby"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="15" name="door" x="720" y="288">
+   <properties>
+    <property name="nextMap" value="soho_gallery"/>
+    <property name="nextMapRoom" value="soho_gallery_office_main"/>
+    <property name="label" value="Private Office"/>
+   </properties>
+   <point/>
+  </object>
+  <object id="16" name="dialog" x="672" y="240">
+   <properties>
+    <property name="content" value="→ Private Office"/>
+   </properties>
+   <point/>
+  </object>
+ </objectgroup>
+</map>

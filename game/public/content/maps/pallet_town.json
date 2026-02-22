@@ -1028,6 +1028,49 @@
           "width": 0,
           "x": 1056,
           "y": 216
+        },
+        {
+          "height": 0,
+          "id": 150,
+          "name": "door",
+          "point": true,
+          "properties": [
+            {
+              "name": "nextMap",
+              "type": "string",
+              "value": "fossil_museum"
+            },
+            {
+              "name": "nextMapRoom",
+              "type": "string",
+              "value": "fossil_museum_main"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 1104,
+          "y": 240
+        },
+        {
+          "height": 0,
+          "id": 151,
+          "name": "dialog",
+          "point": true,
+          "properties": [
+            {
+              "name": "content",
+              "type": "string",
+              "value": "FOSSIL MUSEUM"
+            }
+          ],
+          "rotation": 0,
+          "type": "",
+          "visible": true,
+          "width": 0,
+          "x": 1104,
+          "y": 216
         }
       ],
       "opacity": 1,
@@ -1038,7 +1081,7 @@
     }
   ],
   "nextlayerid": 14,
-  "nextobjectid": 150,
+  "nextobjectid": 152,
   "orientation": "orthogonal",
   "renderorder": "right-down",
   "tiledversion": "1.10.2",

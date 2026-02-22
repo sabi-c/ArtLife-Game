@@ -25,7 +25,8 @@
     "room:list": "node tools/room_pipeline.js list",
     "room:open": "node tools/room_pipeline.js open",
     "room:validate": "node tools/room_pipeline.js validate",
-    "room:watch": "node tools/room_watcher.js"
+    "room:watch": "node tools/room_watcher.js",
+    "room:edit": "node tools/json_to_tmx.js"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
