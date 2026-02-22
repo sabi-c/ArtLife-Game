@@ -159,7 +159,7 @@ export default function App() {
     const handleLoginComplete = ({ action }) => {
         if (action === 'devmode') {
             // Dev Mode: initialize minimal state and open Content Studio
-            try { GameState.newGame({ name: 'Dev Agent', playerName: 'dev' }); } catch (e) { /* may already exist */ }
+            try { GameState.init({ name: 'Dev Agent', playerName: 'dev', id: 'dev_agent', icon: '🔧', tagline: 'Debug mode', startingCash: 500000, startingWorks: 0, perk: 'Debug', difficulty: 'EASY' }); } catch (e) { /* may already exist */ }
             const ui = window.TerminalUIInstance;
             if (ui?.container) {
                 ui.container.style.display = '';

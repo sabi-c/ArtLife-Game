@@ -917,6 +917,14 @@ export class GameState {
             playerLocation: { locationId: 'player_apartment', cityX: 5, cityY: 14, insideVenue: false },
             hoursUsedToday: 0, dayOfWeek: 1, hour: 8, minute: 0,
             toneHistory: {},
+            // Fields required by subsystems (WorldScene, DealResolver, MarketManager, etc.)
+            pendingOffers: [],
+            visitedCities: ['new-york'],
+            visitedRooms: [],
+            collectedItems: [],
+            overworldPosition: null,
+            eraModifier: 1.0,
+            activeModifiers: [],
         };
 
         window._artLifeState = GameState.state;
@@ -981,5 +989,10 @@ export class GameState {
             }
             localStorage.removeItem('artlife_last_slot');
         }
+    }
+
+    /** Alias for init() — some callers use newGame() */
+    static newGame(character) {
+        return GameState.init(character);
     }
 }
