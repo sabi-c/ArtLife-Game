@@ -14,6 +14,8 @@ import { ConsequenceScheduler } from './ConsequenceScheduler.js';
 import { MarketManager } from './MarketManager.js';
 import { GameEventBus, GameEvents } from './GameEventBus.js';
 import { EventRegistry } from './EventRegistry.js';
+import { useEventStore } from '../stores/eventStore.js';
+import { useMarketStore } from '../stores/marketStore.js';
 
 export class WeekEngine {
     /** Last week's advance report — set after each advanceWeek() call. */
@@ -58,6 +60,16 @@ export class WeekEngine {
         // ── Pipeline / Active Deals ──
         try { DealResolver.resolveDeals(state); }
         catch (e) { console.error('[WeekEngine] Deal resolution failed:', e); }
+
+        // ── Market Tick (artist heat, prices, new works) ──
+        try {
+            MarketManager.tick();
+            // Sync market state to Zustand store for persistence & UI
+            const mStore = useMarketStore.getState();
+            mStore.syncFromManager(MarketManager.artists, MarketManager.works, state.marketState, state.week);
+            mStore.generateWeeklyNews(MarketManager.artists);
+        }
+        catch (e) { console.error('[WeekEngine] Market tick failed:', e); }
 
         // ── Phone Messages ──
         try { PhoneManager.generateTurnMessages(); }

@@ -5,14 +5,16 @@
 
 ---
 
-## Current State (2026-02-21)
+## Current State (2026-02-22)
 
 **Tests:** 36/36 unit, 53/53 flow — all green
 **Build:** Clean (no new warnings)
 **Branch:** `main`
-**Deployed:** GitHub Pages (https://sabi-c.github.io/ArtLife-Game/)
+**Deployed:** Cloudflare Pages
 
 ### Recently Completed
+- **Sprint: Module Hardening & Architecture** — Full DialogueEngine rewrite with 5-tone system (Friendly/Schmoozing/Direct/Generous/Ruthless), tone tracking, condition evaluation, effect application (75→370 LOC). MarketManager.tick() wired into WeekEngine pipeline (prices now actually fluctuate weekly). MarketStore fleshed out with price history, artist snapshots, weekly news generation. InventoryStore expanded with provenance tracking. ConsequenceStore made persistent with full queue management. TerminalAPI updated with all store references. Fixed missing useEventStore import in WeekEngine.
+- **Mobile Admin Dashboard** — AdminFAB floating button for touch devices, responsive full-screen layout on mobile, 44px touch targets, Phaser Plugin Inspector for dev-only debugging.
 - **Dashboard HUD Upgrade + World Map + User Profiles & Auth** — Rich header panel (character info, city, week, net worth trend), side-by-side Financials+Stats on desktop, warning bar for elevated anti-resources, styled pipeline panel, clickable world map cities with event markers (◈ fair, ◆ auction, ● event), travel-from-map with AP confirmation, PBKDF2 password-protected user profiles (`ProfileManager.js`), profile-scoped save slots, profile create/login/guest flows in `TerminalLogin.jsx`, Switch Agent + Delete Agent in system menu, ~100 lines new CSS
 - **Calendar & Time UI + Variable Action Costs** — Action budget panel with gold pip bar (4 AP), calendar strip showing upcoming art world events, variable AP costs (1 AP cheap / 2 AP expensive actions), `[AP]` labels on all options, priority "WEEK COMPLETE" CTA when exhausted, ~90 lines new CSS
 - **Screen Audit Bug Fixes (7)** — Fixed initGame reference in character.js, ConsequenceScheduler imports in events.js + journal.js, dead code in phone.js, market.js inspect guard, dashboard.js sparkline null safety, system.js restart/return-to-title
@@ -153,7 +155,7 @@
 | Task | Status | Notes |
 |---|---|---|
 | Dev Test Toolbar (bottom-left quick-launch buttons) | ✅ Done | `[ SceneEngine ]` `[ Haggle Battle ]` `[ Dialogue ]` — jump to any Phaser scene from anywhere |
-| Admin Narrative Dashboard (God Mode via `~` key) | ✅ Done | Spec: `Admin_Narrative_Tracker_Spec.md` |
+| Admin Narrative Dashboard (God Mode via `~` key + mobile FAB) | ✅ Done | Spec: `Admin_Narrative_Tracker_Spec.md`. Mobile: floating DEV button (AdminFAB), responsive full-screen layout, 44px touch targets. |
 | Consequence Queue visualizer | ✅ Done | Read from `ConsequenceScheduler` |
 | NPC Memory Matrix panel | ✅ Done | Show hidden grudges/favors/witnessed |
 | State Importer (JSON dropzone for late-game testing) | ✅ Done | |
@@ -172,9 +174,9 @@
 | **Variable Action Costs** | ✅ Done | `useAction(label, cost=1)`, `hasActions(cost=1)`, MAX_ACTIONS=4. Haggle/sell/art fair=2 AP, browse/visit/call=1 AP |
 | **Progressive Disclosure** | ✅ Done | Early (wk 1-4): core loop only. Mid (5-12): +venues, travel, journal, ego dash. Late (13+): +inventory, overworld, retire. Unlock tease messages in dashboard. |
 | **Calendar Events Attendance** | ✅ Done | `calendarEventScreen()` — attend art fairs, auctions, biennales from dashboard. Tier-scaled stat rewards, NPC encounters, entry costs. Browse works at fairs/auctions. |
-| Tone system for NPC dialogues (5 tones from Roadwarden) | TODO | Spec in `Implementation_Plan.md` A2 |
-| Week 20 character specialization (dominant tone → perk) | TODO | |
-| Progressive disclosure (UI reveals through gameplay) | TODO | Early/mid/late game phases |
+| Tone system for NPC dialogues (5 tones from Roadwarden) | ✅ Done | DialogueEngine rewrite: Friendly/Schmoozing/Direct/Generous/Ruthless. Tone tracking per conversation, persistent `toneHistory` in GameState. |
+| Week 20 character specialization (dominant tone → perk) | ✅ Done | `DialogueEngine.getSpecialization()` — dominant tone after Week 20 grants perk via `TONE_SPECIALIZATIONS`. |
+| Progressive disclosure (UI reveals through gameplay) | ✅ Done | Early (wk 1-4)/Mid (5-12)/Late (13+) phases with option gating. |
 | Inventory system | ✅ Done | Items beyond artworks |
 | **Dialogue Scene Visual Upgrade** | ✅ Done | Pokemon-style dual portrait layout (player L, NPC R), typewriter text, speaker name labels. DialogueBox.jsx rewritten with inline styles. Back buttons on both HaggleScene and MacDialogueScene. |
 | **Session Persistence** | ✅ Done | Auto-resume from `artlife_last_slot` on page reload. Added `VIEW.TERMINAL` to views.js. App.jsx checks `getMostRecentSlot()` on mount, auto-loads save, pushes dashboardScreen. All Phaser scene exits emit `UI_ROUTE: TERMINAL`. |
@@ -194,7 +196,7 @@
 | Build `NPCRegistry.js` | ✅ Done | Expanded into `npcStore.js` (Zustand), subsuming `NPCMemory.js` & `PhoneManager` contacts |
 | Build `EventRegistry.js` | ✅ Done | Event trigger conditions, consequences, and follow-up scheduling |
 | Build `InventoryStore.js` | ✅ Done | Tracks owned items (artworks, documents, contraband) with provenance |
-| Build `MarketEngine.js` | TODO | Weekly price recalculation: artist heat × era modifiers × economic state |
+| Build `MarketEngine.js` | ✅ Done | MarketManager.tick() wired into WeekEngine. MarketStore tracks price history, artist heat snapshots, weekly news. Buyback simulation, flipper penalties, market cycle transitions all active. |
 
 ---
 

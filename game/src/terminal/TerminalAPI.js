@@ -22,6 +22,9 @@ import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
 import { PhoneManager } from '../managers/PhoneManager.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { useEventStore } from '../stores/eventStore.js';
+import { useMarketStore } from '../stores/marketStore.js';
+import { useInventoryStore } from '../stores/inventoryStore.js';
+import { useConsequenceStore } from '../stores/consequenceStore.js';
 import { EventRegistry } from '../managers/EventRegistry.js';
 // Import WeekEngine to trigger self-registration with GameState
 import { WeekEngine } from '../managers/WeekEngine.js';
@@ -44,6 +47,10 @@ export const TerminalAPI = {
 
     // ── Stores ──
     uiStore: useUIStore,
+    marketStore: useMarketStore,
+    inventoryStore: useInventoryStore,
+    consequenceStore: useConsequenceStore,
+    eventStore: useEventStore,
 
     // ── Data ──
     artworks: ARTWORKS,
@@ -56,9 +63,8 @@ export const TerminalAPI = {
 
     // ── Game Helpers ──
     advanceWeek: () => {
+        // WeekEngine handles MarketManager.tick(), store sync, and autoSave internally
         GameState.advanceWeek();
-        MarketManager.tick();
-        GameState.autoSave();
     },
     getLastWeekReport: () => WeekEngine.lastReport,
     getPendingEvent: () => EventRegistry.getPendingEvent(),
