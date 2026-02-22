@@ -27,6 +27,7 @@ export const useCmsStore = create(
                 venues: false,
                 kanban: false,
                 timeline: false,
+                maps: false,
             },
 
             // ── Modification Snapshots ──
@@ -38,6 +39,7 @@ export const useCmsStore = create(
                 kanbanColumns: null, // Kanban board column assignments
                 graphPositions: null, // Content graph node positions
                 timelineOverrides: null, // Week overrides for timeline drag
+                maps: null,         // { [mapId]: mapJSON } — edited Tiled map snapshots
             },
 
             // ── Change Log ──
@@ -257,6 +259,33 @@ export const useCmsStore = create(
             },
 
             // ═══════════════════════════════════════════════════════════
+            //  MAP SNAPSHOT MANAGEMENT
+            // ═══════════════════════════════════════════════════════════
+
+            /** Save a single map's JSON data (from MapEditor edits) */
+            saveMapSnapshot: (mapId, mapJSON) => set((state) => {
+                if (!state.snapshots.maps) state.snapshots.maps = {};
+                state.snapshots.maps[mapId] = JSON.parse(JSON.stringify(mapJSON));
+                state.dirty.maps = true;
+                state.changeLog.push({
+                    timestamp: Date.now(),
+                    domain: 'maps',
+                    action: 'saveMap',
+                    details: `Saved map: ${mapId} (${mapJSON.width}x${mapJSON.height})`,
+                });
+                if (state.changeLog.length > 100) state.changeLog = state.changeLog.slice(-50);
+            }),
+
+            /** Get a saved map snapshot by ID (or null) */
+            getMapSnapshot: (mapId) => {
+                const maps = get().snapshots.maps;
+                return maps ? maps[mapId] || null : null;
+            },
+
+            /** Get all saved map snapshots */
+            getAllMapSnapshots: () => get().snapshots.maps || {},
+
+            // ═══════════════════════════════════════════════════════════
             //  CHANGELOG
             // ═══════════════════════════════════════════════════════════
 
@@ -330,8 +359,8 @@ export const useCmsStore = create(
             // ═══════════════════════════════════════════════════════════
 
             reset: () => set((state) => {
-                state.dirty = { events: false, storylines: false, npcs: false, artworks: false, venues: false, kanban: false, timeline: false };
-                state.snapshots = { events: null, storylines: null, npcs: null, kanbanColumns: null, graphPositions: null, timelineOverrides: null };
+                state.dirty = { events: false, storylines: false, npcs: false, artworks: false, venues: false, kanban: false, timeline: false, maps: false };
+                state.snapshots = { events: null, storylines: null, npcs: null, kanbanColumns: null, graphPositions: null, timelineOverrides: null, maps: null };
                 state.changeLog = [];
                 state.lastSaveTime = null;
             }),

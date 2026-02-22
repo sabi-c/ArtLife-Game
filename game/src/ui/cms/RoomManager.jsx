@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { VENUES, VENUE_MAP, ROOM_MAP } from '../../data/rooms.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
 import MapEditor from './MapEditor.jsx';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
@@ -658,6 +659,297 @@ function ActionsPanel({ venue, mapData, onClose, onEditMap }) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// Room Creation Wizard Modal
+// ════════════════════════════════════════════════════════════════
+
+/** Generate a blank Tiled JSON map with standard layers and tilesets */
+function generateBlankMap(width, height, template = 'blank') {
+    const tw = 48;
+    const th = 48;
+    const totalTiles = width * height;
+
+    // Base tilesets — Room_Builder for walls, Interiors for decor
+    const tilesets = [
+        {
+            columns: 27,
+            firstgid: 1,
+            image: '../../assets/tilesets/Room_Builder_free_48x48.png',
+            imageheight: 1296,
+            imagewidth: 1296,
+            margin: 0,
+            name: 'Room_Builder_free_48x48',
+            spacing: 0,
+            tilecount: 729,
+            tilewidth: tw,
+            tileheight: th,
+        },
+        {
+            columns: 32,
+            firstgid: 730,
+            image: '../../assets/tilesets/Interiors_free_48x48.png',
+            imageheight: 1584,
+            imagewidth: 1536,
+            margin: 0,
+            name: 'Interiors_free_48x48',
+            spacing: 0,
+            tilecount: 1056,
+            tilewidth: tw,
+            tileheight: th,
+        },
+    ];
+
+    // Initialize empty tile data
+    const emptyData = new Array(totalTiles).fill(0);
+
+    // For gallery template, fill floor and add walls
+    let belowData = [...emptyData];
+    let worldData = [...emptyData];
+    if (template === 'gallery' || template === 'museum') {
+        // Fill floor with a beige floor tile (Room_Builder firstgid=1, tile 109 = clean floor)
+        const floorTile = 110; // Light wooden floor
+        belowData = belowData.map(() => floorTile);
+
+        // Add walls on edges (tile 1 = wall top-left, etc.)
+        for (let x = 0; x < width; x++) {
+            worldData[x] = 28;                          // Top wall
+            worldData[(height - 1) * width + x] = 82;  // Bottom wall
+        }
+        for (let y = 0; y < height; y++) {
+            worldData[y * width] = 55;                  // Left wall
+            worldData[y * width + (width - 1)] = 57;   // Right wall
+        }
+    }
+
+    // Create spawn and exit door objects
+    const objects = [
+        {
+            id: 1, name: 'spawn', point: true,
+            x: Math.floor(width / 2) * tw, y: (height - 2) * th,
+            width: 0, height: 0, rotation: 0, type: '', visible: true, properties: [],
+        },
+        {
+            id: 2, name: 'door', point: true,
+            x: Math.floor(width / 2) * tw, y: (height - 1) * th,
+            width: 0, height: 0, rotation: 0, type: '', visible: true,
+            properties: [
+                { name: 'nextMap', type: 'string', value: 'worldscene' },
+                { name: 'label', type: 'string', value: 'Exit' },
+            ],
+        },
+    ];
+
+    // For gallery/museum, add a few paintings on the north wall
+    if (template === 'gallery' || template === 'museum') {
+        const paintingCount = template === 'museum' ? 5 : 3;
+        const spacing = Math.floor(width / (paintingCount + 1));
+        for (let i = 0; i < paintingCount; i++) {
+            objects.push({
+                id: 3 + i, name: 'painting', point: true,
+                x: (spacing * (i + 1)) * tw, y: 2 * th,
+                width: 0, height: 0, rotation: 0, type: '', visible: true,
+                properties: [
+                    { name: 'title', type: 'string', value: `Artwork ${i + 1}` },
+                    { name: 'artist', type: 'string', value: 'Unknown' },
+                    { name: 'price', type: 'string', value: `${(5000 + i * 2500)}` },
+                    { name: 'description', type: 'string', value: '' },
+                ],
+            });
+        }
+        // Add an NPC
+        objects.push({
+            id: 3 + paintingCount, name: 'npc', point: true,
+            x: Math.floor(width * 0.7) * tw, y: Math.floor(height * 0.5) * th,
+            width: 0, height: 0, rotation: 0, type: '', visible: true,
+            properties: [
+                { name: 'id', type: 'string', value: 'gallery_npc' },
+                { name: 'label', type: 'string', value: 'Gallery Curator' },
+                { name: 'dialogue', type: 'string', value: 'Welcome to the gallery.' },
+                { name: 'canHaggle', type: 'string', value: 'false' },
+            ],
+        });
+    }
+
+    return {
+        compressionlevel: -1,
+        height,
+        width,
+        infinite: false,
+        orientation: 'orthogonal',
+        renderorder: 'right-down',
+        tilewidth: tw,
+        tileheight: th,
+        tiledversion: '1.11.2',
+        type: 'map',
+        version: '1.10',
+        nextlayerid: 5,
+        nextobjectid: objects.length + 1,
+        tilesets,
+        layers: [
+            {
+                data: belowData, height, width,
+                id: 1, name: 'below_player', opacity: 1,
+                type: 'tilelayer', visible: true, x: 0, y: 0,
+            },
+            {
+                data: worldData, height, width,
+                id: 2, name: 'world', opacity: 1,
+                type: 'tilelayer', visible: true, x: 0, y: 0,
+            },
+            {
+                data: [...emptyData], height, width,
+                id: 3, name: 'above_player', opacity: 1,
+                type: 'tilelayer', visible: true, x: 0, y: 0,
+            },
+            {
+                draworder: 'topdown', id: 4, name: 'objects',
+                objects, opacity: 1, type: 'objectgroup',
+                visible: true, x: 0, y: 0,
+            },
+        ],
+    };
+}
+
+function RoomWizard({ onClose, onCreateRoom }) {
+    const [name, setName] = useState('');
+    const [mapId, setMapId] = useState('');
+    const [template, setTemplate] = useState('gallery');
+    const [width, setWidth] = useState(12);
+    const [height, setHeight] = useState(10);
+
+    // Auto-generate mapId from name
+    const handleNameChange = (val) => {
+        setName(val);
+        setMapId(val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
+    };
+
+    const handleCreate = () => {
+        if (!mapId) return;
+        const mapJSON = generateBlankMap(width, height, template);
+        onCreateRoom(mapId, name || mapId, mapJSON);
+    };
+
+    const templates = [
+        { id: 'blank', label: 'Blank Room', desc: 'Empty room, no walls or floor' },
+        { id: 'gallery', label: 'Small Gallery', desc: '3 paintings, 1 NPC, walls + floor' },
+        { id: 'museum', label: 'Museum Hall', desc: '5 paintings, 1 NPC, larger layout' },
+    ];
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 1000000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.8)',
+        }}>
+            <div style={{
+                background: '#0a0a14', border: '1px solid #c9a84c',
+                borderRadius: 4, padding: 24, width: 420,
+                fontFamily: mono,
+            }}>
+                <div style={{ fontSize: 14, color: '#c9a84c', fontWeight: 'bold', marginBottom: 16, letterSpacing: 2 }}>
+                    CREATE NEW ROOM
+                </div>
+
+                {/* Name */}
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: '#888', marginBottom: 4 }}>ROOM NAME</div>
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        placeholder="My Gallery"
+                        style={wizInputStyle}
+                        autoFocus
+                    />
+                </div>
+
+                {/* Map ID */}
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: '#888', marginBottom: 4 }}>MAP ID (auto-generated)</div>
+                    <input
+                        type="text"
+                        value={mapId}
+                        onChange={(e) => setMapId(e.target.value)}
+                        placeholder="my_gallery"
+                        style={wizInputStyle}
+                    />
+                </div>
+
+                {/* Template */}
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: '#888', marginBottom: 4 }}>TEMPLATE</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {templates.map(t => (
+                            <button
+                                key={t.id}
+                                onClick={() => {
+                                    setTemplate(t.id);
+                                    if (t.id === 'museum') { setWidth(18); setHeight(14); }
+                                    else if (t.id === 'gallery') { setWidth(12); setHeight(10); }
+                                    else { setWidth(10); setHeight(10); }
+                                }}
+                                style={{
+                                    background: template === t.id ? 'rgba(201,168,76,0.15)' : '#111',
+                                    border: template === t.id ? '1px solid #c9a84c' : '1px solid #333',
+                                    color: template === t.id ? '#c9a84c' : '#888',
+                                    padding: '8px 12px', cursor: 'pointer', fontFamily: mono, fontSize: 11,
+                                    textAlign: 'left', borderRadius: 2,
+                                }}
+                            >
+                                <div style={{ fontWeight: 'bold' }}>{t.label}</div>
+                                <div style={{ fontSize: 9, color: '#555', marginTop: 2 }}>{t.desc}</div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Size */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                    <div>
+                        <div style={{ fontSize: 9, color: '#888', marginBottom: 4 }}>WIDTH (tiles)</div>
+                        <input type="number" value={width} onChange={(e) => setWidth(Number(e.target.value))}
+                            min={5} max={30} style={{ ...wizInputStyle, width: 80 }} />
+                    </div>
+                    <div>
+                        <div style={{ fontSize: 9, color: '#888', marginBottom: 4 }}>HEIGHT (tiles)</div>
+                        <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))}
+                            min={5} max={30} style={{ ...wizInputStyle, width: 80 }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', fontSize: 10, color: '#555', fontFamily: mono }}>
+                        = {width * 48}&times;{height * 48}px
+                    </div>
+                </div>
+
+                {/* Buttons */}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                    <button onClick={onClose} style={{
+                        background: '#111', border: '1px solid #333', color: '#888',
+                        padding: '8px 16px', cursor: 'pointer', fontFamily: mono, fontSize: 11,
+                    }}>CANCEL</button>
+                    <button
+                        onClick={handleCreate}
+                        disabled={!mapId}
+                        style={{
+                            background: mapId ? '#1a3a1a' : '#111',
+                            border: mapId ? '1px solid #3a8a5c' : '1px solid #333',
+                            color: mapId ? '#4ade80' : '#555',
+                            padding: '8px 16px', cursor: mapId ? 'pointer' : 'not-allowed',
+                            fontFamily: mono, fontSize: 11, fontWeight: 'bold',
+                        }}
+                    >CREATE & EDIT</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const wizInputStyle = {
+    width: '100%', boxSizing: 'border-box',
+    background: '#111', border: '1px solid #2a2a3e', color: '#ddd',
+    padding: '8px 10px', fontFamily: '"IBM Plex Mono", monospace', fontSize: 12,
+    borderRadius: 2,
+};
+
+// ════════════════════════════════════════════════════════════════
 // Main RoomManager Component
 // ════════════════════════════════════════════════════════════════
 
@@ -665,8 +957,9 @@ export default function RoomManager({ onClose }) {
     const [selectedVenueId, setSelectedVenueId] = useState(null);
     const [mapData, setMapData] = useState({});
     const [editingMapId, setEditingMapId] = useState(null);
+    const [showWizard, setShowWizard] = useState(false);
 
-    // Fetch all Tiled map JSONs on mount
+    // Fetch all Tiled map JSONs on mount, preferring cmsStore snapshots
     useEffect(() => {
         const tiledMaps = new Set();
         for (const venue of VENUES) {
@@ -675,8 +968,16 @@ export default function RoomManager({ onClose }) {
             }
         }
 
+        // Check cmsStore for persisted map edits first
+        const savedMaps = useCmsStore.getState().getAllMapSnapshots();
+
         Promise.all(
             [...tiledMaps].map(async (id) => {
+                // Use cmsStore snapshot if available (user's edits take priority)
+                if (savedMaps[id]) {
+                    mapCache[id] = savedMaps[id];
+                    return [id, savedMaps[id]];
+                }
                 const json = await fetchMapJSON(id);
                 return [id, json];
             })
@@ -696,21 +997,26 @@ export default function RoomManager({ onClose }) {
         ? VENUES.flatMap(v => v.rooms).find(r => r.tiledMap === editingMapId)
         : null;
 
-    // Handle saving edited map JSON back
+    // Handle saving edited map JSON back — persists to cmsStore (localStorage)
     const handleSaveMap = useCallback((updatedJSON) => {
         // Update in-memory cache so inspector refreshes
         setMapData(prev => ({ ...prev, [editingMapId]: updatedJSON }));
         mapCache[editingMapId] = updatedJSON;
 
-        // Download the file — in a real setup this would write to disk via dev server
-        const blob = new Blob([JSON.stringify(updatedJSON, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${editingMapId}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
+        // Persist to cmsStore for cross-session persistence
+        useCmsStore.getState().saveMapSnapshot(editingMapId, updatedJSON);
     }, [editingMapId]);
+
+    // Handle creating a new room from the wizard
+    const handleCreateRoom = useCallback((mapId, name, mapJSON) => {
+        // Save to cmsStore and in-memory cache
+        useCmsStore.getState().saveMapSnapshot(mapId, mapJSON);
+        setMapData(prev => ({ ...prev, [mapId]: mapJSON }));
+        mapCache[mapId] = mapJSON;
+        setShowWizard(false);
+        // Open it immediately in the editor
+        setEditingMapId(mapId);
+    }, []);
 
     // If editing a map, show the MapEditor full-screen
     if (editingMapId && mapData[editingMapId]) {
@@ -729,8 +1035,16 @@ export default function RoomManager({ onClose }) {
     return (
         <div style={{
             flex: 1, display: 'flex', gap: 1, overflow: 'hidden',
-            padding: '8px', fontFamily: mono,
+            padding: '8px', fontFamily: mono, position: 'relative',
         }}>
+            {/* Room creation wizard modal */}
+            {showWizard && (
+                <RoomWizard
+                    onClose={() => setShowWizard(false)}
+                    onCreateRoom={handleCreateRoom}
+                />
+            )}
+
             {/* Left: Room List */}
             <div style={{ width: '25%', minWidth: 220, display: 'flex', flexDirection: 'column' }}>
                 <RoomList
@@ -738,6 +1052,17 @@ export default function RoomManager({ onClose }) {
                     onSelectVenue={setSelectedVenueId}
                     mapData={mapData}
                 />
+                {/* Create Room button at bottom of list */}
+                <button
+                    onClick={() => setShowWizard(true)}
+                    style={{
+                        margin: '4px 0 0', padding: '10px 12px',
+                        background: '#1a1a0a', border: '1px solid #c9a84c',
+                        color: '#c9a84c', cursor: 'pointer',
+                        fontFamily: mono, fontSize: 11, fontWeight: 'bold',
+                        borderRadius: 4,
+                    }}
+                >+ CREATE ROOM</button>
             </div>
 
             {/* Center: Room Inspector */}

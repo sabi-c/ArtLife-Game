@@ -285,12 +285,12 @@
             {
               "name": "nextMap",
               "type": "string",
-              "value": "gallery_test"
+              "value": "chelsea_gallery"
             },
             {
               "name": "nextMapRoom",
               "type": "string",
-              "value": "gallery_test_main"
+              "value": "chelsea_gallery_main"
             }
           ],
           "rotation": 0,
@@ -770,12 +770,12 @@
             {
               "name": "nextMap",
               "type": "string",
-              "value": "gallery_test"
+              "value": "soho_gallery_lobby"
             },
             {
               "name": "nextMapRoom",
               "type": "string",
-              "value": "gallery_test_main"
+              "value": "soho_gallery_lobby_main"
             }
           ],
           "rotation": 0,

@@ -7,12 +7,23 @@
 
 ## Current State (2026-02-22)
 
-**Version:** v0.3.2
+**Version:** v0.3.3
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
+
+### Tiled-Like Map Editor + CMS Integration (2026-02-22 Session 8)
+- **Tile Painting Tools** — MapEditor.jsx upgraded with full Tiled-like editing: TilesetPicker (scrollable tile grid from loaded tilesets, click to select brush), EditorToolbar (Select/Pencil/Eraser/Eyedropper/Fill tools), tile painting on canvas with mouse drag, ghost tile preview on hover, layer selector (below_player/world/above_player), grid & object visibility toggles.
+- **Undo/Redo** — `useMapEditorHistory` hook with JSON snapshot stack (max 50 states). Cmd+Z undo, Cmd+Shift+Z redo. Applies to both tile painting and object editing.
+- **Keyboard Shortcuts** — V=select, B=pencil, E=eraser, I=eyedropper, G=fill.
+- **CMS Persistence** — Added `maps` domain to cmsStore (Zustand persist). Map edits save to localStorage via `saveMapSnapshot()`. RoomManager loads cmsStore snapshots on mount (user edits take priority over public/ files).
+- **VenueEditor Rewrite** — MasterCMS "Venues / Map" tab now renders full RoomManager instead of read-only JSON dump. Both CMS entry points (MasterCMS venues tab, ContentStudio rooms tab) show same 3-panel room manager with map editor access.
+- **Door Routing Fix** — 3 overworld doors no longer all point to `gallery_test`. Building 1 (left) → gallery_test, Building 2 (center) → soho_gallery_lobby, Building 3 (right) → chelsea_gallery.
+- **Room Creation Wizard** — "+ CREATE ROOM" button in RoomManager. Modal wizard with name, auto-generated mapId, template selection (Blank/Small Gallery/Museum Hall), custom size (5-30 tiles). Generates proper Tiled JSON with layers, tilesets, objects. Auto-persists to cmsStore and opens in MapEditor.
+- **Layer Panel** — Right sidebar "LAYERS" tab shows all map layers with tile/object counts, active layer highlight, map info (size, tile dimensions, tileset count).
+- **Active Layer Dimming** — Non-active tile layers render at 50% opacity when painting, making it clear which layer you're editing.
 
 ### Background-Image Rooms + Visual Map Editor (2026-02-22 Session 7)
 - **4 Museum Rooms** — Art Gallery Museum (20×17, Great Wave/Starry Night/Mona Lisa), Museum Entrance (16×22, ticket booth), Dinosaur Museum (17×21, dinosaur skeletons), Small Gallery (16×10, contemporary). All use pre-composed LimeZu premium artwork as background images with collision-only tile layers.
