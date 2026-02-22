@@ -15,7 +15,7 @@ export function marketScreen(ui) {
     return () => {
         const s = TerminalAPI.state();
         const acc = s.access ?? 0;
-        const allWorks = TerminalAPI.market.getAvailableWorks();
+        const allWorks = TerminalAPI.market?.getAvailableWorks?.() || [];
 
         // ACC Velvet Rope — gate how many works are visible
         let visibleCount;

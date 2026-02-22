@@ -1,5 +1,5 @@
 import { Story } from 'inkjs';
-import { useGameStore } from '../stores/gameStore';
+import { useGameStore } from '../stores/gameStore.js';
 import { useInventoryStore } from '../stores/inventoryStore.js';
 
 export class SceneEngine {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { GameState } from '../managers/GameState';
-import { ProfileManager } from '../managers/ProfileManager';
+import { GameState } from '../managers/GameState.js';
+import { ProfileManager } from '../managers/ProfileManager.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
 // ─── Variable-speed typewriter hook ──────────────────────────────────────────

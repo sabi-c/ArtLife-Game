@@ -133,6 +133,11 @@ export class GameState {
             newsFeed: [],
             decisions: [],
             activeDeals: [],     // tracks works currently pending sale/action
+            pendingOffers: [],   // incoming purchase/trade offers from NPCs
+            visitedCities: ['new-york'], // cities the player has traveled to
+            visitedRooms: [],    // rooms the player has explored in venues
+            collectedItems: [],  // item IDs picked up in WorldScene
+            overworldPosition: null, // { x, y, facing } for WorldScene persistence
             totalWorksBought: startingPortfolio.length,
             totalWorksSold: 0,
             eventsTriggered: [],

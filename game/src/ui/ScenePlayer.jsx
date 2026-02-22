@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SceneEngine } from '../engines/SceneEngine';
+import { SceneEngine } from '../engines/SceneEngine.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
 // ── Scene Library ──

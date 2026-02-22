@@ -51,7 +51,7 @@ export function egoDashboardScreen(ui) {
                 + statBarHtml('AUD', s.audacity ?? 0, 100, 'var(--red)')
                 + statBarHtml('TST', s.taste, 100, 'var(--blue)')
                 + statBarHtml('ACC', s.access, 100, 'var(--green)')
-                + statBarHtml('INT', s.intelligence ?? s.taste ?? 0, 100, '#aa66cc')
+                + statBarHtml('INT', s.intel ?? 0, 100, '#aa66cc')
                 + `</div></div>`
         });
 

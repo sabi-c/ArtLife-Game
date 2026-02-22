@@ -114,7 +114,7 @@ function venueDetailScreen(ui, venue) {
                 label: `🎮 Explore in Visual Mode (LocationScene)`,
                 action: () => {
                     ui.pushScreen(() => ({ lines: [DIM('Loading venue...')], options: [] }));
-                    ui.container.style.display = 'none';
+                    if (ui?.container) ui.container.style.display = 'none';
                     window.game.startTestScene('LocationScene', {
                         venueId: venue.id,
                         roomId: venue.startRoom,
@@ -377,7 +377,7 @@ function npcTalkScreen(ui, charData, contactData, venue, timeKey) {
                         if (style === 'visual' && window.game?.startTestScene) {
                             // Push trap screen, hide terminal, launch dialogue
                             ui.pushScreen(() => ({ lines: [DIM('In conversation...')], options: [] }));
-                            ui.container.style.display = 'none';
+                            if (ui?.container) ui.container.style.display = 'none';
                             window.game.startTestScene('DialogueScene', { event, ui });
                         } else {
                             // Fallback: render dialogue as terminal screen

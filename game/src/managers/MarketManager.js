@@ -18,7 +18,7 @@ export class MarketManager {
         MarketManager.works = works;
 
         // Asynchronously load the real-world scraped data backend
-        fetch('/content/real_world_data.json')
+        fetch('content/real_world_data.json')
             .then(res => res.json())
             .then(data => { MarketManager.realWorldData = data; })
             .catch(err => console.warn('No real_world_data.json found, skipping stochastic anchor data.', err));
