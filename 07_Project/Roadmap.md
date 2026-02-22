@@ -14,6 +14,14 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE ✅
 **Phase 3:** ~98% complete
 
+### CMS Store Audit & Fixes (2026-02-22 Session 4)
+- **StorylineEditor.jsx** — Fixed `s.active`/`s.completed` → `s.activeStorylines`/`s.completedStorylines` (runtime crash)
+- **MarketDashboard.jsx** — Fixed `s.marketState` → `s.marketCycle` (store field mismatch)
+- **DataIngestion.jsx** — Fixed `npcsByTier` → `contacts[]` array (NPC ingestion was silently failing)
+- **KanbanBoard.jsx** — Removed nonexistent `updateEntityCategory()`, replaced with direct `useContentStore.setState()`
+- **ArtworkDashboard.jsx** — Upgraded to Bloomberg-style analytics: ComposedChart (price line + volume bars), KPI ribbon (valuation/high-low/momentum/liquidity), MarketTape order book, ChartErrorBoundary, provenance records
+- **CI Test Fix** — Tests were hardcoded to port 5173, server runs on 5175. Now uses `TEST_PORT` env variable.
+
 ### Deployment Safety System (2026-02-22 Session 3)
 - **Build-Time Version Injection** — `package.json` version + git short hash injected via Vite `define`. Shown on login screen header and `window.ARTLIFE_VERSION`. Console logs version on boot.
 - **Pre-Push Validation Script** — `npm run validate` runs: vite build, import resolution check (337 imports), asset file verification (21 Phaser assets), git tracking audit. Catches the exact class of bug that broke deployments (untracked files imported in code).

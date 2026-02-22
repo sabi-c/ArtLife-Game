@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { VIEW } from '../constants/views.js';
 
 /**
- * IntroScene — Cinematic narrator intro before CharacterSelectScene.
+ * IntroScene — Cinematic narrator intro before TerminalLogin.
  *
  * Veteran-coder notes:
  * - Input uses JustDown in update() rather than keyboard event listeners.
@@ -191,7 +193,8 @@ export class IntroScene extends Phaser.Scene {
             onComplete: () => {
                 this.cameras.main.fadeOut(500, 0, 0, 0);
                 this.cameras.main.once('camerafadeoutcomplete', () => {
-                    this.scene.start('CharacterSelectScene', { ui: this.ui });
+                    this.scene.stop();
+                    GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.BOOT);
                 });
             }
         });
@@ -204,7 +207,8 @@ export class IntroScene extends Phaser.Scene {
         this.input.keyboard.removeAllKeys();
         this.input.removeAllListeners();
 
-        // No fade on ESC — immediate jump
-        this.scene.start('CharacterSelectScene', { ui: this.ui });
+        // No fade on ESC — immediate jump to login
+        this.scene.stop();
+        GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.BOOT);
     }
 }

@@ -32,7 +32,10 @@ export default function App() {
     const [activeView, setActiveView] = useState(() => {
         // E2E Test Backdoor: skip straight to Phaser
         const params = new URLSearchParams(window.location.search);
-        return params.get('skipBoot') ? VIEW.PHASER : VIEW.BOOT;
+        if (params.get('skipBoot')) return VIEW.PHASER;
+        // Fresh visit starts with IntroScene (Phaser cinematic), not BOOT
+        // Auto-resume will override this to TERMINAL if a save exists
+        return VIEW.PHASER;
     });
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
@@ -151,7 +154,23 @@ export default function App() {
                 }
             } catch (err) {
                 console.error('[App] Auto-resume failed:', err);
-                // Fall through to BOOT view (default)
+                // Fall through to intro cinematic below
+            }
+
+            // No save found (or auto-resume failed) — launch IntroScene cinematic
+            if (!autoResumedRef.current) {
+                const introStart = Date.now();
+                const introPoll = setInterval(() => {
+                    if (window.startPhaserGame) {
+                        clearInterval(introPoll);
+                        window.startPhaserGame('new'); // → BootScene → IntroScene
+                    } else if (Date.now() - introStart > 5000) {
+                        clearInterval(introPoll);
+                        console.error('[App] startPhaserGame never registered for intro');
+                        setActiveView(VIEW.BOOT); // Fallback to login screen
+                    }
+                }, 100);
+                setActiveView(VIEW.PHASER);
             }
         }
 
@@ -184,14 +203,13 @@ export default function App() {
             }
             setActiveView(VIEW.TERMINAL);
         } else {
-            // New game: launch Phaser intro sequence
+            // New game: launch CharacterSelectScene directly (IntroScene already played)
             setActiveView(VIEW.PHASER);
-            // Poll for startPhaserGame — BootScene may still be preloading assets
             const pollStart = Date.now();
             const pollId = setInterval(() => {
                 if (window.startPhaserGame) {
                     clearInterval(pollId);
-                    window.startPhaserGame(action);
+                    window.startPhaserGame('charselect');
                     // Give canvas keyboard focus for Phaser input
                     setTimeout(() => {
                         const canvas = game?.canvas || window.phaserGame?.canvas;
@@ -357,7 +375,9 @@ export default function App() {
             )}
 
             {activeOverlay === OVERLAY.CMS && (
-                <ContentStudio onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+                <ErrorBoundary>
+                    <ContentStudio onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+                </ErrorBoundary>
             )}
 
             {activeOverlay === OVERLAY.STORYLINE_CMS && (
@@ -369,7 +389,9 @@ export default function App() {
             )}
 
             {activeOverlay === OVERLAY.MASTER_CMS && (
-                <MasterCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+                <ErrorBoundary>
+                    <MasterCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+                </ErrorBoundary>
             )}
 
             {activeOverlay === OVERLAY.MARKET_DASHBOARD && (
@@ -377,7 +399,9 @@ export default function App() {
             )}
 
             {activeOverlay === OVERLAY.ARTWORK_DASHBOARD && (
-                <ArtworkDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} payload={viewPayload} />
+                <ErrorBoundary>
+                    <ArtworkDashboard onClose={() => setActiveOverlay(OVERLAY.NONE)} payload={viewPayload} />
+                </ErrorBoundary>
             )}
 
             {activeOverlay === OVERLAY.DEBUG_LOG && (

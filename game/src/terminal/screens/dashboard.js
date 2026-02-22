@@ -1399,7 +1399,7 @@ export function dashboardScreen(ui) {
             options.push({
                 label: travelLocked ? `Travel (${cityInfo.name}) (Locked)` : `Travel (${cityInfo.name})`,
                 disabled: travelLocked || !hasActions(1),
-                action: (!travelLocked && hasActions(1)) ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, 'GLOBAL_MAP') : undefined
+                action: (!travelLocked && hasActions(1)) ? () => ui.pushScreen(cityScreen(ui)) : undefined
             });
 
             const intelLocked = phase === 'early';

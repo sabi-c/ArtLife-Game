@@ -102,10 +102,13 @@ export class BootScene extends Phaser.Scene {
         // Expose a method so React can command Phaser to start the game loop when ready.
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'new') {
-                this.scene.launch('TitleScene', { ui });
+                // Fresh visit: play cinematic intro, then hand back to React TerminalLogin
+                this.scene.launch('IntroScene', { ui });
+            } else if (mode === 'charselect') {
+                // After login "New" selection: go straight to character builder
+                this.scene.launch('CharacterSelectScene', { ui });
             } else {
-                // If loading a save, we can skip the Intro and go straight to the Overworld or Menu.
-                // Assuming GameState is already populated by React.
+                // If loading a save, skip straight to Overworld/Menu.
                 this.scene.launch('OverworldScene', { ui });
             }
             // Hide the boot scene
