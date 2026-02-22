@@ -1,0 +1,159 @@
+import React, { useState } from 'react';
+import { EventRegistry } from '../../managers/EventRegistry.js';
+import { useNPCStore } from '../../stores/npcStore.js';
+import { MarketManager } from '../../managers/MarketManager.js';
+
+export default function DataIngestion() {
+    const [payloadStr, setPayloadStr] = useState('');
+    const [status, setStatus] = useState(null); // { type: 'success' | 'error', message: '' }
+    const [targetDomain, setTargetDomain] = useState('auto'); // auto, storylines, events, npcs, market
+
+    const showMsg = (type, message) => {
+        setStatus({ type, message });
+        setTimeout(() => setStatus(null), 5000);
+    };
+
+    const handleIngest = () => {
+        try {
+            const parsed = JSON.parse(payloadStr);
+
+            // If it's not an array, wrap it in one to allow batch processing
+            const incoming = Array.isArray(parsed) ? parsed : [parsed];
+            if (incoming.length === 0) throw new Error("Payload is empty.");
+
+            let domain = targetDomain;
+
+            // Simple heuristic routing if set to 'auto'
+            if (domain === 'auto') {
+                const sample = incoming[0];
+                if (sample.npcId && Array.isArray(sample.steps)) domain = 'storylines';
+                else if (sample.id && sample.type === 'start') domain = 'events';
+                else if (sample.tier && sample.role) domain = 'npcs';
+                else if (sample.id && sample.works) domain = 'market';
+                else throw new Error("Could not auto-detect domain. Please specify target explicitly.");
+            }
+
+            let insertedCount = 0;
+            let updatedCount = 0;
+
+            if (domain === 'storylines') {
+                const updated = [...EventRegistry.jsonStorylines];
+                incoming.forEach(sl => {
+                    const idx = updated.findIndex(existing => existing.id === sl.id);
+                    if (idx >= 0) { updated[idx] = sl; updatedCount++; }
+                    else { updated.push(sl); insertedCount++; }
+                });
+                EventRegistry.jsonStorylines = updated;
+
+            } else if (domain === 'events') {
+                const updated = [...EventRegistry.jsonEvents];
+                incoming.forEach(ev => {
+                    const idx = updated.findIndex(existing => existing.id === ev.id);
+                    if (idx >= 0) { updated[idx] = ev; updatedCount++; }
+                    else { updated.push(ev); insertedCount++; }
+                });
+                EventRegistry.jsonEvents = updated;
+
+            } else if (domain === 'npcs') {
+                useNPCStore.setState(state => {
+                    const newDict = { ...state.npcsByTier };
+                    incoming.forEach(npc => {
+                        const tier = npc.tier || 1;
+                        if (!newDict[tier]) newDict[tier] = [];
+                        const list = [...newDict[tier]];
+                        const idx = list.findIndex(existing => existing.id === npc.id);
+                        if (idx >= 0) { list[idx] = npc; updatedCount++; }
+                        else { list.push(npc); insertedCount++; }
+                        newDict[tier] = list;
+                    });
+                    return { npcsByTier: newDict };
+                });
+
+            } else if (domain === 'market') {
+                if (!MarketManager.artists) throw new Error("MarketManager not initialized. Start Game first.");
+                const updated = [...MarketManager.artists];
+                incoming.forEach(artist => {
+                    const idx = updated.findIndex(existing => existing.id === artist.id);
+                    if (idx >= 0) { updated[idx] = artist; updatedCount++; }
+                    else { updated.push(artist); insertedCount++; }
+                });
+                MarketManager.artists = updated;
+            }
+
+            setPayloadStr(''); // clear input on success
+            showMsg('success', `Merged into [${domain.toUpperCase()}]: ${insertedCount} new added, ${updatedCount} updated.`);
+
+        } catch (err) {
+            showMsg('error', `JSON Parse / Routing Error: ${err.message}`);
+        }
+    };
+
+    // ── Styles ──
+    const panel = {
+        background: '#0a0a0f', border: '1px solid #333', padding: 20,
+        fontFamily: 'inherit', fontSize: 13, color: '#eaeaea',
+    };
+
+    const btnStyle = {
+        background: '#111', border: '1px solid #c9a84c', color: '#c9a84c',
+        padding: '12px 24px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+        textTransform: 'uppercase', fontWeight: 'bold'
+    };
+
+    return (
+        <div style={{ padding: 40, display: 'flex', flexDirection: 'column', gap: 20, height: '100%', overflow: 'auto' }}>
+            <div style={{ maxWidth: 800 }}>
+                <h2 style={{ color: '#c9a84c', marginTop: 0, fontSize: 24, letterSpacing: 2 }}>🤖 AI DATA INGESTION GATEWAY</h2>
+                <p style={{ color: '#888', lineHeight: 1.5 }}>
+                    Paste raw JSON objects or arrays generated by the LLM Agent. The gateway will automatically parse the data, detect its domain structure (Storyline, Event, NPC, Artist Pool), and hot-swap it into the live in-memory game state.
+                </p>
+                <div style={{ color: '#555', fontSize: 11, marginTop: 10 }}>
+                    Note: This writes to transient browser memory. Once you verify the injection works in-game, you must export the JSON from the respective tab and write it to the static data files in `src/data/` to persist it across reloads.
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                <span style={{ color: '#aaa', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>Target Domain Override:</span>
+                <select
+                    value={targetDomain}
+                    onChange={e => setTargetDomain(e.target.value)}
+                    style={{ background: '#111', color: '#eaeaea', border: '1px solid #444', padding: '8px 12px', fontFamily: 'inherit' }}
+                >
+                    <option value="auto">Auto-Detect Routing</option>
+                    <option value="storylines">Storylines</option>
+                    <option value="events">Events (Dialogue)</option>
+                    <option value="npcs">NPCs</option>
+                    <option value="market">Market (Artist Pool)</option>
+                </select>
+            </div>
+
+            <textarea
+                value={payloadStr}
+                onChange={e => setPayloadStr(e.target.value)}
+                spellCheck={false}
+                placeholder="Paste JSON array here... e.g. [{ id: 'npc_1', tier: 1, ... }]"
+                style={{
+                    ...panel, flex: 1, minHeight: 300,
+                    color: '#4caf50', resize: 'vertical', outline: 'none'
+                }}
+            />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                <button onClick={handleIngest} style={btnStyle}>
+                    [ EXECUTE INJECTION PROCEDURE ]
+                </button>
+
+                {status && (
+                    <div style={{
+                        padding: '10px 16px', borderRadius: 4,
+                        background: status.type === 'success' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+                        border: `1px solid ${status.type === 'success' ? '#4caf50' : '#f44336'}`,
+                        color: status.type === 'success' ? '#4caf50' : '#ffaaaa',
+                    }}>
+                        {status.message}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
