@@ -63,6 +63,13 @@ export class LocationScene extends BaseScene {
         if (!this.textures.exists('fossil_museum_48x48')) {
             this.load.image('fossil_museum_48x48', 'assets/tilesets/fossil_museum_48x48.png');
         }
+        // Themed LimeZu tilesets (premium Modern Interiors pack)
+        const themedSets = ['7_Art_48x48', '22_Museum_48x48', '1_Generic_48x48', '13_Conference_Hall_48x48', '2_LivingRoom_48x48'];
+        for (const ts of themedSets) {
+            if (!this.textures.exists(ts)) {
+                this.load.image(ts, `assets/tilesets/${ts}.png`);
+            }
+        }
 
         // Gallery sprite assets (furniture, paintings, decorations)
         const gallerySprites = [

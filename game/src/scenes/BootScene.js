@@ -74,6 +74,12 @@ export class BootScene extends Phaser.Scene {
         this.load.image('gallery_tileset', 'assets/tilesets/gallery_tileset.png');
         this.load.image('Room_Builder_free_48x48', 'assets/tilesets/Room_Builder_free_48x48.png');
         this.load.image('Interiors_free_48x48', 'assets/tilesets/Interiors_free_48x48.png');
+        // ── Themed LimeZu tilesets (premium Modern Interiors pack) ──
+        this.load.image('7_Art_48x48', 'assets/tilesets/7_Art_48x48.png');
+        this.load.image('22_Museum_48x48', 'assets/tilesets/22_Museum_48x48.png');
+        this.load.image('1_Generic_48x48', 'assets/tilesets/1_Generic_48x48.png');
+        this.load.image('13_Conference_Hall_48x48', 'assets/tilesets/13_Conference_Hall_48x48.png');
+        this.load.image('2_LivingRoom_48x48', 'assets/tilesets/2_LivingRoom_48x48.png');
 
         // ── Event JSON Data ──
         this.load.json('events_json', 'content/events.json');
