@@ -42,6 +42,10 @@ export default function AdminDashboard({ onClose }) {
     };
 
     const launchHaggleBattle = () => {
+        if (!GameState.state) {
+            GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'GameState not initialized. Start or load a game first.');
+            return;
+        }
         const haggleInfo = HaggleManager.start({
             mode: 'buy',
             work: { id: 'debug_art_1', title: 'Debug Piece (Code)', artist: 'Admin', price: 50000, medium: 'Code' },
@@ -336,7 +340,6 @@ export default function AdminDashboard({ onClose }) {
 // ── Mobile FAB (floating action button) ──
 // Rendered separately — App.jsx mounts this when admin is closed
 export function AdminFAB({ onClick }) {
-    if (!isTouchDevice) return null;
     return (
         <button
             className="admin-fab"

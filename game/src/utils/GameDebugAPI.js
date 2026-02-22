@@ -137,11 +137,11 @@ export function configureGameDebugAPI(ui) {
         },
 
         /** Launch a scene directly (bypasses menus) */
-        startTestScene: (sceneKey, payload) => {
+        startTestScene: (sceneKey, payload = {}) => {
             if (!window.phaserGame) return 'Engine not ready';
-            if (payload && !payload.ui) payload.ui = ui;
-            if (window.phaserGame.canvas) window.phaserGame.canvas.style.display = 'block';
-            window.phaserGame.scene.start(sceneKey, payload);
+            // Delegate to the centralized scene launcher which handles
+            // terminal hiding, canvas/container visibility, scene cleanup, and React state sync
+            GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, sceneKey, payload);
             return `Started scene: ${sceneKey}`;
         },
 

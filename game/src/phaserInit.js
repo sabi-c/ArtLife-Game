@@ -162,10 +162,20 @@ GameEventBus.on(GameEvents.GAME_OVER, () => {
     }
 });
 
-// Admin Dashboard overrides
+// Admin Dashboard overrides — also used by market haggle and venue cutscenes
 GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
     if (window.phaserGame) {
+        // Hide terminal
         if (container) container.style.display = 'none';
+
+        // Make phaser container visible (React effect uses this div)
+        const phaserContainer = document.getElementById('phaser-game-container');
+        if (phaserContainer) {
+            phaserContainer.style.visibility = 'visible';
+            phaserContainer.style.pointerEvents = 'auto';
+        }
+
+        // Make canvas itself visible
         if (window.phaserGame.canvas) {
             window.phaserGame.canvas.style.visibility = 'visible';
             window.phaserGame.canvas.style.pointerEvents = 'auto';
@@ -180,6 +190,9 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
 
         // Launch the requested scene
         window.phaserGame.scene.start(sceneKey, { ui, ...data });
+
+        // Sync React state so activeView effect stays consistent
+        GameEventBus.emit(GameEvents.UI_ROUTE, 'PHASER');
     }
 });
 
