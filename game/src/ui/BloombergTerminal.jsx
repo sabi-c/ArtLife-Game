@@ -67,6 +67,15 @@ import BloombergTutorial from './BloombergTutorial.jsx';
 import EmailOverlay from './email/EmailOverlay.jsx';
 import './BloombergTerminal.css';
 
+// ── Robust image URL resolution ──
+// Checks imageUrl -> image -> sprite, normalizing bare filenames to /artworks/ paths
+const resolveImageUrl = (work) => {
+    const raw = work?.imageUrl || work?.image || work?.sprite;
+    if (!raw) return null;
+    if (raw.startsWith('http') || raw.startsWith('/')) return raw;
+    return `/artworks/${raw}`;
+};
+
 // ── Intel-gated data masking ──
 function mask(value, intel, threshold, fallback = '???') {
     return intel >= threshold ? value : fallback;
@@ -860,7 +869,7 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
     const dimensionsIn = artwork.dimensionsIn || '';
     const edition = artwork.edition || '';
     const description = artwork.description || '';
-    const imageUrl = artwork.imageUrl || artwork.image || null;
+    const imageUrl = resolveImageUrl(artwork);
     const price = order?.askPrice || work.currentVal || work.price || work.askingPrice || 0;
 
     // Artist birth/death years — Gagosian format: "b. 1960, Brooklyn" or "1899–1968"
@@ -1522,7 +1531,7 @@ function GalleryView({ intel, showPanel, feed, selectedArtist, onSelectArtist, o
                     <div className="sh-section-header">WORKS</div>
                     <div className="sh-grid">
                         {allWorks.map((work, i) => {
-                            const imageUrl = work.imageUrl || work.image || null;
+                            const imageUrl = resolveImageUrl(work);
                             const artistName = (work.artist || 'Unknown').toUpperCase();
                             const title = work.title || 'Untitled';
                             const medium = work.medium || 'Mixed Media';
@@ -1788,7 +1797,7 @@ function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, o
                 const dimensions = work.dimensions || '';
                 const dimensionsIn = work.dimensionsIn || '';
                 const edition = work.edition || '';
-                const imageUrl = work.imageUrl || work.image || null;
+                const imageUrl = resolveImageUrl(work);
                 const born = work.artistBorn || work._artist?.born;
                 const died = work.artistDied || work._artist?.died;
                 const lifespan = born ? (died ? `${born}\u2013${died}` : `b. ${born}`) : '';
@@ -2077,7 +2086,7 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
     const year = artwork.yearCreated || artwork.year || work.yearCreated || '';
     const dimensions = artwork.dimensions || '';
     const description = artwork.description || '';
-    const imageUrl = artwork.imageUrl || artwork.image || null;
+    const imageUrl = resolveImageUrl(artwork);
     const price = work.currentVal || work.price || work.askingPrice || 0;
     const purchasePrice = work.purchasePrice || work.basePrice || 0;
     const genre = artwork.genre || '';
@@ -2672,8 +2681,8 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                         style={{ cursor: 'pointer' }}>
                                         <td className="an-td an-lot">{work._lot}</td>
                                         <td className="an-td an-thumb">
-                                            {work.imageUrl || work.image ? (
-                                                <img className="an-thumb-img" src={work.imageUrl || work.image} alt="" />
+                                            {resolveImageUrl(work) ? (
+                                                <img className="an-thumb-img" src={resolveImageUrl(work)} alt="" />
                                             ) : (
                                                 <div className="an-thumb-placeholder" />
                                             )}
@@ -2914,7 +2923,7 @@ function SothebysView({ intel, onSelectWork, showPanel, feed, selectedArtist, on
                         const propertyFrom = work._owned
                             ? `PROPERTY FROM THE COLLECTION OF ${playerName.toUpperCase()}`
                             : 'PROPERTY OF A PRIVATE COLLECTOR';
-                        const imageUrl = work.imageUrl || work.image || null;
+                        const imageUrl = resolveImageUrl(work);
 
                         // Condition rating based on age
                         const age = year ? (2026 - Number(year)) : 0;
@@ -3115,7 +3124,7 @@ function DeitchView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                         const title = work.title || 'Untitled';
                         const year = work.yearCreated || work.year || '';
                         const medium = work.medium || '';
-                        const imageUrl = work.imageUrl || work.image || null;
+                        const imageUrl = resolveImageUrl(work);
                         const isRevealed = revealedPrices[work.id];
                         // Card size variation: every 3rd card is large
                         const isLarge = i % 3 === 0;
