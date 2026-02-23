@@ -1265,6 +1265,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
     const city = s?.currentCity || 'New York';
     const [sortKey, setSortKey] = useState('lot');
     const [sortDir, setSortDir] = useState('asc');
+    const [searchTerm, setSearchTerm] = useState('');
 
     const toggleSort = (key) => {
         if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -1305,6 +1306,16 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
 
     let allItems = [...ownedItems, ...marketItems];
 
+    // Filter by search term
+    if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase();
+        allItems = allItems.filter(w =>
+            (w.artist || '').toLowerCase().includes(q) ||
+            (w.title || '').toLowerCase().includes(q) ||
+            (w.medium || '').toLowerCase().includes(q)
+        );
+    }
+
     // Sort
     const sortFn = {
         lot: (a, b) => a._lot - b._lot,
@@ -1329,6 +1340,18 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
             <div className="an-header-bar">
                 <span className="an-header-title">ARTLIFE PRICE DATABASE</span>
                 <span className="an-header-sub">Week {week} · {city}</span>
+            </div>
+
+            {/* Search bar — artnet-style */}
+            <div className="an-search-bar">
+                <input
+                    className="an-search-input"
+                    type="text"
+                    placeholder="Search artist, title, or medium..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
+                <span className="an-result-count">{fmtNum(allItems.length)} results</span>
             </div>
 
             {/* Summary strip */}

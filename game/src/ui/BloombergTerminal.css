@@ -3185,6 +3185,39 @@
 .an-gain { color: #2a6e2a; font-weight: 600; }
 .an-loss { color: #cc0000; font-weight: 600; }
 
+/* Search bar — artnet-style search-first interface */
+.an-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.an-search-input {
+    flex: 1;
+    max-width: 400px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.15s;
+    background: #fff;
+}
+
+.an-search-input::placeholder { color: #aaa; }
+.an-search-input:focus { border-color: #cc0000; }
+
+.an-result-count {
+    font-size: 11px;
+    color: #999;
+    white-space: nowrap;
+}
+
 /* Table */
 .an-table {
     width: 100%;
@@ -3413,6 +3446,8 @@
 /* Artnet mobile */
 @media (max-width: 768px) {
     .an-panels { padding: 16px; }
+    .an-search-bar { padding: 8px 16px; }
+    .an-search-input { max-width: none; }
     .an-table { font-size: 11px; }
     .an-th, .an-td { padding: 8px 6px; }
     .an-thumb { display: none; }
@@ -3426,6 +3461,8 @@
 
 @media (max-width: 380px) {
     .an-header-title { font-size: 11px; }
+    .an-search-bar { padding: 8px 14px; }
+    .an-search-input { font-size: 11px; padding: 6px 8px; }
     .an-th { font-size: 8px; }
     .an-td { padding: 6px 4px; }
     .an-price-main { font-size: 11px; }
@@ -3540,6 +3577,9 @@
     color: #003da5;
     font-weight: 700;
     margin-bottom: 24px;
+    display: inline-block;
+    padding-bottom: 6px;
+    border-bottom: 3px solid #003da5;
 }
 
 .sb-sale-title {
