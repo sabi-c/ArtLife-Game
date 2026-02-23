@@ -62,6 +62,16 @@ export class SettingsManager {
                 { value: 'off', display: 'Off' } // 'off' is a valid state
             ],
             default: 'multi' // Defaulting to the new multi-line experience
+        },
+        {
+            id: 'marketStyle',
+            label: 'Market Terminal Style',
+            type: 'cycle',
+            options: [
+                { value: 'gallery', display: 'Gallery Tearsheet' },
+                { value: 'bloomberg', display: 'Bloomberg Dark' }
+            ],
+            default: 'gallery'
         }
     ];
 

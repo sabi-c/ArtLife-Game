@@ -28,6 +28,7 @@ import { CONTACTS } from '../data/contacts.js';
 import { ARTWORKS } from '../data/artworks.js';
 import { VIEW, OVERLAY } from '../constants/views.js';
 import { TerminalAPI } from '../terminal/TerminalAPI.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
 import { useCmsStore } from '../stores/cmsStore.js';
 import './BloombergTerminal.css';
 
@@ -493,7 +494,13 @@ function NotificationBar({ notifications, onClickNotif }) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 10. Artwork Tearsheet Modal (Seventh House gallery design)
+// 10. Artwork Tearsheet Modal (Gagosian/Seventh House gallery design)
+//
+// Matches real gallery PDF tearsheet layout:
+//   Brand header → "TEARSHEET" label → photo → artist (with birth/death) →
+//   title (italic) + year → medium → dimensions (cm + in) → edition →
+//   price → market inset → provenance chain → exhibitions → literature →
+//   action buttons → gallery footer with locations
 // ══════════════════════════════════════════════════════════════
 function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, onListConfirm }) {
     const [confirmBuy, setConfirmBuy] = useState(false);
@@ -515,18 +522,33 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
     const medium = artwork.medium || work.medium || 'Mixed Media';
     const year = artwork.yearCreated || artwork.year || work.yearCreated || '';
     const dimensions = artwork.dimensions || '';
-    const origin = artwork.origin || artwork.city || '';
+    const dimensionsIn = artwork.dimensionsIn || '';
+    const edition = artwork.edition || '';
     const description = artwork.description || '';
     const imageUrl = artwork.imageUrl || artwork.image || null;
     const price = order?.askPrice || work.currentVal || work.price || work.askingPrice || 0;
+
+    // Artist birth/death years — Gagosian format: "b. 1960, Brooklyn" or "1899–1968"
+    const born = artwork.artistBorn;
+    const died = artwork.artistDied;
+    const lifespan = born
+        ? died ? `${born}–${died}` : `b. ${born}`
+        : '';
 
     // Heat and trend (intel-gated)
     const heat = artist?.heat || 0;
     const trend = artist?.heat > 60 ? 'RISING' : artist?.heat < 30 ? 'FALLING' : 'STABLE';
     const tier = artist?.tier || artwork.tier || 'mid_career';
 
-    // Provenance: CMS may have enriched provenance chain
-    const provenance = artwork.provenance || work.provenance || [];
+    // Provenance chain — prefer structured array, fall back to legacy string
+    const provChain = artwork.provenanceChain || [];
+    const provString = typeof artwork.provenance === 'string' ? artwork.provenance : '';
+    // Game-tracked provenance events (runtime trades, moves)
+    const runtimeProv = Array.isArray(work.provenance) ? work.provenance : [];
+
+    // Exhibition history and literature (intel-gated sections)
+    const exhibitions = artwork.exhibitions || [];
+    const literature = artwork.literature || [];
 
     // Market value for listing
     let marketValue = 0;
@@ -541,17 +563,20 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
     return (
         <div className="bb-modal-backdrop" onClick={onClose}>
             <div className="bb-tearsheet" onClick={e => e.stopPropagation()}>
-                {/* Gallery header */}
+
+                {/* ── Gallery header ── */}
                 <div className="bb-ts-header">
-                    <span className="bb-ts-brand">A &nbsp; R &nbsp; T &nbsp; L &nbsp; I &nbsp; F &nbsp; E</span>
+                    <span className="bb-ts-brand">A R T L I F E</span>
                     <button className="bb-ts-star" onClick={toggleWatch}>
                         {isWatched ? '★' : '☆'}
                     </button>
                 </div>
 
-                <div className="bb-ts-label">T E A R S H E E T</div>
+                <div className="bb-ts-label">TEARSHEET</div>
 
-                {/* Artwork image — CMS or placeholder */}
+                <div className="bb-ts-rule" />
+
+                {/* ── Artwork image ── */}
                 <div className="bb-ts-photos">
                     {imageUrl ? (
                         <img className="bb-ts-photo-img" src={imageUrl} alt={title} />
@@ -562,64 +587,117 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                     )}
                 </div>
 
-                {/* Metadata — Seventh House style */}
+                {/* ── Artist + Metadata block — Gagosian formal layout ── */}
                 <div className="bb-ts-meta-block">
-                    <div className="bb-ts-artist">{artistName.toUpperCase()}</div>
-                    <div className="bb-ts-title"><em>{title}{year ? `, ${year}` : ''}</em></div>
-                    {origin && <div className="bb-ts-meta-line">{origin.toUpperCase()}</div>}
-                    <div className="bb-ts-meta-line">{medium.toUpperCase()}</div>
-                    {dimensions && <div className="bb-ts-meta-line">{dimensions.toUpperCase()}</div>}
+                    <div className="bb-ts-artist-line">
+                        <span className="bb-ts-artist">{artistName.toUpperCase()}</span>
+                        {lifespan && <span className="bb-ts-lifespan">({lifespan})</span>}
+                    </div>
+                    <div className="bb-ts-title">
+                        <em>{title}</em>{year ? `, ${year}` : ''}
+                    </div>
+                    <div className="bb-ts-meta-line">{medium}</div>
+                    {dimensions && (
+                        <div className="bb-ts-meta-line">
+                            {dimensions}
+                            {dimensionsIn ? ` (${dimensionsIn})` : ''}
+                        </div>
+                    )}
+                    {edition && <div className="bb-ts-meta-line">{edition}</div>}
                     {description && intel >= 40 && (
                         <div className="bb-ts-description">{description}</div>
                     )}
                 </div>
 
+                {/* ── Price block ── */}
                 <div className="bb-ts-price-block">
                     <div className="bb-ts-price-label">NET PRICE</div>
                     <div className="bb-ts-price">{tearsheetPrice(price)}</div>
                     {order && <div className="bb-ts-available">ONE AVAILABLE</div>}
                 </div>
 
-                {/* Market data inset (dark bg within gallery card) */}
+                {/* ── Market data inset (dark bg, Bloomberg tone) ── */}
                 {intel >= 40 && artist && (
                     <div className="bb-ts-market-inset">
-                        <span>Heat: {heat}</span>
-                        <span>Trend: {trend}</span>
-                        <span>Tier: {tier.replace(/_/g, ' ')}</span>
+                        <div className="bb-ts-market-row">
+                            <span className="bb-ts-market-label">HEAT</span>
+                            <span className="bb-ts-market-val">{heat}</span>
+                        </div>
+                        <div className="bb-ts-market-row">
+                            <span className="bb-ts-market-label">TREND</span>
+                            <span className={`bb-ts-market-val bb-ts-trend-${trend.toLowerCase()}`}>{trend}</span>
+                        </div>
+                        <div className="bb-ts-market-row">
+                            <span className="bb-ts-market-label">TIER</span>
+                            <span className="bb-ts-market-val">{tier.replace(/_/g, ' ').toUpperCase()}</span>
+                        </div>
                     </div>
                 )}
 
-                {/* Provenance */}
-                {intel >= 60 && provenance.length > 0 && (
-                    <div className="bb-ts-provenance">
-                        <div className="bb-ts-section-label">P R O V E N A N C E</div>
-                        {provenance.map((p, i) => (
+                {/* ── Provenance ── */}
+                {intel >= 30 && (provChain.length > 0 || provString) && (
+                    <div className="bb-ts-section">
+                        <div className="bb-ts-section-label">PROVENANCE</div>
+                        {provChain.length > 0
+                            ? provChain.map((entry, i) => (
+                                <div key={i} className="bb-ts-prov-item">{entry}</div>
+                            ))
+                            : <div className="bb-ts-prov-item">{provString}</div>
+                        }
+                    </div>
+                )}
+
+                {/* ── Runtime provenance (game trades/moves) ── */}
+                {intel >= 60 && runtimeProv.length > 0 && (
+                    <div className="bb-ts-section">
+                        <div className="bb-ts-section-label">TRANSACTION HISTORY</div>
+                        {runtimeProv.map((p, i) => (
                             <div key={i} className="bb-ts-prov-item">
-                                · {p.type} W{p.week}{p.city ? `, ${p.city}` : ''}{p.price ? ` — $${p.price.toLocaleString()}` : ''}
+                                {p.type} — Week {p.week}{p.city ? `, ${p.city}` : ''}{p.price ? ` — $${p.price.toLocaleString()}` : ''}
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* Action buttons */}
+                {/* ── Exhibition history (intel-gated) ── */}
+                {intel >= 50 && exhibitions.length > 0 && (
+                    <div className="bb-ts-section">
+                        <div className="bb-ts-section-label">EXHIBITIONS</div>
+                        {exhibitions.map((ex, i) => (
+                            <div key={i} className="bb-ts-exhibit-item">{ex}</div>
+                        ))}
+                    </div>
+                )}
+
+                {/* ── Literature (intel-gated) ── */}
+                {intel >= 70 && literature.length > 0 && (
+                    <div className="bb-ts-section">
+                        <div className="bb-ts-section-label">LITERATURE</div>
+                        {literature.map((lit, i) => (
+                            <div key={i} className="bb-ts-lit-item">{lit}</div>
+                        ))}
+                    </div>
+                )}
+
+                {/* ── Action buttons ── */}
                 {mode === 'buy' && order && !confirmBuy && (
                     <div className="bb-ts-actions">
                         <button className="bb-ts-btn bb-ts-btn-primary"
                             disabled={!hasAP(1) || (s?.cash || 0) < order.askPrice}
                             onClick={() => setConfirmBuy(true)}>
-                            BUY NOW {maskPrice(order.askPrice, intel)} <span className="bb-ts-ap">(1 AP)</span>
+                            BUY NOW {maskPrice(order.askPrice, intel)} <span className="bb-ts-ap">[1 AP]</span>
                         </button>
                         <button className="bb-ts-btn bb-ts-btn-secondary"
                             disabled={!hasAP(2)}
                             onClick={() => onHaggle(order)}>
-                            COUNTER OFFER <span className="bb-ts-ap">(2 AP)</span>
+                            COUNTER OFFER <span className="bb-ts-ap">[2 AP]</span>
                         </button>
                     </div>
                 )}
                 {mode === 'buy' && confirmBuy && (
                     <div className="bb-ts-actions">
                         <div className="bb-ts-confirm-msg">
-                            Confirm purchase of "{title}" for ${order.askPrice.toLocaleString()}?
+                            Confirm purchase of <em>{title}</em> for {tearsheetPrice(order.askPrice)}?
                         </div>
                         <button className="bb-ts-btn bb-ts-btn-primary" onClick={() => onBuy(order)}>
                             CONFIRM PURCHASE
@@ -631,30 +709,30 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                 )}
                 {mode === 'list' && !listTier && (
                     <div className="bb-ts-actions">
-                        <div className="bb-ts-confirm-msg">List "{title}" for sale</div>
+                        <div className="bb-ts-confirm-msg">List <em>{title}</em> for sale</div>
                         <button className="bb-ts-btn bb-ts-btn-secondary"
                             onClick={() => setListTier('quick')}>
-                            QUICK — ${Math.round(marketValue * 0.85).toLocaleString()} (instant) <span className="bb-ts-ap">(2 AP)</span>
+                            QUICK — {tearsheetPrice(Math.round(marketValue * 0.85))} (instant) <span className="bb-ts-ap">[2 AP]</span>
                         </button>
                         <button className="bb-ts-btn bb-ts-btn-primary"
                             onClick={() => setListTier('market')}>
-                            MARKET — ${marketValue.toLocaleString()} (2-4 wk) <span className="bb-ts-ap">(2 AP)</span>
+                            MARKET — {tearsheetPrice(marketValue)} (2–4 wk) <span className="bb-ts-ap">[2 AP]</span>
                         </button>
                         <button className="bb-ts-btn bb-ts-btn-secondary"
                             onClick={() => setListTier('premium')}>
-                            PREMIUM — ${Math.round(marketValue * 1.15).toLocaleString()} (4-8 wk) <span className="bb-ts-ap">(2 AP)</span>
+                            PREMIUM — {tearsheetPrice(Math.round(marketValue * 1.15))} (4–8 wk) <span className="bb-ts-ap">[2 AP]</span>
                         </button>
                     </div>
                 )}
                 {mode === 'list' && listTier && (
                     <div className="bb-ts-actions">
                         <div className="bb-ts-confirm-msg">
-                            Confirm {listTier} listing at ${Math.round(marketValue * (listTier === 'quick' ? 0.85 : listTier === 'premium' ? 1.15 : 1.0)).toLocaleString()}?
+                            Confirm {listTier} listing at {tearsheetPrice(Math.round(marketValue * (listTier === 'quick' ? 0.85 : listTier === 'premium' ? 1.15 : 1.0)))}?
                         </div>
                         <button className="bb-ts-btn bb-ts-btn-primary"
                             disabled={!hasAP(2)}
                             onClick={() => onListConfirm(work, listTier)}>
-                            CONFIRM LISTING <span className="bb-ts-ap">(2 AP)</span>
+                            CONFIRM LISTING <span className="bb-ts-ap">[2 AP]</span>
                         </button>
                         <button className="bb-ts-btn bb-ts-btn-secondary" onClick={() => setListTier(null)}>
                             BACK
@@ -667,9 +745,12 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                     </div>
                 )}
 
-                {/* Footer */}
+                {/* ── Gallery footer with locations ── */}
                 <div className="bb-ts-footer">
-                    A &nbsp;&nbsp; R &nbsp;&nbsp; T &nbsp;&nbsp; L &nbsp;&nbsp; I &nbsp;&nbsp; F &nbsp;&nbsp; E
+                    <div className="bb-ts-footer-brand">A R T L I F E</div>
+                    <div className="bb-ts-footer-locations">
+                        New York &nbsp;·&nbsp; London &nbsp;·&nbsp; Basel &nbsp;·&nbsp; Hong Kong
+                    </div>
                 </div>
             </div>
         </div>
@@ -687,6 +768,15 @@ export default function BloombergTerminal({ onClose }) {
     const [modalMode, setModalMode] = useState(null); // 'buy' | 'list' | 'view'
     const [statusMsg, setStatusMsg] = useState(null);
     const [, forceRender] = useState(0);
+
+    // Market style — gallery tearsheet (default) or bloomberg dark
+    const [marketStyle, setMarketStyle] = useState(() => SettingsManager.get('marketStyle'));
+    const isGallery = marketStyle === 'gallery';
+
+    const toggleMarketStyle = useCallback(() => {
+        SettingsManager.cycleNext('marketStyle');
+        setMarketStyle(SettingsManager.get('marketStyle'));
+    }, []);
 
     const s = GameState.state;
     const intel = s?.intel || 0;
@@ -825,12 +915,14 @@ export default function BloombergTerminal({ onClose }) {
         : null;
 
     return (
-        <div className="bb-overlay">
+        <div className={`bb-overlay${isGallery ? ' bb-gallery' : ''}`}>
             {/* Header */}
             <div className="bb-header">
                 <div className="bb-header-left">
-                    <span className="bb-logo">████</span>
-                    <span className="bb-title">ARTLIFE MARKET TERMINAL</span>
+                    {isGallery
+                        ? <span className="bb-logo">A R T L I F E</span>
+                        : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
+                    }
                 </div>
                 <div className="bb-header-right">
                     <span className="bb-cash">${(s?.cash || 0).toLocaleString()}</span>
@@ -838,6 +930,10 @@ export default function BloombergTerminal({ onClose }) {
                     <span className="bb-cycle-dot" style={{ background: feed.cycle.color }} />
                     <span className="bb-cycle-label">{feed.cycle.state.toUpperCase()}</span>
                     <span className="bb-header-meta">W{week} · {month} {year}</span>
+                    <button className="bb-style-toggle" onClick={toggleMarketStyle}
+                        title={isGallery ? 'Switch to Bloomberg Dark' : 'Switch to Gallery Tearsheet'}>
+                        ◐
+                    </button>
                     <button className="bb-close" onClick={onClose}>✕</button>
                 </div>
             </div>
@@ -890,6 +986,16 @@ export default function BloombergTerminal({ onClose }) {
                 <Watchlist intel={intel} />
                 <PortfolioTracker intel={intel} onListWork={handleListWork} onSelectWork={handleSelectPortfolioWork} />
             </div>
+
+            {/* Gallery footer — only in gallery mode */}
+            {isGallery && (
+                <div className="bb-gallery-footer">
+                    <div className="bb-gallery-footer-brand">A R T L I F E</div>
+                    <div className="bb-gallery-footer-locations">
+                        New York &nbsp;·&nbsp; London &nbsp;·&nbsp; Basel &nbsp;·&nbsp; Hong Kong
+                    </div>
+                </div>
+            )}
 
             {/* Tearsheet Modal */}
             {modalWork && (

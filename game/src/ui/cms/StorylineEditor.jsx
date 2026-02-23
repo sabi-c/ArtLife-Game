@@ -27,9 +27,22 @@ export default function StorylineEditor() {
     const forceActivate = useStorylineStore((s) => s.forceActivate);
 
     useEffect(() => {
-        // Load from EventRegistry
-        const data = EventRegistry.getStorylines();
-        setStorylines(data.length > 0 ? JSON.parse(JSON.stringify(data)) : []);
+        // Load from EventRegistry (may be overridden by cmsStore snapshot)
+        const registryData = EventRegistry.getStorylines();
+        // Also get the source-of-truth import directly
+        import('../../data/storylines.js').then(mod => {
+            const sourceData = mod.STORYLINES || [];
+            // Use whichever has more storylines — prevents stale cmsStore from hiding new arcs
+            const data = sourceData.length > registryData.length ? sourceData : registryData;
+            if (data.length > 0) {
+                const cloned = JSON.parse(JSON.stringify(data));
+                setStorylines(cloned);
+                EventRegistry.jsonStorylines = cloned;
+            }
+        }).catch(() => {
+            // Fallback to registry if import fails
+            setStorylines(registryData.length > 0 ? JSON.parse(JSON.stringify(registryData)) : []);
+        });
     }, []);
 
     const selected = storylines.find(s => s.id === selectedId);

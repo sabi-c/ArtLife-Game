@@ -656,7 +656,10 @@
 }
 
 /* ══════════════════════════════════════════════════════════════ */
-/* Artwork Tearsheet Modal — Seventh House Gallery Aesthetic     */
+/* Artwork Tearsheet Modal — Gagosian / Seventh House Aesthetic  */
+/*                                                                */
+/* Matches real gallery PDF tearsheet layout with formal          */
+/* provenance chains, exhibition history, and literature refs.    */
 /* ══════════════════════════════════════════════════════════════ */
 
 /* Backdrop */
@@ -664,7 +667,7 @@
     position: fixed;
     inset: 0;
     z-index: 1100;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -678,17 +681,22 @@
 
 /* Tearsheet card — gallery white/cream against dark Bloomberg */
 .bb-tearsheet {
-    background: #f5f2ed;
+    background: #f8f6f2;
     color: #1a1a1a;
     width: 90%;
-    max-width: 520px;
-    max-height: 85vh;
+    max-width: 540px;
+    max-height: 88vh;
     overflow-y: auto;
-    padding: 32px 36px;
+    padding: 36px 40px;
     font-family: 'IBM Plex Mono', 'Courier New', monospace;
     animation: bb-ts-slide-in 0.3s ease-out;
     position: relative;
 }
+
+/* Scrollbar styling for tearsheet */
+.bb-tearsheet::-webkit-scrollbar { width: 4px; }
+.bb-tearsheet::-webkit-scrollbar-track { background: transparent; }
+.bb-tearsheet::-webkit-scrollbar-thumb { background: #d5d0c9; border-radius: 2px; }
 
 @keyframes bb-ts-slide-in {
     from { opacity: 0; transform: translateY(12px); }
@@ -700,13 +708,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .bb-ts-brand {
     font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.35em;
+    letter-spacing: 0.45em;
     color: #1a1a1a;
     text-transform: uppercase;
 }
@@ -724,24 +732,31 @@
 
 .bb-ts-star:hover { transform: scale(1.2); }
 
-/* Section label — letter-spaced like "T E A R S H E E T" */
+/* "TEARSHEET" sub-label */
 .bb-ts-label {
-    font-size: 9px;
-    letter-spacing: 0.45em;
-    color: #8a8680;
-    margin-bottom: 20px;
+    font-size: 8px;
+    letter-spacing: 0.5em;
+    color: #9a9690;
+    margin-bottom: 12px;
     text-transform: uppercase;
 }
 
-/* Artwork photo placeholder */
-.bb-ts-photos {
+/* Thin horizontal rule — separates header from content */
+.bb-ts-rule {
+    height: 1px;
+    background: #1a1a1a;
     margin-bottom: 24px;
 }
 
+/* ── Artwork photo ── */
+.bb-ts-photos {
+    margin-bottom: 28px;
+}
+
 .bb-ts-photo-placeholder {
-    background: #e8e4de;
+    background: #eceae5;
     border: 1px solid #d5d0c9;
-    height: 200px;
+    height: 220px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -751,124 +766,180 @@
 .bb-ts-photo-img {
     width: 100%;
     height: auto;
-    max-height: 280px;
+    max-height: 320px;
     object-fit: contain;
     display: block;
 }
 
 .bb-ts-photo-text {
     color: #999;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.3em;
     text-transform: uppercase;
     text-align: center;
     padding: 16px;
 }
 
-/* Metadata block — structured like Seventh House tearsheet */
+/* ── Metadata block — formal gallery layout ── */
 .bb-ts-meta-block {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
 
-.bb-ts-artist {
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    color: #1a1a1a;
-    margin-bottom: 4px;
-}
-
-.bb-ts-title {
-    font-size: 12px;
-    color: #3a3a3a;
+/* Artist line — name + lifespan on same row */
+.bb-ts-artist-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
     margin-bottom: 6px;
 }
 
+.bb-ts-artist {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #1a1a1a;
+}
+
+.bb-ts-lifespan {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: #6a6660;
+}
+
+/* Title line — italic, with year */
+.bb-ts-title {
+    font-size: 12px;
+    color: #2a2a2a;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+/* Individual metadata lines (medium, dimensions, edition) */
 .bb-ts-meta-line {
     font-size: 10px;
-    letter-spacing: 0.1em;
-    color: #6a6660;
-    line-height: 1.6;
+    letter-spacing: 0.04em;
+    color: #5a5a55;
+    line-height: 1.7;
 }
 
 .bb-ts-description {
     font-size: 10px;
-    color: #5a5a55;
+    color: #6a6660;
     line-height: 1.6;
-    margin-top: 8px;
+    margin-top: 10px;
     font-style: italic;
 }
 
-/* Price block — prominent "NET PRICE $ X,XXX.00" */
+/* ── Price block — "NET PRICE $ X,XXX.00" ── */
 .bb-ts-price-block {
-    margin-bottom: 20px;
-    padding: 16px 0;
-    border-top: 1px solid #d5d0c9;
-    border-bottom: 1px solid #d5d0c9;
+    margin-bottom: 24px;
+    padding: 18px 0;
+    border-top: 1px solid #d0cbc4;
+    border-bottom: 1px solid #d0cbc4;
 }
 
 .bb-ts-price-label {
-    font-size: 9px;
-    letter-spacing: 0.3em;
-    color: #8a8680;
-    margin-bottom: 4px;
+    font-size: 8px;
+    letter-spacing: 0.4em;
+    color: #9a9690;
+    margin-bottom: 6px;
 }
 
 .bb-ts-price {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 700;
     color: #1a1a1a;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
 }
 
 .bb-ts-available {
-    font-size: 9px;
-    letter-spacing: 0.2em;
-    color: #8a8680;
-    margin-top: 4px;
+    font-size: 8px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+    margin-top: 6px;
+    text-transform: uppercase;
 }
 
-/* Market data inset — dark bg section within white card */
+/* ── Market data inset — dark Bloomberg stripe within gallery card ── */
 .bb-ts-market-inset {
     background: #0d0d14;
     color: #c0c0c8;
-    padding: 10px 14px;
-    margin-bottom: 16px;
+    padding: 12px 16px;
+    margin-bottom: 24px;
     display: flex;
-    gap: 16px;
+    justify-content: space-between;
+    gap: 12px;
     font-size: 10px;
     letter-spacing: 0.5px;
 }
 
-.bb-ts-market-inset span {
-    white-space: nowrap;
+.bb-ts-market-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
 }
 
-/* Provenance section */
-.bb-ts-provenance {
+.bb-ts-market-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: #5a5a6a;
+}
+
+.bb-ts-market-val {
+    font-weight: 600;
+    color: #e0e0e8;
+    font-size: 11px;
+}
+
+.bb-ts-trend-rising { color: #4caf50; }
+.bb-ts-trend-falling { color: #c94040; }
+.bb-ts-trend-stable { color: #c9a84c; }
+
+/* ── Sections: Provenance, Exhibitions, Literature ── */
+.bb-ts-section {
     margin-bottom: 20px;
 }
 
 .bb-ts-section-label {
-    font-size: 9px;
+    font-size: 8px;
     letter-spacing: 0.45em;
-    color: #8a8680;
+    color: #9a9690;
     margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e0dbd4;
     text-transform: uppercase;
 }
 
+/* Provenance chain items — indented with connecting feel */
 .bb-ts-prov-item {
     font-size: 10px;
-    color: #4a4a4a;
+    color: #3a3a3a;
     line-height: 1.8;
-    padding-left: 4px;
+    padding-left: 0;
+    position: relative;
 }
 
-/* Action buttons — dark bg + gold accent, grounding back in Bloomberg */
+/* Exhibition items */
+.bb-ts-exhibit-item {
+    font-size: 10px;
+    color: #3a3a3a;
+    line-height: 1.8;
+}
+
+/* Literature items — slightly smaller, italic for publication names */
+.bb-ts-lit-item {
+    font-size: 9px;
+    color: #4a4a4a;
+    line-height: 1.9;
+}
+
+/* ── Action buttons ── */
 .bb-ts-actions {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid #d5d0c9;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #d0cbc4;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -879,17 +950,19 @@
     color: #3a3a3a;
     text-align: center;
     margin-bottom: 4px;
+    line-height: 1.5;
 }
 
 .bb-ts-btn {
     font-family: 'IBM Plex Mono', 'Courier New', monospace;
-    font-size: 11px;
-    letter-spacing: 0.15em;
-    padding: 10px 16px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    padding: 12px 16px;
     border: none;
     cursor: pointer;
     transition: all 0.2s;
     text-align: center;
+    text-transform: uppercase;
 }
 
 .bb-ts-btn:disabled {
@@ -909,6 +982,7 @@
 .bb-ts-btn-secondary {
     background: #e8e4de;
     color: #3a3a3a;
+    border: 1px solid #d0cbc4;
 }
 
 .bb-ts-btn-secondary:hover:not(:disabled) {
@@ -918,18 +992,28 @@
 .bb-ts-ap {
     color: #8a8680;
     font-size: 9px;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
 }
 
-/* Gallery footer — spaced decorative letters */
+/* ── Gallery footer with brand + locations ── */
 .bb-ts-footer {
     text-align: center;
-    font-size: 9px;
-    letter-spacing: 0.3em;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid #d0cbc4;
+}
+
+.bb-ts-footer-brand {
+    font-size: 10px;
+    letter-spacing: 0.45em;
+    color: #b0aba4;
+    margin-bottom: 4px;
+}
+
+.bb-ts-footer-locations {
+    font-size: 8px;
+    letter-spacing: 0.15em;
     color: #c0bbb4;
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #e0dbd4;
 }
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -1046,11 +1130,23 @@
         width: 100%;
         max-width: 100%;
         max-height: 100vh;
-        padding: 20px 16px;
+        padding: 24px 18px;
     }
 
     .bb-ts-photo-placeholder {
-        height: 160px;
+        height: 180px;
+    }
+
+    .bb-ts-photo-img {
+        max-height: 240px;
+    }
+
+    .bb-ts-artist {
+        font-size: 12px;
+    }
+
+    .bb-ts-price {
+        font-size: 20px;
     }
 
     .bb-ts-btn {
@@ -1061,6 +1157,10 @@
     .bb-ts-market-inset {
         flex-wrap: wrap;
         gap: 8px;
+    }
+
+    .bb-ts-market-row {
+        min-width: 80px;
     }
 
     /* Listing rows mobile */
@@ -1092,10 +1192,597 @@
     .bb-lb-heat-bar { display: none; }
 
     .bb-tearsheet {
-        padding: 16px 12px;
+        padding: 18px 14px;
+    }
+
+    .bb-ts-artist-line {
+        flex-direction: column;
+        gap: 2px;
     }
 
     .bb-ts-price {
         font-size: 18px;
+    }
+
+    .bb-ts-section-label {
+        font-size: 7px;
+    }
+}
+
+/* ── Style Toggle Button ── */
+.bb-style-toggle {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.bb-style-toggle:hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
+/* GALLERY MODE — Seventh House tearsheet aesthetic                      */
+/*                                                                        */
+/* All styles scoped under .bb-gallery so the original dark theme stays  */
+/* untouched. Single-column scrollable document layout like a PDF.       */
+/*                                                                        */
+/* Palette:                                                               */
+/*   bg: #f8f6f2 (warm cream)    text: #1a1a1a (near-black)             */
+/*   secondary: #6a6660          labels: #9a9690                         */
+/*   borders: #d0cbc4            accent: #c9a84c (gold, interactive)     */
+/*   positive: #2a6e2a           negative: #8b2020                       */
+/* ══════════════════════════════════════════════════════════════════════ */
+
+.bb-gallery {
+    background: #f8f6f2;
+    color: #1a1a1a;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+/* ── Header ── */
+.bb-gallery .bb-header {
+    background: #f8f6f2;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.bb-gallery .bb-logo {
+    color: #1a1a1a;
+    font-size: 11px;
+    letter-spacing: 0.45em;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-title {
+    color: #1a1a1a;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+}
+
+.bb-gallery .bb-cash {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-ap {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.bb-gallery .bb-cycle-label {
+    color: #6a6660;
+}
+
+.bb-gallery .bb-header-meta {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-close {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-close:hover {
+    color: #8b2020;
+    border-color: #8b2020;
+}
+
+.bb-gallery .bb-style-toggle {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-style-toggle:hover {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+/* ── Ticker ── */
+.bb-gallery .bb-ticker {
+    background: #f8f6f2;
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-ticker-item {
+    color: #6a6660;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+/* ── Intel Gate ── */
+.bb-gallery .bb-intel-gate {
+    background: rgba(201, 168, 76, 0.06);
+    border-color: #d0cbc4;
+    color: #9a9690;
+}
+
+/* ── Status Toast ── */
+.bb-gallery .bb-status-toast {
+    background: rgba(201, 168, 76, 0.08);
+    border-color: #d0cbc4;
+    color: #1a1a1a;
+}
+
+/* ── Notifications ── */
+.bb-gallery .bb-notif-bar {
+    background: rgba(201, 168, 76, 0.04);
+    border-bottom-color: #d0cbc4;
+}
+
+.bb-gallery .bb-notif-text {
+    color: #6a6660;
+}
+
+.bb-gallery .bb-notif-dot {
+    background: #c9a84c;
+}
+
+/* ── Layout: single-column document flow ── */
+.bb-gallery .bb-grid,
+.bb-gallery .bb-grid-3col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: transparent;
+    overflow: visible;
+    flex: none;
+}
+
+.bb-gallery .bb-col {
+    background: transparent;
+    overflow: visible;
+}
+
+.bb-gallery .bb-bottom {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    border-top: none;
+}
+
+/* ── Panel Base (gallery) ── */
+.bb-gallery .bb-panel {
+    background: #ffffff;
+    padding: 20px 24px;
+    border-top: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-panel-header {
+    font-size: 8px;
+    letter-spacing: 0.45em;
+    color: #9a9690;
+    font-weight: 400;
+    border-bottom: 1px solid #e0dbd4;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+}
+
+/* ── Leaderboard (gallery) ── */
+.bb-gallery .bb-lb-row {
+    border-radius: 0;
+    padding: 6px 4px;
+    border-bottom: 1px solid #e8e4de;
+}
+
+.bb-gallery .bb-lb-row:hover {
+    background: rgba(201, 168, 76, 0.06);
+}
+
+.bb-gallery .bb-lb-row.selected {
+    background: rgba(201, 168, 76, 0.08);
+    border-left: 2px solid #1a1a1a;
+}
+
+.bb-gallery .bb-lb-rank {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-lb-name {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.bb-gallery .bb-lb-heat-bar {
+    background: #e8e4de;
+    border-radius: 0;
+}
+
+.bb-gallery .bb-lb-heat-fill {
+    background: linear-gradient(90deg, #8b2020, #c9a84c, #2a6e2a);
+}
+
+.bb-gallery .bb-lb-index {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-lb-index.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-lb-index.down {
+    color: #8b2020;
+}
+
+/* ── Sparkline (gallery) ── */
+.bb-gallery .bb-sparkline-svg polyline {
+    stroke: #1a1a1a;
+}
+
+.bb-gallery .bb-no-data {
+    color: #d0cbc4;
+}
+
+/* ── Market Overview (gallery) ── */
+.bb-gallery .bb-ov-label {
+    color: #9a9690;
+    letter-spacing: 0.3em;
+    font-size: 8px;
+}
+
+.bb-gallery .bb-ov-value {
+    color: #1a1a1a;
+}
+
+/* ── Price Chart (gallery) ── */
+.bb-gallery .bb-chart-current {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-chart-delta.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-chart-delta.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-chart-svg line {
+    stroke: rgba(26, 26, 26, 0.08);
+}
+
+.bb-gallery .bb-chart-svg polyline {
+    stroke: #1a1a1a;
+}
+
+.bb-gallery .bb-chart-labels {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-chart-empty {
+    color: #d0cbc4;
+}
+
+/* ── Order Book (gallery) ── */
+.bb-gallery .bb-ob-count {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-tabs {
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-ob-tab {
+    background: #f8f6f2;
+    border-color: #d0cbc4;
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-tab.active {
+    background: #ffffff;
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.bb-gallery .bb-ob-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-ob-row:hover {
+    background: rgba(201, 168, 76, 0.06);
+}
+
+.bb-gallery .bb-ob-sell {
+    border-left-color: #8b2020;
+}
+
+.bb-gallery .bb-ob-buy {
+    border-left-color: #2a6e2a;
+}
+
+.bb-gallery .bb-ob-title {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.bb-gallery .bb-ob-artist {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-price {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.bb-gallery .bb-ob-urgency {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-ob-expires {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-empty {
+    color: #d0cbc4;
+}
+
+.bb-gallery .bb-ob-genres {
+    color: #9a9690;
+}
+
+/* ── Trade Feed (gallery) ── */
+.bb-gallery .bb-trade-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-trade-week {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-trade-parties {
+    color: #6a6660;
+}
+
+.bb-gallery .bb-trade-title {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-trade-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-trades-empty {
+    color: #d0cbc4;
+}
+
+/* ── Watchlist (gallery) ── */
+.bb-gallery .bb-watchlist-empty,
+.bb-gallery .bb-locked {
+    color: #d0cbc4;
+}
+
+.bb-gallery .bb-watch-star {
+    color: #c9a84c;
+}
+
+.bb-gallery .bb-watch-name {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-watch-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-watch-trend.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-watch-trend.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-watch-row {
+    border-bottom: 1px solid #e8e4de;
+    padding: 6px 0;
+}
+
+/* ── Portfolio (gallery) ── */
+.bb-gallery .bb-portfolio-total {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.bb-gallery .bb-portfolio-roi.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-portfolio-roi.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-port-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-port-title {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.bb-gallery .bb-port-title:hover {
+    color: #c9a84c;
+}
+
+.bb-gallery .bb-port-artist {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-port-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-port-roi.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-port-roi.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-port-more {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-port-list-btn {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+}
+
+.bb-gallery .bb-port-list-btn:hover {
+    background: #1a1a1a;
+    color: #f8f6f2;
+}
+
+/* ── Active Listings (gallery) ── */
+.bb-gallery .bb-listings-section {
+    border-top-color: #d0cbc4;
+}
+
+.bb-gallery .bb-listing-row {
+    border-bottom-color: #e8e4de;
+    animation: none;
+    border-left: 2px solid #c9a84c;
+}
+
+.bb-gallery .bb-listing-title {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-listing-tier {
+    color: #9a9690;
+    border-color: #d0cbc4;
+    border-radius: 0;
+}
+
+.bb-gallery .bb-listing-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-listing-cancel {
+    border-color: #8b2020;
+    color: #8b2020;
+}
+
+.bb-gallery .bb-listing-cancel:hover {
+    background: rgba(139, 32, 32, 0.08);
+}
+
+/* ── Tearsheet modal backdrop in gallery mode — lighter ── */
+.bb-gallery .bb-modal-backdrop {
+    background: rgba(248, 246, 242, 0.85);
+}
+
+/* ── Market inset in tearsheet — gallery variant ── */
+.bb-gallery .bb-ts-market-inset {
+    background: #f0ede8;
+    color: #1a1a1a;
+    border: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-ts-market-label {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ts-market-val {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-ts-trend-rising {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-ts-trend-falling {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-ts-trend-stable {
+    color: #c9a84c;
+}
+
+/* ── Gallery footer (full terminal, not modal) ── */
+.bb-gallery-footer {
+    text-align: center;
+    padding: 24px 16px;
+    border-top: 1px solid #1a1a1a;
+    background: #f8f6f2;
+    flex-shrink: 0;
+}
+
+.bb-gallery-footer-brand {
+    font-size: 10px;
+    letter-spacing: 0.45em;
+    color: #b0aba4;
+    margin-bottom: 4px;
+}
+
+.bb-gallery-footer-locations {
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    color: #c0bbb4;
+}
+
+/* ── Gallery scrollbar ── */
+.bb-gallery::-webkit-scrollbar {
+    width: 4px;
+}
+
+.bb-gallery::-webkit-scrollbar-track {
+    background: #f8f6f2;
+}
+
+.bb-gallery::-webkit-scrollbar-thumb {
+    background: #d0cbc4;
+    border-radius: 0;
+}
+
+/* ── Gallery mobile overrides ── */
+@media (max-width: 768px) {
+    .bb-gallery .bb-panel {
+        padding: 16px 14px;
+    }
+
+    .bb-gallery .bb-header {
+        padding: 12px 14px;
+    }
+}
+
+@media (max-width: 380px) {
+    .bb-gallery .bb-panel {
+        padding: 14px 10px;
+    }
+
+    .bb-gallery .bb-panel-header {
+        font-size: 7px;
+        letter-spacing: 0.35em;
     }
 }

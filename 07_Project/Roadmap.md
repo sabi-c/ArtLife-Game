@@ -14,6 +14,17 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
 
+### Gallery Tearsheet UI + Style Toggle (2026-02-22 Session 13)
+
+**Sprint 1: Gallery Mode Reskin**
+- **`marketStyle` setting** — `SettingsManager.SCHEMA` entry (`gallery` / `bloomberg`), auto-appears in Settings overlay. Default: `gallery`.
+- **Gallery class toggle** — `BloombergTerminal.jsx` reads `marketStyle`, applies `.bb-gallery` class on root `bb-overlay`. Style toggle button (`◐`) in header for inline switching.
+- **Gallery tearsheet CSS** — Full `.bb-gallery` scoped stylesheet: warm cream bg (#f8f6f2), near-black text (#1a1a1a), letter-spaced section headers (0.45em), thin rule separators, single-column document flow layout. ~300 lines of CSS overrides covering all 10+ panels.
+- **Layout change** — Gallery mode overrides 3-column grid to single-column scrollable document. Each panel becomes a white section with generous padding and top borders.
+- **Gallery footer** — Brand + city locations bar at bottom of terminal (gallery mode only).
+- **Tearsheet modal** — Lighter backdrop in gallery mode (cream overlay instead of dark), market inset uses light bg.
+- **Mobile responsive** — Gallery mode inherently single-column, works on all screens.
+
 ### Bloomberg v2: Interactive Trading System (2026-02-22 Session 12)
 
 **Sprint 1: Order Book Data Layer**
