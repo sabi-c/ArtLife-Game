@@ -881,8 +881,7 @@ export class DialogueScene extends BaseScene {
                 } else if (this.ui) {
                     this.ui.popScreen(); // pop the blank trap screen
                     this.ui.render();
-                    // Hide canvas when returning to terminal-only UI
-                    this.sys.game.canvas.style.display = 'none';
+                    // Canvas visibility is managed by React App.jsx via UI_ROUTE event above
                 }
 
                 this.scene.stop();

@@ -185,6 +185,7 @@ export default class WorldScene extends BaseScene {
     _buildScene(data) {
         // ── Build tilemap ──
         this.map = this.make.tilemap({ key: 'pallet_town' });
+        this.mapKey = 'pallet_town'; // Store for returnArgs on scene re-entry from DialogueScene
 
         const grounds = this.map.addTilesetImage('grounds', 'grounds');
         const world = this.map.addTilesetImage('world', 'world');
@@ -448,6 +449,9 @@ export default class WorldScene extends BaseScene {
         // ── Location name toast ──
         this._showLocationToast('PALLET TOWN');
 
+        // ── Persistent stats HUD — Artnet-inspired data bar at top of canvas ──
+        this._buildStatsHUD();
+
         // ── Interaction hint (floats above player head) ──
         this._interactHint = this.add.text(0, 0, '', {
             fontFamily: '"Press Start 2P", monospace',
@@ -608,6 +612,9 @@ export default class WorldScene extends BaseScene {
         // ── Interaction hint ──
         this._updateInteractHint();
 
+        // ── Stats HUD refresh (rate-limited) ──
+        this._updateStatsHUD();
+
         // ── Movement logger (every 2s) ──
         this._moveLogTimer = (this._moveLogTimer || 0) + delta;
         if (this._moveLogTimer > 2000) {
@@ -745,7 +752,7 @@ export default class WorldScene extends BaseScene {
 
         // Item?
         if (!hintText) {
-            const item = this.itemSprites.find(i => i.tileX === target.x && i.tileY === target.y);
+            const item = this.itemSprites.find(i => i.x === target.x && i.y === target.y);
             if (item) hintText = '[SPACE] Pick up';
         }
 
@@ -805,7 +812,7 @@ export default class WorldScene extends BaseScene {
             const reverseFacing = { left: 'right', right: 'left', up: 'down', down: 'up' };
             try {
                 this.gridEngine.turnTowards(npcAtTarget.id, reverseFacing[facing] || 'down');
-            } catch (e) { /* turnTowards may not be available */ }
+            } catch (e) { /* GridEngine v2.40+ added turnTowards() — guard for older cached builds */ }
 
             WebAudioService.select();
 
@@ -1206,6 +1213,61 @@ export default class WorldScene extends BaseScene {
                 });
             },
         });
+    }
+
+    // ════════════════════════════════════════════════════
+    // Stats HUD — persistent Artnet-inspired data bar
+    // ════════════════════════════════════════════════════
+
+    _buildStatsHUD() {
+        const { width } = this.scale;
+        const barH = 24;
+        const textStyle = {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '7px',
+            color: '#c9a84c', // gold accent (Artnet-inspired)
+            stroke: '#000000',
+            strokeThickness: 2,
+        };
+
+        // Semi-transparent background bar
+        this._hudBg = this.add.rectangle(width / 2, barH / 2, width, barH, 0x000000, 0.7)
+            .setScrollFactor(0).setDepth(DEPTH.HUD - 1);
+
+        // Player name (left)
+        const s = GameState.state;
+        const name = s?.playerName || 'Player';
+        this._hudName = this.add.text(8, 5, name, { ...textStyle, color: '#c9a84c' })
+            .setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        // Location (center)
+        this._hudLocation = this.add.text(width / 2, 5, 'PALLET TOWN', { ...textStyle, color: '#ffffff' })
+            .setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        // Stats (right) — Cash / Rep / Week
+        const cash = s?.cash ? `$${Math.round(s.cash / 1000)}K` : '$0';
+        const rep = `REP ${s?.reputation || 0}`;
+        const week = `WK ${s?.week || 1}`;
+        this._hudStats = this.add.text(width - 8, 5, `${cash}  ${rep}  ${week}`, { ...textStyle, color: '#aaaaaa', fontSize: '6px' })
+            .setOrigin(1, 0).setScrollFactor(0).setDepth(DEPTH.HUD);
+
+        // Track last update time for rate-limiting refreshes
+        this._hudLastUpdate = 0;
+    }
+
+    /** Refresh HUD text — called from update(), rate-limited to every 500ms. */
+    _updateStatsHUD() {
+        if (!this._hudStats) return;
+        const now = this.time.now;
+        if (now - this._hudLastUpdate < 500) return;
+        this._hudLastUpdate = now;
+
+        const s = GameState.state;
+        if (!s) return;
+        const cash = `$${Math.round(s.cash / 1000)}K`;
+        const rep = `REP ${s.reputation || 0}`;
+        const week = `WK ${s.week || 1}`;
+        this._hudStats.setText(`${cash}  ${rep}  ${week}`);
     }
 
     // ════════════════════════════════════════════════════

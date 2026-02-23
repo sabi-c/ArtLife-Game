@@ -14,6 +14,7 @@ import { VENUES, VENUE_MAP, ROOM_MAP } from '../../data/rooms.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { CONTACTS } from '../../data/contacts.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { GameState } from '../../managers/GameState.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 import MapEditor from './MapEditor.jsx';
 
@@ -611,6 +612,10 @@ function ActionsPanel({ venue, mapData, onClose, onEditMap }) {
     const mapJSON = firstTiledRoom?.tiledMap ? mapData[firstTiledRoom.tiledMap] : null;
 
     const handleTestRoom = () => {
+        // Auto-init demo state if no active game — mirrors triggerScene() pattern
+        if (!GameState.state) {
+            try { GameState.quickDemoInit(); } catch (e) { console.warn('[RoomManager] quickDemoInit failed:', e); }
+        }
         if (onClose) onClose();
         // Launch LocationScene with this venue
         setTimeout(() => {

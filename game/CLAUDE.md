@@ -4,7 +4,7 @@
 When given a plan or task list:
 1. Execute all steps without waiting for approval between them
 2. After completing implementation, always run `npx vite build` to verify
-3. Update `07_Project/Roadmap.md` and `07_Project/README.md` with any new features or status changes
+3. Update `../07_Project/Roadmap.md` and `../07_Project/README.md` (relative to `game/` — these live at repo root `Art-Market-Game/07_Project/`) with any new features or status changes
 4. When all tasks are done, play a completion sound: `afplay /System/Library/Sounds/Glass.aiff`
 5. Provide a concise summary of what was done, files changed, and build status
 
@@ -56,7 +56,7 @@ Any changes to `GameState.state` fields must be documented:
 
 ## Key Rules
 - Never import managers directly in terminal screens — use TerminalAPI
-- CSS prefix convention: `db-` (dashboard), `haggle-` (battle), `t-` (terminal), `wm-` (world map), `db-action-` (action budget), `db-cal-` (calendar)
+- CSS prefix convention: `db-` (dashboard), `haggle-` (battle), `t-` (terminal), `wm-` (world map), `db-action-` (action budget), `db-cal-` (calendar), `bb-` (Bloomberg terminal), `sh-` (Seventh House gallery), `ts-` (Tearsheet), `an-` (Artnet), `sb-` (Sotheby's), `dp-` (Deitch Projects)
 - Terminal screens return `{ lines, options, footerHtml }` — use `type: 'raw'` for HTML injection
 - MAX_ACTIONS = 4, variable costs (1-2 AP per action)
 - `GameState.init()` and `GameState.quickDemoInit()` must have identical field sets

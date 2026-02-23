@@ -45,11 +45,12 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 | **Claude Code (Agent 1)** | Critical bug fixes (WorldScene render, GH Pages deploy, Admin auto-init), documentation | 🟢 Active |
 | **Claude Code (Agent 2)** | Art market economy, real-world data ingestion, MarketDashboard, ArtworkDashboard | ⏸️ Idle |
 
-### Latest Session (2026-02-22 Session 5)
-- **Boot Flow Restructured**: IntroScene → TerminalLogin → CharacterSelectScene → Dashboard
-- **Gallery Interior Test Room**: Tiled JSON map + LocationScene dual-mode (classic + Tiled) + painting interaction + NPC→haggle flow
-- **PageFlow.md**: Complete navigation flow documentation in `07_Project/PageFlow.md`
-- **Antigravity Asset Prompt**: Detailed AI art generation prompt in `07_Project/Antigravity_Gallery_Assets_Prompt.md`
+### Latest Session (2026-02-22 Session 17)
+- **Infrastructure Hardening**: 11 bug fixes — QualityGate OR logic, WorldScene mapKey/item hints, DialogueScene canvas visibility, LocationScene door navigation, NPCManager midnight schedules, RoomManager quickDemoInit guard
+- **Classic Mode Content**: LocationScene now renders items, eavesdrops, and onEnter narratives for the 6 original text-rich venues
+- **WorldScene HUD**: Artnet-inspired persistent stats bar (player name, location, cash/rep/week)
+- **Documentation Audit**: JSDoc headers on 8 files, TerminalAPI API surface docs, WeekEngine pipeline docs, CLAUDE.md path + CSS prefix fixes
+- **CMS Fixes**: VenueEditor onClose forwarding, LocationScene preloads all 14 Tiled maps
 - **Tests**: 53/53 flow, 5/5 unit — all green
 
 ### Known Issues & Recent Fixes (2026-02-22)
@@ -61,6 +62,13 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 | "No state found" on Admin scene launch | `triggerScene()` guards require state but INIT DEMO STATE easily missed | Auto-call `quickDemoInit()` when state missing | ✅ Fixed |
 | `quickDemoInit()` could fail silently | No try/catch around subsystem init calls | Wrapped in try/catch, state always set | ✅ Fixed |
 | CI test runner fails | Playwright tests need running dev server, CI infra incomplete | CI now has readiness polling + split validate/test jobs | ✅ Fixed |
+| QualityGate OR not handled | `{ OR: [...] }` requirements treated as literal key | Added recursive OR evaluation + nested npcFavor support | ✅ Fixed |
+| WorldScene `mapKey` undefined | Never assigned in `_buildScene()` | Added `this.mapKey = 'pallet_town'` after tilemap creation | ✅ Fixed |
+| Item hint uses wrong fields | `_updateInteractHint` checks `tileX/tileY` instead of `x/y` | Changed to correct field names | ✅ Fixed |
+| DialogueScene direct canvas hide | `canvas.style.display='none'` bypasses React | Removed; UI_ROUTE event handles canvas via App.jsx | ✅ Fixed |
+| Tiled door nav fails for multi-room venues | `door.nextMap` used as venueId but it's a tiledMap filename | Resolve via tiledMap property lookup within venue | ✅ Fixed |
+| Classic mode missing content | Items, eavesdrops, onEnter never rendered in classic venues | Added to `populateRoom()` with sprites and interaction | ✅ Fixed |
+| NPCManager midnight schedules | No wraparound for `startHour > endHour` | Added `hour >= start \|\| hour < end` check | ✅ Fixed |
 
 ### Deployment Safety System (2026-02-22 Session 3)
 

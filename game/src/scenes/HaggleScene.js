@@ -1,3 +1,29 @@
+/**
+ * HaggleScene.js — Pokemon-style battle UI for art deal negotiation.
+ *
+ * Renders a full-screen Phaser scene with dealer portrait, price bars,
+ * tactic menu, and animated dialogue. The player picks tactics (CHARM,
+ * LOWBALL, BLUFF, WALK AWAY, etc.) and the dealer responds based on
+ * their personality type (shark, patron, speculator).
+ *
+ * Data flow:
+ *   HaggleManager.start(haggleInfo) → sets up state (prices, NPC, mode)
+ *   HaggleScene.init(data) → merges HaggleManager.getState() with scene data
+ *   Player selects tactic → HaggleManager.applyTactic() → state update → re-render
+ *   Deal resolves → HaggleManager.resolve() → return to caller scene
+ *
+ * Key imports:
+ *   HaggleManager — stateful negotiation engine (current offer, rounds, tactics)
+ *   haggle_config.js — TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, TACTIC_DIALOGUE_CHOICES
+ *
+ * Modes: 'buy' (player acquiring) or 'sell' (player selling)
+ * AP cost: 2 actions per haggle attempt
+ *
+ * Returns to caller via:
+ *   - this.returnScene (e.g. 'LocationScene') with this.returnArgs
+ *   - this.returnCallback (function) for Bloomberg terminal haggles
+ *   - Falls back to UI_ROUTE 'TERMINAL' if neither set
+ */
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { HaggleManager } from '../managers/HaggleManager.js';

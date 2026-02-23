@@ -5,10 +5,17 @@ import { PhoneManager } from './PhoneManager.js';
  * QualityGate — Fallen London-style quality checker
  *
  * Checks requirements objects against GameState.state.
- * Supports: min, max, equals, dotted paths (e.g. 'npcFavor.elena_ross')
+ * Supports: min, max, equals, not, dotted paths (e.g. 'npcFavor.elena_ross')
+ *
+ * Condition forms:
+ *   { reputation: { min: 60 } }              — scalar stat gate
+ *   { 'npcFavor.elena_ross': { min: 10 } }   — dotted path NPC favor
+ *   { npcFavor: { the_host: { min: 5 } } }   — nested object NPC favor
+ *   { OR: [ {req1}, {req2} ] }                — pass if ANY sub-requirement met
  *
  * Used by: EventManager (event eligibility), DialogueScene (choice visibility),
- *          ConsequenceScheduler (conditional triggers)
+ *          ConsequenceScheduler (conditional triggers), LocationScene (room exits),
+ *          rooms.js exit/item/character/eavesdrop requirements
  */
 export class QualityGate {
 
@@ -21,6 +28,23 @@ export class QualityGate {
         if (!requirements) return true;
 
         for (const [key, condition] of Object.entries(requirements)) {
+            // OR: pass if ANY sub-requirement set is fully met
+            if (key === 'OR' && Array.isArray(condition)) {
+                const orMet = condition.some(subReq => QualityGate.check(subReq));
+                if (!orMet) return false;
+                continue;
+            }
+
+            // Nested object NPC favor: { npcFavor: { npc_id: { min: N } } }
+            // Convert to dotted-path checks so resolve() can handle them
+            if (key === 'npcFavor' && typeof condition === 'object' && condition !== null
+                && condition.min === undefined && condition.max === undefined && condition.equals === undefined) {
+                for (const [npcId, npcCond] of Object.entries(condition)) {
+                    if (!QualityGate.check({ [`npcFavor.${npcId}`]: npcCond })) return false;
+                }
+                continue;
+            }
+
             const value = QualityGate.resolve(key);
 
             if (typeof condition === 'object' && condition !== null) {
@@ -48,6 +72,30 @@ export class QualityGate {
         let allMet = true;
 
         for (const [key, condition] of Object.entries(requirements)) {
+            // OR: show as single requirement — "Any of: ..."
+            if (key === 'OR' && Array.isArray(condition)) {
+                const orMet = condition.some(subReq => QualityGate.check(subReq));
+                if (!orMet) allMet = false;
+                // Collect sub-requirement labels for display
+                const subLabels = condition.map(subReq => {
+                    const subDetails = QualityGate.checkDetailed(subReq);
+                    return subDetails.details.map(d => `${d.label} ${d.needed}`).join(', ');
+                });
+                details.push({ key: 'OR', label: `Any of: ${subLabels.join(' or ')}`, met: orMet, current: orMet ? 'Yes' : 'No', needed: 'one condition' });
+                continue;
+            }
+
+            // Nested object NPC favor: { npcFavor: { npc_id: { min: N } } }
+            if (key === 'npcFavor' && typeof condition === 'object' && condition !== null
+                && condition.min === undefined && condition.max === undefined && condition.equals === undefined) {
+                for (const [npcId, npcCond] of Object.entries(condition)) {
+                    const subResult = QualityGate.checkDetailed({ [`npcFavor.${npcId}`]: npcCond });
+                    details.push(...subResult.details);
+                    if (!subResult.met) allMet = false;
+                }
+                continue;
+            }
+
             const value = QualityGate.resolve(key);
             const label = QualityGate.getLabel(key);
             let met = true;

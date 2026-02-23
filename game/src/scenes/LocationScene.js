@@ -14,7 +14,7 @@
  */
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
-import { VENUE_MAP } from '../data/rooms.js';
+import { VENUES, VENUE_MAP } from '../data/rooms.js';
 import { CONTACTS } from '../data/contacts.js';
 import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
 import { DialogueTreeManager } from '../managers/DialogueTreeManager.js';
@@ -158,9 +158,20 @@ export class LocationScene extends BaseScene {
             gfx.destroy();
         }
 
-        // Preload Tiled map if this room uses one
-        // The map key + tileset images are loaded in _preloadTiledAssets()
-        this._pendingTiledMap = null;
+        // Preload ALL Tiled maps referenced by venues in rooms.js.
+        // Phaser deduplicates internally — loading an already-cached map is a no-op.
+        // This ensures any venue's Tiled rooms are available without scene restart.
+        const allTiledMaps = new Set();
+        for (const venue of VENUES) {
+            for (const room of venue.rooms) {
+                if (room.tiledMap) allTiledMaps.add(room.tiledMap);
+            }
+        }
+        for (const mapId of allTiledMaps) {
+            if (!this.cache.tilemap.has(`map_${mapId}`)) {
+                this.load.tilemapTiledJSON(`map_${mapId}`, `content/maps/${mapId}.json`);
+            }
+        }
     }
 
     create(data) {
@@ -1289,9 +1300,32 @@ export class LocationScene extends BaseScene {
     _enterTiledDoor(door) {
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
+            // Resolve target venue: prefer explicit venueId, fall back to staying in current venue.
+            // door.nextMap is a Tiled map filename (e.g. 'soho_gallery_exhibition'), NOT a venue ID.
+            let targetVenueId = door.venueId || this.venueId;
+            let targetRoomId = door.roomId || door.nextMapRoom || null;
+
+            // If no explicit roomId, find the room within the venue whose tiledMap matches nextMap.
+            // This handles intra-venue transitions in multi-room venues like soho_gallery.
+            if (!targetRoomId && door.nextMap) {
+                const venue = VENUE_MAP[targetVenueId];
+                if (venue) {
+                    const matchingRoom = venue.rooms.find(r => r.tiledMap === door.nextMap);
+                    if (matchingRoom) {
+                        targetRoomId = matchingRoom.id;
+                    } else {
+                        // nextMap might be an external venue ID (legacy compat)
+                        if (VENUE_MAP[door.nextMap]) {
+                            targetVenueId = door.nextMap;
+                            targetRoomId = null; // will use venue's startRoom
+                        }
+                    }
+                }
+            }
+
             this.scene.restart({
-                venueId: door.nextMap || this.venueId,
-                roomId: door.nextMapRoom || null,
+                venueId: targetVenueId,
+                roomId: targetRoomId,
                 venueTimeRemaining: this.venueTimeRemaining,
                 ui: this.ui,
             });
@@ -1324,6 +1358,79 @@ export class LocationScene extends BaseScene {
                     fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#ffaaaa'
                 }).setOrigin(0.5);
             });
+        }
+
+        // ── Items (gold-tinted interactable sprites) ──
+        if (this.roomData.items && this.roomData.items.length > 0) {
+            this.roomData.items.forEach((item, i) => {
+                if (item.requires && !QualityGate.check(item.requires)) return;
+
+                const itemSprite = this.add.sprite(centerX + 80 + (i * 40), centerY - 20, 'placeholder_exit');
+                itemSprite.setTint(0xffd700); // gold for items
+                itemSprite.setScale(1.5);
+                this.physics.add.existing(itemSprite);
+                itemSprite.body.setImmovable(true);
+
+                itemSprite.interactType = 'item';
+                itemSprite.interactId = item.name;
+                itemSprite.interactName = item.name;
+                itemSprite.itemData = item;
+                this.interactables.add(itemSprite);
+
+                this.add.text(itemSprite.x, itemSprite.y - 14, `📦 ${item.name}`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '5px', color: '#ffd700'
+                }).setOrigin(0.5);
+            });
+        }
+
+        // ── Eavesdrops (purple-tinted ambient dialogue, gated by requires) ──
+        if (this.roomData.eavesdrops && this.roomData.eavesdrops.length > 0) {
+            this.roomData.eavesdrops.forEach((eaves, i) => {
+                if (typeof eaves === 'string') return; // skip legacy string eavesdrops
+                if (eaves.requires && !QualityGate.check(eaves.requires)) return;
+
+                const eavesSprite = this.add.sprite(centerX - 80 - (i * 40), centerY, 'placeholder_exit');
+                eavesSprite.setTint(0x9966cc); // purple for eavesdrops
+                eavesSprite.setScale(1.2);
+                this.physics.add.existing(eavesSprite);
+                eavesSprite.body.setImmovable(true);
+
+                eavesSprite.interactType = 'eavesdrop';
+                eavesSprite.interactId = eaves.id;
+                eavesSprite.interactName = eaves.desc || 'Overheard conversation';
+                eavesSprite.eavesdropData = eaves;
+                this.interactables.add(eavesSprite);
+
+                this.add.text(eavesSprite.x, eavesSprite.y - 14, '💬', {
+                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#9966cc'
+                }).setOrigin(0.5);
+            });
+        }
+
+        // ── onEnter narrative (first visit only) ──
+        if (this.roomData.onEnter) {
+            const oe = this.roomData.onEnter;
+            const s = GameState.state;
+            const roomKey = this.roomData.id;
+            const isFirstVisit = !s?.visitedRooms?.includes(roomKey);
+
+            if (oe.text && (!oe.firstVisitOnly || isFirstVisit)) {
+                // Mark room as visited
+                if (s && isFirstVisit) {
+                    if (!s.visitedRooms) s.visitedRooms = [];
+                    s.visitedRooms.push(roomKey);
+                }
+
+                // Show narrative popup
+                this.time.delayedCall(500, () => {
+                    this._showClassicNarrative(oe.text);
+                });
+
+                // Apply stat effects
+                if (oe.effects) {
+                    GameState.applyEffects(oe.effects);
+                }
+            }
         }
 
         if (this.roomData.exits) {
@@ -1408,7 +1515,67 @@ export class LocationScene extends BaseScene {
             }
         } else if (obj.interactType === 'character') {
             this.startDialogue(obj.interactId);
+        } else if (obj.interactType === 'item') {
+            // Show item description and apply onLook effects
+            const item = obj.itemData;
+            const desc = item.desc || item.name;
+            this._showClassicNarrative(desc);
+            if (item.onLook) GameState.applyEffects(item.onLook);
+        } else if (obj.interactType === 'eavesdrop') {
+            // Show overheard dialogue and apply effects
+            const eaves = obj.eavesdropData;
+            this._showClassicNarrative(eaves.content || eaves.desc);
+            if (eaves.effects) GameState.applyEffects(eaves.effects);
+            // oneShot eavesdrops: destroy after first interaction
+            if (eaves.oneShot) {
+                obj.destroy();
+            }
+            // Unlock flags
+            if (eaves.unlocks && GameState.state) {
+                if (!GameState.state.flags) GameState.state.flags = {};
+                GameState.state.flags[eaves.unlocks] = true;
+            }
         }
+    }
+
+    /** Show a narrative text popup at the bottom of the screen — used for onEnter text,
+     *  item descriptions, and eavesdrop content in classic mode. SPACE to dismiss. */
+    _showClassicNarrative(text) {
+        if (this._narrativeActive) return;
+        this._narrativeActive = true;
+
+        const { width, height } = this.scale;
+        const boxH = 80;
+        const padding = 12;
+
+        const bg = this.add.rectangle(width / 2, height - boxH / 2, width, boxH, 0x000000, 0.85);
+        const narrativeText = this.add.text(padding, height - boxH + padding, text, {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#ffffff',
+            wordWrap: { width: width - padding * 2 },
+            lineSpacing: 6,
+        });
+        const hint = this.add.text(width - padding, height - 12, '[SPACE]', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '6px',
+            color: '#888888',
+        }).setOrigin(1, 1);
+
+        const dismiss = () => {
+            bg.destroy();
+            narrativeText.destroy();
+            hint.destroy();
+            this._narrativeActive = false;
+        };
+
+        // Dismiss on SPACE key press (with delay to prevent instant dismiss)
+        this.time.delayedCall(300, () => {
+            const handler = this.input.keyboard.on('keydown-SPACE', () => {
+                this.input.keyboard.off('keydown-SPACE', handler);
+                dismiss();
+            });
+        });
     }
 
     showOverheadMessage(text) {

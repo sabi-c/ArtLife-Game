@@ -10,6 +10,12 @@ import Phaser from 'phaser';
  *  - Walk animation syncing
  *  - Directional interaction raycasting (Spacebar / E)
  *  - Y-depth sorting
+ *
+ * STATUS: Ready to use but NOT yet wired into WorldScene.
+ * WorldScene currently handles player input, animation, and interaction inline.
+ * Migration plan: Replace inline player management with a Player instance.
+ * Call player.update(scene) in WorldScene.update(), set player.onInteract callback
+ * for NPC/door/item interactions.
  */
 export class Player extends Phaser.GameObjects.Sprite {
     /** @type {string} GridEngine character id */

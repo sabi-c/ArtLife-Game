@@ -939,6 +939,11 @@ export class GameState {
      * Instantly initialize GameState with demo data (no save/load).
      * Used by Admin Dashboard to quickly bootstrap a testable game state.
      */
+    /**
+     * Quick demo state for Admin Dashboard testing and CMS "Test Room" launches.
+     * IMPORTANT: Every field here must mirror init() — see CLAUDE.md state shape rules.
+     * If you add a field to init(), add it here too (and vice versa).
+     */
     static quickDemoInit() {
         try {
             const works = generateInitialWorks();
@@ -954,6 +959,7 @@ export class GameState {
 
         // 12-week demo with realistic trading history (mirrors seedDemoSave)
         GameState.state = {
+            // ── Identity (chosen at character creation) ──
             character: {
                 id: 'hedge_fund', name: 'THE HEDGE FUND', icon: '📊',
                 tagline: 'Art is just another asset class.',
@@ -965,6 +971,7 @@ export class GameState {
             selectedDrip: { id: 'power_suit', label: 'Power Suit', icon: '👔', effects: { reputation: 5, access: 5 } },
             selectedVice: null,
             traits: ['Quant Eye'],
+            // ── Financials ──
             cash: 795000,
             portfolio: [
                 {
@@ -984,8 +991,10 @@ export class GameState {
                     provenance: [{ type: 'acquired', week: 12, city: 'new-york', price: 12000, source: 'Market' }],
                 },
             ],
+            // ── Time & Market ──
             week: 12, currentCity: 'new-york',
-            marketState: 'bull', marketStateTurnsRemaining: 12,
+            marketState: 'bull', marketStateTurnsRemaining: 12, // weeks until market state transition
+            // ── Core Stats (0-100 scale) ──
             reputation: 62, taste: 64, audacity: 40, access: 60, intel: 65,
             wealthHistory: [
                 { week: 1, cash: 750000, assets: 0 },
@@ -1016,26 +1025,33 @@ export class GameState {
                 { text: 'Yuki Tanaka shortlisted for Turner Prize.', week: 11 },
                 { text: 'Acquired "Red Squares on White" by Tomas Herrera for $12,000', week: 12 },
             ],
-            decisions: [], activeDeals: [],
-            totalWorksBought: 5, totalWorksSold: 3, eventsTriggered: [],
+            decisions: [], activeDeals: [], // active sell/trade deals in pipeline
+            totalWorksBought: 5, totalWorksSold: 3, eventsTriggered: [], // triggered event IDs (for cooldown)
+            // ── Anti-Resources (bad stats that rise from risky behavior) ──
             marketHeat: 8, suspicion: 0, burnout: 2,
             flipHistory: [
                 { workId: 'demo_sold_1', buyWeek: 1, sellWeek: 5, holdTime: 4 },
                 { workId: 'demo_sold_2', buyWeek: 2, sellWeek: 4, holdTime: 2 },
                 { workId: 'demo_sold_3', buyWeek: 3, sellWeek: 7, holdTime: 4 },
             ],
-            dealerBlacklisted: false,
-            consecutiveEventWeeks: 0, forcedRest: false, actionsThisWeek: 0,
+            dealerBlacklisted: false, // permanent flag from too many lowball offers
+            // ── Action Economy ──
+            consecutiveEventWeeks: 0, forcedRest: false, actionsThisWeek: 0, // MAX_ACTIONS = 4
+            // ── World Position & Time of Day ──
             playerLocation: { locationId: 'player_apartment', cityX: 5, cityY: 14, insideVenue: false },
             hoursUsedToday: 0, dayOfWeek: 1, hour: 8, minute: 0,
+            // ── Tone System (dialogue style tracking) ──
             toneHistory: {},
+            // ── Pending NPC trade offers (expire after 3 weeks) ──
             pendingOffers: [],
+            // ── Exploration tracking ──
             visitedCities: ['new-york', 'london'],
-            visitedRooms: [],
-            collectedItems: [],
-            overworldPosition: null,
-            eraModifier: 1.0,
-            activeModifiers: [],
+            visitedRooms: [], // room IDs visited (for onEnter.firstVisitOnly checks)
+            collectedItems: [], // item IDs picked up in WorldScene/LocationScene
+            overworldPosition: null, // { x, y } for WorldScene re-entry
+            // ── Market modifiers ──
+            eraModifier: 1.0, // multiplier for era-specific price adjustments
+            activeModifiers: [], // temporary gameplay modifiers from events/perks
             watchlist: [
                 { type: 'artist', id: 'yuki_tanaka', addedWeek: 3 },
                 { type: 'artist', id: 'kwame_asante', addedWeek: 5 },

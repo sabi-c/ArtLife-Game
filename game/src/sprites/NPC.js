@@ -8,6 +8,12 @@ import Phaser from 'phaser';
  *  - GridEngine random wandering
  *  - Walk animation syncing
  *  - Y-depth sorting
+ *
+ * STATUS: Ready to use but NOT yet wired into WorldScene.
+ * WorldScene currently manages NPC sprites inline in _spawnNPCs() (~60 lines).
+ * Migration plan: Replace inline NPC sprite management in WorldScene._spawnNPCs()
+ * with `new NPC(scene, ...)` instances and call npc.getGridEngineConfig() for
+ * the GridEngine create() config. Call npc.update(scene) in WorldScene.update().
  */
 export class NPC extends Phaser.GameObjects.Sprite {
     /** @type {string} GridEngine character id */

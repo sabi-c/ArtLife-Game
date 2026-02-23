@@ -189,7 +189,12 @@ export class WeekEngine {
     }
 
     // ── Internal helpers ──
+    // Pipeline order: DealResolver → MarketManager → MarketSimulator → PhoneManager →
+    // NPCMemory → ConsequenceScheduler → Storylines → Events → PendingOffers →
+    // Freeport → Theft → AntiDecay → Burnout → SystemicTriggers → MarketTransition → WealthSnapshot
+    // Each step is isolated by try/catch so one failure doesn't block others.
 
+    /** Decay marketHeat (-1/week) and suspicion (-0.5/week) toward zero. */
     static _decayAntiResources(state) {
         // Natural marketHeat decay — cools 1 point per turn
         if (state.marketHeat > 0) {
@@ -201,6 +206,7 @@ export class WeekEngine {
         }
     }
 
+    /** Charge $200/piece/4weeks for freeport-stored works. */
     static _processFreeportCosts(state) {
         if (state.week % 4 === 0) {
             const freeportPieces = state.portfolio.filter(w => w.storage === 'freeport');
@@ -212,6 +218,7 @@ export class WeekEngine {
         }
     }
 
+    /** 1% chance per week of losing uninsured home-stored works to theft. */
     static _processTheftRisk(state) {
         const stolen = [];
         state.portfolio = state.portfolio.filter(work => {
@@ -227,6 +234,7 @@ export class WeekEngine {
         });
     }
 
+    /** Burnout rises when marketHeat > 30, recovers when < 15. Forces rest at >= 8. */
     static _processBurnout(state) {
         if (state.marketHeat > 30) {
             state.burnout = Math.min(10, state.burnout + 0.5);
@@ -240,6 +248,7 @@ export class WeekEngine {
         }
     }
 
+    /** Countdown marketStateTurnsRemaining; when 0, transition to random bull/bear/flat. */
     static _processMarketTransition(state) {
         state.marketStateTurnsRemaining--;
         if (state.marketStateTurnsRemaining <= 0) {
@@ -258,6 +267,7 @@ export class WeekEngine {
         }
     }
 
+    /** Push { week, cash, assets } to wealthHistory (max 52 entries = 1 year). Powers sparkline. */
     static _recordWealthSnapshot(state) {
         const portfolioVal = GameState.getPortfolioValue();
         (state.wealthHistory = state.wealthHistory || []).push({

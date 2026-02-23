@@ -9,6 +9,6 @@
 import React from 'react';
 import RoomManager from './RoomManager.jsx';
 
-export default function VenueEditor() {
-    return <RoomManager onClose={() => {}} />;
+export default function VenueEditor({ onClose }) {
+    return <RoomManager onClose={onClose || (() => {})} />;
 }

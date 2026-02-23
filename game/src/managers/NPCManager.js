@@ -279,11 +279,14 @@ export const NPCManager = {
     getNPCsForMap(mapId, dayOfWeek, hour) {
         const activeNPCs = [];
         for (const npc of this.npcs) {
-            const schedule = npc.schedule.find(s =>
-                s.map === mapId &&
-                s.days.includes(dayOfWeek) &&
-                hour >= s.startHour && hour < s.endHour
-            );
+            const schedule = npc.schedule.find(s => {
+                if (s.map !== mapId || !s.days.includes(dayOfWeek)) return false;
+                // Handle midnight-crossing schedules (e.g. startHour: 19, endHour: 2)
+                if (s.startHour > s.endHour) {
+                    return hour >= s.startHour || hour < s.endHour;
+                }
+                return hour >= s.startHour && hour < s.endHour;
+            });
 
             if (schedule) {
                 activeNPCs.push({

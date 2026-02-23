@@ -1,3 +1,21 @@
+/**
+ * gameStore.js — Legacy Zustand store for basic game state.
+ *
+ * WARNING: This is a PRE-AUDIT store. The canonical game state lives in
+ * GameState.state (singleton pattern in managers/GameState.js).
+ * Do NOT write to this store outside of WeekEngine.advanceWeek().
+ * This store exists for Zustand persistence compatibility and for
+ * React components that need to subscribe to state changes.
+ *
+ * Key exports:
+ *   useGameStore — React hook for subscribing to week/capital/stats changes
+ *   useGameStore.getState() — non-React access
+ *
+ * Persisted to localStorage as 'artlife-game-store'.
+ * Uses immer for immutable updates + subscribeWithSelector for granular subscriptions.
+ *
+ * Consumers: MarketDashboard, CalendarHUD, AdminDashboard (read-only)
+ */
 import { create } from 'zustand';
 import { subscribeWithSelector, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';

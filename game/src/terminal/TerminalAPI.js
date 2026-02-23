@@ -1,8 +1,42 @@
 /**
- * TerminalAPI.js
- * Extracted during Phase 41 Architecture Refactoring.
- * A facade that provides rendering screens with a single point of access
- * to game state, managers, and data.
+ * TerminalAPI.js — The data facade for all terminal screens.
+ *
+ * Terminal screens (dashboard.js, market.js, phone.js, etc.) MUST import from
+ * TerminalAPI instead of importing managers directly. This provides a single
+ * stable API surface and prevents circular dependency issues.
+ *
+ * Exported namespaces:
+ *   state()           — returns GameState.state (the canonical game state object)
+ *   market            — MarketManager (prices, artist heat, work values)
+ *   haggle            — HaggleManager (start/end haggle, get state)
+ *   scheduler         — ConsequenceScheduler (delayed effects)
+ *   log / decisions   — DecisionLog (player choice history)
+ *   dialogue          — DialogueTreeManager
+ *   network           — PhoneManager (contacts, messages)
+ *   npcStore          — useNPCStore (Zustand NPC state)
+ *   ticker            — TickerSystem (news ticker)
+ *   settings          — SettingsManager (user preferences)
+ *   gate              — QualityGate (requirement checking)
+ *
+ * Stores:
+ *   uiStore, marketStore, inventoryStore, consequenceStore, eventStore
+ *
+ * Static data arrays:
+ *   artworks, venues, characters, contacts, dialogueTrees, treesByNpc
+ *
+ * Game helpers:
+ *   advanceWeek()     — delegates to GameState.advanceWeek() (which calls WeekEngine)
+ *   getLastWeekReport() — WeekEngine.lastReport
+ *   getPendingEvent() — EventRegistry.getPendingEvent()
+ *   initGame.*        — init, save/load, buyWork, applyEffects
+ *   bloomberg.*       — trading API (buy/sell/haggle/list from terminal)
+ *   watchlist.*       — artist/artwork watchlist CRUD
+ *   npcMarket.*       — NPC profiles, collection rankings, trade flow
+ *
+ * Usage in terminal screens:
+ *   import { TerminalAPI } from '../terminal/TerminalAPI.js';
+ *   const s = TerminalAPI.state();   // NOT: GameState.state
+ *   const works = TerminalAPI.artworks;
  */
 
 import { GameState } from '../managers/GameState.js';

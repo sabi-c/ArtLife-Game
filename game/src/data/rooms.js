@@ -3,9 +3,30 @@
  * Converted from markdown venue files in 05_World/Rooms/
  * Schema: 05_World/Room_Schema.md
  *
- * Each venue contains a rooms[] array. Each room follows:
- *   id, venue, name, desc, look, items[], characters[], exits[],
- *   eavesdrops[], onEnter, timeCost, tags[]
+ * Venue shape:
+ *   id, name, desc, startRoom, timeLimit, availableWeeks, frequency, requires, rooms[]
+ *
+ * Room shape:
+ *   id          — unique room identifier
+ *   venue       — parent venue id
+ *   name, desc  — display name and short description for HUD
+ *   look        — longer narrative text for LOOK command
+ *   tiledMap    — (optional) Tiled JSON map key; if present, uses visual Tiled mode
+ *   items[]     — interactable objects { name, desc, isTakeable, requires, onLook, onTake }
+ *   characters[]— NPCs present { id, desc, topics[], requires }
+ *   exits[]     — room transitions { dir, id, label, block, requires }
+ *   eavesdrops[]— overheard dialogue { id, desc, content, effects, requires, unlocks, oneShot }
+ *   onEnter     — { firstVisitOnly, text, effects } triggered on room entry
+ *   timeCost    — action points spent entering this room (default 1)
+ *   tags[]      — metadata tags for filtering/search
+ *
+ * Requirement objects (used in exits, items, characters, eavesdrops):
+ *   { stat: { min: N, max: N } }              — scalar stat gate
+ *   { 'npcFavor.npc_id': { min: N } }         — dotted-path NPC favor
+ *   { npcFavor: { npc_id: { min: N } } }      — nested object NPC favor
+ *   { OR: [ {req1}, {req2} ] }                — pass if ANY sub-requirement met
+ *
+ * Exports: VENUES (array), ROOM_MAP (flat room lookup), VENUE_MAP (venue lookup)
  */
 
 // ─────────────────────────────────────────────
@@ -959,13 +980,13 @@ const FOSSIL_MUSEUM = {
             look: 'The T-Rex skull alone is worth more than your apartment. The information plaques are written in that particular museum tone — confident, timeless, faintly condescending.',
             items: [],
             characters: [
-                { name: 'Dr. Morton', desc: 'The museum curator. Tweed jacket, reading glasses on a chain. Knows the provenance of every bone in this building.' }
+                { id: 'dr_morton', desc: 'The museum curator. Tweed jacket, reading glasses on a chain. Knows the provenance of every bone in this building.' }
             ],
             exits: [{ dir: 'south', id: null, label: 'Exit to street' }],
             eavesdrops: [
-                'A child tugs their parent\'s sleeve: "Is that one real?" The parent hesitates too long.',
-                'Two paleontology students argue about cladistics near the raptor display.',
-                'A security guard yawns. Night shifts in the fossil wing are quiet.',
+                { id: 'fossil_child', desc: 'A child and parent by the display case', content: 'A child tugs their parent\'s sleeve: "Is that one real?" The parent hesitates too long.', effects: null },
+                { id: 'fossil_students', desc: 'Two students near the raptor display', content: 'Two paleontology students argue about cladistics near the raptor display.', effects: null },
+                { id: 'fossil_guard', desc: 'A security guard by the exit', content: 'A security guard yawns. Night shifts in the fossil wing are quiet.', effects: null },
             ],
             onEnter: { firstVisitOnly: true, text: 'You step into the paleontology wing and stop. The T-Rex skeleton is enormous — jaws open, frozen mid-roar. Across the hall, a pack of velociraptors seems to track your movement. Dr. Morton adjusts his glasses and walks over.', effects: null },
             timeCost: 0,

@@ -7,12 +7,49 @@
 
 ## Current State (2026-02-22)
 
-**Version:** v0.4.0
+**Version:** v0.4.1
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
+
+### Infrastructure Hardening + Documentation Audit (2026-02-22 Session 17)
+
+**11 Bug Fixes:**
+- QualityGate: Added `OR` logic — rooms using `{ OR: [{...}, {...}] }` requirements now work (cocktail_party penthouse exits unlocked)
+- QualityGate: Added nested object npcFavor support `{ npcFavor: { npc_id: { min: N } } }`
+- WorldScene: Fixed `this.mapKey` never set — returnArgs from DialogueScene now work
+- WorldScene: Fixed item hint using `tileX/tileY` instead of `x/y` — item interaction hints now show
+- DialogueScene: Removed direct `canvas.style.display = 'none'` — canvas visibility now React-managed via UI_ROUTE
+- LocationScene: Fixed Tiled door navigation — `_enterTiledDoor()` now resolves rooms by tiledMap property within venue, not by raw filename as venueId
+- LocationScene: Added preloading of ALL Tiled maps from VENUES data (14 maps)
+- rooms.js: Fixed fossil_museum eavesdrops (strings → proper objects) and characters (name → id)
+- NPCManager: Fixed midnight-crossing schedule support (`startHour > endHour`)
+- RoomManager: "Test Room" now auto-inits quickDemoInit when no game state exists
+- VenueEditor: Fixed onClose prop forwarding to RoomManager
+
+**Classic Mode Content Rendering:**
+- LocationScene classic mode now renders items (gold sprites), eavesdrops (purple sprites), and onEnter narrative popups
+- Items apply onLook effects on interaction, eavesdrops apply effects and unlock flags
+- oneShot eavesdrops self-destruct after first interaction
+- SPACE key dismisses narrative popups
+- First-visit tracking via `visitedRooms` array in GameState
+
+**WorldScene HUD Overlay:**
+- Artnet-inspired persistent stats bar (data-dense, monospace, gold accent)
+- Shows: player name, location, cash/rep/week stats
+- Phaser-native (scrollFactor 0, depth HUD) — no React overlay per architecture rules
+- Rate-limited refresh every 500ms
+
+**Documentation Audit (15 files):**
+- CLAUDE.md: Fixed 07_Project path reference, added 6 Bloomberg CSS prefixes (bb-, sh-, ts-, an-, sb-, dp-)
+- JSDoc headers added: npcStore.js, gameStore.js, eventStore.js, HaggleScene.js
+- TerminalAPI.js: Full API surface documented (30+ exports, namespaces, usage examples)
+- WeekEngine.js: All 6 private methods documented, pipeline order comment added
+- GameState.quickDemoInit(): Added sync warning header + inline comments matching init()
+- rooms.js: Schema docs updated with full field reference including OR requirements
+- NPC.js, Player.js: Added migration status notes (ready but not yet wired into WorldScene)
 
 ### Gallery Views Deep Build-Out (2026-02-22 Session 16)
 
@@ -43,13 +80,17 @@
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 1 | Seventh House view: staggered 2-col artwork grid (seventhhouse.la style) | HIGH | TODO |
-| 2 | Pokemon walk-around: full reskin with proper Pokemon sprites | HIGH | TODO |
-| 3 | Connect Bloomberg terminal ↔ Pokemon walk-around (launch world from terminal) | MEDIUM | TODO |
-| 4 | Sotheby's view: add bidding simulation UI | MEDIUM | TODO |
-| 5 | Deitch view: "OPENING RECEPTION" event banner from calendar data | MEDIUM | TODO |
-| 6 | All views: CMS artwork image display improvements | MEDIUM | TODO |
-| 7 | World building: fix non-Chelsea room navigation | LOW | TODO |
+| 1 | Seventh House view: staggered 2-col artwork grid (seventhhouse.la style) | HIGH | DONE (S15) |
+| 2 | Pokemon walk-around: HUD overlay, bug fixes, NPC midnight fix | HIGH | DONE (S17) |
+| 3 | Infrastructure: QualityGate OR logic, door nav, classic mode content | HIGH | DONE (S17) |
+| 4 | Documentation audit: JSDoc headers, CLAUDE.md fixes, TerminalAPI docs | HIGH | DONE (S17) |
+| 5 | CMS: VenueEditor/RoomManager fixes, map preloading | HIGH | DONE (S17) |
+| 6 | Connect Bloomberg terminal ↔ Pokemon walk-around (launch world from terminal) | MEDIUM | TODO |
+| 7 | Sotheby's view: add bidding simulation UI | MEDIUM | TODO |
+| 8 | Deitch view: "OPENING RECEPTION" event banner from calendar data | MEDIUM | TODO |
+| 9 | All views: CMS artwork image display improvements | MEDIUM | TODO |
+| 10 | Wire NPC.js/Player.js into WorldScene (refactor inline sprite management) | MEDIUM | TODO |
+| 11 | Pokemon walk-around: proper sprite reskin + multi-map transitions | HIGH | TODO |
 
 ### Gallery Polish + 2-Column Layouts (2026-02-22 Session 15)
 

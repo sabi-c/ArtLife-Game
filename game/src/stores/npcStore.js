@@ -1,3 +1,31 @@
+/**
+ * npcStore.js — Zustand store for NPC contact state, memory, and market data.
+ *
+ * Persists the full contacts array to localStorage. Each contact tracks:
+ *   favor (-100 to 100), met (boolean), memory { witnessed[], grudges[], favors[], lastContact },
+ *   wealth { liquidCash, financialStress }, collection { owned[], forSale[] }, marketStats {}
+ *
+ * Initialized by GameState.init() via useNPCStore.getState().init().
+ * Reset on new game via useNPCStore.getState().reset().
+ *
+ * Key exports:
+ *   useNPCStore — React hook for component access (BloombergTerminal NPCDirectoryPanel)
+ *   useNPCStore.getState() — non-React access from Phaser scenes, WeekEngine, MarketSimulator
+ *
+ * Key methods:
+ *   adjustFavor(npcId, amount) — clamp favor to [-100, 100]
+ *   meetContact(npcId) — set met=true on first encounter
+ *   autonomousTick(week) — favor decay, offer expiry, NPC gossip (called by WeekEngine)
+ *   syncAllMarketData(npcState) — batch sync from MarketSimulator results
+ *   getMarketProfile(npcId) — merged view for UI consumption
+ *
+ * NOTE: autonomousTick() uses setTimeout(fn, 0) to call PhoneManager.sendMessage()
+ * because Immer's draft proxy cannot be accessed after the set() callback returns.
+ * The timeout defers the side-effect to after state is committed.
+ *
+ * Consumers: WeekEngine, MarketSimulator, LocationScene, BloombergTerminal,
+ *            NPCDirectoryPanel, DialogueScene, dashboard.js (via TerminalAPI.npcStore)
+ */
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';

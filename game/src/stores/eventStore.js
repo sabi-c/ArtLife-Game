@@ -1,3 +1,21 @@
+/**
+ * eventStore.js — Zustand store for event scheduling and history.
+ *
+ * Manages the event pool, priority queue (storyline-triggered events),
+ * pending events (waiting to be presented to player), and recent history
+ * (cooldown tracking to avoid repeats).
+ *
+ * Key exports:
+ *   useEventStore — React hook for component access
+ *   useEventStore.getState() — non-React access from WeekEngine, EventRegistry
+ *
+ * NOTE: eventPool is NOT persisted — it reloads from data/events.js on init().
+ * Only scheduling state (lastEventWeek, recentEventIds, priorityQueue, pendingEvent)
+ * is persisted via partialize().
+ *
+ * Consumers: WeekEngine (addPriorityEvent, setPendingEvent), EventRegistry (getEvent),
+ *            DialogueScene (consumePendingEvent), dashboard.js (getPendingEvent)
+ */
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
