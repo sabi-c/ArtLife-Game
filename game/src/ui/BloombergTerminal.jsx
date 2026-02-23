@@ -2106,21 +2106,46 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
 
                     {/* Action buttons */}
                     <div className="an-ld-actions">
-                        {work._isMarket && work._order && (
+                        {(work._isMarket || work._ownerType === 'market') && work._ownerData && (
                             <>
                                 <button className="an-ld-btn an-ld-btn-primary"
-                                    disabled={!hasAP(1) || (s?.cash || 0) < (work._order.askPrice || 0)}
-                                    onClick={() => onBuy(work._order)}>
+                                    disabled={!hasAP(1) || (s?.cash || 0) < (work._ownerData.askPrice || 0)}
+                                    onClick={() => onBuy(work._ownerData)}>
                                     BUY NOW <span className="an-ld-ap">[1 AP]</span>
                                 </button>
                                 <button className="an-ld-btn an-ld-btn-secondary"
                                     disabled={!hasAP(2)}
-                                    onClick={() => onHaggle(work._order)}>
+                                    onClick={() => onHaggle(work._ownerData)}>
                                     COUNTER OFFER <span className="an-ld-ap">[2 AP]</span>
                                 </button>
                             </>
                         )}
-                        {work._owned && (
+                        {work._ownerType === 'npc' && (
+                            <button className="an-ld-btn an-ld-btn-primary"
+                                style={{ background: '#cc0000', borderColor: '#cc0000' }}
+                                disabled={!hasAP(2)}
+                                onClick={() => {
+                                    const npc = work._ownerData;
+                                    const currVal = work.currentVal || 0;
+                                    const askPrice = Math.floor(currVal * (1 + (Math.random() * 0.4))); // 0-40% markup
+                                    const haggleInfo = HaggleManager.start({
+                                        mode: 'buy',
+                                        work: work,
+                                        npc: npc,
+                                        askingPrice: askPrice,
+                                        playerOffer: currVal // default starter
+                                    });
+                                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'HaggleScene', { haggleInfo });
+                                }}>
+                                HAGGLE TO ACQUIRE <span className="an-ld-ap">[2 AP]</span>
+                            </button>
+                        )}
+                        {work._ownerType === 'unknown' && (
+                            <button className="an-ld-btn an-ld-btn-secondary" disabled style={{ opacity: 0.5 }}>
+                                LOCATION UNKNOWN
+                            </button>
+                        )}
+                        {(work._owned || work._ownerType === 'player') && (
                             <button className="an-ld-btn an-ld-btn-secondary"
                                 disabled={!hasAP(2)}
                                 onClick={() => onList(work)}>
@@ -2163,6 +2188,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
     // Enrich portfolio
     const showCollection = showPanel('collection');
     const showMarket = showPanel('orderbook');
+    const showDatabase = showPanel('database');
 
     const ownedItems = showCollection ? portfolio.map((work, i) => {
         const artwork = ARTWORKS.find(a => a.id === work.id) || work;
@@ -2192,7 +2218,61 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
         };
     }) : [];
 
-    let allItems = [...ownedItems, ...marketItems];
+    // Database View (All Artworks)
+    const databaseItems = showDatabase ? ARTWORKS.map((artwork, i) => {
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(artwork, false); }
+        catch { currentVal = artwork.basePrice || 0; }
+        const artist = MarketManager.artists?.find(a => a.id === artwork.artistId);
+
+        let ownerLabel = 'Unknown';
+        let ownerType = 'unknown'; // 'player', 'market', 'npc', 'unknown'
+        let ownerData = null;
+
+        // Check player
+        if (portfolio.some(w => w.id === artwork.id)) {
+            ownerLabel = 'Player Collection';
+            ownerType = 'player';
+        }
+        // Check market
+        else {
+            const openOrder = MarketSimulator.getOpenSellOrders().find(o => o.artworkId === artwork.id);
+            if (openOrder) {
+                ownerLabel = 'Open Market';
+                ownerType = 'market';
+                currentVal = openOrder.askPrice;
+                ownerData = openOrder;
+            }
+            // Check NPCs
+            else {
+                const npcStore = useNPCStore.getState();
+                const npcs = npcStore.contacts || [];
+                const npcOwner = npcs.find(n => n.collection?.owned?.includes(artwork.id) || n.collection?.forSale?.includes(artwork.id));
+                if (npcOwner) {
+                    ownerLabel = npcOwner.name || npcOwner.id;
+                    ownerType = 'npc';
+                    ownerData = npcOwner;
+                } else if (artwork.ownerId) {
+                    // Fallback to initial owner ID if not yet resolved and not empty
+                    const fallbackNpc = npcs.find(n => n.id === artwork.ownerId);
+                    ownerLabel = fallbackNpc ? (fallbackNpc.name || fallbackNpc.id) : (artwork.ownerId || 'Private Collection');
+                    ownerType = fallbackNpc ? 'npc' : 'unknown';
+                    ownerData = fallbackNpc || null;
+                } else {
+                    ownerLabel = 'Private Collection';
+                }
+            }
+        }
+
+        return {
+            ...artwork, currentVal, purchasePrice: 0,
+            estLow: Math.round(currentVal * 0.85), estHigh: Math.round(currentVal * 1.15),
+            _artist: artist, _lot: i + 1, _owned: ownerType === 'player',
+            _ownerLabel: ownerLabel, _ownerType: ownerType, _ownerData: ownerData
+        };
+    }) : [];
+
+    let allItems = showDatabase ? databaseItems : [...ownedItems, ...marketItems];
 
     // Filter by search term
     if (searchTerm.trim()) {
@@ -2404,6 +2484,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                             <th className="an-th" onClick={() => toggleSort('artist')}>Artist{SortIcon({ k: 'artist' })}</th>
                             <th className="an-th" onClick={() => toggleSort('title')}>Title{SortIcon({ k: 'title' })}</th>
                             <th className="an-th">Medium</th>
+                            {showDatabase && <th className="an-th">Owner</th>}
                             <th className="an-th" style={{ width: 50 }}>Heat</th>
                             <th className="an-th">Estimate</th>
                             <th className="an-th" onClick={() => toggleSort('price')}>Price{SortIcon({ k: 'price' })}</th>
@@ -2447,6 +2528,11 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                             {work.yearCreated ? `, ${work.yearCreated}` : ''}
                                         </td>
                                         <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
+                                        {showDatabase && (
+                                            <td className="an-td" style={{ color: work._ownerType === 'player' ? '#15803d' : work._ownerType === 'market' ? '#1d4ed8' : '#666', fontWeight: work._ownerType !== 'unknown' ? 'bold' : 'normal', fontSize: 11 }}>
+                                                {work._ownerLabel}
+                                            </td>
+                                        )}
                                         <td className="an-td" style={{ padding: '4px 6px' }}>
                                             {work._artist && (() => {
                                                 const h = work._artist.heat || 0;
@@ -2471,7 +2557,13 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                             ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
                                         </td>
                                         <td className="an-td an-price">
-                                            <div className="an-price-main">${fmtNum(work.currentVal)}</div>
+                                            <div className="an-price-main">
+                                                {work._isMarket || work._ownerType === 'market' ? (
+                                                    <strong style={{ color: '#111' }}>${fmtNum(work.currentVal)}</strong>
+                                                ) : (
+                                                    intel >= 20 ? `$${fmtNum(work.currentVal)}` : '$???'
+                                                )}
+                                            </div>
                                             {work._owned && work.purchasePrice > 0 && (
                                                 <div className="an-price-sub">
                                                     Paid ${fmtNum(work.purchasePrice)}
@@ -2479,14 +2571,26 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                             )}
                                         </td>
                                         <td className="an-td an-status">
-                                            {work._isMarket ? (
-                                                <span className="an-badge an-badge-available">FOR SALE</span>
-                                            ) : roi !== null ? (
-                                                <span className={`an-badge ${Number(roi) >= 0 ? 'an-badge-sold' : 'an-badge-loss'}`}>
-                                                    {Number(roi) >= 0 ? '+' : ''}{roi}%
-                                                </span>
+                                            {showDatabase ? (
+                                                work._ownerType === 'player' ? (
+                                                    <span className="an-badge an-badge-held">HELD</span>
+                                                ) : work._ownerType === 'market' ? (
+                                                    <span className="an-badge an-badge-available">FOR SALE</span>
+                                                ) : work._ownerType === 'npc' ? (
+                                                    <span className="an-badge" style={{ background: '#f5f5f5', color: '#666', border: '1px solid #ccc' }}>PRIVATE</span>
+                                                ) : (
+                                                    <span className="an-badge" style={{ background: '#fff', color: '#ccc', border: '1px dashed #eee' }}>UNKNOWN</span>
+                                                )
                                             ) : (
-                                                <span className="an-badge an-badge-held">HELD</span>
+                                                work._isMarket ? (
+                                                    <span className="an-badge an-badge-available">FOR SALE</span>
+                                                ) : roi !== null ? (
+                                                    <span className={`an-badge ${Number(roi) >= 0 ? 'an-badge-sold' : 'an-badge-loss'}`}>
+                                                        {Number(roi) >= 0 ? '+' : ''}{roi}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="an-badge an-badge-held">HELD</span>
+                                                )
                                             )}
                                         </td>
                                     </tr>
