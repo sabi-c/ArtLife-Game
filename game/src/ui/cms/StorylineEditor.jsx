@@ -688,14 +688,51 @@ const StoryStepNode = ({ data }) => {
                     </select>
                 </div>
             )}
-            <Handle type="source" position={Position.Bottom} style={{ background: '#c9a84c' }} />
+            {data.hasBranch && (
+                <div style={{ fontSize: 9, color: '#60a5fa', marginTop: 4, textAlign: 'center', fontWeight: 'bold' }}>
+                    ⤴ BRANCHES
+                </div>
+            )}
+            {data.isBranch && data.branchColor && (
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: data.branchColor, borderRadius: '4px 0 0 4px' }} />
+            )}
+            <Handle type="source" position={Position.Bottom} style={{ background: data.branchColor || '#c9a84c' }} />
+        </div>
+    );
+};
+
+// ── Branch Label Node ──
+const BranchLabelNode = ({ data }) => {
+    const { branchId, label, condition, stepsCount } = data;
+    return (
+        <div style={{
+            padding: '8px 14px',
+            background: 'rgba(100,165,250,0.08)',
+            border: '1px solid #60a5fa',
+            borderRadius: 8,
+            minWidth: 180,
+        }}>
+            <Handle type="target" position={Position.Top} style={{ background: '#60a5fa' }} />
+            <div style={{ fontSize: 11, fontWeight: 'bold', color: '#60a5fa' }}>
+                ⤴ {label || branchId}
+            </div>
+            {condition && (
+                <div style={{ fontSize: 9, color: '#888', marginTop: 3, fontStyle: 'italic' }}>
+                    {condition}
+                </div>
+            )}
+            <div style={{ fontSize: 9, color: '#555', marginTop: 3 }}>
+                {stepsCount > 0 ? `${stepsCount} step${stepsCount > 1 ? 's' : ''}` : 'Arc ends here'}
+            </div>
+            <Handle type="source" position={Position.Bottom} style={{ background: '#60a5fa' }} />
         </div>
     );
 };
 
 const nodeTypes = {
     triggerNode: TriggerNode,
-    storyStepNode: StoryStepNode
+    storyStepNode: StoryStepNode,
+    branchLabelNode: BranchLabelNode,
 };
 
 function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdateStoryline, activeInfo, onHoverEvent }) {
@@ -724,9 +761,11 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
         draggable: true,
     });
 
+    const BRANCH_COLORS = ['#60a5fa', '#4ade80', '#f59e0b', '#f87171', '#a78bfa', '#ec4899'];
+
     if (storyline.steps && storyline.steps.length > 0) {
         initialEdges.push({
-            id: `e-trigger-0`,
+            id: 'e-trigger-0',
             source: 'trigger',
             target: '0',
             animated: true,
@@ -738,11 +777,12 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
             const isCurrent = activeInfo && activeInfo.currentStep === idx;
             const isPast = activeInfo && activeInfo.currentStep > idx;
             const eventDef = availableEvents.find(e => e.id === step.eventId);
+            const hasBranch = step.branchTo && typeof step.branchTo === 'object';
 
             initialNodes.push({
                 id: String(idx),
                 type: 'storyStepNode',
-                position: step.position || { x: 250, y: 180 + idx * 130 },
+                position: step.position || { x: 300, y: 180 + idx * 140 },
                 data: {
                     step, isCurrent, isPast,
                     isSelected: editingStepIdx === idx,
@@ -752,11 +792,80 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
                     availableEvents: editingStepIdx === idx ? availableEvents : null,
                     onLinkEvent: (newId) => handleLinkEvent(idx, newId),
                     onHoverEvent: onHoverEvent,
+                    hasBranch,
                 },
                 draggable: true,
             });
 
-            if (idx < storyline.steps.length - 1) {
+            // If step has branchTo — render branch label nodes + branch step nodes
+            if (hasBranch && storyline.branches) {
+                const branchEntries = Object.entries(step.branchTo);
+                branchEntries.forEach(([choiceIdx, branchId], bIdx) => {
+                    const branch = storyline.branches[branchId];
+                    if (!branch) return;
+                    const color = BRANCH_COLORS[bIdx % BRANCH_COLORS.length];
+                    const branchNodeId = `branch_${idx}_${branchId}`;
+                    const xOffset = (bIdx - (branchEntries.length - 1) / 2) * 260;
+
+                    // Branch label node
+                    initialNodes.push({
+                        id: branchNodeId,
+                        type: 'branchLabelNode',
+                        position: { x: 300 + xOffset, y: 180 + (idx + 1) * 140 },
+                        data: { branchId, label: branch.label, condition: branch.condition, stepsCount: (branch.steps || []).length },
+                        draggable: true,
+                    });
+
+                    // Edge from fork step to branch label
+                    initialEdges.push({
+                        id: `e-fork-${idx}-${branchId}`,
+                        source: String(idx),
+                        target: branchNodeId,
+                        label: `Choice ${choiceIdx}`,
+                        labelStyle: { fill: color, fontSize: 9 },
+                        labelBgStyle: { fill: '#111', fillOpacity: 0.9 },
+                        style: { stroke: color, strokeWidth: 2, strokeDasharray: '6 3' },
+                        markerEnd: { type: MarkerType.ArrowClosed, color },
+                    });
+
+                    // Branch step nodes
+                    (branch.steps || []).forEach((bStep, bsIdx) => {
+                        const bStepId = `${branchNodeId}_s${bsIdx}`;
+                        const bEventDef = availableEvents.find(e => e.id === bStep.eventId);
+                        initialNodes.push({
+                            id: bStepId,
+                            type: 'storyStepNode',
+                            position: { x: 300 + xOffset, y: 180 + (idx + 2 + bsIdx) * 140 },
+                            data: {
+                                step: bStep, isCurrent: false, isPast: false,
+                                isSelected: false,
+                                eventTitle: bEventDef?.title || null,
+                                eventExists: !!bEventDef,
+                                choiceCount: bEventDef ? (bEventDef.steps || []).filter(s => s.type === 'choice').length : 0,
+                                onHoverEvent: onHoverEvent,
+                                isBranch: true, branchColor: color,
+                            },
+                            draggable: true,
+                        });
+
+                        // Edge from branch label to first branch step, or between branch steps
+                        const prevId = bsIdx === 0 ? branchNodeId : `${branchNodeId}_s${bsIdx - 1}`;
+                        initialEdges.push({
+                            id: `e-${prevId}-${bStepId}`,
+                            source: prevId,
+                            target: bStepId,
+                            label: bsIdx === 0 ? `+${bStep.delayWeeks || 0}w` : `+${bStep.delayWeeks || 0}w`,
+                            labelStyle: { fill: color, fontSize: 9 },
+                            labelBgStyle: { fill: '#111', fillOpacity: 0.8 },
+                            style: { stroke: color, strokeWidth: 2 },
+                            markerEnd: { type: MarkerType.ArrowClosed, color },
+                        });
+                    });
+                });
+            }
+
+            // Regular linear edges between main steps (only if next step exists and current step doesn't branch)
+            if (!hasBranch && idx < storyline.steps.length - 1) {
                 const nextStep = storyline.steps[idx + 1];
                 initialEdges.push({
                     id: `e${idx}-${idx + 1}`,
@@ -766,6 +875,19 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
                     labelStyle: { fill: '#aaa', fontSize: 10 },
                     labelBgStyle: { fill: '#111', color: '#111', fillOpacity: 0.8 },
                     style: { stroke: '#888', strokeWidth: 2 },
+                    markerEnd: { type: MarkerType.ArrowClosed, color: '#888' },
+                });
+            } else if (hasBranch && idx < storyline.steps.length - 1) {
+                // If branching step also has subsequent linear steps, connect them
+                const nextStep = storyline.steps[idx + 1];
+                initialEdges.push({
+                    id: `e${idx}-${idx + 1}`,
+                    source: String(idx),
+                    target: String(idx + 1),
+                    label: `+${nextStep.delayWeeks || 0}w (Main)`,
+                    labelStyle: { fill: '#aaa', fontSize: 10 },
+                    labelBgStyle: { fill: '#111', fillOpacity: 0.8 },
+                    style: { stroke: '#888', strokeWidth: 2, strokeDasharray: '4 4' },
                     markerEnd: { type: MarkerType.ArrowClosed, color: '#888' },
                 });
             }
