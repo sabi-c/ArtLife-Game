@@ -18,6 +18,7 @@ import HaggleEditor from './cms/HaggleEditor.jsx';
 import MarketSimDashboard from './cms/MarketSimDashboard.jsx';
 import ArtTerminal from './cms/ArtTerminal.jsx';
 import ActivityLogViewer from './cms/ActivityLogViewer.jsx';
+import DataHub from './cms/DataHub.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board', dirtyDomain: 'kanban' },
@@ -31,7 +32,7 @@ const TABS = [
     { id: 'terminal', icon: '📡', label: 'Live Terminal' },
     { id: 'venues', icon: '🏢', label: 'Venues / Map', dirtyDomain: 'maps' },
     { id: 'actlog', icon: '📋', label: 'Activity Log' },
-    { id: 'ingest', icon: '🤖', label: 'AI Ingestion Port' },
+    { id: 'ingest', icon: '📦', label: 'Data Hub' },
 ];
 
 export default function MasterCMS({ onClose }) {
@@ -170,7 +171,7 @@ export default function MasterCMS({ onClose }) {
             case 'terminal': return <ArtTerminal />;
             case 'actlog': return <ActivityLogViewer />;
             case 'venues': return <VenueEditor />;
-            case 'ingest': return <DataIngestion />;
+            case 'ingest': return <DataHub />;
             default: return null;
         }
     };

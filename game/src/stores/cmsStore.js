@@ -55,6 +55,10 @@ export const useCmsStore = create(
             changeLog: [],    // Array of { timestamp, domain, action, details }
             lastSaveTime: null,
 
+            // ── Data Presets ──
+            presets: {},           // { [name]: { bundle, savedAt, summary } }
+            activePreset: null,    // Name of currently loaded preset
+
             // ── Auto-save Timer ID ──
             _autoSaveTimer: null,
 
@@ -428,6 +432,91 @@ export const useCmsStore = create(
                 state.lastSaveTime = null;
             }),
 
+            // ═══════════════════════════════════════════════════════════
+            //  DATA PRESETS
+            // ═══════════════════════════════════════════════════════════
+
+            /** Save current live data as a named preset */
+            saveAsPreset: (name) => {
+                try {
+                    const bundle = {
+                        _meta: { savedAt: new Date().toISOString(), version: '1.2.0', game: 'ArtLife' },
+                        events: EventRegistry.jsonEvents || [],
+                        storylines: EventRegistry.jsonStorylines || [],
+                        npcs: useNPCStore.getState().contacts || [],
+                        artworks: get().snapshots.artworks || null,
+                        artists: get().snapshots.artists || (MarketManager.artists || null),
+                        maps: get().snapshots.maps || null,
+                        timelineOverrides: get().snapshots.timelineOverrides || null,
+                        haggle_config: get().snapshots.haggle_config || null,
+                    };
+                    const summary = {
+                        events: (bundle.events || []).length,
+                        storylines: (bundle.storylines || []).length,
+                        npcs: (bundle.npcs || []).length,
+                        artworks: (bundle.artworks || []).length,
+                        artists: (bundle.artists || []).length,
+                    };
+                    set((state) => {
+                        state.presets[name] = { bundle: JSON.parse(JSON.stringify(bundle)), savedAt: new Date().toISOString(), summary };
+                        state.activePreset = name;
+                        state.changeLog.push({ timestamp: Date.now(), domain: 'presets', action: 'save', details: `Saved preset: "${name}"` });
+                    });
+                    console.log(`[CmsStore] 💾 Preset saved: "${name}"`);
+                    return true;
+                } catch (err) {
+                    console.error('[CmsStore] Preset save failed:', err);
+                    return false;
+                }
+            },
+
+            /** Load a named preset into the live game state */
+            loadPreset: (name) => {
+                const preset = get().presets[name];
+                if (!preset?.bundle) return false;
+                const ok = get().importBundle(preset.bundle);
+                if (ok) {
+                    set((state) => {
+                        state.activePreset = name;
+                        state.changeLog.push({ timestamp: Date.now(), domain: 'presets', action: 'load', details: `Loaded preset: "${name}"` });
+                    });
+                    console.log(`[CmsStore] 📥 Preset loaded: "${name}"`);
+                }
+                return ok;
+            },
+
+            /** Delete a named preset */
+            deletePreset: (name) => {
+                set((state) => {
+                    delete state.presets[name];
+                    if (state.activePreset === name) state.activePreset = null;
+                    state.changeLog.push({ timestamp: Date.now(), domain: 'presets', action: 'delete', details: `Deleted preset: "${name}"` });
+                });
+            },
+
+            /** List all presets with metadata */
+            listPresets: () => {
+                const presets = get().presets || {};
+                return Object.entries(presets).map(([name, data]) => ({
+                    name,
+                    savedAt: data.savedAt,
+                    summary: data.summary || {},
+                }));
+            },
+
+            /** Get live data counts from all registries */
+            getDataSummary: () => {
+                try {
+                    return {
+                        events: (EventRegistry.jsonEvents || []).length,
+                        storylines: (EventRegistry.jsonStorylines || []).length,
+                        npcs: (useNPCStore.getState().contacts || []).length,
+                        artists: (MarketManager.artists || []).length,
+                        artworks: (get().snapshots.artworks || []).length,
+                    };
+                } catch { return { events: 0, storylines: 0, npcs: 0, artists: 0, artworks: 0 }; }
+            },
+
         })),
         {
             name: 'artlife-cms-store',
@@ -436,6 +525,8 @@ export const useCmsStore = create(
                 snapshots: state.snapshots,
                 changeLog: state.changeLog,
                 lastSaveTime: state.lastSaveTime,
+                presets: state.presets,
+                activePreset: state.activePreset,
             }),
         }
     )
