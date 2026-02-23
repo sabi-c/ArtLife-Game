@@ -4,9 +4,10 @@
  * 8 tabs: Ticker, Charts, Order Book, Collectors, Trade Feed, Strategies, Alerts, Events
  * All charts via inline SVG — no external dependencies.
  */
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { MarketSimulator } from '../../managers/MarketSimulator.js';
 import { MarketManager } from '../../managers/MarketManager.js';
+import { ARTWORKS } from '../../data/artworks.js';
 
 // ══════════════════════════════════════════════
 // STYLES
@@ -685,14 +686,148 @@ export default function MarketSimDashboard() {
     const [notification, setNotification] = useState(null);
     const [activeTab, setActiveTab] = useState('ticker');
 
+    // ── Animated Playback State Machine ──
+    // States: 'idle' | 'running' | 'paused' | 'complete'
+    const [playbackState, setPlaybackState] = useState('idle');
+    const [playbackWeek, setPlaybackWeek] = useState(0);
+    const [playbackSpeed, setPlaybackSpeed] = useState(400); // ms per week
+    const [playbackCycle, setPlaybackCycle] = useState('flat');
+    const playbackRef = useRef(null); // interval ID
+    const accumulatedRef = useRef({
+        priceHistory: [], marketEvents: [], cycleHistory: [],
+        totalTrades: 0, totalVolume: 0,
+    });
+
     const showNotif = useCallback((msg) => {
         setNotification(msg);
         setTimeout(() => setNotification(null), 4000);
     }, []);
 
-    const runSim = useCallback(() => {
+    // ── Step one simulated week ──
+    const stepOneWeek = useCallback((week) => {
+        try {
+            // Evolve market cycle
+            let cycle = playbackCycle;
+            const roll = Math.random();
+            if (cycle === 'flat') {
+                if (roll < 0.08) cycle = 'bull';
+                else if (roll < 0.14) cycle = 'bear';
+            } else if (cycle === 'bull') {
+                if (roll < 0.12) cycle = 'flat';
+                else if (roll < 0.04) cycle = 'bear';
+            } else if (cycle === 'bear') {
+                if (roll < 0.10) cycle = 'flat';
+            }
+            setPlaybackCycle(cycle);
+
+            // Fire market event (~15% chance)
+            let evt = null;
+            try {
+                evt = MarketSimulator._generateMarketEvent?.(week, cycle) || null;
+                if (evt) MarketSimulator._applyMarketEvent?.(evt);
+            } catch { /* optional */ }
+
+            // Run one week
+            const report = MarketSimulator.simulate(week, cycle);
+
+            // Snapshot prices
+            let weekPrices = null;
+            try {
+                const artistPrices = {};
+                for (const artist of (MarketManager.artists || [])) {
+                    const works = (ARTWORKS || []).filter(aw => aw.artistId === artist.id);
+                    const prices = works.map(aw => {
+                        try { return MarketSimulator._getPrice?.(aw) || artist.basePriceMin || 10000; }
+                        catch { return artist.basePriceMin || 10000; }
+                    });
+                    const avgPrice = prices.length > 0 ? Math.round(prices.reduce((s, p) => s + p, 0) / prices.length) : artist.basePriceMin || 10000;
+                    artistPrices[artist.id] = { name: artist.name, tier: artist.tier, avgPrice, heat: Math.round(artist.heat * 10) / 10, index: artist.artistIndex || 500 };
+                }
+                const compositeIndex = MarketManager.getCompositeIndex ? MarketManager.getCompositeIndex() : 1000;
+                weekPrices = { week, cycle, compositeIndex, artists: artistPrices, volume: report.totalVolume, trades: report.tradesExecuted };
+            } catch { /* non-critical */ }
+
+            // Accumulate results
+            const acc = accumulatedRef.current;
+            if (weekPrices) acc.priceHistory.push(weekPrices);
+            if (evt) acc.marketEvents.push(evt);
+            acc.cycleHistory.push(cycle);
+            acc.totalTrades += report.tradesExecuted;
+            acc.totalVolume += report.totalVolume;
+
+            // Update simResult so tabs render incrementally
+            setSimResult({
+                weeks: week,
+                totalTrades: acc.totalTrades,
+                totalVolume: acc.totalVolume,
+                npcState: MarketSimulator.getNPCState(),
+                tradeLog: MarketSimulator.getTradeLog(),
+                priceHistory: [...acc.priceHistory],
+                marketEvents: [...acc.marketEvents],
+                cycleHistory: [...acc.cycleHistory],
+            });
+
+            return { report, evt };
+        } catch (e) {
+            console.error('[SimPlayback] Week error:', e);
+            return null;
+        }
+    }, [playbackCycle]);
+
+    // ── Start playback ──
+    const startPlayback = useCallback(() => {
+        // Reset state
+        MarketSimulator._npcState = null;
+        MarketSimulator.tradeLog = [];
+        accumulatedRef.current = { priceHistory: [], marketEvents: [], cycleHistory: [], totalTrades: 0, totalVolume: 0 };
+        setPlaybackWeek(0);
+        setPlaybackCycle('flat');
+        setPlaybackState('running');
+        setSimResult(null);
+        showNotif(`▶ Starting ${weekCount}-week simulation...`);
+    }, [weekCount, showNotif]);
+
+    // ── Playback interval engine ──
+    useEffect(() => {
+        if (playbackState !== 'running') {
+            if (playbackRef.current) { clearInterval(playbackRef.current); playbackRef.current = null; }
+            return;
+        }
+
+        playbackRef.current = setInterval(() => {
+            setPlaybackWeek(prev => {
+                const nextWeek = prev + 1;
+                if (nextWeek > weekCount) {
+                    clearInterval(playbackRef.current);
+                    playbackRef.current = null;
+                    setPlaybackState('complete');
+                    const acc = accumulatedRef.current;
+                    showNotif(`✅ ${weekCount}wk sim — ${acc.totalTrades} trades, $${acc.totalVolume.toLocaleString()} vol, ${acc.marketEvents.length} events`);
+                    return prev;
+                }
+                stepOneWeek(nextWeek);
+                return nextWeek;
+            });
+        }, playbackSpeed);
+
+        return () => { if (playbackRef.current) { clearInterval(playbackRef.current); playbackRef.current = null; } };
+    }, [playbackState, playbackSpeed, weekCount, stepOneWeek, showNotif]);
+
+    // ── Pause / Resume / Stop ──
+    const pausePlayback = useCallback(() => setPlaybackState('paused'), []);
+    const resumePlayback = useCallback(() => setPlaybackState('running'), []);
+    const stopPlayback = useCallback(() => {
+        setPlaybackState('complete');
+        const acc = accumulatedRef.current;
+        showNotif(`⏹ Stopped at W${playbackWeek} — ${acc.totalTrades} trades`);
+    }, [playbackWeek, showNotif]);
+
+    // Backwards-compat: instant run (used as fallback)
+    const runSimInstant = useCallback(() => {
         const result = MarketSimulator.simulateMultipleWeeks(weekCount);
         setSimResult(result);
+        setPlaybackState('complete');
+        setPlaybackWeek(weekCount);
         showNotif(`✅ ${weekCount}wk sim — ${result.totalTrades} trades, $${result.totalVolume.toLocaleString()} vol, ${result.marketEvents?.length || 0} events`);
     }, [weekCount, showNotif]);
 
@@ -756,20 +891,92 @@ export default function MarketSimDashboard() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <select value={weekCount} onChange={e => setWeekCount(Number(e.target.value))}
+                        disabled={playbackState === 'running'}
                         style={{
                             background: '#0a0a12', border: '1px solid #222', color: '#888',
                             padding: '3px 8px', fontSize: 9, borderRadius: 3, fontFamily: mono,
                         }}>
                         {[5, 10, 20, 50, 100].map(n => <option key={n} value={n}>{n}wk</option>)}
                     </select>
-                    <button onClick={runSim} style={{
-                        ...miniBtn, borderColor: '#4ade80', color: '#4ade80',
-                        fontWeight: 'bold', padding: '4px 14px',
-                    }}>
-                        ▶ RUN SIMULATION
-                    </button>
+
+                    {/* Speed selector */}
+                    <select value={playbackSpeed} onChange={e => setPlaybackSpeed(Number(e.target.value))}
+                        style={{
+                            background: '#0a0a12', border: '1px solid #222', color: '#666',
+                            padding: '3px 6px', fontSize: 8, borderRadius: 3, fontFamily: mono,
+                        }}>
+                        <option value={400}>1×</option>
+                        <option value={200}>2×</option>
+                        <option value={80}>5×</option>
+                        <option value={30}>10×</option>
+                    </select>
+
+                    {/* Playback controls */}
+                    {playbackState === 'idle' || playbackState === 'complete' ? (
+                        <button onClick={startPlayback} style={{
+                            ...miniBtn, borderColor: '#4ade80', color: '#4ade80',
+                            fontWeight: 'bold', padding: '4px 14px',
+                        }}>
+                            ▶ RUN
+                        </button>
+                    ) : playbackState === 'running' ? (
+                        <>
+                            <button onClick={pausePlayback} style={{
+                                ...miniBtn, borderColor: '#fbbf24', color: '#fbbf24', padding: '4px 10px',
+                            }}>⏸</button>
+                            <button onClick={stopPlayback} style={{
+                                ...miniBtn, borderColor: '#f87171', color: '#f87171', padding: '4px 10px',
+                            }}>⏹</button>
+                        </>
+                    ) : playbackState === 'paused' ? (
+                        <>
+                            <button onClick={resumePlayback} style={{
+                                ...miniBtn, borderColor: '#4ade80', color: '#4ade80', padding: '4px 10px',
+                            }}>▶</button>
+                            <button onClick={stopPlayback} style={{
+                                ...miniBtn, borderColor: '#f87171', color: '#f87171', padding: '4px 10px',
+                            }}>⏹</button>
+                        </>
+                    ) : null}
+
+                    {/* Instant run (hold alt) */}
+                    <button onClick={runSimInstant} title="Instant run (no animation)" style={{
+                        ...miniBtn, color: '#333', fontSize: 7, padding: '4px 6px',
+                    }}>⚡</button>
                 </div>
             </div>
+
+            {/* Progress Bar — during playback */}
+            {(playbackState === 'running' || playbackState === 'paused') && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '4px 12px', background: '#060610',
+                    borderBottom: '1px solid #1a1a2e',
+                }}>
+                    <span style={{ fontSize: 8, color: playbackState === 'paused' ? '#fbbf24' : '#4ade80', fontWeight: 'bold' }}>
+                        {playbackState === 'paused' ? '⏸ PAUSED' : '▶ SIMULATING'}
+                    </span>
+                    <div style={{ flex: 1, height: 6, background: '#1a1a2e', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{
+                            height: '100%', borderRadius: 3,
+                            width: `${(playbackWeek / weekCount) * 100}%`,
+                            background: playbackState === 'paused'
+                                ? 'linear-gradient(90deg, #fbbf24, #fb923c)'
+                                : 'linear-gradient(90deg, #4ade80, #22d3ee)',
+                            transition: 'width 200ms ease',
+                        }} />
+                    </div>
+                    <span style={{ fontSize: 9, color: '#ddd', fontWeight: 'bold' }}>
+                        W{playbackWeek}/{weekCount}
+                    </span>
+                    <span style={{ fontSize: 7, color: cycleColors[playbackCycle] || '#666' }}>
+                        {cycleIcons[playbackCycle]} {playbackCycle.toUpperCase()}
+                    </span>
+                    <span style={{ fontSize: 7, color: '#333' }}>
+                        {accumulatedRef.current.totalTrades} trades · ${accumulatedRef.current.totalVolume.toLocaleString()} vol
+                    </span>
+                </div>
+            )}
 
             {/* Summary Stats */}
             {simResult && (
