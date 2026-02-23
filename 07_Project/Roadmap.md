@@ -15,6 +15,23 @@
 **CI:** Build & Validate ✅ | Playwright Tests informational (continue-on-error)
 **Phase 3:** Complete. Phase 4 active.
 
+### Email Haggle Game-Wide Integration (2026-02-23 Session 29)
+
+**Email-based negotiation is now the default for ALL haggle battles:**
+- Added `EMAIL_HAGGLE_START` event to GameEventBus for global email haggle launching
+- App.jsx renders `EmailOverlay` on top of all views when triggered from any context
+- DialogueScene now launches email negotiation instead of Phaser HaggleScene
+- AdminDashboard SCENES tab shows both email haggle (primary) and legacy Phaser battle
+
+**Admin EMAIL Test Tab:**
+- New EMAIL tab in AdminDashboard with 5 test scenarios
+- Haggle mode: Patron ($285K Basquiat), Mega-Dealer ($42K Haring), Sell ($1.2M Koons)
+- Static mode: Deal offer email, Auction result notification
+- Inline preview: EmailOverlay renders inside admin panel for rapid testing
+- Link to Email Design Guide (F3) for component inspection
+
+**Files changed:** GameEventBus.js (+1 event), App.jsx (+EmailOverlay import, global state, event listener, render), AdminDashboard.jsx (+EMAIL tab, email haggle launcher, inline preview), DialogueScene.js (email haggle instead of Phaser HaggleScene)
+
 ### Unified Email Overlay System (2026-02-23 Session 27)
 
 **Merged two separate email overlays into one polished, professional system:**
