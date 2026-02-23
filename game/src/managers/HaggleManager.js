@@ -526,6 +526,49 @@ class _HaggleManager {
 
             // Reputation boost for successful deals
             GameState.state.reputation = Math.min(100, GameState.state.reputation + 1);
+
+            // ── Sync NPC collection to npcStore ──
+            try {
+                const npcId = h.npc?.id;
+                if (npcId) {
+                    const store = useNPCStore.getState();
+                    const contact = store.getContact(npcId);
+                    if (contact) {
+                        const owned = [...(contact.collection?.owned || [])];
+                        if (h.mode === 'buy') {
+                            // Player bought → remove from NPC's collection
+                            const idx = owned.indexOf(h.work.id);
+                            if (idx >= 0) owned.splice(idx, 1);
+                        } else {
+                            // Player sold → add to NPC's collection
+                            owned.push(h.work.id);
+                        }
+                        store.syncMarketData(npcId, {
+                            ...contact,
+                            cash: (contact.wealth?.liquidCash || 0) + (h.mode === 'buy' ? h.finalPrice : -h.finalPrice),
+                            owned,
+                        });
+                    }
+                }
+            } catch { /* npcStore may not be ready */ }
+
+            // ── Update global artwork trade history ──
+            try {
+                const artworkRef = ARTWORK_MAP[h.work.id];
+                if (artworkRef) {
+                    artworkRef.owner = h.mode === 'buy' ? 'player' : (h.npc?.id || 'dealer');
+                    artworkRef.lastTradePrice = h.finalPrice;
+                    artworkRef.lastTradeWeek = GameState.state.week;
+                    if (!artworkRef.tradeHistory) artworkRef.tradeHistory = [];
+                    artworkRef.tradeHistory.push({
+                        buyer: h.mode === 'buy' ? 'player' : (h.npc?.id || 'dealer'),
+                        seller: h.mode === 'buy' ? (h.npc?.id || 'dealer') : 'player',
+                        price: h.finalPrice,
+                        week: GameState.state.week,
+                        type: 'haggle',
+                    });
+                }
+            } catch { /* non-critical */ }
         } else {
             // Walk away — minor heat from wasted time
             GameState.addNews(`❌ Haggle over "${h.work.title}" fell through.`);

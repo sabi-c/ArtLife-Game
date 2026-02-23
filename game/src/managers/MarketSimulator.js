@@ -43,6 +43,7 @@
 
 import { CONTACTS } from '../data/contacts.js';
 import { ARTWORKS } from '../data/artworks.js';
+import { ARTWORK_MAP } from '../data/artworks.js';
 import { MarketManager } from './MarketManager.js';
 import { GameState } from './GameState.js';
 import { ActivityLogger } from './ActivityLogger.js';
@@ -304,6 +305,11 @@ export class MarketSimulator {
 
         // Generate open orders for Bloomberg order book
         MarketSimulator.generateOpenOrders(week, marketCycle);
+
+        // ── Persist NPC state to Zustand store ──
+        try {
+            useNPCStore.getState().syncAllMarketData(MarketSimulator._npcState);
+        } catch { /* store may not be initialized */ }
 
         return MarketSimulator.weeklyReport;
     }
@@ -615,6 +621,24 @@ export class MarketSimulator {
             const title = trade.artwork?.title || trade.artworkId;
             const priceStr = `$${trade.price.toLocaleString()}`;
             GameState.addNews(`[Market] ${buyerName} acquired "${title}" from ${sellerName} for ${priceStr}`);
+        } catch { /* non-critical */ }
+
+        // ── Update global artwork record with trade history ──
+        try {
+            const work = ARTWORK_MAP[trade.artworkId];
+            if (work) {
+                work.owner = trade.buyerId;
+                work.lastTradePrice = trade.price;
+                work.lastTradeWeek = week;
+                if (!work.tradeHistory) work.tradeHistory = [];
+                work.tradeHistory.push({
+                    buyer: trade.buyerId,
+                    seller: trade.sellerId,
+                    price: trade.price,
+                    week,
+                    discount: trade.discount,
+                });
+            }
         } catch { /* non-critical */ }
     }
 

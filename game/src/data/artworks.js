@@ -692,7 +692,11 @@ export const ARTWORKS = [
 ];
 
 // Ensure every artwork has basePrice (needed by MarketManager for dynamic pricing)
-ARTWORKS.forEach(w => { if (!w.basePrice) w.basePrice = w.askingPrice; });
+ARTWORKS.forEach(w => {
+    if (!w.basePrice) w.basePrice = w.askingPrice;
+    if (!w.owner) w.owner = 'gallery';         // default: on gallery market
+    if (!w.tradeHistory) w.tradeHistory = [];   // runtime: filled by MarketSimulator._settle
+});
 
 // Convenience lookup by id
 export const ARTWORK_MAP = Object.fromEntries(ARTWORKS.map(a => [a.id, a]));
