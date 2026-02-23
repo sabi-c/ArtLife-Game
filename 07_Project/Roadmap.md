@@ -14,6 +14,18 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
 
+### 6 Art-World Gallery Styles (2026-02-22 Session 14)
+
+**Sprint 1: 3 New Gallery Styles (Artnet + Sotheby's + Deitch)**
+- **Artnet Auction Results** — Tabular data-dense layout: white bg, red `#cc0000` accent, sans-serif, sortable columns (lot/artist/title/price), estimate ranges, ROI badges, sale summary strip. ~120 lines JSX + ~280 lines CSS.
+- **Sotheby's Catalogue** — Luxury lot-by-lot view: off-white `#fafaf7`, blue `#003da5` lot numbers (32px, weight 300), Georgia serif body, "PROPERTY FROM THE COLLECTION OF" headers, estimate ranges, condition ratings, catalogue notes. ~200 lines JSX + ~340 lines CSS.
+- **Deitch Projects** — Underground gallery masonry: industrial gray `#e8e8e8`, Impact 64px headers, fluorescent `--dp-accent` CSS variable (stable per session), hidden prices (click "INQUIRE" to reveal), rotated corner stickers, staggered card entrance animation. ~140 lines JSX + ~350 lines CSS.
+- **Mobile responsive** — All 3 styles have 768px + 380px breakpoints: hidden columns on Artnet table, lot nav horizontal scroll for Sotheby's, 2-column Deitch grid on small screens.
+- **Print styles** — `@media print` for all 3: Artnet (clean table), Sotheby's (lot-per-page with page-break), Deitch (cards without hover effects).
+- **Panel visibility** — All 3 styles respect `showPanel()` gating via SettingsManager `bloombergPanels` checklist.
+- **Style-specific headers** — Each style shows its own logo text + cash/AP in the header bar.
+- **6 total styles** — Gallery Dashboard → Gagosian Tearsheet → Artnet → Sotheby's → Deitch → Bloomberg Dark.
+
 ### Gallery Tearsheet UI + Style Toggle (2026-02-22 Session 13)
 
 **Sprint 1: Gallery Mode Reskin**
