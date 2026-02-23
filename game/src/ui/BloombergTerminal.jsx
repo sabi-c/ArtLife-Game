@@ -973,7 +973,7 @@ function TransactionHistoryPanel({ intel }) {
 //
 // Print-ready: @media print rules ensure page breaks between works.
 // ══════════════════════════════════════════════════════════════
-function TearsheetView({ intel, onSelectWork, showPanel }) {
+function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectTrade, onListWork }) {
     const s = GameState.state;
     const portfolio = s?.portfolio || [];
     const playerName = s?.playerName || 'THE DEALER';
@@ -1232,6 +1232,37 @@ function TearsheetView({ intel, onSelectWork, showPanel }) {
                     </React.Fragment>
                 );
             })}
+
+            {/* ── Additional panels — 2-col grid ── */}
+            <div className="ts-panels ts-panels-grid">
+                <div className="ts-panels-col">
+                    {showPanel('leaderboard') && feed && (
+                        <ArtistLeaderboard
+                            leaderboard={feed.leaderboard}
+                            liveSparklines={feed.liveSparklines}
+                            intel={intel}
+                            selectedArtist={selectedArtist}
+                            onSelect={onSelectArtist}
+                        />
+                    )}
+                    {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                    {showPanel('watchlist') && <Watchlist intel={intel} />}
+                </div>
+                <div className="ts-panels-col">
+                    {showPanel('pricechart') && feed && (
+                        <PriceChart
+                            artistId={selectedArtist}
+                            priceHistory={feed.priceHistory}
+                            liveSparklines={feed.liveSparklines}
+                            intel={intel}
+                        />
+                    )}
+                    {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                    {showPanel('portfolio') && (
+                        <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                    )}
+                </div>
+            </div>
 
             {/* Final page — gallery locations */}
             <div className="ts-page ts-back-page">
@@ -2166,7 +2197,9 @@ export default function BloombergTerminal({ onClose }) {
 
             {/* Tearsheet mode — Gagosian/Frieze exact-replica paginated view */}
             {isTearsheet && (
-                <TearsheetView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel} />
+                <TearsheetView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
+                    feed={feed} selectedArtist={selectedArtist} onSelectArtist={setSelectedArtist}
+                    onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
             )}
 
             {/* Artnet mode — tabular auction results */}

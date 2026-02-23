@@ -2828,8 +2828,63 @@
     line-height: 1.8;
 }
 
+/* ── Tearsheet additional panels — Gagosian serif styling ── */
+.ts-panels {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 40px;
+}
+
+.ts-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+    align-items: start;
+}
+
+.ts-panels-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.bb-tearsheet-mode .bb-panel {
+    background: #ffffff;
+    border: none;
+    border-top: 1px solid #e0dcd6;
+    padding-top: 24px;
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-panel-header {
+    color: #999;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    border-bottom: none;
+    padding-bottom: 12px;
+}
+
+.bb-tearsheet-mode .bb-lb-row { border-bottom-color: #f0ede8; }
+.bb-tearsheet-mode .bb-lb-row:hover { background: #faf8f5; }
+.bb-tearsheet-mode .bb-lb-name { color: #1a1a1a; font-family: Georgia, serif; }
+.bb-tearsheet-mode .bb-lb-heat-fill { background: #c9a84c; }
+.bb-tearsheet-mode .bb-nw-big { color: #1a1a1a; font-weight: 300; font-size: 36px; font-family: Georgia, serif; }
+.bb-tearsheet-mode .bb-nw-stat-label { color: #999; }
+.bb-tearsheet-mode .bb-nw-stat-value { color: #1a1a1a; }
+.bb-tearsheet-mode .bb-ps-value { color: #1a1a1a; }
+.bb-tearsheet-mode .bb-ps-label { color: #999; }
+.bb-tearsheet-mode .bb-trade-row { border-bottom-color: #f0ede8; }
+.bb-tearsheet-mode .bb-trade-price { color: #1a1a1a; }
+.bb-tearsheet-mode .bb-port-list-btn { background: #1a1a1a; color: #fff; border: none; }
+.bb-tearsheet-mode .bb-port-list-btn:hover { background: #333; }
+
 /* ── Tearsheet mobile ── */
 @media (max-width: 768px) {
+    .ts-panels { padding: 24px 20px; }
+    .ts-panels-grid { grid-template-columns: 1fr; }
     .ts-page {
         padding: 32px 24px;
         min-height: 80vh;
