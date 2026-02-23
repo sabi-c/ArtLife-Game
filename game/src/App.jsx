@@ -21,6 +21,7 @@ import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import BloombergTerminal from './ui/BloombergTerminal.jsx';
 import SalesGrid from './ui/SalesGrid.jsx';
 import EmailDesignGuide from './ui/email/EmailDesignGuide.jsx';
+import GmailDesignGuide from './ui/email/GmailDesignGuide.jsx';
 import EmailOverlay from './ui/email/EmailOverlay.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import CharacterCreator from './ui/CharacterCreator.jsx';
@@ -419,6 +420,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.DESIGN_GUIDE && (
                 <EmailDesignGuide onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.GMAIL_GUIDE && (
+                <GmailDesignGuide onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {/* Global Email Haggle — rendered above all overlays when triggered from any context */}

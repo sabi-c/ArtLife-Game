@@ -768,6 +768,11 @@ export default function AdminDashboard({ onClose }) {
                                         [ Email Design Guide (F3) ]
                                         <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Component showcase with all email UI pieces</div>
                                     </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#1a73e8', color: '#1a73e8' }} onClick={() => triggerOverlay(OVERLAY.GMAIL_GUIDE)}>
+                                        [ Gmail Design Guide ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Full Gmail email client mockup — inbox, threads, compose</div>
+                                    </button>
                                 </div>
                             </div>
                         )}
