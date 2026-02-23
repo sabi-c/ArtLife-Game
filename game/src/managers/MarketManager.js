@@ -5,6 +5,7 @@ import { generateId } from '../utils/id.js';
 import { useMarketStore } from '../stores/marketStore.js';
 import { MarketHistoryEngine } from './MarketHistoryEngine.js';
 import { MarketSimulator } from './MarketSimulator.js';
+import { MarketEventBus } from './MarketEventBus.js';
 
 /**
  * MarketManager.js — Pricing Engine & Artist Index Calculator
@@ -141,6 +142,9 @@ export class MarketManager {
         if (Math.random() < 0.15) {
             MarketManager.addNewWorkToMarket();
         }
+
+        // Tick event bus (decay active effects)
+        MarketEventBus.tick();
     }
 
     static calculatePrice(work, includeJitter = false) {
@@ -156,7 +160,15 @@ export class MarketManager {
         // ── Hedonic Pricing Model (ArtNet-inspired attribute scoring) ──
         const hedonicMultiplier = MarketManager._hedonicScore(work);
 
-        let targetPrice = work.basePrice * heatMultiplier * marketMultiplier * eraModifier * flipperPenalty * hedonicMultiplier;
+        // ── Event-Reactive Pricing (MarketEventBus active effects) ──
+        const eventModifier = MarketEventBus.getPriceModifier(work.artistId, artist.tier);
+        const eventHeat = MarketEventBus.getHeatModifier(work.artistId);
+        if (eventHeat) {
+            // Temporarily boost/dip artist heat for this calculation
+            artist.heat = Math.max(0, Math.min(100, artist.heat + eventHeat * 0.01));
+        }
+
+        let targetPrice = work.basePrice * heatMultiplier * marketMultiplier * eraModifier * flipperPenalty * hedonicMultiplier * eventModifier;
 
         // ── Real-World Data Drift Integration ──
         const rwData = MarketManager.realWorldData?.[artist.id];

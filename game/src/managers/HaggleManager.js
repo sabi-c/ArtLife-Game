@@ -42,6 +42,7 @@ import { ExpressionEngine } from '../engine/ExpressionEngine.js';
 import { GameState } from './GameState.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { ARTWORK_MAP } from '../data/artworks.js';
+import { MarketEventBus, EVENT_IMPACTS } from './MarketEventBus.js';
 
 class _HaggleManager {
     constructor() {
@@ -101,6 +102,34 @@ class _HaggleManager {
         const npcWalkaway = profile.walkawayThreshold ?? 0.70;
         const npcTriggers = profile.emotionalTriggers || [];
 
+        // ── Relationship modifiers (Engine 2 → Engine 3 pipeline) ──
+        let relationshipPriceModifier = 1.0;
+        let relationshipData = null;
+        try {
+            const store = useNPCStore.getState();
+            relationshipData = store.getRelationship(resolvedNpc?.id);
+            if (relationshipData) {
+                // Grudge → +25% markup (they don't want to deal with you)
+                if (relationshipData.holds_grudge) {
+                    relationshipPriceModifier *= 1 + 0.25 * relationshipData.grudge_severity;
+                    npcPatience = Math.max(1, npcPatience - 2); // Less patient
+                }
+                // Owes favor → 15% discount
+                if (relationshipData.owes_favor) {
+                    relationshipPriceModifier *= 0.85;
+                    npcPatience += 1;
+                }
+                // Trust → flexibility range (0.0-0.2 extra flexibility)
+                npcFlexibility += relationshipData.trust * 0.15;
+                // Respect → bluff reduction (they don't bluff people they respect)
+                // (handled in executeTactic)
+                // Low trust → reduced patience
+                if (relationshipData.trust < 0.3) {
+                    npcPatience = Math.max(1, npcPatience - 1);
+                }
+            }
+        } catch { /* npcStore may not be ready */ }
+
         // ── Taste bonus: preferred genre/tier gives extra patience ──
         if (taste && work) {
             if (taste.preferredTiers?.includes(work.tier)) npcPatience += 1;
@@ -136,6 +165,9 @@ class _HaggleManager {
             const flexAdjust = 1 + ((1 - npcFlexibility) * 0.1);
             adjustedAsk = Math.round(askingPrice * dealerType.greedFactor * flexAdjust);
         }
+
+        // Apply relationship price modifier
+        adjustedAsk = Math.round(adjustedAsk * relationshipPriceModifier);
 
         // Player's opening offer
         const opening = playerOffer || Math.round(adjustedAsk * 0.7);
@@ -584,6 +616,53 @@ class _HaggleManager {
         };
 
         this.active = null;
+
+        // ── Emit events to MarketEventBus + record in NPC memory ──
+        try {
+            const npcId = result.work?.npcId || h.npc?.id;
+            const week = GameState.state?.week || 0;
+            if (result.result === 'deal') {
+                const eventType = result.mode === 'buy' ? 'player_bought' : 'player_sold';
+                MarketEventBus.emit(eventType, {
+                    npcId, workId: result.work?.id, price: result.finalPrice, week,
+                });
+                // Record in NPC memory
+                if (npcId) {
+                    const impact = EVENT_IMPACTS[eventType] || {};
+                    useNPCStore.getState().recordInteraction(npcId, eventType, {
+                        ...impact, workId: result.work?.id, price: result.finalPrice,
+                    }, impact.significance, week);
+                }
+                // Check for flip (sold within 4 weeks of purchase)
+                if (result.mode === 'sell' && result.work?.purchaseWeek) {
+                    const holdTime = week - result.work.purchaseWeek;
+                    if (holdTime <= 4) {
+                        const profit = result.finalPrice - (result.work.purchasePrice || 0);
+                        MarketEventBus.emit('player_flipped', {
+                            npcId, workId: result.work?.id, profit, weeksHeld: holdTime, week,
+                        });
+                        if (npcId) {
+                            const flipImpact = EVENT_IMPACTS.player_flipped || {};
+                            useNPCStore.getState().recordInteraction(npcId, 'player_flipped', {
+                                ...flipImpact, profit, weeksHeld: holdTime,
+                            }, flipImpact.significance, week);
+                        }
+                    }
+                }
+            } else {
+                // Walkaway — check if player was lowballing
+                if (npcId && h.currentOffer < h.askingPrice * 0.6) {
+                    MarketEventBus.emit('player_lowballed', {
+                        npcId, amount: h.currentOffer, askingPrice: h.askingPrice, week,
+                    });
+                    const lowballImpact = EVENT_IMPACTS.player_lowballed || {};
+                    useNPCStore.getState().recordInteraction(npcId, 'player_lowballed', {
+                        ...lowballImpact, amount: h.currentOffer, askingPrice: h.askingPrice,
+                    }, lowballImpact.significance, week);
+                }
+            }
+        } catch { /* non-critical event emission */ }
+
         return result;
     }
 
