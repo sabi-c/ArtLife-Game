@@ -144,6 +144,45 @@ export default function KanbanBoard() {
                 Drag and drop content chunks to reorganize their structural flow within the game's architecture.
             </div>
 
+            {/* ── Data Health Stats ── */}
+            {loaded && (
+                <div style={{
+                    display: 'flex', gap: 8, padding: '10px 20px', background: '#0a0a12',
+                    borderBottom: '1px solid #222', flexWrap: 'wrap', alignItems: 'center',
+                }}>
+                    {(() => {
+                        const counts = {};
+                        entities.forEach(e => { counts[e.category] = (counts[e.category] || 0) + 1; });
+                        const cats = Object.keys(CATEGORY_META);
+                        const total = entities.length;
+                        const withDesc = entities.filter(e => e.data?.bio || e.data?.description || e.data?.text).length;
+                        return (
+                            <>
+                                <span style={{ fontSize: 9, color: '#c9a84c', fontWeight: 'bold', letterSpacing: 1, textTransform: 'uppercase', marginRight: 8 }}>
+                                    📊 DATA HEALTH
+                                </span>
+                                {cats.map(cat => {
+                                    const meta = CATEGORY_META[cat];
+                                    const count = counts[cat] || 0;
+                                    return (
+                                        <span key={cat} style={{
+                                            fontSize: 10, color: count > 0 ? meta.color : '#333',
+                                            background: '#111', padding: '2px 8px', borderRadius: 10,
+                                            border: `1px solid ${count > 0 ? meta.color + '40' : '#1a1a2e'}`,
+                                        }}>
+                                            {meta.icon} {count}
+                                        </span>
+                                    );
+                                })}
+                                <span style={{ fontSize: 9, color: '#555', marginLeft: 8 }}>
+                                    {total} total · {withDesc} with descriptions ({total > 0 ? Math.round((withDesc / total) * 100) : 0}%)
+                                </span>
+                            </>
+                        );
+                    })()}
+                </div>
+            )}
+
             <DragDropContext onDragEnd={onDragEnd}>
                 <div style={boardStyle}>
                     {Object.entries(columns).map(([colId, items]) => {

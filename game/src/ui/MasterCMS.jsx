@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { useCmsStore } from '../stores/cmsStore.js';
+import { EventRegistry } from '../managers/EventRegistry.js';
+import { useNPCStore } from '../stores/npcStore.js';
+import { useContentStore } from '../stores/contentStore.js';
 
 // Sub-components
 import StorylineEditor from './cms/StorylineEditor.jsx';
@@ -59,10 +62,42 @@ export default function MasterCMS({ onClose }) {
         [dirty]
     );
 
-    // Start auto-save on mount
+    // Start auto-save on mount + load content store for counts
     useEffect(() => {
         useCmsStore.getState().startAutoSave();
+        useContentStore.getState().load();
     }, []);
+
+    // ── Entity Counts for sidebar badges ──
+    const entityCounts = useMemo(() => {
+        const events = EventRegistry.jsonEvents || [];
+        const storylines = EventRegistry.jsonStorylines || [];
+        const npcs = useNPCStore.getState().contacts || [];
+        return {
+            board: null, // Project Board — no count
+            timeline: null,
+            storylines: storylines.length || null,
+            events: events.length || null,
+            npcs: npcs.length || null,
+            artworks: null, // computed lazily
+            haggle: null,
+            marketsim: null,
+            venues: null,
+            actlog: null,
+            ingest: null,
+        };
+    }, [activeTab]); // recompute when switching tabs (cheap)
+
+    // ── Global Search ──
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchResults = useMemo(() => {
+        if (!searchQuery || searchQuery.length < 2) return [];
+        const q = searchQuery.toLowerCase();
+        const entities = useContentStore.getState().entities || [];
+        return entities
+            .filter(e => (e.name || '').toLowerCase().includes(q) || (e.id || '').toLowerCase().includes(q))
+            .slice(0, 12);
+    }, [searchQuery]);
 
     // ESC to close
     useEffect(() => {
@@ -111,13 +146,22 @@ export default function MasterCMS({ onClose }) {
         if (isMobile) setSidebarOpen(false);
     }, [isMobile]);
 
+    // Cross-editor navigation — child editors can call this to switch tabs
+    const navigateTo = useCallback((tabId, entityId) => {
+        setActiveTab(tabId);
+        // Store selected entity ID for the target editor to pick up
+        if (entityId) {
+            window.__cmsNavigateTo = { tab: tabId, entityId, ts: Date.now() };
+        }
+    }, []);
+
     const renderTabContent = () => {
         switch (activeTab) {
             case 'board': return <KanbanBoard />;
             case 'timeline': return <TimelineCalendar />;
-            case 'storylines': return <StorylineEditor />;
-            case 'events': return <EventEditor />;
-            case 'npcs': return <NPCEditor />;
+            case 'storylines': return <StorylineEditor onNavigate={navigateTo} />;
+            case 'events': return <EventEditor onNavigate={navigateTo} />;
+            case 'npcs': return <NPCEditor onNavigate={navigateTo} />;
             case 'artworks': return <ArtworkEditor />;
             case 'haggle': return <HaggleEditor />;
             case 'marketsim': return <MarketSimDashboard />;
@@ -193,6 +237,50 @@ export default function MasterCMS({ onClose }) {
                         <span style={{ color: '#4caf50', fontSize: 12, fontWeight: 'bold' }}>
                             {saveFlash}
                         </span>
+                    )}
+                    {/* Global Search */}
+                    {!isMobile && (
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="🔍 Search all domains..."
+                                style={{
+                                    background: '#0a0a12', color: '#eaeaea', border: '1px solid #333',
+                                    padding: '5px 10px', fontFamily: 'inherit', fontSize: 11,
+                                    width: 200, borderRadius: 3, outline: 'none',
+                                }}
+                                onFocus={e => e.target.style.borderColor = '#c9a84c'}
+                                onBlur={e => { e.target.style.borderColor = '#333'; setTimeout(() => setSearchQuery(''), 200); }}
+                            />
+                            {searchResults.length > 0 && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', left: 0, right: 0,
+                                    background: '#111', border: '1px solid #333', borderRadius: 4,
+                                    zIndex: 1000, maxHeight: 300, overflow: 'auto', marginTop: 4,
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                                }}>
+                                    {searchResults.map(r => {
+                                        const tabMap = { npc: 'npcs', event: 'events', artist: 'artworks', artwork: 'artworks', venue: 'venues', calendar: 'timeline', scene: 'events', dialogue: 'events' };
+                                        const targetTab = tabMap[r.category] || 'board';
+                                        return (
+                                            <div key={r.id}
+                                                onMouseDown={() => { navigateTo(targetTab, r.id); setSearchQuery(''); }}
+                                                style={{
+                                                    padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #1a1a2e',
+                                                    fontSize: 11, display: 'flex', justifyContent: 'space-between',
+                                                }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,0.1)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                            >
+                                                <span style={{ color: '#eaeaea' }}>{r.icon} {r.name}</span>
+                                                <span style={{ color: '#555', fontSize: 9, textTransform: 'uppercase' }}>{r.category}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
 
