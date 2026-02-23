@@ -75,7 +75,8 @@ export class SettingsManager {
                 { value: 'deitch', display: 'Deitch Projects' },
                 { value: 'byform', display: 'Byform Portfolio' },
                 { value: 'waterworks', display: 'Waterworks Map' },
-                { value: 'bloomberg', display: 'Bloomberg Terminal' }
+                { value: 'bloomberg', display: 'Bloomberg Terminal' },
+                { value: 'styleguide', display: 'Style Guide' }
             ],
             default: 'gallery'
         },
@@ -113,7 +114,7 @@ export class SettingsManager {
                 ],
                 minimal: ['playerstats', 'networth', 'collection', 'orderbook'],
                 trading: ['ticker', 'leaderboard', 'orderbook', 'pricechart', 'tradefeed', 'portfolio', 'notifications', 'watchlist'],
-                tearsheet: ['collection', 'orderbook', 'playerstats', 'networth'],
+                tearsheet: ['collection', 'orderbook', 'playerstats', 'networth', 'watchlist', 'overview', 'directory', 'leaderboard', 'pricechart', 'tradefeed', 'txhistory', 'portfolio'],
             }
         },
         {

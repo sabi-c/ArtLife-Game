@@ -7,13 +7,47 @@
 
 ## Current State (2026-02-23)
 
-**Version:** v0.4.3
+**Version:** v0.4.4
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **CI:** Build & Validate ✅ | Playwright Tests informational (continue-on-error)
 **Phase 3:** Complete. Phase 4 active.
+
+### Style Guides + Email Dialogue Scene (2026-02-23 Session 25)
+
+**SharedPanelGrid Component:**
+- Extracted reusable 2-column panel grid from 5 bespoke implementations
+- Views updated: TearsheetView, ArtnetView, SothebysView, DeitchView, ByformView
+- All views now show consistent panel set: playerstats, networth, directory, leaderboard, tradefeed, watchlist, pricechart, txhistory, portfolio
+- Tearsheet preset expanded from 4 panels to 12
+
+**CSS Design Tokens:**
+- Added `:root` custom properties: `--an-*` (Artnet), `--ts-*` (Tearsheet), `--bb-*` (Bloomberg)
+- Covers: bg, fg, accent, border, font families, radius, brand spacing
+
+**Layout Wrapper Components:**
+- `ArtnetLayout` — slots: title, subtitle, search, statsBar, mainContent, panelProps, footerText
+- `TearsheetLayout` — slots: coverTitle, coverSubtitle, contextContent, introContent, pages[], panelProps, backContent
+- Both wrap SharedPanelGrid + standard chrome for trivial page scaffolding
+
+**StyleGuideView (9th Bloomberg view style):**
+- Accessible via market style cycle toggle ('styleguide')
+- Sections: Color Tokens (swatches), Artnet Patterns (header, search, table, stats, badges, buttons), Tearsheet Patterns (cover, text, provenance, price, address), Typography Scale, Email Preview
+- sg-* CSS prefix, ~200 lines of styles
+
+**Email Dialogue Overlay:**
+- New `EmailDialogueOverlay.jsx` (~280 lines) — Artnet-styled email exchange
+- 6 phases: reading → choosing → sending → waiting → receiving → complete
+- Typewriter effect (18ms/char), envelope fly animation (600ms CSS), pulsing dots (1.5s)
+- Inline markdown (**bold**) with accent-colored price highlights
+- 2-panel split layout: 35% thread history / 65% current email
+- Events with `isEmail: true` auto-route to EmailDialogueOverlay instead of EventOverlay
+- `deals.js` — 2 example email events (Sasha Klein approach, Marcus Price flip opportunity)
+- an-email-* CSS prefix (~200 lines)
+
+**Files changed:** BloombergTerminal.jsx, BloombergTerminal.css, SettingsManager.js, EmailDialogueOverlay.jsx (new), data/events/deals.js (new), data/events/index.js
 
 ### Bloomberg Unification: Events + Admin + Bug Fixes (2026-02-23 Session 24)
 
