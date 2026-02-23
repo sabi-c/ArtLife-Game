@@ -3646,6 +3646,149 @@
     color: #999;
 }
 
+/* ── Artist name as clickable link ── */
+.an-artist-link { cursor: pointer; }
+.an-artist-link:hover { text-decoration: underline; color: #cc0000; }
+
+/* ── Artist Detail Card — artnet artist page inline ── */
+.an-artist-detail {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #fafafa;
+    border-top: 3px solid #cc0000;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.an-ad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.an-ad-name {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+
+.an-ad-close {
+    background: none;
+    border: 1px solid #ccc;
+    color: #999;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+}
+
+.an-ad-close:hover { color: #cc0000; border-color: #cc0000; }
+
+.an-ad-meta {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #666;
+}
+
+.an-ad-medium { font-weight: 600; color: #333; }
+
+.an-ad-tier {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    background: #333;
+    color: #fff;
+    border-radius: 2px;
+}
+
+.an-ad-heat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.an-ad-heat-bar {
+    display: inline-block;
+    width: 80px;
+    height: 6px;
+    background: #e0e0e0;
+    overflow: hidden;
+}
+
+.an-ad-heat-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #cc0000, #ff6600);
+    transition: width 0.3s;
+}
+
+.an-ad-flavor {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #fff;
+    border-left: 3px solid #cc0000;
+}
+
+.an-ad-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.an-ad-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.an-ad-stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    text-transform: uppercase;
+}
+
+.an-ad-stat-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.an-ad-stat-value.up { color: #2a6e2a; }
+.an-ad-stat-value.down { color: #cc0000; }
+
+.an-ad-chart {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.an-ad-chart-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+}
+
+/* Artist detail mobile */
+@media (max-width: 768px) {
+    .an-artist-detail { padding: 16px; }
+    .an-ad-name { font-size: 16px; }
+    .an-ad-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* ── Artnet additional panels — styled for white/data theme ── */
 .an-panels {
     max-width: 1100px;

@@ -1440,6 +1440,93 @@ function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, o
 }
 
 // ══════════════════════════════════════════════════════════════
+// 15B. Artist Detail Card — artnet-style artist page inline
+//
+// Shows artist bio, tier, heat, owned works, market availability,
+// price history sparkline. Displayed in Artnet view when an
+// artist name is clicked in the table.
+// ══════════════════════════════════════════════════════════════
+function ArtistDetailCard({ artist, intel, items, feed, onClose }) {
+    if (!artist) return null;
+
+    const tier = artist.tier || 'emerging';
+    const heat = artist.heat || 0;
+    const flavor = artist.flavor || '';
+    const medium = artist.medium || '';
+
+    // Works by this artist in current view
+    const artistWorks = items.filter(w =>
+        w.artistId === artist.id || w._artist?.id === artist.id
+    );
+    const ownedWorks = artistWorks.filter(w => w._owned);
+    const marketWorks = artistWorks.filter(w => w._isMarket);
+
+    // Price range
+    const prices = artistWorks.map(w => w.currentVal).filter(Boolean);
+    const priceMin = prices.length > 0 ? Math.min(...prices) : 0;
+    const priceMax = prices.length > 0 ? Math.max(...prices) : 0;
+
+    // Sparkline data from feed
+    const sparkData = feed?.liveSparklines?.[artist.id] || [];
+
+    // Index from leaderboard
+    const lb = feed?.leaderboard?.find(l => l.id === artist.id);
+    const index = lb?.index || 0;
+    const indexDelta = lb?.delta || 0;
+
+    return (
+        <div className="an-artist-detail">
+            <div className="an-ad-header">
+                <div className="an-ad-name">{artist.name}</div>
+                <button className="an-ad-close" onClick={onClose}>✕</button>
+            </div>
+            <div className="an-ad-meta">
+                <span className="an-ad-medium">{medium}</span>
+                <span className="an-ad-tier">{tier.toUpperCase()}</span>
+                <span className="an-ad-heat">
+                    Heat: {heat}
+                    <span className="an-ad-heat-bar">
+                        <span className="an-ad-heat-fill" style={{ width: `${Math.min(heat, 100)}%` }} />
+                    </span>
+                </span>
+            </div>
+            {flavor && intel >= 30 && (
+                <div className="an-ad-flavor">{flavor}</div>
+            )}
+            <div className="an-ad-stats">
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">INDEX</span>
+                    <span className={`an-ad-stat-value ${indexDelta > 0 ? 'up' : indexDelta < 0 ? 'down' : ''}`}>
+                        {index.toFixed(1)}
+                        {indexDelta !== 0 && ` (${indexDelta > 0 ? '+' : ''}${indexDelta.toFixed(1)})`}
+                    </span>
+                </div>
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">PRICE RANGE</span>
+                    <span className="an-ad-stat-value">
+                        {prices.length > 0 ? `$${fmtNum(priceMin)} – $${fmtNum(priceMax)}` : 'No data'}
+                    </span>
+                </div>
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">IN COLLECTION</span>
+                    <span className="an-ad-stat-value">{ownedWorks.length} works</span>
+                </div>
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">ON MARKET</span>
+                    <span className="an-ad-stat-value">{marketWorks.length} available</span>
+                </div>
+            </div>
+            {sparkData.length >= 2 && (
+                <div className="an-ad-chart">
+                    <span className="an-ad-chart-label">PRICE TREND</span>
+                    <MiniSparkline data={sparkData} width={200} height={36} color="#cc0000" />
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // 16. Artnet Auction Results View
 //
 // Clean, data-dense tabular layout inspired by artnet.com's
@@ -1455,6 +1542,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
     const [sortKey, setSortKey] = useState('lot');
     const [sortDir, setSortDir] = useState('asc');
     const [searchTerm, setSearchTerm] = useState('');
+    const [detailArtist, setDetailArtist] = useState(null);
 
     const toggleSort = (key) => {
         if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -1588,7 +1676,11 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                         )}
                                     </td>
                                     <td className="an-td an-artist-cell">
-                                        <div className="an-artist-name">{work.artist || 'Unknown'}</div>
+                                        <div className="an-artist-name an-artist-link"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDetailArtist(detailArtist?.id === work._artist?.id ? null : work._artist);
+                                            }}>{work.artist || 'Unknown'}</div>
                                         {work._artist && (
                                             <div className="an-artist-meta">
                                                 {work.artistBorn || work._artist?.born
@@ -1629,6 +1721,17 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                         })}
                     </tbody>
                 </table>
+            )}
+
+            {/* Artist detail card — shown when artist name is clicked */}
+            {detailArtist && (
+                <ArtistDetailCard
+                    artist={detailArtist}
+                    intel={intel}
+                    items={allItems}
+                    feed={feed}
+                    onClose={() => setDetailArtist(null)}
+                />
             )}
 
             {/* ── Additional panels below the table — 2-col grid ── */}
