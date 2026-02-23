@@ -205,8 +205,7 @@ export default function AdminDashboard({ onClose }) {
                             <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>SYSTEM TOOLS</h3>
                             <button style={btnStyle} onClick={() => triggerUI(VIEW.TERMINAL)}>■ TERMINAL INTERFACE</button>
                             <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => triggerOverlay(OVERLAY.MASTER_CMS)}>🏗️ MASTER CMS & VISUAL EDITOR</button>
-                            <button style={{ ...btnStyle, borderColor: '#555', color: '#888' }} onClick={() => triggerOverlay(OVERLAY.STORYLINE_CMS)}>⛓️ Storyline Visualizer (Legacy)</button>
-                            <button style={{ ...btnStyle, borderColor: '#555', color: '#888' }} onClick={() => triggerOverlay(OVERLAY.EVENT_CMS)}>🌳 Event JSON Visualizer (Legacy)</button>
+                            <button style={{ ...btnStyle, borderColor: '#00e5ff', color: '#00e5ff' }} onClick={() => triggerOverlay(OVERLAY.BLOOMBERG)}>📊 BLOOMBERG MARKET TERMINAL</button>
                             <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.MARKET_DASHBOARD)}>📈 Market Dashboard</button>
                         </div>
                         <div>
@@ -219,12 +218,8 @@ export default function AdminDashboard({ onClose }) {
                             }}>[ Trigger Global Dialogue Box ]</button>
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>DEVELOPER TOOLS</div>
                             <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.CMS)}>
-                                [ Content Management Studio ]
+                                [ Content Studio (Legacy) ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Visual content wiring & timeline editor</div>
-                            </button>
-                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.STORYLINE_CMS)}>
-                                [ Storyline CMS ]
-                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Event chains, NPC arcs & narrative management</div>
                             </button>
 
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>BOOT FLOWS</div>

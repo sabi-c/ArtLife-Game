@@ -14,8 +14,7 @@ import SettingsOverlay from './ui/SettingsOverlay.jsx';
 import ContentStudio from './ui/ContentStudio.jsx';
 import MobileJoypad from './ui/MobileJoypad.jsx';
 import CalendarHUD from './ui/CalendarHUD.jsx';
-import StorylineCMS from './ui/StorylineCMS.jsx';
-import EventCMS from './ui/CMSOverlay.jsx';
+// Legacy overlays removed: StorylineCMS, CMSOverlay (superseded by MasterCMS)
 import MasterCMS from './ui/MasterCMS.jsx';
 import MarketDashboard from './ui/MarketDashboard.jsx';
 import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
@@ -382,13 +381,7 @@ export default function App() {
                 </ErrorBoundary>
             )}
 
-            {activeOverlay === OVERLAY.STORYLINE_CMS && (
-                <StorylineCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
-            )}
-
-            {activeOverlay === OVERLAY.EVENT_CMS && (
-                <EventCMS onClose={() => setActiveOverlay(OVERLAY.NONE)} />
-            )}
+            {/* Legacy overlays STORYLINE_CMS and EVENT_CMS removed — use MASTER_CMS */}
 
             {activeOverlay === OVERLAY.MASTER_CMS && (
                 <ErrorBoundary>

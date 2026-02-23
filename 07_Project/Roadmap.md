@@ -7,12 +7,93 @@
 
 ## Current State (2026-02-22)
 
-**Version:** v0.3.3
+**Version:** v0.4.0
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
+
+### Bloomberg Terminal & Legacy Cleanup (2026-02-22 Session 11)
+
+**Sprint 1: Micro-Tick Engine**
+- **MarketManager.microTick()** — Lightweight O-U price jitter between weekly ticks. Damped volatility (30% of weekly), weak mean reversion (theta 0.15). Fires on each game-hour boundary in `advanceTime()`.
+- **intraWeekPrices buffer** — `marketStore.recordMicroTick()` records per-artist avg price (last 50 points) for Bloomberg sparklines. Cleared on week advance.
+
+**Sprint 2: Bloomberg Data Feed Hook**
+- **useBloombergFeed** — `src/hooks/useBloombergFeed.js`: Zustand-derived hook computing leaderboard, movers, volume leaders, composite index, live sparklines, market cycle.
+- **MarketSimulator trade queries** — `getTradesByArtwork()`, `getTradesByArtist()` for filtered trade log access.
+
+**Sprint 3: Bloomberg Overlay Component**
+- **BloombergTerminal.jsx** — Full-screen dark Bloomberg-style overlay with 7 sub-panels: TickerBar (scrolling headlines), ArtistLeaderboard (ranked by index + sparklines), MarketOverview (composite index, cycle, volume), PriceChart (SVG sparkline for selected artist), TradeFeed (NPC trades), Watchlist (starred items), PortfolioTracker (player works + ROI).
+- **Intel-gated progressive disclosure** — 20/40/60/80 intel thresholds mask prices, names, features.
+- **OVERLAY.BLOOMBERG** added to views.js, wired in App.jsx.
+
+**Sprint 4: NPC Intra-Week Trade Drip**
+- **MarketSimulator.simulateMicroTrade()** — ~1% chance per game-hour for NPC trade drip. Picks random buyer, finds seller, resolves full trade.
+
+**Sprint 5: Watchlist & Portfolio Integration**
+- **GameState.state.watchlist** — `[]` array persisted in saves. TerminalAPI.watchlist namespace (add/remove/get/getWithPrices).
+- **Market terminal watchlist toggle** — Star/unstar artists and artworks from inspect screen.
+- **Dashboard launch** — "Check Market Terminal" option in mid/late phase (1 AP).
+
+**Sprint 6: Polish & Legacy Cleanup**
+- **Bloomberg in Admin Dashboard** — Added to SYSTEM TOOLS as highlighted button.
+- **Mobile responsive refinement** — Touch targets (44px min), single-column layout on mobile, scrollable panels, very-small-screen breakpoint (380px).
+- **Legacy overlay removal** — Removed StorylineCMS.jsx and CMSOverlay.jsx overlay rendering from App.jsx. Removed STORYLINE_CMS and EVENT_CMS overlay constants. Cleaned duplicate buttons from AdminDashboard.
+
+### NPC Integration, CMS Wiring & Market CMS (2026-02-22 Session 10)
+
+**Sprint 1: CMS → Game Runtime Wiring**
+- **HaggleManager reads from CMS** — `useNPCStore` priority resolution: CMS edits → CONTACTS fallback → anonymous. Changed `npc` to `resolvedNpc` throughout.
+- **HaggleEditor persists via cmsStore** — `hotSwapDealer()` saves to `cmsStore.saveSnapshot('haggle_config')`. On reload, checks cmsStore first.
+- **LocationScene loads CMS maps** — Before `this.make.tilemap()`, injects CMS map snapshot from `cmsStore.getMapSnapshot()` into Phaser cache.
+- **EventRegistry checks timeline overrides** — `getAvailableEvents()` filters out events pinned to specific weeks via `cmsStore.getTimelineOverrides()`.
+
+**Sprint 2: NPC Simulation Stats in Haggle**
+- **Taste-based refusal** — NPC's `avoidedGenres` rejects artworks: "Not my taste, darling."
+- **Wealth ceiling enforcement** — Asking price > 1.5x `spendingCeiling` → auto-refuse: "That's beyond my range."
+- **Taste bonus** — Preferred tier/genre → +1 patience each.
+- **Wealth ceiling flex reduction** — Price > ceiling → flexibility × 0.3.
+- **Collection awareness** — Same artist owned ≥2 → -1 patience (diminishing returns).
+
+**Sprint 3: LocationScene NPC Sprites & Walking**
+- **CONTACT_MAP lookup** — `Object.fromEntries(CONTACTS.map(c => [c.id, c]))` for O(1) contact resolution.
+- **Contact-specific sprites** — NPCs with `spriteKey` matching a loaded texture get their character sprite. Falls back through gallery NPCs → generic sprites.
+- **NPC random walk** — `gridEngine.moveRandomly(npc.id, 1500, 3)` after GridEngine create. Walk animations hooked to `movementStarted`/`movementStopped` events.
+- **Contact name labels** — `contact?.name || npc.label || npc.id || 'NPC'`.
+
+**Sprint 4: WorldScene Character Sprites**
+- **NPC spritesheet preloading** — 16 walk sprite keys loaded in WorldScene.preload() (160×160 frames, 16 per sheet).
+- **Sprite-aware spawning** — `_spawnNPCs()` uses `npc.spriteKey` with fallback to tinted `world_player`.
+- **Walk animation hooks** — GridEngine `movementStarted`/`movementStopped` drive per-NPC directional walk animations.
+
+**Sprint 5: Comprehensive Artwork & Market CMS**
+- **ARTWORKS ↔ ARTISTS linked** — Added `artistId` field to static artworks that match simulation artists (Yuki Tanaka → artist_05, Kwame Asante → artist_08). Added `basePrice` to all catalogue works.
+- **ArtworkEditor upgraded to 7 sub-tabs:**
+  - **Metadata** — Edit individual artwork fields, JSON hot-swap, artistId linking dropdown
+  - **Artists** — Edit simulation artists in real-time (heat slider, volatility, tier, price ranges, buyback toggle). Hot-swaps into live MarketManager. Shows linked artworks.
+  - **Market** — Live artist heat index table with sparklines, market cycle banner, weekly intel
+  - **Controls** — Force bull/bear/flat cycle, tick market N weeks, era modifier slider with visual indicator
+  - **Portfolio** — Player's owned works with purchase price, current value, ROI%, hold time, net worth summary cards
+  - **Calendar** — Art world calendar events
+  - **Haggle** — Full haggle price matrix across all dealer types (30 works × N dealer types)
+- **Bulk operations** — Shift+click multi-select artworks, batch tier changes, batch price adjustments (±10%, ±20%, +50%).
+- **Import/Export** — CSV import (Artnet-style: title,artist,year,medium,askingPrice,genre,tier), JSON import/export. Deduplication on import.
+- **CMS persistence** — Artwork and artist edits saved to `cmsStore.saveSnapshot()`. Bundle export includes artworks + artists data. Import restores them.
+
+### Room Polish, Data Integration & Error Handling (2026-02-22 Session 9)
+- **Wall Collision Fix** — LocationScene now enforces collision on ALL non-empty tiles in the `world` layer after GridEngine.create(), regardless of tileset property definitions. Fixes players walking through walls in all maps.
+- **Safe Tilemap Loading** — `this.make.tilemap()` wrapped in try/catch; falls back to classic scene mode and records error to `window.ArtLife` error registry.
+- **Artwork Database Integration** — Tiled painting objects now support `artworkId` property linking to `ARTWORK_MAP` from `artworks.js` (28 artworks). Popup shows full metadata: title, artist, medium, year, provenance, price. Haggle also resolves artwork data from database.
+- **NPC Dialogue Tree Integration** — Tiled NPCs with `id` matching a `CONTACTS` entry and having a `TREES_BY_NPC` dialogue tree now launch full branching `DialogueScene` instead of inline text popup. Falls back to inline dialogue for NPCs without trees.
+- **NPC meetContact Integration** — First interaction with a Tiled NPC matching a contact calls `useNPCStore.meetContact(npcId)`, enabling them in the Phone terminal screen.
+- **CMS Artwork Picker** — MapEditor PropertyEditor: painting objects show "LINK ARTWORK" dropdown listing all ARTWORKS. Selecting one auto-fills artworkId, title, artist, price, description.
+- **CMS NPC Picker** — MapEditor PropertyEditor: NPC objects show "LINK NPC" dropdown listing all CONTACTS. Selecting one auto-fills id, label, dialogue, canHaggle.
+- **cmsStore ES Import Fix** — Replaced 6 inline `require()` calls with top-level ES imports (`EventRegistry`, `useNPCStore`). Eliminates intermittent Vite build errors.
+- **Tileset Canvas Preview** — RoomManager RoomInspector now renders a canvas-based visual preview for tileset rooms (not just bgImage rooms). Loads tileset images, renders all tile layers + object markers.
+- **Room Wizard Enhancement** — Room creation wizard now includes artwork selection (checkbox list of all ARTWORKS) and NPC selection (checkbox list of all CONTACTS). Selected artworks/NPCs are injected into the generated map with proper `artworkId` and contact `id` properties.
+- **AI Room Generation API** — `generateRoomFromPrompt()` exported from `tools/generate_room.js`. Accepts `{ name, width, height, paintings: [artworkIds], npcs: [contactIds], style }` and returns a valid Tiled JSON with linked artwork and NPC data.
 
 ### Tiled-Like Map Editor + CMS Integration (2026-02-22 Session 8)
 - **Tile Painting Tools** — MapEditor.jsx upgraded with full Tiled-like editing: TilesetPicker (scrollable tile grid from loaded tilesets, click to select brush), EditorToolbar (Select/Pencil/Eraser/Eyedropper/Fill tools), tile painting on canvas with mouse drag, ghost tile preview on hover, layer selector (below_player/world/above_player), grid & object visibility toggles.

@@ -370,30 +370,102 @@
 
 /* ── Mobile responsive ── */
 @media (max-width: 768px) {
+    .bb-overlay {
+        font-size: 10px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bb-header {
+        padding: 10px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .bb-title {
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .bb-close {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .bb-grid {
         grid-template-columns: 1fr;
+        overflow: visible;
+        flex: none;
+    }
+
+    .bb-col-left,
+    .bb-col-right {
+        overflow: visible;
     }
 
     .bb-bottom {
         grid-template-columns: 1fr;
     }
 
+    .bb-panel {
+        padding: 10px;
+    }
+
     .bb-lb-row {
         grid-template-columns: 20px 1fr 40px 36px 60px;
         font-size: 10px;
+        min-height: 36px;
+        align-items: center;
     }
 
     .bb-trade-row {
         grid-template-columns: 26px 1fr 60px;
+        min-height: 32px;
     }
 
     .bb-trade-title { display: none; }
 
-    .bb-overlay {
-        font-size: 10px;
-    }
-
     .bb-chart-current {
         font-size: 14px;
     }
+
+    .bb-watch-row {
+        min-height: 36px;
+        align-items: center;
+    }
+
+    .bb-port-row {
+        grid-template-columns: 1fr 60px 50px;
+        min-height: 32px;
+    }
+
+    .bb-port-artist { display: none; }
+
+    .bb-overview-grid {
+        gap: 10px;
+    }
+
+    .bb-ov-value {
+        font-size: 12px;
+    }
+
+    .bb-trades-list {
+        max-height: 160px;
+    }
+}
+
+/* ── Very small screens (iPhone SE etc.) ── */
+@media (max-width: 380px) {
+    .bb-header-meta { display: none; }
+    .bb-ticker { font-size: 9px; }
+
+    .bb-lb-row {
+        grid-template-columns: 18px 1fr 34px 50px;
+    }
+
+    .bb-lb-heat-bar { display: none; }
 }
