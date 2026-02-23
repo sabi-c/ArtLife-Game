@@ -1115,6 +1115,129 @@ function TransactionHistoryPanel({ intel }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// 14B. Gallery View — Seventh House staggered product grid
+//
+// Inspired by seventhhouse.la: cream bg, monospace letter-spaced
+// type, staggered 2-column artwork grid with generous whitespace.
+// Hero section (stats+networth), artwork grid, then data panels.
+// ══════════════════════════════════════════════════════════════
+function GalleryView({ intel, showPanel, feed, selectedArtist, onSelectArtist, onSelectWork, onSelectOrder, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const portfolio = s?.portfolio || [];
+
+    // Enrich portfolio items
+    const items = portfolio.map(work => {
+        const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(work, false); }
+        catch { currentVal = work.price || work.basePrice || 0; }
+        return { ...work, ...artwork, currentVal };
+    });
+
+    // Market items
+    const marketItems = showPanel('orderbook') ? MarketSimulator.getOpenSellOrders().map(order => {
+        const artwork = ARTWORKS.find(a => a.id === order.artworkId) || {};
+        return { ...artwork, ...order, currentVal: order.askPrice || 0, _isMarket: true };
+    }) : [];
+
+    const allWorks = [...items, ...marketItems];
+
+    return (
+        <div className="gallery-body">
+            {/* Hero section — player stats + net worth */}
+            <div className="gallery-hero">
+                {showPanel('playerstats') && <PlayerStatsPanel />}
+                {showPanel('networth') && <NetWorthPanel intel={intel} />}
+            </div>
+
+            {/* Staggered artwork grid — Seventh House style */}
+            {showPanel('collection') && allWorks.length > 0 && (
+                <div className="sh-section">
+                    <div className="sh-section-header">WORKS</div>
+                    <div className="sh-grid">
+                        {allWorks.map((work, i) => {
+                            const imageUrl = work.imageUrl || work.image || null;
+                            const artistName = (work.artist || 'Unknown').toUpperCase();
+                            const title = work.title || 'Untitled';
+                            const medium = work.medium || 'Mixed Media';
+                            const year = work.yearCreated || work.year || '';
+                            // Stagger: odd items get extra top margin
+                            const isOffset = i % 2 === 1;
+
+                            return (
+                                <div key={work.id || i}
+                                    className={`sh-card${isOffset ? ' sh-card-offset' : ''}`}
+                                    onClick={() => onSelectWork && onSelectWork(work)}>
+                                    <div className="sh-card-image">
+                                        {imageUrl ? (
+                                            <img className="sh-card-img" src={imageUrl} alt={title} />
+                                        ) : (
+                                            <div className="sh-card-placeholder">
+                                                <span>{title}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="sh-card-info">
+                                        <div className="sh-card-artist">{artistName}</div>
+                                        <div className="sh-card-title">
+                                            <em>{title}</em>{year ? `, ${year}` : ''}
+                                        </div>
+                                        <div className="sh-card-medium">{medium}</div>
+                                        {intel >= 40 && (
+                                            <div className="sh-card-price">
+                                                {tearsheetPrice(work.currentVal)}
+                                            </div>
+                                        )}
+                                        {work._isMarket && (
+                                            <div className="sh-card-tag">AVAILABLE</div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* NPC Directory — People section */}
+            {showPanel('directory') && (
+                <div className="sh-section">
+                    <div className="sh-section-header">PEOPLE</div>
+                    <NPCDirectoryPanel intel={intel} />
+                </div>
+            )}
+
+            {/* Data panels — 2-column grid */}
+            <div className="gallery-grid-2col">
+                <div className="gallery-col">
+                    {showPanel('leaderboard') && <ArtistLeaderboard
+                        leaderboard={feed.leaderboard}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                        selectedArtist={selectedArtist}
+                        onSelect={onSelectArtist}
+                    />}
+                    {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                    {showPanel('watchlist') && <Watchlist intel={intel} />}
+                </div>
+                <div className="gallery-col">
+                    {showPanel('orderbook') && <OrderBook intel={intel} onSelectOrder={onSelectOrder} />}
+                    {showPanel('pricechart') && <PriceChart
+                        artistId={selectedArtist}
+                        priceHistory={feed.priceHistory}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                    />}
+                    {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} />}
+                    {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                    {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // 15. Tearsheet View — Gagosian / Frieze LA exact-replica layout
 //
 // Renders each artwork in the player's collection as a proper
@@ -2590,44 +2713,19 @@ export default function BloombergTerminal({ onClose }) {
                     onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
             )}
 
-            {/* Gallery mode: Seventh House-inspired 2-column dashboard */}
+            {/* Gallery mode: Seventh House-inspired staggered grid */}
             {isGallery && (
-                <div className="gallery-body">
-                    {/* Hero section — player stats + net worth */}
-                    <div className="gallery-hero">
-                        {showPanel('playerstats') && <PlayerStatsPanel />}
-                        {showPanel('networth') && <NetWorthPanel intel={intel} />}
-                    </div>
-
-                    {/* 2-column responsive grid for panels */}
-                    <div className="gallery-grid-2col">
-                        <div className="gallery-col">
-                            {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
-                            {showPanel('collection') && <CollectionPanel intel={intel} onSelectWork={handleSelectPortfolioWork} />}
-                            {showPanel('leaderboard') && <ArtistLeaderboard
-                                leaderboard={feed.leaderboard}
-                                liveSparklines={feed.liveSparklines}
-                                intel={intel}
-                                selectedArtist={selectedArtist}
-                                onSelect={setSelectedArtist}
-                            />}
-                            {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={handleSelectTrade} />}
-                            {showPanel('watchlist') && <Watchlist intel={intel} />}
-                        </div>
-                        <div className="gallery-col">
-                            {showPanel('orderbook') && <OrderBook intel={intel} onSelectOrder={handleSelectOrder} />}
-                            {showPanel('pricechart') && <PriceChart
-                                artistId={selectedArtist}
-                                priceHistory={feed.priceHistory}
-                                liveSparklines={feed.liveSparklines}
-                                intel={intel}
-                            />}
-                            {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} />}
-                            {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
-                            {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={handleListWork} onSelectWork={handleSelectPortfolioWork} />}
-                        </div>
-                    </div>
-                </div>
+                <GalleryView
+                    intel={intel}
+                    showPanel={showPanel}
+                    feed={feed}
+                    selectedArtist={selectedArtist}
+                    onSelectArtist={setSelectedArtist}
+                    onSelectWork={handleSelectPortfolioWork}
+                    onSelectOrder={handleSelectOrder}
+                    onSelectTrade={handleSelectTrade}
+                    onListWork={handleListWork}
+                />
             )}
 
             {/* Bloomberg dark mode: original 3-column grid */}

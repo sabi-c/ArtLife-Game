@@ -1998,6 +1998,112 @@
     .gallery-grid-2col { grid-template-columns: 1fr; gap: 16px; }
 }
 
+/* ── Seventh House (sh-*) — staggered artwork grid ── */
+.sh-section {
+    margin-bottom: 48px;
+}
+
+.sh-section-header {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5em;
+    color: #9a9690;
+    border-bottom: 1px solid #1a1a1a;
+    padding-bottom: 8px;
+    margin-bottom: 32px;
+}
+
+.sh-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+}
+
+.sh-card {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.sh-card:hover { opacity: 0.8; }
+
+/* Stagger effect — odd cards shifted down */
+.sh-card-offset {
+    margin-top: 48px;
+}
+
+.sh-card-image {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: #ebe8e3;
+}
+
+.sh-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sh-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: #b0aba4;
+    text-align: center;
+    padding: 20px;
+}
+
+.sh-card-info {
+    padding: 0;
+}
+
+.sh-card-artist {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.sh-card-title {
+    font-size: 11px;
+    color: #6a6660;
+    margin-bottom: 2px;
+}
+
+.sh-card-medium {
+    font-size: 9px;
+    color: #b0aba4;
+    letter-spacing: 0.1em;
+}
+
+.sh-card-price {
+    font-size: 10px;
+    color: #1a1a1a;
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+}
+
+.sh-card-tag {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #c9a84c;
+    margin-top: 4px;
+}
+
+/* Seventh House mobile */
+@media (max-width: 768px) {
+    .sh-grid { grid-template-columns: 1fr; gap: 32px; }
+    .sh-card-offset { margin-top: 0; }
+    .sh-section-header { margin-bottom: 20px; }
+}
+
 /* ── Gallery: remove all row borders (use spacing instead) ── */
 .bb-gallery .bb-lb-row { border-bottom: none; padding: 6px 4px; }
 .bb-gallery .bb-trade-row { border-bottom: none; }
