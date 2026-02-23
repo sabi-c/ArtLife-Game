@@ -2349,6 +2349,9 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
     const [sortKey, setSortKey] = useState('lot');
     const [sortDir, setSortDir] = useState('asc');
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterTier, setFilterTier] = useState('all');
+    const [filterGenre, setFilterGenre] = useState('all');
+    const [filterOwner, setFilterOwner] = useState('all');
     const [detailArtist, setDetailArtist] = useState(null);
     const [detailWork, setDetailWork] = useState(null);
 
@@ -2451,6 +2454,13 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
 
     let allItems = showDatabase ? databaseItems : [...ownedItems, ...marketItems];
 
+    // Collect unique genres/tiers for filter dropdowns
+    const allGenres = useMemo(() => {
+        const set = new Set();
+        (showDatabase ? ARTWORKS : [...(portfolio || [])]).forEach(w => { if (w.genre) set.add(w.genre); });
+        return Array.from(set).sort();
+    }, [showDatabase, portfolio]);
+
     // Filter by search term
     if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
@@ -2461,12 +2471,26 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
         );
     }
 
+    // Filter by tier
+    if (filterTier !== 'all') {
+        allItems = allItems.filter(w => w.tier === filterTier);
+    }
+    // Filter by genre
+    if (filterGenre !== 'all') {
+        allItems = allItems.filter(w => w.genre === filterGenre);
+    }
+    // Filter by owner type (database view only)
+    if (showDatabase && filterOwner !== 'all') {
+        allItems = allItems.filter(w => w._ownerType === filterOwner);
+    }
+
     // Sort
     const sortFn = {
         lot: (a, b) => a._lot - b._lot,
         artist: (a, b) => (a.artist || '').localeCompare(b.artist || ''),
         price: (a, b) => a.currentVal - b.currentVal,
         title: (a, b) => (a.title || '').localeCompare(b.title || ''),
+        year: (a, b) => (a.yearCreated || a.year || 0) - (b.yearCreated || b.year || 0),
     };
     if (sortFn[sortKey]) {
         allItems.sort(sortFn[sortKey]);
@@ -2561,6 +2585,46 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                     onChange={e => setSearchTerm(e.target.value)}
                 />
                 <span className="an-result-count">{fmtNum(allItems.length)} results</span>
+            </div>
+
+            {/* Filter bar */}
+            <div className="an-filter-bar" style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '6px 16px',
+                background: '#fafafa', borderBottom: '1px solid #e5e5e5',
+                fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: '#555',
+                flexWrap: 'wrap',
+            }}>
+                <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: '#999' }}>Filters</span>
+                <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
+                    style={{ padding: '3px 8px', border: '1px solid #ddd', background: '#fff', fontSize: 11, color: '#333', cursor: 'pointer' }}>
+                    <option value="all">All Tiers</option>
+                    <option value="classic">Classic</option>
+                    <option value="mid_career">Mid-Career</option>
+                    <option value="speculative">Speculative</option>
+                </select>
+                {allGenres.length > 0 && (
+                    <select value={filterGenre} onChange={e => setFilterGenre(e.target.value)}
+                        style={{ padding: '3px 8px', border: '1px solid #ddd', background: '#fff', fontSize: 11, color: '#333', cursor: 'pointer' }}>
+                        <option value="all">All Genres</option>
+                        {allGenres.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                )}
+                {showDatabase && (
+                    <select value={filterOwner} onChange={e => setFilterOwner(e.target.value)}
+                        style={{ padding: '3px 8px', border: '1px solid #ddd', background: '#fff', fontSize: 11, color: '#333', cursor: 'pointer' }}>
+                        <option value="all">All Owners</option>
+                        <option value="player">My Collection</option>
+                        <option value="market">On Market</option>
+                        <option value="npc">NPC Holdings</option>
+                        <option value="unknown">Private/Unknown</option>
+                    </select>
+                )}
+                {(filterTier !== 'all' || filterGenre !== 'all' || filterOwner !== 'all' || searchTerm.trim()) && (
+                    <button onClick={() => { setFilterTier('all'); setFilterGenre('all'); setFilterOwner('all'); setSearchTerm(''); }}
+                        style={{ padding: '3px 10px', border: '1px solid #ccc', background: '#fff', fontSize: 10, color: '#999', cursor: 'pointer', letterSpacing: 0.5 }}>
+                        Clear All
+                    </button>
+                )}
             </div>
 
             {/* Summary strip */}
@@ -2661,6 +2725,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                             <th className="an-th an-th-img"></th>
                             <th className="an-th" onClick={() => toggleSort('artist')}>Artist{SortIcon({ k: 'artist' })}</th>
                             <th className="an-th" onClick={() => toggleSort('title')}>Title{SortIcon({ k: 'title' })}</th>
+                            <th className="an-th" onClick={() => toggleSort('year')}>Year{SortIcon({ k: 'year' })}</th>
                             <th className="an-th">Medium</th>
                             {showDatabase && <th className="an-th">Owner</th>}
                             <th className="an-th" style={{ width: 50 }}>Heat</th>
@@ -2703,8 +2768,8 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                         </td>
                                         <td className="an-td an-title-cell">
                                             <em>{work.title || 'Untitled'}</em>
-                                            {work.yearCreated ? `, ${work.yearCreated}` : ''}
                                         </td>
+                                        <td className="an-td" style={{ fontSize: 11, color: '#666' }}>{work.yearCreated || work.year || '—'}</td>
                                         <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
                                         {showDatabase && (
                                             <td className="an-td" style={{ color: work._ownerType === 'player' ? '#15803d' : work._ownerType === 'market' ? '#1d4ed8' : '#666', fontWeight: work._ownerType !== 'unknown' ? 'bold' : 'normal', fontSize: 11 }}>
@@ -2774,7 +2839,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                     </tr>
                                     {isExpanded && (
                                         <tr className="an-detail-row">
-                                            <td colSpan="9" style={{ padding: 0 }}>
+                                            <td colSpan="11" style={{ padding: 0 }}>
                                                 <ArtnetLotDetail
                                                     work={work}
                                                     intel={intel}

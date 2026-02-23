@@ -156,7 +156,31 @@
     font-style: italic;
 }
 
-/* Provide email-overlay context so child components inherit CSS vars */
-.edg-email-context {
-    /* Inherits from .email-overlay vars via the class */
+/* ══════════════════════════════════════════════════════════════
+   Interactive States
+   ══════════════════════════════════════════════════════════════ */
+
+/* Active pill — gold border + brighter text */
+.edg-pill-active {
+    border-color: #c9a84c !important;
+    color: #e0e0e0 !important;
+    background: rgba(201, 168, 76, 0.08) !important;
+}
+
+/* Active tactic card — gold left border */
+.edg-tactic-active {
+    border-color: #c9a84c !important;
+    border-left: 3px solid #c9a84c !important;
+    background: rgba(201, 168, 76, 0.04) !important;
+}
+
+/* Flash feedback on click */
+.edg-flash {
+    animation: edg-flash-anim 0.3s ease-out !important;
+}
+
+@keyframes edg-flash-anim {
+    0% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0.5); }
+    50% { box-shadow: 0 0 12px 2px rgba(201, 168, 76, 0.3); }
+    100% { box-shadow: 0 0 0 0 rgba(201, 168, 76, 0); }
 }
