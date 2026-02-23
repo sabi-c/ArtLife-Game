@@ -1,13 +1,13 @@
 /**
  * deals.js — Email-based deal negotiation events
  *
- * Events with `isEmail: true` route to EmailDialogueOverlay instead of
+ * Events with `isEmail: true` route to the unified EmailOverlay instead of
  * the standard EventOverlay. Each step is either an email (incoming/outgoing)
  * or a choice that generates a player reply and optional NPC response.
  *
  * Template vars: {{playerName}} is replaced at render time.
  *
- * @see EmailDialogueOverlay.jsx for the rendering component
+ * @see src/ui/email/EmailOverlay.jsx for the rendering component
  */
 
 export const DEAL_EVENTS = [

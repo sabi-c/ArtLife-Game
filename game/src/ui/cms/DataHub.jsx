@@ -3,6 +3,7 @@ import { useCmsStore } from '../../stores/cmsStore.js';
 import { EventRegistry } from '../../managers/EventRegistry.js';
 import { useNPCStore } from '../../stores/npcStore.js';
 import { MarketManager } from '../../managers/MarketManager.js';
+import { ARTWORKS } from '../../data/artworks.js';
 import { DOMAIN_SCHEMAS, SAMPLE_TEMPLATES, validateDomainData, detectDomain } from '../../data/DataTemplates.js';
 
 // ══════════════════════════════════════
@@ -140,6 +141,23 @@ export default function DataHub() {
         }
     };
 
+    // ── Manage Domain ──
+    const handleManageDomain = (domain) => {
+        if (!store.snapshots[domain]) {
+            let existingData = [];
+            if (domain === 'events') existingData = EventRegistry.jsonEvents;
+            else if (domain === 'storylines') existingData = EventRegistry.jsonStorylines;
+            else if (domain === 'npcs') existingData = useNPCStore.getState().contacts;
+            else if (domain === 'artists') existingData = MarketManager.artists;
+            else if (domain === 'artworks') existingData = ARTWORKS;
+
+            if (existingData && existingData.length > 0) {
+                store.saveSnapshot(domain, existingData);
+            }
+        }
+        setSelectedDomain(domain);
+    };
+
     // ── Template Downloads ──
     const handleDownloadTemplate = (domain) => {
         const sample = SAMPLE_TEMPLATES[domain]();
@@ -252,7 +270,11 @@ export default function DataHub() {
 
         if (importPreview.type === 'bundle') {
             const ok = store.importBundle(importPreview.raw);
-            if (ok) { flash('success', `Bundle imported: ${importPreview.filename}`); setImportPreview(null); }
+            if (ok) {
+                flash('success', `Bundle imported: ${importPreview.filename}`);
+                store.logImport({ action: 'import', domain: 'bundle', source: importPreview.filename, count: Object.values(importPreview.raw).reduce((s, v) => s + (Array.isArray(v) ? v.length : 0), 0), details: `Full bundle import from ${importPreview.filename}` });
+                setImportPreview(null);
+            }
             else flash('error', 'Bundle import failed');
             return;
         }
@@ -286,9 +308,11 @@ export default function DataHub() {
                 inserted = items.length;
             }
 
+            store.logImport({ action: 'import', domain, source: importPreview.filename || 'paste', count: inserted + updated, details: `${inserted} new, ${updated} updated` });
             flash('success', `[${DOMAIN_SCHEMAS[domain].label}] ${inserted} new, ${updated} updated`);
             setImportPreview(null);
         } catch (err) {
+            store.logImport({ action: 'import_error', domain, source: importPreview.filename || 'unknown', count: 0, details: err.message });
             flash('error', `Import failed: ${err.message}`);
         }
     };
@@ -320,7 +344,10 @@ export default function DataHub() {
 
     // ── Export ──
     const handleExportBundle = () => {
-        if (store.exportBundle()) flash('success', 'Full bundle exported → downloads');
+        if (store.exportBundle()) {
+            store.logImport({ action: 'export', domain: 'bundle', source: 'full_export', count: 0, details: 'Full bundle exported to downloads' });
+            flash('success', 'Full bundle exported → downloads');
+        }
         else flash('error', 'Export failed');
     };
 
@@ -343,6 +370,44 @@ export default function DataHub() {
     // ══════════════════════════════════════
     // Render
     // ══════════════════════════════════════
+    if (selectedDomain) {
+        const schema = DOMAIN_SCHEMAS[selectedDomain];
+        const items = store.snapshots[selectedDomain] || [];
+
+        return (
+            <div style={S.root}>
+                <div style={S.section}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                        <h3 style={{ ...S.sectionTitle, margin: 0 }}>{schema.icon} Manage {schema.label}</h3>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                            <button style={S.btnDanger} onClick={() => { if (confirm('Delete ALL items?')) store.deleteAllItems(selectedDomain); }}>Delete All</button>
+                            <button style={S.btn} onClick={() => setSelectedDomain(null)}>Back to Hub</button>
+                        </div>
+                    </div>
+                    {items.length === 0 ? (
+                        <div style={S.dim}>No items found. Import some first.</div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                            {items.map((item, i) => (
+                                <div key={item.id || i} style={{ background: '#0a0a14', border: '1px solid #222', padding: 12, borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ overflow: 'hidden', paddingRight: 10 }}>
+                                        <div style={{ color: '#eee', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                            {item.title || item.name || item.id}
+                                        </div>
+                                        <div style={{ ...S.dim, fontSize: 10, marginTop: 4, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                                            {item.artist || item.artistId || item.category || item.type || item.id}
+                                        </div>
+                                    </div>
+                                    <button style={{ ...S.btnDanger, padding: '4px 8px', fontSize: 10, minWidth: 28 }} onClick={() => store.deleteItem(selectedDomain, item.id)}>✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={S.root}>
             {status && <div style={S.status(status.type)}>{status.message}</div>}
@@ -527,7 +592,45 @@ export default function DataHub() {
                 </details>
             </div>
 
-            {/* ═══ Section 4: Live Data Summary ═══ */}
+            {/* ═══ Section 4: Import / Export History ═══ */}
+            <div style={S.section}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={S.sectionTitle}>📋 Import / Export History</h3>
+                    {store.importLog.length > 0 && (
+                        <button style={S.btnSmall} onClick={() => store.clearImportLog()}>Clear Log</button>
+                    )}
+                </div>
+                {store.importLog.length === 0 ? (
+                    <div style={S.dim}>No import/export operations recorded yet.</div>
+                ) : (
+                    <div style={{ maxHeight: 200, overflow: 'auto', background: '#080812', border: '1px solid #222', borderRadius: 6, padding: 8 }}>
+                        {[...store.importLog].reverse().map((entry, i) => (
+                            <div key={i} style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px',
+                                borderBottom: '1px solid #111', fontSize: 11, color: '#bbb',
+                            }}>
+                                <span style={{
+                                    fontSize: 14,
+                                    minWidth: 18,
+                                }}>{entry.action === 'export' ? '📤' : entry.action === 'import_error' ? '❌' : '📥'}</span>
+                                <span style={{ color: '#666', minWidth: 60 }}>
+                                    {new Date(entry.timestamp).toLocaleTimeString()}
+                                </span>
+                                <span style={{ color: '#c9a84c', fontWeight: 600, minWidth: 70 }}>
+                                    {entry.domain}
+                                </span>
+                                <span style={{ flex: 1 }}>{entry.details}</span>
+                                {entry.count > 0 && (
+                                    <span style={{ color: '#4caf50', fontWeight: 700 }}>{entry.count} items</span>
+                                )}
+                                <span style={{ color: '#555', fontSize: 9 }}>{entry.source}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* ═══ Section 5: Live Data Summary ═══ */}
             <div style={S.section}>
                 <h3 style={S.sectionTitle}>📊 Live Data Summary</h3>
                 <table style={S.table}>
@@ -551,6 +654,7 @@ export default function DataHub() {
                                         <div style={{ display: 'flex', gap: 6 }}>
                                             <button style={S.btnSmall} onClick={() => handleExportDomain(key)} disabled={count === 0}>Export</button>
                                             <button style={S.btnSmall} onClick={() => handleDownloadTemplate(key)}>Template</button>
+                                            <button style={S.btnSmall} onClick={() => handleManageDomain(key)} disabled={count === 0}>Manage</button>
                                         </div>
                                     </td>
                                 </tr>

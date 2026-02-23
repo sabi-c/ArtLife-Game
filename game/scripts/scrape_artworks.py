@@ -42,7 +42,7 @@ def download_image(url, save_path):
     """Download image from URL to save_path."""
     try:
         headers = {
-            "User-Agent": "ArtMarketGameBot/1.0 (https://github.com/example/artmarket; art@example.com) Mozilla/5.0"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
         response = requests.get(url, headers=headers, stream=True, timeout=10)
         response.raise_for_status()
@@ -60,7 +60,7 @@ def scrape_wikipedia():
     print(f"Found {len(artworks)} artworks in artworks.js")
     
     # Init Wikipedia API
-    wiki = wikipediaapi.Wikipedia('ArtMarketBot/1.0 (art@example.com)', 'en')
+    wiki = wikipediaapi.Wikipedia('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'en')
     success_count = 0
     
     for i, art in enumerate(artworks):
@@ -95,7 +95,7 @@ def scrape_wikipedia():
             
             req_url = f"https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=original&titles={page.title.replace(' ', '%20')}"
             try:
-                res = requests.get(req_url, headers={"User-Agent": "ArtMarketBot/1.0"})
+                res = requests.get(req_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"})
                 data = res.json()
                 pages = data.get('query', {}).get('pages', {})
                 img_url = None

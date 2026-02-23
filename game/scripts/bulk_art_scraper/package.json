@@ -1,0 +1,17 @@
+{
+  "name": "bulk_art_scraper",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "crawlee": "^3.16.0",
+    "playwright": "^1.58.2"
+  }
+}

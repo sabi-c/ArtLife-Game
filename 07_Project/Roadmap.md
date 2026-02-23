@@ -15,6 +15,53 @@
 **CI:** Build & Validate ✅ | Playwright Tests informational (continue-on-error)
 **Phase 3:** Complete. Phase 4 active.
 
+### Unified Email Overlay System (2026-02-23 Session 27)
+
+**Merged two separate email overlays into one polished, professional system:**
+- `EmailDialogueOverlay.jsx` (static scripted deals) + `HaggleEmailOverlay.jsx` (HaggleManager negotiations) → unified `src/ui/email/` module
+- 5 new files: `EmailOverlay.jsx` (shell), `EmailThread.jsx` (left panel), `EmailCompose.jsx` (right panel), `useEmailState.js` (state machine hook), `EmailOverlay.css` (dark-mode styles)
+- Gmail-style tactic chips: category row (TACTICS/POWERS/INFO/DEAL) → tactic pills with type-color dots (red=emotional, blue=logical, orange=aggressive, green=financial) → dialogue sub-choices
+- No emoji in tactic labels (stripped at render time)
+- Full thread view with clickable messages, haggle status bar (ASK/OFFER/PATIENCE/ROUND)
+- Dark-mode-first design with `email-` CSS prefix, `--email-*` design tokens
+- Typewriter at 25ms/char, 0.8s send animation, 1.2s/1.5s waiting dots
+- Responsive: stacks panels vertically at < 700px
+- Extracted `an-email-*` CSS from BloombergTerminal.css (320 lines removed)
+- Deleted old `EmailDialogueOverlay.jsx` and `HaggleEmailOverlay.jsx`
+
+**Files changed:** 5 new files in `src/ui/email/`, BloombergTerminal.jsx (imports + overlay routing), BloombergTerminal.css (email CSS removed), deals.js (comment update)
+**Files deleted:** `EmailDialogueOverlay.jsx`, `HaggleEmailOverlay.jsx`
+
+### Code Refactoring Sprint (2026-02-23 Session 26)
+
+**Utility Extraction:**
+- Created `src/utils/math.js` — shared `clamp()` utility replacing ~20 inline `Math.max(min, Math.min(max, value))` patterns across 8 files
+- Created `src/utils/format.js` — `formatMoney()`, `formatMoneyShort()`, `formatPct()`, `formatPriceByIntel()` formatters
+- Extracted `src/terminal/screens/shared-helpers.js` — `statBarHtml()`, `sparkline()`, `hasActions()`, `useAction()`, `getActionsRemaining()`, `generateFlavorNews()` moved from dashboard.js (1,716 lines) so other screens can import helpers without loading the entire module
+
+**Import Cleanup:**
+- Removed redundant dynamic `import('../managers/EventRegistry.js')` in DialogueScene.js (already statically imported)
+- Changed HaggleScene dashboard import from `dashboard.js` to `index.js` for consistency
+- Added JSDoc comments on all intentional dynamic imports (GameState→WeekEngine, EventRegistry→storylineStore, contentStore→calendar_events)
+- Archived dead `InkBridge.js` to `_Archive/` (never imported anywhere)
+
+**Dashboard Split** (1,716 → ~600 line hub + 3 modules):
+- `dashboard-venue.js` — venuePickerScreen, venueDetailScreen, roomExploreScreen, npcTalkScreen, terminalDialogueScreen
+- `dashboard-weekly.js` — weekTransitionScreen, weekReportScreen (callback pattern breaks circular deps)
+- `dashboard-cutscenes.js` — testVenueCutscenesScreen (dev feature)
+- `dashboard.js` — reduced to hub importing from sub-modules, re-exports shared-helpers for backwards compat
+
+**HaggleScene Split** (1,913 → ~266 line orchestrator + 3 mixins):
+- `scenes/haggle/HaggleRenderer.js` — battle arena, sprites, bars, result screens, achievements
+- `scenes/haggle/HaggleTactics.js` — menu system, tactic execution, dialogue choices, deal/extend UI
+- `scenes/haggle/HaggleDialogue.js` — typewriter, combat animations, type-specific visual effects
+- Uses Object.assign mixin pattern to keep `this` references intact across modules
+
+**Build Optimization:**
+- Investigated CMS manual chunk splitting — reverted because MasterCMS transitively imports Phaser, causing worse splitting. Existing phaser-only manual chunk is already optimal.
+
+**Files changed:** 8 files got clamp() import, 4 terminal screens updated to import from shared-helpers.js, dashboard.js rewritten as hub, HaggleScene.js rewritten as orchestrator. 7 new files created, 1 archived.
+
 ### Style Guides + Email Dialogue Scene (2026-02-23 Session 25)
 
 **SharedPanelGrid Component:**

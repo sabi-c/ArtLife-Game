@@ -1,0 +1,615 @@
+/**
+ * EmailOverlay.css — Unified email overlay styles
+ *
+ * Dark-mode-first design. All classes use the email- prefix.
+ * Replaces the an-email-* rules previously in BloombergTerminal.css.
+ * Visual language: "Artnet and Gmail had a child" — professional,
+ * dark, with gold accent and pill-shaped tactic chips.
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   Design Tokens
+   ══════════════════════════════════════════════════════════════ */
+
+.email-overlay {
+    --email-bg: #0e0e14;
+    --email-bg-secondary: #16161e;
+    --email-accent: #c9a84c;
+    --email-accent-light: rgba(201, 168, 76, 0.08);
+    --email-border: #2a2a2a;
+    --email-fg: #e0e0e0;
+    --email-fg-muted: #777;
+    --email-font-body: 'Helvetica Neue', Arial, sans-serif;
+    --email-font-mono: 'IBM Plex Mono', Courier, monospace;
+    --email-radius: 2px;
+
+    /* Type colors for tactic dots */
+    --email-type-emotional: #c44;
+    --email-type-logical: #4488cc;
+    --email-type-aggressive: #cc8833;
+    --email-type-financial: #44aa66;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Overlay Shell
+   ══════════════════════════════════════════════════════════════ */
+
+.email-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--email-font-body);
+    color: var(--email-fg);
+    animation: email-fade-in 0.4s ease-out;
+}
+
+@keyframes email-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.email-modal {
+    background: var(--email-bg);
+    border: 1px solid var(--email-border);
+    border-radius: 4px;
+    width: 940px;
+    max-width: 95vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Header Bar
+   ══════════════════════════════════════════════════════════════ */
+
+.email-header {
+    background: var(--email-accent);
+    color: #fff;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.email-header-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.email-close {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff;
+    padding: 4px 14px;
+    border-radius: var(--email-radius);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--email-font-body);
+    letter-spacing: 0.04em;
+    transition: background 0.15s;
+}
+
+.email-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Split Layout: 35% thread | 65% compose
+   ══════════════════════════════════════════════════════════════ */
+
+.email-split {
+    display: grid;
+    grid-template-columns: 35% 65%;
+    flex: 1;
+    min-height: 300px;
+    overflow: hidden;
+}
+
+@media (max-width: 700px) {
+    .email-split {
+        grid-template-columns: 1fr;
+        grid-template-rows: 200px 1fr;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Left Panel: Thread
+   ══════════════════════════════════════════════════════════════ */
+
+.email-thread {
+    border-right: 1px solid var(--email-border);
+    padding: 0;
+    overflow-y: auto;
+    background: var(--email-bg-secondary);
+}
+
+/* Haggle status bar */
+.email-haggle-status {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--email-border);
+    font-size: 11px;
+    font-family: var(--email-font-mono);
+}
+
+.email-haggle-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.email-haggle-row:last-child {
+    margin-bottom: 0;
+}
+
+.email-haggle-label {
+    color: var(--email-fg-muted);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+}
+
+.email-haggle-value {
+    font-weight: 700;
+    color: var(--email-fg);
+}
+
+.email-haggle-danger {
+    color: var(--email-accent);
+}
+
+/* Thread title */
+.email-thread-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--email-fg-muted);
+    padding: 12px 14px 8px;
+}
+
+.email-thread-empty {
+    font-size: 12px;
+    color: #555;
+    text-align: center;
+    padding: 24px 14px;
+}
+
+/* Message cards */
+.email-msg {
+    padding: 8px 14px;
+    margin: 0 8px 6px;
+    border-radius: var(--email-radius);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+    animation: email-msg-slide 0.3s ease-out;
+}
+
+@keyframes email-msg-slide {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.email-msg:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.email-msg--in {
+    border-left-color: #444;
+}
+
+.email-msg--out {
+    border-left-color: var(--email-accent);
+}
+
+.email-msg--active {
+    background: var(--email-accent-light);
+    border-left-color: var(--email-accent);
+}
+
+.email-msg-from {
+    font-weight: 600;
+    color: var(--email-fg);
+}
+
+.email-msg-time {
+    font-size: 10px;
+    color: var(--email-fg-muted);
+    margin-top: 2px;
+}
+
+.email-msg-preview {
+    margin-top: 3px;
+    color: #666;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+/* Sending indicator */
+.email-sending-indicator {
+    text-align: center;
+    font-size: 11px;
+    color: var(--email-accent);
+    padding: 12px 0;
+    font-style: italic;
+    animation: email-fade-in 0.3s ease-out;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Right Panel: Compose / Read
+   ══════════════════════════════════════════════════════════════ */
+
+.email-compose {
+    padding: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sender info block */
+.email-sender {
+    border-bottom: 1px solid var(--email-border);
+    padding: 14px 20px;
+    flex-shrink: 0;
+}
+
+.email-sender-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 3px;
+    font-size: 12px;
+}
+
+.email-sender-row:last-child {
+    margin-bottom: 0;
+}
+
+.email-sender-label {
+    color: var(--email-fg-muted);
+    font-weight: 500;
+    min-width: 55px;
+}
+
+.email-sender-value {
+    color: var(--email-fg);
+    font-weight: 600;
+}
+
+/* Email body text */
+.email-body {
+    padding: 16px 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--email-fg);
+    flex: 1;
+}
+
+.email-body--choosing {
+    flex: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--email-border);
+}
+
+.email-line {
+    margin: 0 0 8px 0;
+}
+
+.email-highlight {
+    color: var(--email-accent);
+    font-weight: 700;
+}
+
+/* Blinking cursor */
+.email-cursor {
+    color: var(--email-accent);
+    animation: email-cursor-blink 0.8s step-end infinite;
+    font-weight: 300;
+}
+
+@keyframes email-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Waiting dots */
+.email-waiting {
+    text-align: center;
+    padding: 32px 0;
+}
+
+.email-dots {
+    font-size: 24px;
+    font-weight: 700;
+    color: #555;
+    letter-spacing: 0.3em;
+    animation: email-dots-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes email-dots-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+/* Sent confirmation */
+.email-sent-msg {
+    text-align: center;
+    color: var(--email-fg-muted);
+    font-size: 13px;
+    padding: 24px 0;
+    font-style: italic;
+}
+
+/* Outcome */
+.email-outcome {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--email-accent-light);
+    border-left: 3px solid var(--email-accent);
+    border-radius: var(--email-radius);
+    font-size: 13px;
+}
+
+/* Done button */
+.email-done-btn {
+    margin-top: 20px;
+    padding: 10px 24px;
+    background: var(--email-accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--email-radius);
+    font-family: var(--email-font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.email-done-btn:hover {
+    opacity: 0.85;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Choosing Phase
+   ══════════════════════════════════════════════════════════════ */
+
+.email-choosing {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Static mode: choice buttons */
+.email-actions {
+    padding: 12px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.email-action-btn {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--email-bg);
+    border: 1px solid var(--email-border);
+    border-radius: 16px;
+    font-family: var(--email-font-body);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--email-fg);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.email-action-btn:hover {
+    border-color: var(--email-accent);
+    background: var(--email-accent-light);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Haggle Tactic Panel
+   ══════════════════════════════════════════════════════════════ */
+
+.email-tactic-panel {
+    padding: 12px 20px 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Category row: horizontal pills */
+.email-category-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.email-category-chip {
+    padding: 6px 16px;
+    background: var(--email-bg);
+    border: 1px solid var(--email-border);
+    border-radius: 16px;
+    font-family: var(--email-font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--email-fg-muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.email-category-chip:hover {
+    border-color: var(--email-accent);
+    color: var(--email-fg);
+}
+
+.email-category-chip--active {
+    border-color: var(--email-accent);
+    color: var(--email-accent);
+    background: var(--email-accent-light);
+}
+
+/* Tactic chip grid */
+.email-chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    animation: email-fade-in 0.3s ease-out;
+}
+
+.email-tactic-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--email-bg);
+    border: 1px solid var(--email-border);
+    border-radius: 16px;
+    font-family: var(--email-font-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--email-fg);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.email-tactic-chip:hover:not(:disabled) {
+    border-color: var(--email-accent);
+    background: var(--email-accent-light);
+}
+
+.email-tactic-chip--locked {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Type dot: 8px colored circle */
+.email-type-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Info Panel
+   ══════════════════════════════════════════════════════════════ */
+
+.email-info-panel {
+    font-family: var(--email-font-mono);
+    font-size: 12px;
+    animation: email-fade-in 0.3s ease-out;
+}
+
+.email-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.email-info-row span:first-child {
+    color: var(--email-fg-muted);
+}
+
+.email-info-row span:last-child {
+    font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Deal Panel
+   ══════════════════════════════════════════════════════════════ */
+
+.email-deal-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: email-fade-in 0.3s ease-out;
+}
+
+.email-deal-btn {
+    padding: 12px 20px;
+    border: 1px solid var(--email-border);
+    border-radius: var(--email-radius);
+    font-family: var(--email-font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.email-deal-btn--accept {
+    background: rgba(68, 170, 102, 0.1);
+    border-color: #44aa66;
+    color: #44aa66;
+}
+
+.email-deal-btn--accept:hover {
+    background: rgba(68, 170, 102, 0.2);
+}
+
+.email-deal-btn--walk {
+    background: var(--email-bg);
+    border-color: var(--email-border);
+    color: var(--email-fg-muted);
+}
+
+.email-deal-btn--walk:hover {
+    border-color: #c44;
+    color: #c44;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Dialogue Sub-Choices
+   ══════════════════════════════════════════════════════════════ */
+
+.email-dialogue-choices {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: email-fade-in 0.3s ease-out;
+}
+
+.email-dialogue-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--email-fg-muted);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+.email-dialogue-chip {
+    padding: 10px 16px;
+    background: var(--email-bg);
+    border: 1px solid var(--email-border);
+    border-radius: var(--email-radius);
+    font-family: var(--email-font-body);
+    font-size: 12px;
+    color: var(--email-fg);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    line-height: 1.4;
+}
+
+.email-dialogue-chip:hover {
+    border-color: var(--email-accent);
+    background: var(--email-accent-light);
+}

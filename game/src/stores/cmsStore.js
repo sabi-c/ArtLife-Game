@@ -54,6 +54,7 @@ export const useCmsStore = create(
 
             // ── Change Log ──
             changeLog: [],    // Array of { timestamp, domain, action, details }
+            importLog: [],    // Array of { timestamp, domain, action, source, count, details }
             lastSaveTime: null,
 
             // ── Data Presets ──
@@ -115,6 +116,81 @@ export const useCmsStore = create(
             getSnapshot: (domain) => {
                 return get().snapshots[domain];
             },
+
+            // ═══════════════════════════════════════════════════════════
+            //  IMPORT / EXPORT LOGGING
+            // ═══════════════════════════════════════════════════════════
+
+            /** Log an import or export operation */
+            logImport: (entry) => set((state) => {
+                state.importLog.push({
+                    timestamp: Date.now(),
+                    ...entry,
+                });
+                // Keep log manageable
+                if (state.importLog.length > 200) {
+                    state.importLog = state.importLog.slice(-100);
+                }
+            }),
+
+            /** Clear the import log */
+            clearImportLog: () => set((state) => {
+                state.importLog = [];
+            }),
+
+            // ═══════════════════════════════════════════════════════════
+            //  DELETION
+            // ═══════════════════════════════════════════════════════════
+
+            /** Delete a specific item from a domain */
+            deleteItem: (domain, id) => set((state) => {
+                let deletedCount = 0;
+
+                if (domain === 'events' && state.snapshots.events) {
+                    const origLen = state.snapshots.events.length;
+                    state.snapshots.events = state.snapshots.events.filter(x => x.id !== id);
+                    if (state.snapshots.events.length < origLen) deletedCount++;
+                    EventRegistry.jsonEvents = state.snapshots.events;
+                } else if (domain === 'storylines' && state.snapshots.storylines) {
+                    const origLen = state.snapshots.storylines.length;
+                    state.snapshots.storylines = state.snapshots.storylines.filter(x => x.id !== id);
+                    if (state.snapshots.storylines.length < origLen) deletedCount++;
+                    EventRegistry.jsonStorylines = state.snapshots.storylines;
+                } else if (domain === 'npcs' && state.snapshots.npcs) {
+                    const origLen = state.snapshots.npcs.length;
+                    state.snapshots.npcs = state.snapshots.npcs.filter(x => x.id !== id);
+                    if (state.snapshots.npcs.length < origLen) deletedCount++;
+                    useNPCStore.setState({ contacts: state.snapshots.npcs });
+                } else if (domain === 'artists' && state.snapshots.artists) {
+                    const origLen = state.snapshots.artists.length;
+                    state.snapshots.artists = state.snapshots.artists.filter(x => x.id !== id);
+                    if (state.snapshots.artists.length < origLen) deletedCount++;
+                    MarketManager.artists = state.snapshots.artists;
+                } else if (domain === 'artworks' && state.snapshots.artworks) {
+                    const origLen = state.snapshots.artworks.length;
+                    state.snapshots.artworks = state.snapshots.artworks.filter(x => x.id !== id);
+                    if (state.snapshots.artworks.length < origLen) deletedCount++;
+                }
+
+                if (deletedCount > 0) {
+                    state.dirty[domain] = true;
+                    state.changeLog.push({ timestamp: Date.now(), domain, action: 'delete', details: `Deleted item ${id}` });
+                    if (state.changeLog.length > 100) state.changeLog = state.changeLog.slice(-50);
+                }
+            }),
+
+            /** Delete ALL items from a domain */
+            deleteAllItems: (domain) => set((state) => {
+                if (domain === 'events') { state.snapshots.events = []; EventRegistry.jsonEvents = []; }
+                else if (domain === 'storylines') { state.snapshots.storylines = []; EventRegistry.jsonStorylines = []; }
+                else if (domain === 'npcs') { state.snapshots.npcs = []; useNPCStore.setState({ contacts: [] }); }
+                else if (domain === 'artists') { state.snapshots.artists = []; MarketManager.artists = []; }
+                else if (domain === 'artworks') { state.snapshots.artworks = []; }
+
+                state.dirty[domain] = true;
+                state.changeLog.push({ timestamp: Date.now(), domain, action: 'deleteAll', details: `Cleared all items in ${domain}` });
+                if (state.changeLog.length > 100) state.changeLog = state.changeLog.slice(-50);
+            }),
 
             // ═══════════════════════════════════════════════════════════
             //  SAVE / LOAD / EXPORT

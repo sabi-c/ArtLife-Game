@@ -44,13 +44,12 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 |---|---|---|
 | **Antigravity** | CMS Data Hub, MarketSimulator robustness, CI fix, project audit | 🟢 Active |
 
-### Latest Session (2026-02-23 Session 23)
-- **CMS Data Hub v2**: Domain-specific templates, schema validation, drag-and-drop import, per-domain export, named presets
-- **MarketSimulator Robustness**: Trade type tags (`npc_trade`, `player_buy`, `sim_manual`), provenance chains in ARTWORK_MAP, buyer/seller names in trade history
-- **Artwork Trade History**: Persistent tradeHistory merged with sim log in ArtworkMarketPanel, owner + listing status display
-- **NPC Market Activity**: Trade type badges column with color coding
-- **Data Integrity**: Artworks count fixed (was 0 in Data Hub — read from wrong source), exportBundle + saveAsPreset now include live ARTWORKS
-- **CI Fix**: Playwright test job marked `continue-on-error` — Build & Validate remains the real gate (113 consecutive test failures resolved)
+### Latest Session (2026-02-23 Session 27)
+- **Unified Email Overlay System**: Merged `EmailDialogueOverlay.jsx` + `HaggleEmailOverlay.jsx` into `src/ui/email/` module (5 files)
+- Gmail-style tactic chips with type-color dots, category navigation (TACTICS/POWERS/INFO/DEAL), dialogue sub-choices
+- Dark-mode professional design with `email-` CSS prefix, full thread view, haggle status bar
+- `useEmailState.js` hook: unified state machine for both static deal events and HaggleManager negotiations
+- **Build**: Clean
 
 ### Known Issues & Recent Fixes (2026-02-23)
 

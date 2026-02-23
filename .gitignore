@@ -3,3 +3,16 @@ dist/
 .nyc_output/
 *.log
 .env
+
+# Artwork images (scraped — too large for git; generate with scripts)
+game/public/artworks/
+
+# Bulk scraper artifacts
+game/scripts/bulk_art_scraper/node_modules/
+game/scripts/bulk_art_scraper/storage/
+game/scripts/bundles/
+
+# Python
+game/scripts/.venv/
+__pycache__/
+*.pyc

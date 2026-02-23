@@ -64,8 +64,7 @@ import { CITY_DATA } from '../data/cities.js';
 import { WORLD_LOCATIONS } from '../data/world_locations.js';
 import { clamp } from '../utils/math.js';
 import BloombergTutorial from './BloombergTutorial.jsx';
-import EmailDialogueOverlay from './EmailDialogueOverlay.jsx';
-import HaggleEmailOverlay from './HaggleEmailOverlay.jsx';
+import EmailOverlay from './email/EmailOverlay.jsx';
 import './BloombergTerminal.css';
 
 // ── Intel-gated data masking ──
@@ -2496,6 +2495,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
     const realizedPnl = playerSales.reduce((s, t) => s + (t.profit || 0), 0);
 
     const [showSaleStats, setShowSaleStats] = useState(false);
+    const [listExpanded, setListExpanded] = useState(false);
 
     // Live market data for pulse header
     const tickSnap = useMemo(() => {
@@ -2661,7 +2661,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                         </tr>
                     </thead>
                     <tbody>
-                        {allItems.map((work, i) => {
+                        {(listExpanded ? allItems : allItems.slice(0, 10)).map((work, i) => {
                             const roi = work.purchasePrice > 0
                                 ? ((work.currentVal - work.purchasePrice) / work.purchasePrice * 100).toFixed(1) : null;
                             const isExpanded = detailWork?.id === work.id || (detailWork?._lot === work._lot && !work.id);
@@ -2783,6 +2783,18 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                         })}
                     </tbody>
                 </table>
+            )}
+
+            {allItems.length > 10 && (
+                <div style={{ textAlign: 'center', margin: '16px 0' }}>
+                    <button
+                        className="an-btn"
+                        style={{ padding: '8px 24px', fontSize: 12, letterSpacing: 1 }}
+                        onClick={() => setListExpanded(!listExpanded)}
+                    >
+                        {listExpanded ? 'Collapse List ▲' : `View All ${allItems.length} Artworks ▼`}
+                    </button>
+                </div>
             )}
 
             {/* Artist detail card — shown when artist name is clicked */}
@@ -4256,32 +4268,29 @@ export default function BloombergTerminal({ onClose }) {
                 }} />
             )}
 
-            {/* Event Overlay — routes email events to EmailDialogueOverlay, others to EventOverlay */}
-            {pendingEvent && pendingEvent.isEmail && !activeHaggle && (
-                <EmailDialogueOverlay
-                    event={pendingEvent}
-                    onComplete={(choiceData) => {
-                        useEventStore.getState().consumePendingEvent();
+            {/* Unified Email Overlay — handles both static deal events and haggle negotiations */}
+            {(pendingEvent?.isEmail || activeHaggle) && (
+                <EmailOverlay
+                    mode={activeHaggle ? 'haggle' : 'static'}
+                    event={pendingEvent?.isEmail ? pendingEvent : undefined}
+                    haggleInfo={activeHaggle || undefined}
+                    onComplete={() => {
+                        if (pendingEvent?.isEmail) {
+                            useEventStore.getState().consumePendingEvent();
+                        }
+                        if (activeHaggle) {
+                            setActiveHaggle(null);
+                        }
                         forceRender(n => n + 1);
                     }}
                 />
             )}
+            {/* Non-email Event Overlay */}
             {pendingEvent && !pendingEvent.isEmail && !activeHaggle && (
                 <EventOverlay
                     event={pendingEvent}
                     onComplete={(choiceData) => {
                         useEventStore.getState().consumePendingEvent();
-                        forceRender(n => n + 1);
-                    }}
-                />
-            )}
-
-            {/* Haggle Email Overlay */}
-            {activeHaggle && (
-                <HaggleEmailOverlay
-                    haggleInfo={activeHaggle}
-                    onClose={() => {
-                        setActiveHaggle(null);
                         forceRender(n => n + 1);
                     }}
                 />
