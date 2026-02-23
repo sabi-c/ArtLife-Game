@@ -1356,7 +1356,7 @@ export default function ArtworkEditor() {
                                                 >
                                                     {selected.sprite ? (
                                                         <>
-                                                            <img src={`/artworks/${selected.sprite}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                                                            <img src={selected.sprite.startsWith('/') ? selected.sprite : `/artworks/${selected.sprite}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
                                                             <div style={{ display: 'none', color: '#555', fontSize: 10 }}>Image not found. Drop new file.</div>
                                                         </>
                                                     ) : (
