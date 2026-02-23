@@ -1360,6 +1360,70 @@
     padding: 16px;
 }
 
+/* ── Clickable artwork image ── */
+.bb-ts-photo-clickable {
+    cursor: zoom-in;
+    transition: opacity 0.2s;
+}
+
+.bb-ts-photo-clickable:hover {
+    opacity: 0.85;
+}
+
+/* ── Lightbox overlay ── */
+.bb-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    animation: bb-lightbox-in 0.25s ease;
+}
+
+@keyframes bb-lightbox-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.bb-lightbox-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    cursor: default;
+}
+
+.bb-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.bb-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 /* ── Metadata block — formal gallery layout ── */
 .bb-ts-meta-block {
     margin-bottom: 24px;

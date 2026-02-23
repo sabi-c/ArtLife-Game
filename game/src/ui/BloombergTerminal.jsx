@@ -841,7 +841,7 @@ function NotificationBar({ notifications, onClickNotif }) {
 //   price → market inset → provenance chain → exhibitions → literature →
 //   action buttons → gallery footer with locations
 // ══════════════════════════════════════════════════════════════
-function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, onListConfirm }) {
+function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, onListConfirm, onImageClick }) {
     const [confirmBuy, setConfirmBuy] = useState(false);
     const [listTier, setListTier] = useState(null);
     const s = GameState.state;
@@ -918,7 +918,13 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                 {/* ── Artwork image ── */}
                 <div className="bb-ts-photos">
                     {imageUrl ? (
-                        <img className="bb-ts-photo-img" src={imageUrl} alt={title} />
+                        <img
+                            className="bb-ts-photo-img bb-ts-photo-clickable"
+                            src={imageUrl}
+                            alt={title}
+                            onClick={() => onImageClick?.(imageUrl)}
+                            title="Click to view full size"
+                        />
                     ) : (
                         <div className="bb-ts-photo-placeholder">
                             <span className="bb-ts-photo-text">{title}</span>
@@ -4147,6 +4153,7 @@ export default function BloombergTerminal({ onClose }) {
     const [showTutorial, setShowTutorial] = useState(!SettingsManager.get('hasSeenBloombergIntro', false));
     const [activeHaggle, setActiveHaggle] = useState(null);
     const [statusMsg, setStatusMsg] = useState(null);
+    const [lightboxUrl, setLightboxUrl] = useState(null);
     const [, forceRender] = useState(0);
 
     // Pending event overlay — driven by useEventStore
@@ -4544,7 +4551,16 @@ export default function BloombergTerminal({ onClose }) {
                     onBuy={handleBuy}
                     onHaggle={handleHaggle}
                     onListConfirm={handleListConfirm}
+                    onImageClick={(url) => setLightboxUrl(url)}
                 />
+            )}
+
+            {/* ═══ Artwork Image Lightbox ═══ */}
+            {lightboxUrl && (
+                <div className="bb-lightbox" onClick={() => setLightboxUrl(null)}>
+                    <img className="bb-lightbox-img" src={lightboxUrl} alt="" onClick={e => e.stopPropagation()} />
+                    <button className="bb-lightbox-close" onClick={() => setLightboxUrl(null)}>✕</button>
+                </div>
             )}
         </div>
     );

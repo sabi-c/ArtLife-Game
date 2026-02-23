@@ -23,6 +23,7 @@ import SalesGrid from './ui/SalesGrid.jsx';
 import EmailDesignGuide from './ui/email/EmailDesignGuide.jsx';
 import GmailDesignGuide from './ui/email/GmailDesignGuide.jsx';
 import IMessageUI from './ui/email/iMessageUI.jsx';
+import ArtnetLogin from './ui/ArtnetLogin.jsx';
 import EmailOverlay from './ui/email/EmailOverlay.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import CharacterCreator from './ui/CharacterCreator.jsx';
@@ -44,7 +45,7 @@ export default function App() {
         return VIEW.PHASER;
     });
     const [viewPayload, setViewPayload] = useState(null);
-    const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
+    const [activeOverlay, setActiveOverlay] = useState(OVERLAY.BLOOMBERG);
     const [isGridSceneActive, setIsGridSceneActive] = useState(false);
     const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null); // EmailOverlay haggle from any context
     const autoResumedRef = useRef(false);
@@ -429,6 +430,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.IMESSAGE_UI && (
                 <IMessageUI onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.ARTNET_LOGIN && (
+                <ArtnetLogin onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {/* Global Email Haggle — rendered above all overlays when triggered from any context */}

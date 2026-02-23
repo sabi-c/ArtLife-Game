@@ -778,6 +778,11 @@ export default function AdminDashboard({ onClose }) {
                                         [ iMessage UI ]
                                         <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Apple iMessage chat — contacts, bubbles, typing indicator</div>
                                     </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00' }} onClick={() => triggerOverlay(OVERLAY.ARTNET_LOGIN)}>
+                                        [ Artnet Login ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>artnet.com login page clone — Log In, Sign Up, forms</div>
+                                    </button>
                                 </div>
                             </div>
                         )}
