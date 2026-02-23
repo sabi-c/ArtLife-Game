@@ -51,7 +51,7 @@ import { useNPCStore } from '../stores/npcStore.js';
 import { ExpressionEngine } from '../engine/ExpressionEngine.js';
 
 // ── Trade Log (persisted per session) ──
-const MAX_LOG_SIZE = 200;
+const MAX_LOG_SIZE = 2000;
 
 // ════════════════════════════════════════════
 // Market Formulas — SoonFx-inspired expression trees
@@ -1127,6 +1127,47 @@ export class MarketSimulator {
         ];
 
         MarketSimulator.tradeLog.push(...demoTrades);
+    }
+
+    /**
+     * Load historical trades from MarketHistoryEngine output.
+     * Called during MarketManager.init() to pre-populate the trade log
+     * with realistic multi-year trade data spanning the full simulation.
+     *
+     * @param {Array} trades — from MarketHistoryEngine.generate().trades
+     */
+    static loadHistoricalTrades(trades) {
+        if (!trades || trades.length === 0) return;
+
+        // Only load if trade log is empty or has only demo trades (< 20)
+        if (MarketSimulator.tradeLog.length > 20) return;
+
+        // Convert engine trades to trade log format and append
+        const formatted = trades.map(t => ({
+            buyer: t.buyer,
+            seller: t.seller,
+            artwork: t.artworkId,
+            artworkId: t.artworkId,
+            title: t.title || '',
+            artist: t.artist || '',
+            artistId: t.artistId || '',
+            price: t.price,
+            week: t.week,
+            type: t.type || 'historical',
+            medium: t.medium || '',
+            tier: t.tier || '',
+            cycle: t.cycle || 'flat',
+        }));
+
+        // Pre-pend historical trades before any existing ones
+        MarketSimulator.tradeLog = [...formatted, ...MarketSimulator.tradeLog];
+
+        // Trim to max
+        if (MarketSimulator.tradeLog.length > MAX_LOG_SIZE) {
+            MarketSimulator.tradeLog = MarketSimulator.tradeLog.slice(-MAX_LOG_SIZE);
+        }
+
+        console.log(`[MarketSimulator] Loaded ${formatted.length} historical trades (${MarketSimulator.tradeLog.length} total in log)`);
     }
 
     /** Reset all simulation state */

@@ -73,6 +73,8 @@ export class SettingsManager {
                 { value: 'artnet', display: 'Artnet Price Database' },
                 { value: 'sothebys', display: "Sotheby's Catalogue" },
                 { value: 'deitch', display: 'Deitch Projects' },
+                { value: 'byform', display: 'Byform Portfolio' },
+                { value: 'waterworks', display: 'Waterworks Map' },
                 { value: 'bloomberg', display: 'Bloomberg Terminal' }
             ],
             default: 'gallery'
@@ -112,7 +114,14 @@ export class SettingsManager {
                 trading: ['ticker', 'leaderboard', 'orderbook', 'pricechart', 'tradefeed', 'portfolio', 'notifications', 'watchlist'],
                 tearsheet: ['collection', 'orderbook', 'playerstats', 'networth'],
             }
-        }
+        },
+        {
+            id: 'marketSimConfig',
+            label: 'Market Simulation Config',
+            type: 'object',
+            default: {},
+            hidden: true, // Not shown in cycle UI — managed by MarketConfig
+        },
     ];
 
     static _cache = null;
@@ -183,6 +192,11 @@ export class SettingsManager {
                 val = [...def.default];
             } else {
                 val = val.filter(v => validOptions.includes(v));
+            }
+        } else if (def.type === 'object') {
+            // Object type — return as-is if valid, default otherwise
+            if (val === undefined || val === null || typeof val !== 'object') {
+                val = def.default !== undefined ? { ...def.default } : {};
             }
         } else if (val === undefined) {
             val = def.default;

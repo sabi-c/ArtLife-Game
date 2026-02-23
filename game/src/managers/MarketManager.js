@@ -3,6 +3,8 @@ import { GameState } from './GameState.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
 import { useMarketStore } from '../stores/marketStore.js';
+import { MarketHistoryEngine } from './MarketHistoryEngine.js';
+import { MarketSimulator } from './MarketSimulator.js';
 
 /**
  * MarketManager.js — Pricing Engine & Artist Index Calculator
@@ -50,11 +52,38 @@ export class MarketManager {
     static realWorldData = null;
     static artists = [];
     static works = [];
+    static historicalData = null; // Multi-year simulation from MarketHistoryEngine
 
     static init(works) {
         // Deep copy artists so we can mutate heat
         MarketManager.artists = ARTISTS.map((a) => ({ ...a }));
         MarketManager.works = works;
+
+        // ── Generate multi-year historical data ──
+        // This populates price charts, trade history, and market events
+        // in the Bloomberg terminal with realistic 5-year data.
+        try {
+            MarketManager.historicalData = MarketHistoryEngine.generate(ARTISTS, {
+                yearsOfHistory: 5,
+                seed: 42, // Deterministic for consistent experience
+            });
+            console.log(`[MarketManager] Generated ${MarketManager.historicalData.compositeHistory.length}-week market history with ${MarketManager.historicalData.trades.length} trades`);
+
+            // Pre-populate marketStore with historical data
+            try {
+                const store = useMarketStore.getState();
+                if (store.loadHistoricalData) {
+                    store.loadHistoricalData(MarketManager.historicalData);
+                }
+            } catch { /* store may not have loadHistoricalData yet */ }
+
+            // Pre-populate trade log with historical trades
+            try {
+                MarketSimulator.loadHistoricalTrades(MarketManager.historicalData.trades);
+            } catch { /* MarketSimulator may not be ready */ }
+        } catch (err) {
+            console.warn('[MarketManager] Historical data generation failed:', err);
+        }
 
         // Asynchronously load the real-world scraped data backend
         fetch('content/real_world_data.json')
