@@ -14,6 +14,43 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
 
+### Gallery Views Deep Build-Out (2026-02-22 Session 16)
+
+**NPC Directory Panel** — New panel showing all 16 art world NPCs:
+- Role badges with color coding (dealer gold, gallerist green, auction blue, etc.)
+- Favor level descriptors (Close Ally → Enemy) with numeric at intel 40+
+- Filter by role, sort by favor or name
+- Personality teaser at intel 60+, annual budget at intel 50+
+- Intel < 30: only shows met contacts (progressive disclosure)
+- Per-style CSS for all 6 views
+- Added to `bloombergPanels` schema in SettingsManager
+
+**Artnet Artist Detail Card** — Click any artist name in the Artnet table:
+- Inline detail card with: bio/flavor text (intel 30+), tier badge, heat bar
+- Index score with delta, price range, collection count, market availability
+- Price trend sparkline from live data
+- Artist names styled as clickable blue links with red hover
+
+**Artnet Sale Statistics** — Collapsible section above table:
+- 6 stat cards: total lots, collection count, market count, trade volume, realized P&L, unrealized P&L
+- Performance by artist breakdown table: lots, total value, owned vs market
+- Quick summary in toggle bar (trade count + volume)
+- Responsive: 6→3→2 column grid on smaller screens
+
+**Visible Style Label** — Toggle button now shows current view name (e.g. "◐ Seventh House")
+
+### Phase 4B — Planned (TODO)
+
+| # | Task | Priority | Status |
+|---|------|----------|--------|
+| 1 | Seventh House view: staggered 2-col artwork grid (seventhhouse.la style) | HIGH | TODO |
+| 2 | Pokemon walk-around: full reskin with proper Pokemon sprites | HIGH | TODO |
+| 3 | Connect Bloomberg terminal ↔ Pokemon walk-around (launch world from terminal) | MEDIUM | TODO |
+| 4 | Sotheby's view: add bidding simulation UI | MEDIUM | TODO |
+| 5 | Deitch view: "OPENING RECEPTION" event banner from calendar data | MEDIUM | TODO |
+| 6 | All views: CMS artwork image display improvements | MEDIUM | TODO |
+| 7 | World building: fix non-Chelsea room navigation | LOW | TODO |
+
 ### Gallery Polish + 2-Column Layouts (2026-02-22 Session 15)
 
 **Style Rename** — Display names updated for clarity:
