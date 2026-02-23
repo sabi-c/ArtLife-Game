@@ -2,6 +2,7 @@ import { ARTISTS } from '../data/artists.js';
 import { GameState } from './GameState.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
+import { useMarketStore } from '../stores/marketStore.js';
 
 /**
  * Market simulation engine
@@ -195,6 +196,38 @@ export class MarketManager {
     static detectArtificialFloor(artistId) {
         const artist = MarketManager.getArtist(artistId);
         return artist ? (artist.buybackActive || false) : false;
+    }
+
+    /**
+     * Lightweight intra-week price jitter — O-U mean-reverting noise without
+     * full heat evolution or market cycle transitions. Called from
+     * GameState.advanceTime() whenever the game clock crosses an hour boundary.
+     *
+     * Uses damped volatility (30% of weekly) and weaker mean reversion (theta 0.15)
+     * so prices drift slightly between weekly ticks but don't diverge wildly.
+     */
+    static microTick() {
+        if (MarketManager.works.length === 0) return;
+
+        for (const work of MarketManager.works) {
+            if (!work.onMarket) continue;
+            const artist = MarketManager.artists.find(a => a.id === work.artistId);
+            if (!artist) continue;
+
+            const target = MarketManager.calculatePrice(work, false);
+            const vol = (artist.heatVolatility || 5) * 0.3; // Damped volatility
+            const theta = 0.15; // Weaker mean reversion than weekly tick
+            const shock = vol * work.price * 0.01 * (Math.random() * 2 - 1);
+            const reversion = theta * (target - work.price);
+            work.price = Math.max(100, Math.round(work.price + reversion * 0.1 + shock));
+        }
+
+        MarketManager._lastMicroTick = Date.now();
+
+        // Record snapshot for Bloomberg sparklines
+        try {
+            useMarketStore.getState().recordMicroTick(MarketManager.artists, MarketManager.works);
+        } catch { /* store not ready */ }
     }
 
     // ══════════════════════════════════════════════════════════════

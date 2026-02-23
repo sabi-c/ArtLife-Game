@@ -110,6 +110,19 @@ export class MarketSimulator {
     /** Get weekly report */
     static getWeeklyReport() { return MarketSimulator.weeklyReport; }
 
+    /** Get all trades involving a specific artwork */
+    static getTradesByArtwork(artworkId) {
+        return MarketSimulator.tradeLog.filter(t => t.artwork === artworkId);
+    }
+
+    /** Get all trades involving works by a specific artist */
+    static getTradesByArtist(artistId) {
+        return MarketSimulator.tradeLog.filter(t => {
+            const work = ARTWORKS.find(a => a.id === t.artwork);
+            return work?.artistId === artistId;
+        });
+    }
+
     // ══════════════════════════════════════════════════════════════
     // Main Simulation Tick (called from WeekEngine)
     // ══════════════════════════════════════════════════════════════
@@ -494,6 +507,72 @@ export class MarketSimulator {
         } catch {
             return work.askingPrice || 10000;
         }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    // Intra-Week Micro Trades (called from GameState.advanceTime)
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Attempt a single NPC-to-NPC trade during intra-week time advancement.
+     * Called each game-hour from advanceTime() — ~1% chance per call so trades
+     * trickle in throughout the week rather than all resolving at week-end.
+     *
+     * @param {number} hour — current game hour (0-23)
+     * @param {number} dayOfWeek — 1-7
+     * @param {string} marketCycle — 'bull' | 'bear' | 'flat'
+     * @returns {object|null} — trade result or null if nothing happened
+     */
+    static simulateMicroTrade(hour, dayOfWeek, marketCycle) {
+        // ~1% chance per micro-tick (each game-hour). With ~16 waking hours × 7 days
+        // that's ~112 attempts per week, yielding ~1.1 trades/week on average.
+        if (Math.random() > 0.01) return null;
+
+        MarketSimulator._ensureState();
+        const state = MarketSimulator._npcState;
+        const npcs = Object.values(state);
+
+        // Pick a random NPC to be the buyer
+        const buyerIdx = Math.floor(Math.random() * npcs.length);
+        const buyer = npcs[buyerIdx];
+        if (!buyer || buyer.cash < 2000 || buyer.owned.length >= buyer.maxCapacity) return null;
+
+        // Generate a buy order
+        const buys = MarketSimulator._decideBuys(buyer, GameState.state?.week || 1, marketCycle);
+        if (buys.length === 0) return null;
+        const buyOrder = buys[0];
+
+        // Find a seller with something to sell
+        const sellOrders = [];
+        for (const npc of npcs) {
+            if (npc.id === buyer.id) continue;
+            const sells = MarketSimulator._decideSells(npc, GameState.state?.week || 1, marketCycle);
+            sellOrders.push(...sells);
+        }
+        if (sellOrders.length === 0) return null;
+
+        // Match
+        const matches = MarketSimulator._matchOrders([buyOrder], sellOrders, state);
+        if (matches.length === 0) return null;
+
+        // Resolve + settle
+        const result = MarketSimulator._resolveTrade(matches[0], state);
+        if (!result) return null;
+
+        const week = GameState.state?.week || 1;
+        MarketSimulator._settle(result, state, week);
+
+        // Record in trade log
+        const tradeEntry = {
+            buyer: result.buyerId, seller: result.sellerId,
+            artwork: result.artworkId, price: result.price, week,
+        };
+        MarketSimulator.tradeLog.push(tradeEntry);
+        if (MarketSimulator.tradeLog.length > MAX_LOG_SIZE) {
+            MarketSimulator.tradeLog = MarketSimulator.tradeLog.slice(-MAX_LOG_SIZE);
+        }
+
+        return tradeEntry;
     }
 
     // ══════════════════════════════════════════════════════════════

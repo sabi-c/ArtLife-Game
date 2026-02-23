@@ -27,6 +27,31 @@ export const useMarketStore = create(
             // Works currently available on market (synced from MarketManager)
             availableWorks: [],
 
+            // Intra-week price buffer per artist (for live Bloomberg sparklines)
+            // Not persisted — session-only display data, cleared on week advance
+            intraWeekPrices: {},
+
+            /**
+             * Record a micro-tick price snapshot per artist for intra-week sparklines.
+             * Called from MarketManager.microTick() or advanceTime().
+             */
+            recordMicroTick: (artists, works) => set((state) => {
+                for (const artist of (artists || [])) {
+                    if (!state.intraWeekPrices[artist.id]) state.intraWeekPrices[artist.id] = [];
+                    const artistWorks = (works || []).filter(w => w.artistId === artist.id && w.onMarket);
+                    if (artistWorks.length === 0) continue;
+                    const avgPrice = Math.round(artistWorks.reduce((s, w) => s + w.price, 0) / artistWorks.length);
+                    state.intraWeekPrices[artist.id].push(avgPrice);
+                    // Keep last 50 data points per artist
+                    if (state.intraWeekPrices[artist.id].length > 50) {
+                        state.intraWeekPrices[artist.id] = state.intraWeekPrices[artist.id].slice(-50);
+                    }
+                }
+            }),
+
+            /** Clear intra-week buffer on week advance (fresh sparklines each week) */
+            clearIntraWeekPrices: () => set((state) => { state.intraWeekPrices = {}; }),
+
             /**
              * Sync state from MarketManager after each tick.
              * Called by WeekEngine or TerminalAPI.
@@ -152,6 +177,7 @@ export const useMarketStore = create(
                 state.marketCycle = 'flat';
                 state.weeklyNews = [];
                 state.availableWorks = [];
+                state.intraWeekPrices = {};
             }),
         })),
         {

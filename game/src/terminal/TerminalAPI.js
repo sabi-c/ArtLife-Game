@@ -105,6 +105,52 @@ export const TerminalAPI = {
     //  NPC MARKET API — plugin point for UI components
     // ═══════════════════════════════════════════════════════════
 
+    // ═══════════════════════════════════════════════════════════
+    //  BLOOMBERG WATCHLIST API
+    // ═══════════════════════════════════════════════════════════
+
+    watchlist: {
+        /** Add an artist or artwork to the watchlist */
+        add: (type, id, price) => {
+            const s = GameState.state;
+            if (!s) return;
+            if (!s.watchlist) s.watchlist = [];
+            if (s.watchlist.some(w => w.id === id)) return; // already watching
+            s.watchlist.push({ type, id, addedWeek: s.week, addedPrice: price || null });
+        },
+        /** Remove an item from the watchlist */
+        remove: (id) => {
+            const s = GameState.state;
+            if (!s?.watchlist) return;
+            s.watchlist = s.watchlist.filter(w => w.id !== id);
+        },
+        /** Check if an item is on the watchlist */
+        isWatched: (id) => {
+            return (GameState.state?.watchlist || []).some(w => w.id === id);
+        },
+        /** Get the full watchlist */
+        get: () => GameState.state?.watchlist || [],
+        /** Get watchlist with resolved current prices */
+        getWithPrices: () => {
+            const list = GameState.state?.watchlist || [];
+            return list.map(item => {
+                let currentPrice = 0;
+                if (item.type === 'artist') {
+                    const works = MarketManager.works?.filter(w => w.artistId === item.id && w.onMarket) || [];
+                    currentPrice = works.length > 0
+                        ? Math.round(works.reduce((s, w) => s + w.price, 0) / works.length)
+                        : 0;
+                } else {
+                    const work = ARTWORKS.find(a => a.id === item.id);
+                    try { currentPrice = MarketManager.calculatePrice(work, false); }
+                    catch { currentPrice = work?.askingPrice || 0; }
+                }
+                const delta = item.addedPrice ? ((currentPrice - item.addedPrice) / item.addedPrice * 100) : 0;
+                return { ...item, currentPrice, delta: Math.round(delta * 10) / 10 };
+            });
+        },
+    },
+
     npcMarket: {
         /**
          * Get full market profile for an NPC — combines static contacts data,

@@ -73,6 +73,7 @@ export class WeekEngine {
             MarketManager.tick();
             // Sync market state to Zustand store for persistence & UI
             const mStore = useMarketStore.getState();
+            mStore.clearIntraWeekPrices(); // Reset intra-week sparkline data for new week
             mStore.syncFromManager(MarketManager.artists, MarketManager.works, state.marketState, state.week);
             mStore.generateWeeklyNews(MarketManager.artists);
         }

@@ -248,6 +248,27 @@ export function inspectScreen(ui, work) {
             });
         }
 
+        // ── Watchlist toggle ──
+        const isWatched = TerminalAPI.watchlist.isWatched(work.id);
+        const artistWatched = work.artistId ? TerminalAPI.watchlist.isWatched(work.artistId) : false;
+        if (isWatched) {
+            options.push({
+                label: '☆ Remove from Watchlist',
+                action: () => { TerminalAPI.watchlist.remove(work.id); ui.replaceScreen(inspectScreen(ui, work)); }
+            });
+        } else {
+            options.push({
+                label: '★ Add to Watchlist',
+                action: () => { TerminalAPI.watchlist.add('artwork', work.id, work.price); ui.replaceScreen(inspectScreen(ui, work)); }
+            });
+        }
+        if (work.artistId && !artistWatched) {
+            options.push({
+                label: `★ Watch Artist: ${work.artist}`,
+                action: () => { TerminalAPI.watchlist.add('artist', work.artistId); ui.replaceScreen(inspectScreen(ui, work)); }
+            });
+        }
+
         options.push({ label: '← Back', action: () => ui.popScreen() });
         return { lines, options };
     };

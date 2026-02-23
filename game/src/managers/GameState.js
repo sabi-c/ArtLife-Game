@@ -172,6 +172,8 @@ export class GameState {
             activeModifiers: [], // Array of active event economic modifiers
             // ── Tone / dialogue tracking ──
             toneHistory: {},     // { npcId: [tone1, tone2, ...] }
+            // ── Bloomberg Watchlist ──
+            watchlist: [],       // Array of { type: 'artist'|'artwork', id: string, addedWeek: number, addedPrice?: number }
         };
 
         // Expose reference for React UI components (PlayerDashboard etc.)
@@ -243,11 +245,30 @@ export class GameState {
      */
     static advanceTime(minutes) {
         const state = GameState.state;
+        const oldHour = state.hour;
         state.minute += minutes;
 
         while (state.minute >= 60) {
             state.minute -= 60;
             state.hour += 1;
+        }
+
+        // Fire micro-tick on each hour boundary for intra-week price jitter + trade drip
+        if (Math.floor(state.hour) !== Math.floor(oldHour)) {
+            try { MarketManager.microTick(); } catch { /* non-critical */ }
+            // Attempt an intra-week NPC trade (lazy import avoids circular dep)
+            try {
+                import('./MarketSimulator.js').then(({ MarketSimulator }) => {
+                    const trade = MarketSimulator.simulateMicroTrade(
+                        state.hour, state.dayOfWeek, state.marketState
+                    );
+                    if (trade) {
+                        import('./ActivityLogger.js').then(({ ActivityLogger }) => {
+                            ActivityLogger.logMarket('micro_trade', trade);
+                        }).catch(() => {});
+                    }
+                }).catch(() => {});
+            } catch { /* non-critical */ }
         }
 
         // If we push past midnight, force a sleep until 8 AM next day
@@ -854,6 +875,7 @@ export class GameState {
                 insideVenue: false,
             },
             hoursUsedToday: 0,
+            watchlist: [],
         };
 
         const saveData = {
@@ -945,6 +967,7 @@ export class GameState {
             overworldPosition: null,
             eraModifier: 1.0,
             activeModifiers: [],
+            watchlist: [], // Bloomberg watchlist
         };
 
         window._artLifeState = GameState.state;

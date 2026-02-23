@@ -1482,6 +1482,18 @@ export function dashboardScreen(ui) {
                 action: !intelLocked ? () => GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.MARKET_DASHBOARD) : undefined
             });
 
+            // Bloomberg Terminal (mid/late game, costs 1 AP)
+            const bloombergLocked = phase === 'early';
+            opsItems.push({ icon: '💹', label: bloombergLocked ? 'Market Terminal (Locked)' : 'Market Terminal', ap: 1, disabled: bloombergLocked || !hasActions(1) });
+            options.push({
+                label: bloombergLocked ? 'Market Terminal (Locked)' : 'Market Terminal (Bloomberg)',
+                disabled: bloombergLocked || !hasActions(1),
+                action: (!bloombergLocked && hasActions(1)) ? () => {
+                    useAction('Checked Market Terminal');
+                    GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.BLOOMBERG);
+                } : undefined
+            });
+
             if (pendingCount > 0) {
                 opsItems.push({ icon: '💼', label: `Pending Offers`, badge: `${pendingCount}` });
                 options.push({
