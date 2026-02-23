@@ -22,6 +22,7 @@ import { CALENDAR_EVENTS } from '../../data/calendar_events.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { ARTISTS } from '../../data/artists.js';
 import { DEALER_TYPES, HAGGLE_CONFIG } from '../../data/haggle_config.js';
+import TearSheetView from './TearSheetView.jsx';
 
 // ── Style Constants ──
 const mono = '"IBM Plex Mono", "Courier New", monospace';
@@ -791,6 +792,7 @@ export default function ArtworkEditor() {
         { id: 'portfolio', icon: '💼', label: 'Portfolio' },
         { id: 'calendar', icon: '📅', label: 'Calendar' },
         { id: 'haggle', icon: '⚔️', label: 'Haggle' },
+        { id: 'tearsheet', icon: '📄', label: 'Tear Sheet' },
     ];
 
     return (
@@ -1031,6 +1033,13 @@ export default function ArtworkEditor() {
                                         })}
                                     </tbody>
                                 </table>
+                            </div>
+                        )}
+
+                        {/* TEAR SHEET */}
+                        {subTab === 'tearsheet' && (
+                            <div style={{ flex: 1, margin: -16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                <TearSheetView />
                             </div>
                         )}
                     </div>

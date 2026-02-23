@@ -68,10 +68,49 @@ export class SettingsManager {
             label: 'Market Terminal Style',
             type: 'cycle',
             options: [
-                { value: 'gallery', display: 'Gallery Tearsheet' },
+                { value: 'gallery', display: 'Gallery Dashboard' },
+                { value: 'tearsheet', display: 'Gagosian Tearsheet' },
+                { value: 'artnet', display: 'Artnet Auction' },
+                { value: 'sothebys', display: "Sotheby's Catalogue" },
+                { value: 'deitch', display: 'Deitch Projects' },
                 { value: 'bloomberg', display: 'Bloomberg Dark' }
             ],
             default: 'gallery'
+        },
+        {
+            id: 'bloombergPanels',
+            label: 'Bloomberg Panels',
+            type: 'checklist',
+            options: [
+                { value: 'ticker', display: 'Ticker Bar' },
+                { value: 'notifications', display: 'Notifications' },
+                { value: 'playerstats', display: 'Player Stats' },
+                { value: 'networth', display: 'Net Worth' },
+                { value: 'collection', display: 'Collection' },
+                { value: 'leaderboard', display: 'Artist Index' },
+                { value: 'pricechart', display: 'Price Chart' },
+                { value: 'orderbook', display: 'Order Book' },
+                { value: 'overview', display: 'Market Overview' },
+                { value: 'tradefeed', display: 'Trade Feed' },
+                { value: 'txhistory', display: 'Transaction History' },
+                { value: 'watchlist', display: 'Watchlist' },
+                { value: 'portfolio', display: 'Portfolio Tracker' },
+            ],
+            default: [
+                'ticker', 'notifications', 'playerstats', 'networth', 'collection',
+                'leaderboard', 'pricechart', 'orderbook', 'overview', 'tradefeed',
+                'txhistory', 'watchlist', 'portfolio',
+            ],
+            presets: {
+                full: [
+                    'ticker', 'notifications', 'playerstats', 'networth', 'collection',
+                    'leaderboard', 'pricechart', 'orderbook', 'overview', 'tradefeed',
+                    'txhistory', 'watchlist', 'portfolio',
+                ],
+                minimal: ['playerstats', 'networth', 'collection', 'orderbook'],
+                trading: ['ticker', 'leaderboard', 'orderbook', 'pricechart', 'tradefeed', 'portfolio', 'notifications', 'watchlist'],
+                tearsheet: ['collection', 'orderbook', 'playerstats', 'networth'],
+            }
         }
     ];
 
@@ -136,6 +175,14 @@ export class SettingsManager {
             if (!validOptions.includes(val)) {
                 val = def.default;
             }
+        } else if (def.type === 'checklist') {
+            // Validate array — filter to valid options only, fall back to default
+            const validOptions = def.options.map(o => o.value);
+            if (!Array.isArray(val)) {
+                val = [...def.default];
+            } else {
+                val = val.filter(v => validOptions.includes(v));
+            }
         } else if (val === undefined) {
             val = def.default;
         }
@@ -177,6 +224,35 @@ export class SettingsManager {
         const currentVal = this.get(key);
         const option = def.options.find(o => o.value === currentVal);
         return option ? option.display : String(currentVal);
+    }
+
+    /**
+     * Toggle an item in a checklist setting — adds if missing, removes if present.
+     */
+    static toggleChecklistItem(key, value) {
+        const def = this.SCHEMA.find(s => s.id === key);
+        if (!def || def.type !== 'checklist') return;
+
+        const current = [...this.get(key)];
+        const idx = current.indexOf(value);
+        if (idx >= 0) {
+            current.splice(idx, 1);
+        } else {
+            current.push(value);
+        }
+        this.set(key, current);
+    }
+
+    /**
+     * Apply a named preset to a checklist setting.
+     */
+    static applyPreset(key, presetName) {
+        const def = this.SCHEMA.find(s => s.id === key);
+        if (!def || def.type !== 'checklist' || !def.presets) return;
+
+        const preset = def.presets[presetName];
+        if (!preset) return;
+        this.set(key, [...preset]);
     }
 
     /**

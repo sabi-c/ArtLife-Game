@@ -5,6 +5,7 @@ import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { VIEW, OVERLAY } from '../constants/views.js';
 import { useNPCStore } from '../stores/npcStore.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
 
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
@@ -229,6 +230,54 @@ export default function AdminDashboard({ onClose }) {
                                     [ {step} ]
                                 </button>
                             ))}
+                        </div>
+                        {/* ── Bloomberg Panel Config ── */}
+                        <div style={{ gridColumn: '1 / -1', marginTop: 20 }}>
+                            <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>BLOOMBERG PANEL CONFIG</h3>
+                            <div style={{
+                                background: '#0a0a0f', border: '1px solid #333', padding: 16,
+                            }}>
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                                    {['full', 'minimal', 'trading', 'tearsheet'].map(preset => (
+                                        <button key={preset} style={{
+                                            ...btnStyle, width: 'auto', marginBottom: 0,
+                                            padding: '6px 14px', fontSize: 10, letterSpacing: '0.15em',
+                                            minHeight: 32,
+                                        }} onClick={() => {
+                                            SettingsManager.applyPreset('bloombergPanels', preset);
+                                            forceUpdate();
+                                        }}>
+                                            {preset.toUpperCase()}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: isTouchDevice ? '1fr 1fr' : '1fr 1fr 1fr',
+                                    gap: '6px 16px',
+                                }}>
+                                    {(SettingsManager.SCHEMA.find(s => s.id === 'bloombergPanels')?.options || []).map(opt => {
+                                        const panels = SettingsManager.get('bloombergPanels');
+                                        const checked = panels.includes(opt.value);
+                                        return (
+                                            <label key={opt.value} style={{
+                                                display: 'flex', alignItems: 'center', gap: 8,
+                                                fontSize: 11, color: checked ? '#e0e0e8' : '#555',
+                                                cursor: 'pointer', padding: '3px 0',
+                                            }}>
+                                                <input type="checkbox" checked={checked}
+                                                    style={{ accentColor: '#c9a84c', width: 14, height: 14, cursor: 'pointer' }}
+                                                    onChange={() => {
+                                                        SettingsManager.toggleChecklistItem('bloombergPanels', opt.value);
+                                                        forceUpdate();
+                                                    }}
+                                                />
+                                                {opt.display}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

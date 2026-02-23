@@ -1365,19 +1365,23 @@
     border-top: none;
 }
 
-/* ── Panel Base (gallery) ── */
+/* ── Panel Base (gallery) — de-boxed: transparent, spacing-based flow ── */
 .bb-gallery .bb-panel {
-    background: #ffffff;
+    background: transparent;
     padding: 20px 24px;
-    border-top: 1px solid #d0cbc4;
+    border-top: none;
+}
+
+.bb-gallery .bb-panel + .bb-panel {
+    margin-top: 32px;
 }
 
 .bb-gallery .bb-panel-header {
     font-size: 8px;
     letter-spacing: 0.45em;
-    color: #9a9690;
-    font-weight: 400;
-    border-bottom: 1px solid #e0dbd4;
+    color: #6a6660;
+    font-weight: 600;
+    border-bottom: 1px solid #1a1a1a;
     padding-bottom: 8px;
     margin-bottom: 14px;
 }
@@ -1765,6 +1769,252 @@
     border-radius: 0;
 }
 
+/* ── Gallery: remove all row borders (use spacing instead) ── */
+.bb-gallery .bb-lb-row { border-bottom: none; padding: 6px 4px; }
+.bb-gallery .bb-trade-row { border-bottom: none; }
+.bb-gallery .bb-watch-row { border-bottom: none; padding: 6px 0; }
+.bb-gallery .bb-ob-row { border-bottom: none; }
+.bb-gallery .bb-port-row { border-bottom: none; }
+
+/* ── Gallery: remove tearsheet market inset border ── */
+.bb-gallery .bb-ts-market-inset { border: none; }
+
+/* ══════════════════════════════════════════════════════════════ */
+/* NEW COMPONENTS — Gallery-scoped styles                        */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* ── Player Stats (bb-ps-*) — 5-column clean stat grid ── */
+.bb-ps-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    text-align: center;
+}
+
+.bb-ps-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bb-ps-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+}
+
+.bb-ps-label {
+    font-size: 7px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+}
+
+/* ── Net Worth (bb-nw-*) — hero number + sparkline + stat grid ── */
+.bb-nw-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.bb-nw-big {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.02em;
+}
+
+.bb-nw-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 24px;
+}
+
+.bb-nw-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-nw-stat-label {
+    font-size: 7px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+}
+
+.bb-nw-stat-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.bb-nw-stat-value.up { color: #2a6e2a; }
+.bb-nw-stat-value.down { color: #8b2020; }
+
+/* ── Collection (bb-coll-*) — gallery-catalogue style ── */
+.bb-coll-count {
+    font-size: 9px;
+    font-weight: 400;
+    color: #9a9690;
+}
+
+.bb-coll-empty {
+    color: #d0cbc4;
+    font-size: 10px;
+    padding: 12px 0;
+}
+
+.bb-coll-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #e8e4de;
+    transition: background 0.15s;
+}
+
+.bb-coll-item:last-child {
+    border-bottom: none;
+}
+
+.bb-coll-item:hover {
+    background: rgba(201, 168, 76, 0.04);
+}
+
+.bb-coll-artist {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: #1a1a1a;
+    margin-bottom: 3px;
+}
+
+.bb-coll-title {
+    font-size: 11px;
+    color: #2a2a2a;
+    margin-bottom: 3px;
+}
+
+.bb-coll-medium {
+    font-size: 9px;
+    color: #9a9690;
+    margin-bottom: 6px;
+}
+
+.bb-coll-prices {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: #6a6660;
+}
+
+.bb-coll-arrow {
+    color: #d0cbc4;
+}
+
+.bb-coll-roi {
+    font-weight: 600;
+}
+
+.bb-coll-roi.up { color: #2a6e2a; }
+.bb-coll-roi.down { color: #8b2020; }
+
+/* ── Transaction History (bb-txh-*) — ledger with BUY/SELL badges ── */
+.bb-txh-summary {
+    font-size: 9px;
+    font-weight: 400;
+    color: #9a9690;
+}
+
+.bb-txh-summary .up { color: #2a6e2a; }
+.bb-txh-summary .down { color: #8b2020; }
+
+.bb-txh-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-txh-empty {
+    color: #d0cbc4;
+    font-size: 10px;
+    padding: 12px 0;
+}
+
+.bb-txh-row {
+    display: grid;
+    grid-template-columns: 36px 30px 1fr auto 70px auto;
+    gap: 6px;
+    padding: 6px 0;
+    font-size: 10px;
+    align-items: center;
+    border-bottom: 1px solid #f0ede8;
+}
+
+.bb-txh-row:last-child {
+    border-bottom: none;
+}
+
+.bb-txh-badge {
+    display: inline-block;
+    padding: 1px 4px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-align: center;
+}
+
+.bb-txh-badge.buy {
+    background: #f0ede8;
+    color: #6a6660;
+}
+
+.bb-txh-badge.sell {
+    background: #1a1a1a;
+    color: #f8f6f2;
+}
+
+.bb-txh-week {
+    color: #9a9690;
+    font-size: 9px;
+}
+
+.bb-txh-title {
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-txh-artist {
+    color: #9a9690;
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-txh-price {
+    color: #1a1a1a;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-txh-pnl {
+    font-weight: 700;
+    font-size: 10px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.bb-txh-pnl.up { color: #2a6e2a; }
+.bb-txh-pnl.down { color: #8b2020; }
+
+.bb-txh-hold {
+    font-weight: 400;
+    color: #9a9690;
+    font-size: 9px;
+}
+
 /* ── Gallery mobile overrides ── */
 @media (max-width: 768px) {
     .bb-gallery .bb-panel {
@@ -1774,6 +2024,27 @@
     .bb-gallery .bb-header {
         padding: 12px 14px;
     }
+
+    .bb-ps-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px 8px;
+    }
+
+    .bb-nw-big {
+        font-size: 24px;
+    }
+
+    .bb-nw-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px 16px;
+    }
+
+    .bb-txh-row {
+        grid-template-columns: 36px 26px 1fr 60px;
+    }
+
+    .bb-txh-artist { display: none; }
+    .bb-txh-pnl { display: none; }
 }
 
 @media (max-width: 380px) {
@@ -1785,4 +2056,1940 @@
         font-size: 7px;
         letter-spacing: 0.35em;
     }
+
+    .bb-ps-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .bb-ps-value {
+        font-size: 18px;
+    }
+
+    .bb-nw-big {
+        font-size: 20px;
+    }
+
+    .bb-nw-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Panel Config Dropdown (bb-config-*)                           */
+/* ══════════════════════════════════════════════════════════════ */
+
+.bb-config-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.bb-config-btn {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.bb-config-btn:hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
+}
+
+.bb-gallery .bb-config-btn {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-config-btn:hover {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.bb-config-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1049;
+}
+
+.bb-config-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1050;
+    background: #111118;
+    border: 1px solid #333;
+    padding: 12px 14px;
+    min-width: 200px;
+    max-height: 420px;
+    overflow-y: auto;
+    animation: bb-config-open 0.15s ease-out;
+}
+
+.bb-config-dropdown.bb-config-gallery {
+    background: #f8f6f2;
+    border-color: #d0cbc4;
+    color: #1a1a1a;
+}
+
+@keyframes bb-config-open {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bb-config-title {
+    font-size: 8px;
+    letter-spacing: 0.4em;
+    color: #5a5a6a;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a3e;
+}
+
+.bb-config-gallery .bb-config-title {
+    color: #9a9690;
+    border-bottom-color: #d0cbc4;
+}
+
+.bb-config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.bb-config-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #c0c0c8;
+    cursor: pointer;
+    padding: 3px 0;
+    transition: color 0.15s;
+}
+
+.bb-config-item:hover {
+    color: #e0e0e8;
+}
+
+.bb-config-gallery .bb-config-item {
+    color: #3a3a3a;
+}
+
+.bb-config-gallery .bb-config-item:hover {
+    color: #1a1a1a;
+}
+
+.bb-config-item input[type="checkbox"] {
+    accent-color: #c9a84c;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.bb-config-presets {
+    display: flex;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid #2a2a3e;
+}
+
+.bb-config-gallery .bb-config-presets {
+    border-top-color: #d0cbc4;
+}
+
+.bb-config-preset {
+    flex: 1;
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 5px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.bb-config-preset:hover {
+    border-color: #c9a84c;
+    color: #c9a84c;
+}
+
+.bb-config-gallery .bb-config-preset {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-config-gallery .bb-config-preset:hover {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* TEARSHEET MODE (ts-*) — Gagosian Frieze LA 2026 exact replica */
+/*                                                                */
+/* Serif typography (Georgia / Times), white background,          */
+/* page-by-page layout matching Gagosian PDF tearsheet format.    */
+/* Print-ready: Cmd+P produces clean gallery tearsheets.          */
+/*                                                                */
+/* References:                                                    */
+/*   - Frieze Los Angeles 2026_Gagosian.pdf (page 4, 11, 14)     */
+/*   - art terminal reference.pdf (Seventh House format)          */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* ── Tearsheet mode overlay overrides ── */
+.bb-tearsheet-mode {
+    background: #ffffff;
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-header {
+    background: #ffffff;
+    border-bottom: none;
+    padding: 16px 40px;
+}
+
+.bb-tearsheet-mode .bb-logo {
+    color: #1a1a1a;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    letter-spacing: 0.45em;
+    font-weight: 400;
+}
+
+.bb-tearsheet-mode .bb-cash,
+.bb-tearsheet-mode .bb-ap,
+.bb-tearsheet-mode .bb-cycle-label,
+.bb-tearsheet-mode .bb-header-meta {
+    display: none;
+}
+
+.bb-tearsheet-mode .bb-cycle-dot {
+    display: none;
+}
+
+.bb-tearsheet-mode .bb-close {
+    border: none;
+    color: #999;
+    font-size: 16px;
+}
+
+.bb-tearsheet-mode .bb-close:hover {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-style-toggle {
+    border: none;
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-style-toggle:hover {
+    color: #1a1a1a;
+}
+
+/* Config gear visible but subtle in tearsheet mode */
+.bb-tearsheet-mode .bb-config-btn {
+    border: none;
+    color: #ccc;
+    font-size: 12px;
+}
+
+.bb-tearsheet-mode .bb-config-btn:hover {
+    color: #1a1a1a;
+}
+
+/* Config dropdown in tearsheet — match white bg */
+.bb-tearsheet-mode .bb-config-dropdown {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+.bb-tearsheet-mode .bb-config-title {
+    color: #999;
+    border-bottom-color: #e0e0e0;
+}
+
+.bb-tearsheet-mode .bb-config-item {
+    color: #3a3a3a;
+}
+
+.bb-tearsheet-mode .bb-config-item:hover {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-config-presets {
+    border-top-color: #e0e0e0;
+}
+
+.bb-tearsheet-mode .bb-config-preset {
+    border-color: #e0e0e0;
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-config-preset:hover {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-status-toast {
+    background: rgba(0,0,0,0.04);
+    border: 1px solid #e0e0e0;
+    color: #1a1a1a;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+/* ── Tearsheet container ── */
+.ts-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+/* ── Individual page — letter-size proportions ── */
+.ts-page {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 60px 64px;
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* No borders between pages — clean document flow like a real PDF */
+
+/* ── Cover page — Frieze event style ── */
+.ts-cover-page {
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+}
+
+.ts-cover-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.ts-cover-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #1a1a1a;
+    margin: 0 0 12px 0;
+    line-height: 1.2;
+}
+
+.ts-cover-dates {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 13px;
+    color: #666;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.ts-cover-booth {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 0.04em;
+}
+
+.ts-cover-brand {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    text-align: center;
+    padding-bottom: 40px;
+}
+
+/* ── Text/Intro page ── */
+.ts-text-page {
+    justify-content: flex-start;
+    padding-top: 100px;
+}
+
+.ts-text-body {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #2a2a2a;
+    max-width: 480px;
+}
+
+.ts-text-body p {
+    margin: 0 0 16px 0;
+    text-indent: 0;
+}
+
+/* ── Page brand footer (bottom of each page) ── */
+.ts-page-brand {
+    margin-top: auto;
+    padding-top: 40px;
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+}
+
+/* ── IMAGE PAGE ── */
+.ts-image-page {
+    padding: 40px 40px 32px 40px;
+    justify-content: center;
+}
+
+.ts-image-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.ts-artwork-img {
+    max-width: 100%;
+    max-height: 65vh;
+    object-fit: contain;
+    display: block;
+}
+
+.ts-artwork-placeholder {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: 55vh;
+    background: #f5f5f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e8e4de;
+}
+
+.ts-placeholder-inner {
+    text-align: center;
+    padding: 32px;
+}
+
+.ts-placeholder-title {
+    display: block;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    font-style: italic;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.ts-placeholder-artist {
+    display: block;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #bbb;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+/* Caption bar — bottom of image page */
+.ts-image-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 20px;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #1a1a1a;
+}
+
+.ts-caption-artist {
+    font-weight: 700;
+}
+
+.ts-caption-title em {
+    font-style: italic;
+}
+
+.ts-caption-medium,
+.ts-caption-dims,
+.ts-caption-edition {
+    color: #1a1a1a;
+    font-size: 10px;
+}
+
+.ts-caption-brand {
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+    white-space: nowrap;
+}
+
+/* ── INFO PAGE (the actual tearsheet) ── */
+.ts-info-page {
+    padding: 56px 64px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.ts-info-page:hover {
+    background: #fafaf8;
+}
+
+/* Centered small-caps header — matches Gagosian page top */
+.ts-info-header {
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #1a1a1a;
+    font-variant: small-caps;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+    padding-bottom: 0;
+}
+
+.ts-info-header em {
+    font-style: italic;
+    text-transform: none;
+    font-variant: normal;
+}
+
+/* Body content */
+.ts-info-body {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #1a1a1a;
+}
+
+/* Artist name — bold, with lifespan */
+.ts-info-artist {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.ts-info-artist strong {
+    font-weight: 700;
+}
+
+/* Title — italic, with year */
+.ts-info-title-line {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.ts-info-title-line em {
+    font-style: italic;
+}
+
+/* Metadata lines (medium, dimensions, signed) */
+.ts-info-meta {
+    font-size: 12px;
+    color: #1a1a1a;
+    line-height: 1.5;
+}
+
+/* Price block */
+.ts-info-price-block {
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.ts-info-price {
+    font-size: 12px;
+    font-weight: 400;
+    color: #1a1a1a;
+}
+
+.ts-info-avail {
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+}
+
+.ts-info-acquired {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.ts-info-price-label {
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+
+/* ── Sections: Provenance, Exhibited, Literature ── */
+.ts-info-section {
+    margin-top: 24px;
+}
+
+/* Bold underlined section header — exact Gagosian format */
+.ts-info-section-head {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* Section items — regular weight, indented for provenance chain feel */
+.ts-info-section-item {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    line-height: 1.7;
+    padding-left: 0;
+}
+
+/* ── Gallery address block (bottom-right of info page) ── */
+.ts-info-address {
+    margin-top: 40px;
+    text-align: right;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+.ts-address-brand {
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.ts-address-line {
+    font-size: 10px;
+    color: #999;
+    line-height: 1.6;
+}
+
+/* ── Placeholder year ── */
+.ts-placeholder-year {
+    display: block;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #ccc;
+    margin-top: 4px;
+}
+
+/* ── Empty state sub-text ── */
+.ts-empty-sub {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #ccc;
+    margin-top: 4px;
+}
+
+/* ── Back/Final page ── */
+.ts-back-page {
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.ts-back-content {
+    text-align: center;
+}
+
+.ts-back-brand {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+}
+
+.ts-back-locations {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.ts-back-url {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    color: #ccc;
+    letter-spacing: 0.08em;
+}
+
+.ts-back-contact {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #bbb;
+    line-height: 1.6;
+    margin-top: 16px;
+}
+
+/* ── Empty state ── */
+.ts-empty {
+    text-align: center;
+    padding: 80px 0;
+}
+
+.ts-empty-brand {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+}
+
+.ts-empty-text {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #999;
+    line-height: 1.8;
+}
+
+/* ── Tearsheet mobile ── */
+@media (max-width: 768px) {
+    .ts-page {
+        padding: 32px 24px;
+        min-height: 80vh;
+    }
+
+    .ts-info-page {
+        padding: 36px 24px;
+    }
+
+    .ts-cover-title {
+        font-size: 22px;
+    }
+
+    .ts-info-header {
+        font-size: 8px;
+        margin-bottom: 32px;
+    }
+
+    .ts-image-caption {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ts-caption-brand {
+        align-self: flex-end;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* PRINT STYLES — Cmd+P produces clean gallery tearsheets        */
+/*                                                                */
+/* Each ts-page gets its own printed page. Header bar hidden.     */
+/* White background, no decorative borders.                       */
+/* ══════════════════════════════════════════════════════════════ */
+@media print {
+    /* Hide Bloomberg header bar and all non-tearsheet UI */
+    .bb-header,
+    .bb-ticker,
+    .bb-notif-bar,
+    .bb-intel-gate,
+    .bb-status-toast,
+    .bb-grid,
+    .bb-bottom,
+    .bb-gallery-footer,
+    .bb-config-wrapper {
+        display: none !important;
+    }
+
+    /* Full-page white */
+    .bb-overlay,
+    .bb-tearsheet-mode {
+        position: static;
+        background: #fff;
+        overflow: visible;
+    }
+
+    .ts-view {
+        overflow: visible;
+    }
+
+    /* Each page = one printed page */
+    .ts-page {
+        page-break-after: always;
+        page-break-inside: avoid;
+        min-height: 0;
+        max-width: none;
+        padding: 48px 56px;
+        border-top: none;
+    }
+
+    .ts-page:last-child {
+        page-break-after: auto;
+    }
+
+    /* No hover effects in print */
+    .ts-info-page:hover {
+        background: transparent;
+    }
+
+    /* Ensure images print */
+    .ts-artwork-img {
+        max-height: 60vh;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .ts-artwork-placeholder {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    @page {
+        margin: 0.5in;
+        size: letter;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Gallery Visual Polish — refined spacing & typography          */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Page constraint — center column at readable width */
+.bb-gallery .bb-col {
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Generous spacing between panels */
+.bb-gallery .bb-panel + .bb-panel {
+    margin-top: 48px;
+}
+
+/* ── PlayerStats as CV header ── */
+.bb-gallery .bb-player-stats .bb-panel-header {
+    text-align: center;
+    font-size: 14px;
+    letter-spacing: 0.35em;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 10px;
+    color: #1a1a1a;
+}
+
+.bb-ps-subtitle {
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+    margin-bottom: 16px;
+}
+
+.bb-gallery .bb-ps-value {
+    font-weight: 300;
+    font-size: 24px;
+}
+
+.bb-gallery .bb-ps-item {
+    border-right: 1px solid #e8e4de;
+}
+
+.bb-gallery .bb-ps-item:last-child {
+    border-right: none;
+}
+
+/* ── NetWorth hero — centered, thin number ── */
+.bb-gallery .bb-nw-hero {
+    justify-content: center;
+}
+
+.bb-gallery .bb-nw-big {
+    font-weight: 300;
+    font-size: 36px;
+}
+
+.bb-gallery .bb-nw-grid {
+    border-top: 1px solid #e8e4de;
+    padding-top: 16px;
+}
+
+/* ── Collection as catalogue raisonné ── */
+.bb-gallery .bb-coll-item {
+    padding: 20px 0;
+}
+
+.bb-gallery .bb-coll-artist {
+    letter-spacing: 0.25em;
+}
+
+.bb-coll-dimensions {
+    font-size: 9px;
+    color: #9a9690;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+/* ── Header — heavier border for gravitas ── */
+.bb-gallery .bb-header {
+    padding: 16px 32px;
+    border-bottom: 2px solid #1a1a1a;
+}
+
+/* ── Footer — generous padding + heavy border ── */
+.bb-gallery .bb-gallery-footer {
+    padding: 40px 16px;
+    border-top: 2px solid #1a1a1a;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* ARTNET AUCTION RESULTS (an-*) — artnet.com price database     */
+/*                                                                */
+/* Clean, data-dense, sans-serif. White bg, red accent header,   */
+/* tabular layout with lot numbers, estimate ranges, and ROI.    */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Overlay overrides */
+.bb-artnet {
+    background: #ffffff;
+    color: #333333;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+}
+
+.bb-artnet .bb-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.bb-artnet .bb-logo {
+    color: #cc0000;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.bb-artnet .bb-cash,
+.bb-artnet .bb-ap,
+.bb-artnet .bb-cycle-label,
+.bb-artnet .bb-cycle-dot,
+.bb-artnet .bb-header-meta {
+    display: none;
+}
+
+.bb-artnet .bb-close {
+    border: none;
+    color: #999;
+}
+
+.bb-artnet .bb-close:hover { color: #cc0000; }
+
+.bb-artnet .bb-style-toggle {
+    border: none;
+    color: #999;
+}
+
+.bb-artnet .bb-style-toggle:hover { color: #cc0000; }
+
+.bb-artnet .bb-config-btn {
+    border: none;
+    color: #999;
+}
+
+.bb-artnet .bb-config-btn:hover { color: #333; }
+
+.bb-artnet .bb-config-dropdown {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+}
+
+.bb-artnet .bb-config-title {
+    color: #999;
+    border-bottom-color: #e0e0e0;
+}
+
+.bb-artnet .bb-config-item { color: #333; }
+.bb-artnet .bb-config-item:hover { color: #000; }
+
+.bb-artnet .bb-config-presets { border-top-color: #e0e0e0; }
+
+.bb-artnet .bb-config-preset {
+    border-color: #e0e0e0;
+    color: #666;
+}
+
+.bb-artnet .bb-config-preset:hover {
+    border-color: #cc0000;
+    color: #cc0000;
+}
+
+.bb-artnet .bb-status-toast {
+    background: #fff3f3;
+    border: 1px solid #e0e0e0;
+    color: #cc0000;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Artnet view container */
+.an-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    background: #ffffff;
+}
+
+/* Red header bar */
+.an-header-bar {
+    background: #cc0000;
+    color: #ffffff;
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.an-header-title {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.an-header-sub {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+/* Summary strip */
+.an-summary {
+    display: flex;
+    gap: 24px;
+    padding: 10px 24px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 11px;
+    color: #666;
+}
+
+.an-gain { color: #2a6e2a; font-weight: 600; }
+.an-loss { color: #cc0000; font-weight: 600; }
+
+/* Table */
+.an-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.an-th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid #333;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.an-th:hover { color: #cc0000; }
+
+.an-th-img { width: 50px; cursor: default; }
+
+.an-row {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.1s;
+}
+
+.an-row:hover { background: #fafafa; }
+
+.an-td {
+    padding: 10px 12px;
+    vertical-align: top;
+}
+
+/* Lot number — bold, small badge */
+.an-lot {
+    font-weight: 800;
+    color: #333;
+    font-size: 11px;
+    text-align: center;
+    width: 40px;
+}
+
+/* Thumbnail */
+.an-thumb { width: 50px; padding: 8px 6px; }
+
+.an-thumb-img {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    display: block;
+}
+
+.an-thumb-placeholder {
+    width: 44px;
+    height: 44px;
+    background: #f0f0f0;
+    border: 1px solid #e0e0e0;
+}
+
+/* Artist cell */
+.an-artist-cell { min-width: 120px; }
+
+.an-artist-name {
+    font-weight: 600;
+    color: #0066cc;
+    font-size: 12px;
+}
+
+.an-artist-meta {
+    color: #999;
+    font-size: 10px;
+    margin-top: 1px;
+}
+
+/* Title cell */
+.an-title-cell {
+    color: #333;
+    font-size: 12px;
+    min-width: 140px;
+}
+
+/* Medium */
+.an-medium {
+    color: #999;
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* Estimate range */
+.an-estimate {
+    color: #666;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* Price */
+.an-price { text-align: right; white-space: nowrap; }
+
+.an-price-main {
+    font-weight: 700;
+    color: #333;
+    font-size: 13px;
+}
+
+.an-price-sub {
+    color: #999;
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+/* Status badges */
+.an-status { text-align: center; }
+
+.an-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border-radius: 2px;
+}
+
+.an-badge-sold {
+    background: #e8f5e9;
+    color: #2a6e2a;
+}
+
+.an-badge-loss {
+    background: #fce4ec;
+    color: #cc0000;
+}
+
+.an-badge-available {
+    background: #e3f2fd;
+    color: #0066cc;
+}
+
+.an-badge-held {
+    background: #f5f5f5;
+    color: #999;
+}
+
+/* Empty state */
+.an-empty {
+    text-align: center;
+    padding: 60px 24px;
+    color: #999;
+    font-size: 13px;
+}
+
+/* Footer */
+.an-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 10px;
+    color: #999;
+}
+
+/* Artnet mobile */
+@media (max-width: 768px) {
+    .an-table { font-size: 11px; }
+    .an-th, .an-td { padding: 8px 6px; }
+    .an-thumb { display: none; }
+    .an-medium { display: none; }
+    .an-estimate { display: none; }
+    .an-summary { flex-wrap: wrap; gap: 8px 16px; }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* SOTHEBY'S CATALOGUE (sb-*) — luxury auction catalogue         */
+/*                                                                */
+/* Serif body, sans-serif headers, off-white bg, blue accents,   */
+/* centered single-column, generous margins, formal hierarchy.   */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Overlay overrides */
+.bb-sothebys {
+    background: #fafaf7;
+    color: #1c1c1c;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 13px;
+}
+
+.bb-sothebys .bb-header {
+    background: #fafaf7;
+    border-bottom: none;
+    padding: 14px 40px;
+}
+
+.bb-sothebys .bb-logo {
+    color: #003da5;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.35em;
+    font-weight: 700;
+}
+
+.bb-sothebys .bb-cash,
+.bb-sothebys .bb-ap,
+.bb-sothebys .bb-cycle-label,
+.bb-sothebys .bb-cycle-dot,
+.bb-sothebys .bb-header-meta {
+    display: none;
+}
+
+.bb-sothebys .bb-close {
+    border: none;
+    color: #999;
+}
+
+.bb-sothebys .bb-close:hover { color: #003da5; }
+
+.bb-sothebys .bb-style-toggle {
+    border: none;
+    color: #999;
+}
+
+.bb-sothebys .bb-style-toggle:hover { color: #003da5; }
+
+.bb-sothebys .bb-config-btn { border: none; color: #bbb; }
+.bb-sothebys .bb-config-btn:hover { color: #1c1c1c; }
+
+.bb-sothebys .bb-config-dropdown {
+    background: #fafaf7;
+    border: 1px solid #e0ddd8;
+}
+
+.bb-sothebys .bb-config-title { color: #999; border-bottom-color: #e0ddd8; }
+.bb-sothebys .bb-config-item { color: #3a3a3a; }
+.bb-sothebys .bb-config-presets { border-top-color: #e0ddd8; }
+
+.bb-sothebys .bb-config-preset {
+    border-color: #e0ddd8;
+    color: #999;
+}
+
+.bb-sothebys .bb-config-preset:hover {
+    border-color: #003da5;
+    color: #003da5;
+}
+
+.bb-sothebys .bb-status-toast {
+    background: rgba(0, 61, 165, 0.05);
+    border: 1px solid #e0ddd8;
+    color: #003da5;
+}
+
+/* Sotheby's view container */
+.sb-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #fafaf7;
+}
+
+/* Sale header — clean, centered, formal */
+.sb-sale-header {
+    text-align: center;
+    padding: 48px 40px 32px;
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.sb-sale-brand {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.5em;
+    color: #003da5;
+    font-weight: 700;
+    margin-bottom: 24px;
+}
+
+.sb-sale-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: #1c1c1c;
+    margin-bottom: 8px;
+}
+
+.sb-sale-info {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+.sb-sale-estimate {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #003da5;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+/* Lot navigation pills */
+.sb-lot-nav {
+    display: flex;
+    gap: 4px;
+    padding: 12px 40px;
+    border-bottom: 1px solid #e8e4de;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.sb-lot-pill {
+    background: none;
+    border: 1px solid #d0cbc4;
+    color: #888;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 28px;
+    text-align: center;
+}
+
+.sb-lot-pill:hover {
+    border-color: #003da5;
+    color: #003da5;
+}
+
+.sb-lot-pill.sb-lot-active {
+    background: #003da5;
+    border-color: #003da5;
+    color: #ffffff;
+}
+
+/* Individual lot page */
+.sb-lot {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 48px 40px;
+    border-bottom: 1px solid #e8e4de;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sb-lot:hover { background: #f8f6f2; }
+
+.sb-lot:last-child { border-bottom: none; }
+
+/* Blue lot number — oversized, Sotheby's signature */
+.sb-lot-number {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 32px;
+    font-weight: 300;
+    color: #003da5;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+
+/* "Property from..." */
+.sb-property {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: #999;
+    margin-bottom: 24px;
+}
+
+/* Lot image */
+.sb-lot-image {
+    margin-bottom: 24px;
+}
+
+.sb-lot-img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    display: block;
+    border: 1px solid #f0ede8;
+}
+
+.sb-lot-placeholder {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: 300px;
+    background: #f0ede8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+    color: #bbb;
+    font-size: 14px;
+}
+
+/* Lot metadata */
+.sb-lot-meta { margin-bottom: 20px; }
+
+.sb-lot-artist {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #1c1c1c;
+    margin-bottom: 4px;
+}
+
+.sb-lot-origin {
+    font-weight: 400;
+    font-size: 12px;
+    color: #888;
+    letter-spacing: 0.02em;
+}
+
+.sb-lot-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    color: #1c1c1c;
+    margin-bottom: 4px;
+}
+
+.sb-lot-medium {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #666;
+}
+
+.sb-lot-dims {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #888;
+}
+
+/* Estimate — blue, Sotheby's signature element */
+.sb-estimate {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #003da5;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    padding: 12px 0;
+    border-top: 1px solid #e8e4de;
+    border-bottom: 1px solid #e8e4de;
+}
+
+/* Sold / acquired info */
+.sb-sold {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1c1c1c;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+
+.sb-available { color: #003da5; }
+
+/* Condition */
+.sb-condition {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 16px;
+    font-style: italic;
+}
+
+/* Catalogue note */
+.sb-catalogue-note {
+    margin-bottom: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e8e4de;
+}
+
+.sb-note-label {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.sb-catalogue-note p {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #3a3a3a;
+    margin: 0;
+}
+
+/* Provenance / Exhibited / Literature sections */
+.sb-section {
+    margin-bottom: 16px;
+}
+
+.sb-section-label {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #999;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e8e4de;
+}
+
+.sb-section-item {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #3a3a3a;
+    line-height: 1.7;
+}
+
+/* Empty state */
+.sb-empty {
+    text-align: center;
+    padding: 80px 40px;
+    color: #bbb;
+    font-size: 14px;
+}
+
+/* Sale footer */
+.sb-sale-footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid #d0cbc4;
+}
+
+.sb-footer-brand {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    color: #003da5;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.sb-footer-locations {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #bbb;
+    letter-spacing: 0.06em;
+}
+
+/* Sotheby's lots container */
+.sb-lots {
+    padding: 0;
+}
+
+/* Sotheby's mobile */
+@media (max-width: 768px) {
+    .sb-lot { padding: 32px 20px; }
+    .sb-lot-number { font-size: 24px; }
+    .sb-sale-header { padding: 32px 20px 24px; }
+    .sb-sale-title { font-size: 22px; }
+    .sb-lot-nav { padding: 10px 16px; }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* DEITCH PROJECTS (dp-*) — underground gallery aesthetic        */
+/*                                                                */
+/* Bold sans-serif (Impact-like), industrial white/gray bg,      */
+/* fluorescent neon accents (CSS variable --dp-accent),          */
+/* masonry card grid, giant typography, zine/collage energy.      */
+/* Prices hidden by default — click to reveal (gallerist vibe).  */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Overlay overrides */
+.bb-deitch {
+    background: #e8e8e8;
+    color: #000000;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+}
+
+.bb-deitch .bb-header {
+    background: #ffffff;
+    border-bottom: 3px solid #000000;
+    padding: 10px 20px;
+}
+
+.bb-deitch .bb-logo {
+    color: #000000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.bb-deitch .bb-cash,
+.bb-deitch .bb-ap,
+.bb-deitch .bb-cycle-label,
+.bb-deitch .bb-cycle-dot,
+.bb-deitch .bb-header-meta {
+    display: none;
+}
+
+.bb-deitch .bb-close {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-close:hover {
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-style-toggle {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-style-toggle:hover {
+    background: var(--dp-accent, #ff00ff);
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-config-btn {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-config-btn:hover {
+    background: var(--dp-accent, #ff00ff);
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-config-dropdown {
+    background: #ffffff;
+    border: 2px solid #000;
+}
+
+.bb-deitch .bb-config-title {
+    color: #000;
+    font-weight: 900;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0.1em;
+    border-bottom-color: #000;
+}
+
+.bb-deitch .bb-config-item { color: #000; font-weight: 600; }
+
+.bb-deitch .bb-config-presets { border-top-color: #000; }
+
+.bb-deitch .bb-config-preset {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.bb-deitch .bb-config-preset:hover {
+    background: var(--dp-accent, #ff00ff);
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-status-toast {
+    background: var(--dp-accent, #ff00ff);
+    border: none;
+    color: #000;
+    font-weight: 800;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0.08em;
+}
+
+/* Deitch view container */
+.dp-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #e8e8e8;
+    padding: 0 0 40px 0;
+}
+
+/* Giant header */
+.dp-header {
+    background: #ffffff;
+    padding: 32px 24px 24px;
+    border-bottom: 4px solid #000;
+}
+
+.dp-header-title {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 64px;
+    font-weight: 900;
+    color: #000;
+    letter-spacing: -0.02em;
+    line-height: 0.9;
+    text-transform: uppercase;
+}
+
+.dp-header-show {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+    letter-spacing: 0.06em;
+}
+
+.dp-now-showing {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.dp-featured-name {
+    color: var(--dp-accent, #ff00ff);
+    font-weight: 700;
+}
+
+/* Masonry card grid */
+.dp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 3px;
+    padding: 3px;
+}
+
+/* Card */
+.dp-card {
+    background: #ffffff;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.dp-card:hover {
+    transform: translateY(-2px) rotate(-0.3deg);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+}
+
+.dp-card-lg {
+    grid-column: span 2;
+}
+
+/* Card image */
+.dp-card-image {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #f0f0f0;
+}
+
+.dp-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s;
+}
+
+.dp-card:hover .dp-card-img {
+    transform: scale(1.03);
+}
+
+.dp-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f0;
+    padding: 24px;
+}
+
+.dp-card-ph-title {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #ccc;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* Giant artist name */
+.dp-card-artist {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: #000;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    padding: 12px 14px 2px;
+    text-transform: uppercase;
+}
+
+.dp-card-lg .dp-card-artist {
+    font-size: 40px;
+}
+
+/* Title — small, underneath */
+.dp-card-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #333;
+    padding: 0 14px;
+    line-height: 1.4;
+}
+
+/* Medium — typewriter */
+.dp-card-medium {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    color: #999;
+    padding: 2px 14px 0;
+}
+
+/* Price — hidden by default */
+.dp-card-price {
+    padding: 8px 14px 14px;
+    cursor: pointer;
+}
+
+.dp-price-hidden {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    color: #ccc;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px dotted #ccc;
+    transition: color 0.2s;
+}
+
+.dp-price-hidden:hover {
+    color: var(--dp-accent, #ff00ff);
+    border-bottom-color: var(--dp-accent, #ff00ff);
+}
+
+.dp-price-revealed {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+}
+
+/* Status sticker — rotated badge in corner */
+.dp-sticker {
+    position: absolute;
+    top: 12px;
+    right: -28px;
+    transform: rotate(45deg);
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    padding: 4px 36px;
+    text-transform: uppercase;
+}
+
+.dp-sticker-owned {
+    background: #000;
+    color: #fff;
+}
+
+/* Empty state */
+.dp-empty {
+    text-align: center;
+    padding: 80px 24px;
+}
+
+.dp-empty-text {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 36px;
+    color: #000;
+    letter-spacing: -0.01em;
+}
+
+.dp-empty-sub {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #999;
+    margin-top: 8px;
+}
+
+/* Footer */
+.dp-footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: #ffffff;
+    border-top: 4px solid #000;
+}
+
+.dp-footer-brand {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #000;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+.dp-footer-info {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.04em;
+}
+
+/* Deitch mobile */
+@media (max-width: 768px) {
+    .dp-header-title { font-size: 40px; }
+    .dp-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .dp-card-lg { grid-column: span 1; }
+    .dp-card-artist { font-size: 20px; }
+    .dp-card-lg .dp-card-artist { font-size: 24px; }
+    .dp-empty-text { font-size: 24px; }
 }

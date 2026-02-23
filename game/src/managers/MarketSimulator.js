@@ -792,6 +792,34 @@ export class MarketSimulator {
         return false;
     }
 
+    /**
+     * Seed the trade log with historical demo trades so Bloomberg
+     * TradeFeed and analytics panels have data on first open.
+     * Uses real ARTWORKS IDs so title lookups resolve correctly.
+     * Called from GameState.quickDemoInit() and seedDemoSave().
+     */
+    static seedTradeLog() {
+        // Only seed if trade log is empty — don't overwrite live data
+        if (MarketSimulator.tradeLog.length > 0) return;
+
+        const demoTrades = [
+            // NPC-to-NPC trades across weeks 2-9
+            { buyer: 'elena_vasquez', seller: 'max_sterling', artwork: 'haring_radiant_baby_1982', price: 192000, week: 2 },
+            { buyer: 'ibrahim_kone', seller: 'nadia_volkov', artwork: 'kwame_asante_portrait_series', price: 28000, week: 3 },
+            { buyer: 'nadia_volkov', seller: 'elena_vasquez', artwork: 'liu_wei_architecture_03', price: 35000, week: 5 },
+            { buyer: 'max_sterling', seller: 'ibrahim_kone', artwork: 'amoako_boafo_skin_series', price: 62000, week: 6 },
+            { buyer: 'ibrahim_kone', seller: 'max_sterling', artwork: 'priya_sundaram_ghost_print', price: 8500, week: 8 },
+            // Player trades (match GameState.transactions)
+            { buyer: 'player', seller: 'elena_vasquez', artwork: 'elara_voss_chromatic_field', price: 44000, week: 1 },
+            { buyer: 'nadia_volkov', seller: 'player', artwork: 'elara_voss_chromatic_field', price: 68000, week: 5 },
+            { buyer: 'player', seller: 'max_sterling', artwork: 'yuki_tanaka_kyoto_study', price: 38000, week: 8 },
+            // Late-week NPC trade
+            { buyer: 'elena_vasquez', seller: 'ibrahim_kone', artwork: 'jadé_fadojutimi_composition', price: 45000, week: 9 },
+        ];
+
+        MarketSimulator.tradeLog.push(...demoTrades);
+    }
+
     /** Reset all simulation state */
     static reset() {
         MarketSimulator._npcState = null;

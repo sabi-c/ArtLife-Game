@@ -796,6 +796,8 @@ export class GameState {
     static seedDemoSave() {
         if (GameState.hasSave()) return; // don't overwrite real saves
 
+        // 12-week demo with realistic trading history:
+        // 5 total buys, 3 sells (2 profit, 1 loss), 2 current holds
         const demoState = {
             character: {
                 id: 'hedge_fund',
@@ -812,59 +814,84 @@ export class GameState {
             selectedDrip: { id: 'power_suit', label: 'Power Suit', effects: { reputation: 5, access: 5 } },
             selectedVice: null,
             traits: ['Quant Eye'],
-            cash: 680000,
+            cash: 795000,
             portfolio: [
                 {
-                    id: 'demo_work_1', title: 'Void Study #7', artist: 'Yuki Tanaka',
-                    price: 42000, purchasePrice: 38000, purchaseWeek: 1,
+                    id: 'demo_work_4', title: 'Void Study #7', artist: 'Yuki Tanaka',
+                    artistId: 'yuki_tanaka',
+                    price: 42000, purchasePrice: 38000, purchaseWeek: 8,
                     purchaseCity: 'new-york', owner: 'player', storage: 'home',
                     onMarket: false, era: 'contemporary', medium: 'Oil on canvas',
-                    provenance: [{ type: 'acquired', week: 1, city: 'new-york', price: 38000, source: 'Market' }],
+                    provenance: [{ type: 'acquired', week: 8, city: 'new-york', price: 38000, source: 'Market' }],
                 },
                 {
-                    id: 'demo_work_2', title: 'Red Squares on White', artist: 'Marcus Aldridge',
-                    price: 15000, purchasePrice: 12000, purchaseWeek: 2,
+                    id: 'demo_work_5', title: 'Red Squares on White', artist: 'Tomas Herrera',
+                    artistId: 'tomas_herrera',
+                    price: 15000, purchasePrice: 12000, purchaseWeek: 12,
                     purchaseCity: 'new-york', owner: 'player', storage: 'home',
                     onMarket: false, era: 'emerging', medium: 'Acrylic on panel',
-                    provenance: [{ type: 'acquired', week: 2, city: 'new-york', price: 12000, source: 'Market' }],
+                    provenance: [{ type: 'acquired', week: 12, city: 'new-york', price: 12000, source: 'Market' }],
                 },
             ],
-            week: 3,
+            week: 12,
             currentCity: 'new-york',
             marketState: 'bull',
             marketStateTurnsRemaining: 12,
-            reputation: 55,
-            taste: 58,
-            audacity: 35,
-            access: 55,
-            intel: 5,
+            reputation: 62,
+            taste: 64,
+            audacity: 40,
+            access: 60,
+            intel: 65,
+            // 12-week arc: buy-dip W1-3, recovery W4-8, plateau W9-12
             wealthHistory: [
                 { week: 1, cash: 750000, assets: 0 },
-                { week: 2, cash: 712000, assets: 38000 },
-                { week: 3, cash: 680000, assets: 57000 },
+                { week: 2, cash: 706000, assets: 44000 },
+                { week: 3, cash: 668000, assets: 90000 },
+                { week: 4, cash: 697000, assets: 51000 },
+                { week: 5, cash: 765000, assets: 51000 },
+                { week: 6, cash: 770000, assets: 48000 },
+                { week: 7, cash: 781200, assets: 42000 },
+                { week: 8, cash: 743200, assets: 82000 },
+                { week: 9, cash: 748000, assets: 85000 },
+                { week: 10, cash: 760000, assets: 88000 },
+                { week: 11, cash: 790000, assets: 55000 },
+                { week: 12, cash: 795000, assets: 57000 },
             ],
             transactions: [
-                { type: 'buy', title: 'Void Study #7', price: 38000, week: 1 },
-                { type: 'buy', title: 'Red Squares on White', price: 12000, week: 2 },
+                // 5 BUYs + 3 SELLs in reverse-chrono order (newest first)
+                { id: 'tx_8', action: 'BUY', title: 'Red Squares on White', artist: 'Tomas Herrera', price: 12000, week: 12 },
+                { id: 'tx_7', action: 'BUY', title: 'Void Study #7', artist: 'Yuki Tanaka', price: 38000, week: 8 },
+                { id: 'tx_6', action: 'SELL', title: 'Fragment Study IV', artist: 'Kwame Asante', price: 11200, week: 7, profit: 1700, holdWeeks: 4 },
+                { id: 'tx_5', action: 'SELL', title: 'Concrete Prayer', artist: 'Elena Voss', price: 68000, week: 5, profit: 24000, holdWeeks: 4 },
+                { id: 'tx_4', action: 'SELL', title: 'Untitled After Rain', artist: 'Javier Molina', price: 29000, week: 4, profit: -9000, holdWeeks: 2 },
+                { id: 'tx_3', action: 'BUY', title: 'Fragment Study IV', artist: 'Kwame Asante', price: 9500, week: 3 },
+                { id: 'tx_2', action: 'BUY', title: 'Untitled After Rain', artist: 'Javier Molina', price: 38000, week: 2 },
+                { id: 'tx_1', action: 'BUY', title: 'Concrete Prayer', artist: 'Elena Voss', price: 44000, week: 1 },
             ],
             newsFeed: [
-                'Bull market continues — collectors scrambling for contemporary.',
-                'Yuki Tanaka shortlisted for Turner Prize.',
+                { text: 'Bull market continues — collectors scrambling for contemporary.', week: 10 },
+                { text: 'Yuki Tanaka shortlisted for Turner Prize.', week: 11 },
+                { text: 'Acquired "Red Squares on White" by Tomas Herrera for $12,000', week: 12 },
+                { text: '[Market] Elena Voss featured in Frieze spotlight — prices surging.', week: 9 },
             ],
             decisions: [],
             activeDeals: [],
             pendingOffers: [],
-            visitedCities: ['new-york'],
+            visitedCities: ['new-york', 'london'],
             visitedRooms: [],
             collectedItems: [],
             overworldPosition: null,
-            totalWorksBought: 2,
-            totalWorksSold: 0,
+            totalWorksBought: 5,
+            totalWorksSold: 3,
             eventsTriggered: [],
-            marketHeat: 0,
+            marketHeat: 8,
             suspicion: 0,
-            burnout: 0,
-            flipHistory: [],
+            burnout: 2,
+            flipHistory: [
+                { workId: 'demo_sold_1', buyWeek: 1, sellWeek: 5, holdTime: 4 },
+                { workId: 'demo_sold_2', buyWeek: 2, sellWeek: 4, holdTime: 2 },
+                { workId: 'demo_sold_3', buyWeek: 3, sellWeek: 7, holdTime: 4 },
+            ],
             dealerBlacklisted: false,
             consecutiveEventWeeks: 0,
             forcedRest: false,
@@ -877,7 +904,12 @@ export class GameState {
                 insideVenue: false,
             },
             hoursUsedToday: 0,
-            watchlist: [],
+            // Watchlist with 2 artists + 1 artwork for notification data
+            watchlist: [
+                { type: 'artist', id: 'yuki_tanaka', addedWeek: 3 },
+                { type: 'artist', id: 'kwame_asante', addedWeek: 5 },
+                { type: 'artwork', id: 'basquiat_untitled_1982', addedWeek: 6, addedPrice: 420000 },
+            ],
             bloombergListings: [],
         };
 
@@ -887,12 +919,12 @@ export class GameState {
                 playerName: 'Seb',
                 characterName: 'THE HEDGE FUND',
                 characterIcon: '📊',
-                week: 3,
-                cash: 680000,
+                week: 12,
+                cash: 795000,
                 portfolioCount: 2,
-                netWorth: 737000,
+                netWorth: 852000,
                 city: 'new-york',
-                reputation: 55,
+                reputation: 62,
                 savedAt: new Date().toISOString(),
                 version: 'demo-seed',
             }
@@ -920,6 +952,7 @@ export class GameState {
             // Continue — state can still be set even if some subsystems fail
         }
 
+        // 12-week demo with realistic trading history (mirrors seedDemoSave)
         GameState.state = {
             character: {
                 id: 'hedge_fund', name: 'THE HEDGE FUND', icon: '📊',
@@ -932,49 +965,94 @@ export class GameState {
             selectedDrip: { id: 'power_suit', label: 'Power Suit', icon: '👔', effects: { reputation: 5, access: 5 } },
             selectedVice: null,
             traits: ['Quant Eye'],
-            cash: 680000,
+            cash: 795000,
             portfolio: [
                 {
-                    id: 'demo_work_1', title: 'Void Study #7', artist: 'Yuki Tanaka',
-                    price: 42000, purchasePrice: 38000, purchaseWeek: 1,
+                    id: 'demo_work_4', title: 'Void Study #7', artist: 'Yuki Tanaka',
+                    artistId: 'yuki_tanaka',
+                    price: 42000, purchasePrice: 38000, purchaseWeek: 8,
                     purchaseCity: 'new-york', owner: 'player', storage: 'home',
                     onMarket: false, era: 'contemporary', medium: 'Oil on canvas',
-                    provenance: [{ type: 'acquired', week: 1, city: 'new-york', price: 38000, source: 'Market' }],
+                    provenance: [{ type: 'acquired', week: 8, city: 'new-york', price: 38000, source: 'Market' }],
+                },
+                {
+                    id: 'demo_work_5', title: 'Red Squares on White', artist: 'Tomas Herrera',
+                    artistId: 'tomas_herrera',
+                    price: 15000, purchasePrice: 12000, purchaseWeek: 12,
+                    purchaseCity: 'new-york', owner: 'player', storage: 'home',
+                    onMarket: false, era: 'emerging', medium: 'Acrylic on panel',
+                    provenance: [{ type: 'acquired', week: 12, city: 'new-york', price: 12000, source: 'Market' }],
                 },
             ],
-            week: 5, currentCity: 'new-york',
+            week: 12, currentCity: 'new-york',
             marketState: 'bull', marketStateTurnsRemaining: 12,
-            reputation: 55, taste: 58, audacity: 35, access: 55, intel: 5,
+            reputation: 62, taste: 64, audacity: 40, access: 60, intel: 65,
             wealthHistory: [
                 { week: 1, cash: 750000, assets: 0 },
-                { week: 2, cash: 712000, assets: 38000 },
-                { week: 3, cash: 680000, assets: 42000 },
+                { week: 2, cash: 706000, assets: 44000 },
+                { week: 3, cash: 668000, assets: 90000 },
+                { week: 4, cash: 697000, assets: 51000 },
+                { week: 5, cash: 765000, assets: 51000 },
+                { week: 6, cash: 770000, assets: 48000 },
+                { week: 7, cash: 781200, assets: 42000 },
+                { week: 8, cash: 743200, assets: 82000 },
+                { week: 9, cash: 748000, assets: 85000 },
+                { week: 10, cash: 760000, assets: 88000 },
+                { week: 11, cash: 790000, assets: 55000 },
+                { week: 12, cash: 795000, assets: 57000 },
             ],
             transactions: [
-                { id: 'tx_1', action: 'BUY', title: 'Void Study #7', price: 38000, week: 1 },
+                { id: 'tx_8', action: 'BUY', title: 'Red Squares on White', artist: 'Tomas Herrera', price: 12000, week: 12 },
+                { id: 'tx_7', action: 'BUY', title: 'Void Study #7', artist: 'Yuki Tanaka', price: 38000, week: 8 },
+                { id: 'tx_6', action: 'SELL', title: 'Fragment Study IV', artist: 'Kwame Asante', price: 11200, week: 7, profit: 1700, holdWeeks: 4 },
+                { id: 'tx_5', action: 'SELL', title: 'Concrete Prayer', artist: 'Elena Voss', price: 68000, week: 5, profit: 24000, holdWeeks: 4 },
+                { id: 'tx_4', action: 'SELL', title: 'Untitled After Rain', artist: 'Javier Molina', price: 29000, week: 4, profit: -9000, holdWeeks: 2 },
+                { id: 'tx_3', action: 'BUY', title: 'Fragment Study IV', artist: 'Kwame Asante', price: 9500, week: 3 },
+                { id: 'tx_2', action: 'BUY', title: 'Untitled After Rain', artist: 'Javier Molina', price: 38000, week: 2 },
+                { id: 'tx_1', action: 'BUY', title: 'Concrete Prayer', artist: 'Elena Voss', price: 44000, week: 1 },
             ],
-            newsFeed: ['Bull market continues.', 'Yuki Tanaka shortlisted for Turner Prize.'],
+            newsFeed: [
+                { text: 'Bull market continues.', week: 10 },
+                { text: 'Yuki Tanaka shortlisted for Turner Prize.', week: 11 },
+                { text: 'Acquired "Red Squares on White" by Tomas Herrera for $12,000', week: 12 },
+            ],
             decisions: [], activeDeals: [],
-            totalWorksBought: 1, totalWorksSold: 0, eventsTriggered: [],
-            marketHeat: 0, suspicion: 0, burnout: 0,
-            flipHistory: [], dealerBlacklisted: false,
+            totalWorksBought: 5, totalWorksSold: 3, eventsTriggered: [],
+            marketHeat: 8, suspicion: 0, burnout: 2,
+            flipHistory: [
+                { workId: 'demo_sold_1', buyWeek: 1, sellWeek: 5, holdTime: 4 },
+                { workId: 'demo_sold_2', buyWeek: 2, sellWeek: 4, holdTime: 2 },
+                { workId: 'demo_sold_3', buyWeek: 3, sellWeek: 7, holdTime: 4 },
+            ],
+            dealerBlacklisted: false,
             consecutiveEventWeeks: 0, forcedRest: false, actionsThisWeek: 0,
             playerLocation: { locationId: 'player_apartment', cityX: 5, cityY: 14, insideVenue: false },
             hoursUsedToday: 0, dayOfWeek: 1, hour: 8, minute: 0,
             toneHistory: {},
-            // Fields required by subsystems (WorldScene, DealResolver, MarketManager, etc.)
             pendingOffers: [],
-            visitedCities: ['new-york'],
+            visitedCities: ['new-york', 'london'],
             visitedRooms: [],
             collectedItems: [],
             overworldPosition: null,
             eraModifier: 1.0,
             activeModifiers: [],
-            watchlist: [], // Bloomberg watchlist
-            bloombergListings: [], // Bloomberg sell listings
+            watchlist: [
+                { type: 'artist', id: 'yuki_tanaka', addedWeek: 3 },
+                { type: 'artist', id: 'kwame_asante', addedWeek: 5 },
+                { type: 'artwork', id: 'basquiat_untitled_1982', addedWeek: 6, addedPrice: 420000 },
+            ],
+            bloombergListings: [],
         };
 
         window._artLifeState = GameState.state;
+
+        // Seed the MarketSimulator trade log with historical NPC + player trades
+        try {
+            import('./MarketSimulator.js').then(({ MarketSimulator }) => {
+                MarketSimulator.seedTradeLog();
+            });
+        } catch { /* non-critical */ }
+
         GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Demo state initialized — all features unlocked.');
         return true;
     }
