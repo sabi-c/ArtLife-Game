@@ -656,6 +656,140 @@
 }
 
 /* ══════════════════════════════════════════════════════════════ */
+/* NPC Directory Panel — contacts, relationships, intel          */
+/* ══════════════════════════════════════════════════════════════ */
+
+.bb-dir-count {
+    float: right;
+    background: #1a1a2e;
+    color: #888;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 400;
+}
+
+.bb-dir-controls {
+    display: flex;
+    gap: 6px;
+    padding: 6px 0 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.bb-dir-filter {
+    background: #111118;
+    color: #c0c0c8;
+    border: 1px solid #2a2a3e;
+    font-family: inherit;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.bb-dir-sort {
+    background: none;
+    border: 1px solid #2a2a3e;
+    color: #888;
+    font-family: inherit;
+    font-size: 9px;
+    padding: 3px 8px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+}
+
+.bb-dir-sort:hover { color: #c9a84c; border-color: #c9a84c; }
+
+.bb-dir-empty {
+    color: #5a5a6a;
+    font-size: 10px;
+    padding: 16px 0;
+    text-align: center;
+}
+
+.bb-dir-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-dir-row {
+    padding: 8px 6px;
+    border-bottom: 1px solid #111118;
+    transition: background 0.15s;
+}
+
+.bb-dir-row:hover { background: rgba(201, 168, 76, 0.04); }
+
+.bb-dir-row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bb-dir-emoji { font-size: 16px; flex-shrink: 0; }
+
+.bb-dir-info { flex: 1; min-width: 0; }
+
+.bb-dir-name {
+    color: #e0e0e8;
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-dir-title {
+    color: #5a5a6a;
+    font-size: 9px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-dir-role-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    color: #fff;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bb-dir-row-meta {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    padding-left: 28px;
+    font-size: 9px;
+}
+
+.bb-dir-favor { font-weight: 600; }
+
+.bb-dir-met {
+    color: #4caf50;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.bb-dir-wealth {
+    color: #5a5a6a;
+}
+
+.bb-dir-personality {
+    color: #6a6a7a;
+    font-size: 9px;
+    font-style: italic;
+    margin-top: 4px;
+    padding-left: 28px;
+    line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
 /* Artwork Tearsheet Modal — Gagosian / Seventh House Aesthetic  */
 /*                                                                */
 /* Matches real gallery PDF tearsheet layout with formal          */
@@ -1696,6 +1830,17 @@
 .bb-gallery .bb-port-more {
     color: #9a9690;
 }
+
+/* Directory in gallery mode */
+.bb-gallery .bb-dir-count { background: #e8e4de; color: #6a6660; }
+.bb-gallery .bb-dir-filter { background: #fff; color: #1a1a1a; border-color: #d0cbc4; }
+.bb-gallery .bb-dir-sort { border-color: #d0cbc4; color: #6a6660; }
+.bb-gallery .bb-dir-sort:hover { color: #1a1a1a; border-color: #1a1a1a; }
+.bb-gallery .bb-dir-row { border-bottom-color: #e8e4de; }
+.bb-gallery .bb-dir-row:hover { background: rgba(201, 168, 76, 0.06); }
+.bb-gallery .bb-dir-name { color: #1a1a1a; }
+.bb-gallery .bb-dir-title { color: #9a9690; }
+.bb-gallery .bb-dir-personality { color: #9a9690; }
 
 .bb-gallery .bb-port-list-btn {
     border-color: #1a1a1a;
@@ -2892,6 +3037,15 @@
 .bb-tearsheet-mode .bb-ps-label { color: #999; }
 .bb-tearsheet-mode .bb-trade-row { border-bottom-color: #f0ede8; }
 .bb-tearsheet-mode .bb-trade-price { color: #1a1a1a; }
+.bb-tearsheet-mode .bb-dir-count { background: #e0dcd6; color: #999; }
+.bb-tearsheet-mode .bb-dir-filter { background: #fff; color: #1a1a1a; border-color: #e0dcd6; font-family: Georgia, serif; }
+.bb-tearsheet-mode .bb-dir-sort { border-color: #e0dcd6; color: #999; }
+.bb-tearsheet-mode .bb-dir-row { border-bottom-color: #f0ede8; }
+.bb-tearsheet-mode .bb-dir-row:hover { background: #faf8f5; }
+.bb-tearsheet-mode .bb-dir-name { color: #1a1a1a; font-family: Georgia, serif; }
+.bb-tearsheet-mode .bb-dir-title { color: #999; }
+.bb-tearsheet-mode .bb-dir-personality { color: #999; font-family: Georgia, serif; }
+
 .bb-tearsheet-mode .bb-port-list-btn { background: #1a1a1a; color: #fff; border: none; }
 .bb-tearsheet-mode .bb-port-list-btn:hover { background: #333; }
 
@@ -3559,6 +3713,16 @@
 }
 .bb-artnet .bb-port-list-btn:hover { background: #a00; }
 
+.bb-artnet .bb-dir-count { background: #f0f0f0; color: #666; }
+.bb-artnet .bb-dir-filter { background: #fff; color: #333; border-color: #ccc; }
+.bb-artnet .bb-dir-sort { border-color: #ccc; color: #666; }
+.bb-artnet .bb-dir-sort:hover { color: #cc0000; border-color: #cc0000; }
+.bb-artnet .bb-dir-row { border-bottom-color: #f0f0f0; }
+.bb-artnet .bb-dir-row:hover { background: #fafafa; }
+.bb-artnet .bb-dir-name { color: #0066cc; }
+.bb-artnet .bb-dir-title { color: #999; }
+.bb-artnet .bb-dir-personality { color: #999; }
+
 .bb-artnet .bb-ob-tab.active { border-bottom-color: #cc0000; color: #cc0000; }
 .bb-artnet .bb-txh-badge.buy { background: #e8f5e9; color: #2a6e2a; }
 .bb-artnet .bb-txh-badge.sell { background: #fff3f3; color: #cc0000; }
@@ -4041,6 +4205,16 @@
 .bb-sothebys .bb-trade-row { border-bottom-color: #e8e4de; }
 .bb-sothebys .bb-trade-row:hover { background: #f8f6f2; }
 
+.bb-sothebys .bb-dir-count { background: #e8e4de; color: #999; }
+.bb-sothebys .bb-dir-filter { background: #fafaf7; color: #1c1c1c; border-color: #d0cbc4; font-family: Georgia, serif; }
+.bb-sothebys .bb-dir-sort { border-color: #d0cbc4; color: #999; }
+.bb-sothebys .bb-dir-sort:hover { color: #003da5; border-color: #003da5; }
+.bb-sothebys .bb-dir-row { border-bottom-color: #e8e4de; }
+.bb-sothebys .bb-dir-row:hover { background: #f8f6f2; }
+.bb-sothebys .bb-dir-name { color: #003da5; font-family: Georgia, serif; }
+.bb-sothebys .bb-dir-title { color: #999; }
+.bb-sothebys .bb-dir-personality { color: #999; font-family: Georgia, serif; }
+
 .bb-sothebys .bb-port-list-btn {
     background: #003da5;
     color: #fff;
@@ -4511,6 +4685,15 @@
 
 .bb-deitch .bb-trade-row { border-bottom: 1px solid #e8e8e8; }
 .bb-deitch .bb-trade-row:hover { background: #f5f5f0; }
+
+.bb-deitch .bb-dir-count { background: #000; color: var(--dp-accent, #ff00ff); font-weight: 900; }
+.bb-deitch .bb-dir-filter { background: #fff; color: #000; border: 2px solid #000; font-weight: 700; }
+.bb-deitch .bb-dir-sort { border: 2px solid #000; color: #000; font-weight: 700; }
+.bb-deitch .bb-dir-sort:hover { background: var(--dp-accent, #ff00ff); }
+.bb-deitch .bb-dir-row { border-bottom: 1px solid #e8e8e8; }
+.bb-deitch .bb-dir-row:hover { background: #f5f5f0; }
+.bb-deitch .bb-dir-name { color: #000; font-weight: 700; }
+.bb-deitch .bb-dir-title { color: #666; }
 
 .bb-deitch .bb-port-list-btn {
     background: var(--dp-accent, #ff00ff);

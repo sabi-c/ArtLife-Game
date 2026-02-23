@@ -95,17 +95,18 @@ export class SettingsManager {
                 { value: 'txhistory', display: 'Transaction History' },
                 { value: 'watchlist', display: 'Watchlist' },
                 { value: 'portfolio', display: 'Portfolio Tracker' },
+                { value: 'directory', display: 'NPC Directory' },
             ],
             default: [
                 'ticker', 'notifications', 'playerstats', 'networth', 'collection',
                 'leaderboard', 'pricechart', 'orderbook', 'overview', 'tradefeed',
-                'txhistory', 'watchlist', 'portfolio',
+                'txhistory', 'watchlist', 'portfolio', 'directory',
             ],
             presets: {
                 full: [
                     'ticker', 'notifications', 'playerstats', 'networth', 'collection',
                     'leaderboard', 'pricechart', 'orderbook', 'overview', 'tradefeed',
-                    'txhistory', 'watchlist', 'portfolio',
+                    'txhistory', 'watchlist', 'portfolio', 'directory',
                 ],
                 minimal: ['playerstats', 'networth', 'collection', 'orderbook'],
                 trading: ['ticker', 'leaderboard', 'orderbook', 'pricechart', 'tradefeed', 'portfolio', 'notifications', 'watchlist'],

@@ -30,6 +30,7 @@ import { VIEW, OVERLAY } from '../constants/views.js';
 import { TerminalAPI } from '../terminal/TerminalAPI.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 import { useCmsStore } from '../stores/cmsStore.js';
+import { useNPCStore } from '../stores/npcStore.js';
 import './BloombergTerminal.css';
 
 // ── Intel-gated data masking ──
@@ -863,6 +864,162 @@ function NetWorthPanel({ intel }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// 12B. NPC Directory Panel — art world contacts & relationships
+//
+// Shows all NPCs with role, title, favor level, and interaction status.
+// Data from useNPCStore (Zustand) + CONTACTS master list.
+// Intel-gated: higher intel reveals more NPC details.
+// ══════════════════════════════════════════════════════════════
+
+/** Role badge color mapping for visual distinction */
+const ROLE_COLORS = {
+    dealer: '#c9a84c',
+    gallerist: '#2a6e2a',
+    auction: '#003da5',
+    artist: '#8b2020',
+    collector: '#6a4c93',
+    advisor: '#0066cc',
+    mega_dealer: '#c9a84c',
+    speculator: '#cc0000',
+    young_hustler: '#ff6600',
+    institutional: '#555',
+};
+
+function NPCDirectoryPanel({ intel }) {
+    const contacts = useNPCStore(state => state.contacts);
+    const [sortKey, setSortKey] = useState('favor');
+    const [sortDir, setSortDir] = useState('desc');
+    const [filterRole, setFilterRole] = useState('all');
+
+    // Only show NPCs player has met (or all if intel >= 60)
+    const visibleContacts = useMemo(() => {
+        let list = (contacts || []).map(c => {
+            // Merge with CONTACTS master data for full info
+            const master = CONTACTS.find(m => m.id === c.id) || {};
+            return { ...master, ...c };
+        });
+
+        // Intel < 30: only show met contacts
+        if (intel < 30) {
+            list = list.filter(c => c.met);
+        }
+
+        // Role filter
+        if (filterRole !== 'all') {
+            list = list.filter(c => c.role === filterRole);
+        }
+
+        // Sort
+        const sortFn = {
+            favor: (a, b) => (b.favor || 0) - (a.favor || 0),
+            name: (a, b) => (a.name || '').localeCompare(b.name || ''),
+            role: (a, b) => (a.role || '').localeCompare(b.role || ''),
+        };
+        if (sortFn[sortKey]) {
+            list.sort(sortFn[sortKey]);
+            if (sortDir === 'asc') list.reverse();
+        }
+
+        return list;
+    }, [contacts, intel, filterRole, sortKey, sortDir]);
+
+    // Unique roles for filter
+    const roles = useMemo(() => {
+        const allRoles = (contacts || []).map(c => c.role).filter(Boolean);
+        return [...new Set(allRoles)].sort();
+    }, [contacts]);
+
+    const toggleSort = (key) => {
+        if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortKey(key); setSortDir('desc'); }
+    };
+
+    // Favor level descriptor
+    const favorLabel = (f) => {
+        if (f >= 15) return 'Close Ally';
+        if (f >= 8) return 'Friendly';
+        if (f >= 3) return 'Warm';
+        if (f >= -2) return 'Neutral';
+        if (f >= -8) return 'Cool';
+        if (f >= -15) return 'Hostile';
+        return 'Enemy';
+    };
+
+    const favorColor = (f) => {
+        if (f >= 8) return '#2a6e2a';
+        if (f >= 3) return '#4caf50';
+        if (f >= -2) return '#999';
+        if (f >= -8) return '#cc6600';
+        return '#cc0000';
+    };
+
+    return (
+        <div className="bb-panel bb-directory">
+            <div className="bb-panel-header">
+                DIRECTORY
+                <span className="bb-dir-count">{visibleContacts.length}</span>
+            </div>
+            {/* Filter + sort controls */}
+            <div className="bb-dir-controls">
+                <select className="bb-dir-filter" value={filterRole}
+                    onChange={e => setFilterRole(e.target.value)}>
+                    <option value="all">All Roles</option>
+                    {roles.map(r => (
+                        <option key={r} value={r}>{r.replace('_', ' ').toUpperCase()}</option>
+                    ))}
+                </select>
+                <button className="bb-dir-sort" onClick={() => toggleSort('favor')}>
+                    Favor {sortKey === 'favor' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                </button>
+                <button className="bb-dir-sort" onClick={() => toggleSort('name')}>
+                    Name {sortKey === 'name' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+                </button>
+            </div>
+            {visibleContacts.length === 0 ? (
+                <div className="bb-dir-empty">
+                    {intel < 30 ? 'No contacts met yet. Meet NPCs to build your network.'
+                        : 'No contacts match this filter.'}
+                </div>
+            ) : (
+                <div className="bb-dir-list">
+                    {visibleContacts.map(c => (
+                        <div key={c.id} className="bb-dir-row">
+                            <div className="bb-dir-row-main">
+                                <span className="bb-dir-emoji">{c.emoji || '👤'}</span>
+                                <div className="bb-dir-info">
+                                    <div className="bb-dir-name">{c.name || 'Unknown'}</div>
+                                    <div className="bb-dir-title">{c.title || c.role || ''}</div>
+                                </div>
+                                <span className="bb-dir-role-badge"
+                                    style={{ background: ROLE_COLORS[c.role] || '#666' }}>
+                                    {(c.role || '').replace('_', ' ').toUpperCase()}
+                                </span>
+                            </div>
+                            <div className="bb-dir-row-meta">
+                                <span className="bb-dir-favor" style={{ color: favorColor(c.favor || 0) }}>
+                                    {favorLabel(c.favor || 0)}
+                                    {intel >= 40 && ` (${c.favor || 0})`}
+                                </span>
+                                {c.met && <span className="bb-dir-met">MET</span>}
+                                {intel >= 50 && c.wealth && (
+                                    <span className="bb-dir-wealth">
+                                        Budget: ${fmtNum(c.wealth.annualBudget || 0)}
+                                    </span>
+                                )}
+                            </div>
+                            {/* Personality teaser — intel gated */}
+                            {intel >= 60 && c.personality && (
+                                <div className="bb-dir-personality">{c.personality}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // 13. Collection Panel (gallery-catalogue style per work)
 // ══════════════════════════════════════════════════════════════
 function CollectionPanel({ intel, onSelectWork }) {
@@ -1236,6 +1393,7 @@ function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, o
             {/* ── Additional panels — 2-col grid ── */}
             <div className="ts-panels ts-panels-grid">
                 <div className="ts-panels-col">
+                    {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                     {showPanel('leaderboard') && feed && (
                         <ArtistLeaderboard
                             leaderboard={feed.leaderboard}
@@ -1477,6 +1635,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
             <div className="an-panels an-panels-grid">
                 <div className="an-panels-col">
                     {showPanel('playerstats') && <PlayerStatsPanel />}
+                    {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                     {showPanel('leaderboard') && feed && (
                         <ArtistLeaderboard
                             leaderboard={feed.leaderboard}
@@ -1713,6 +1872,7 @@ function SothebysView({ intel, onSelectWork, showPanel, feed, selectedArtist, on
             <div className="sb-panels sb-panels-grid">
                 <div className="sb-panels-col">
                     {showPanel('playerstats') && <PlayerStatsPanel />}
+                    {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                     {showPanel('leaderboard') && feed && (
                         <ArtistLeaderboard
                             leaderboard={feed.leaderboard}
@@ -1885,6 +2045,7 @@ function DeitchView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
             <div className="dp-panels dp-panels-grid">
                 <div className="dp-panels-col">
                     {showPanel('playerstats') && <PlayerStatsPanel />}
+                    {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                     {showPanel('leaderboard') && feed && (
                         <ArtistLeaderboard
                             leaderboard={feed.leaderboard}
@@ -2236,6 +2397,7 @@ export default function BloombergTerminal({ onClose }) {
                     {/* 2-column responsive grid for panels */}
                     <div className="gallery-grid-2col">
                         <div className="gallery-col">
+                            {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                             {showPanel('collection') && <CollectionPanel intel={intel} onSelectWork={handleSelectPortfolioWork} />}
                             {showPanel('leaderboard') && <ArtistLeaderboard
                                 leaderboard={feed.leaderboard}
@@ -2293,6 +2455,7 @@ export default function BloombergTerminal({ onClose }) {
                     <div className="bb-bottom">
                         {showPanel('watchlist') && <Watchlist intel={intel} />}
                         {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={handleListWork} onSelectWork={handleSelectPortfolioWork} />}
+                        {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                     </div>
                 </>
             )}
