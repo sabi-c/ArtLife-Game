@@ -38,14 +38,18 @@ function mask(value, intel, threshold, fallback = '???') {
 }
 
 function maskPrice(price, intel) {
-    if (intel >= 40) return `$${price.toLocaleString()}`;
-    if (intel >= 20) return `$${(Math.round(price / 10000) * 10000).toLocaleString()}`;
+    const p = Number(price) || 0;
+    if (intel >= 40) return `$${p.toLocaleString()}`;
+    if (intel >= 20) return `$${(Math.round(p / 10000) * 10000).toLocaleString()}`;
     return '$???';
 }
 
+/** Safe number formatting — prevents toLocaleString crashes on undefined/NaN */
+function fmtNum(val) { return (Number(val) || 0).toLocaleString(); }
+
 /** Format price with full decimals for tearsheet (Seventh House style) */
 function tearsheetPrice(price) {
-    return `$ ${Number(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `$ ${(Number(price) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 // ── Mini Sparkline SVG ──
@@ -240,7 +244,7 @@ function MarketOverview({ compositeIndex, cycle, intel }) {
                 </div>
                 <div className="bb-ov-item">
                     <span className="bb-ov-label">Volume</span>
-                    <span className="bb-ov-value">{mask(`$${volume.toLocaleString()}`, intel, 40)}</span>
+                    <span className="bb-ov-value">{mask(`$${fmtNum(volume)}`, intel, 40)}</span>
                 </div>
                 <div className="bb-ov-item">
                     <span className="bb-ov-label">Active Works</span>
@@ -463,7 +467,7 @@ function PortfolioTracker({ intel, onListWork, onSelectWork }) {
                         <div key={listing.id} className="bb-listing-row">
                             <span className="bb-listing-title">"{listing.title}"</span>
                             <span className="bb-listing-tier">{listing.tier.toUpperCase()}</span>
-                            <span className="bb-listing-price">${listing.askPrice.toLocaleString()}</span>
+                            <span className="bb-listing-price">${fmtNum(listing.askPrice)}</span>
                             <button className="bb-listing-cancel"
                                 onClick={() => TerminalAPI.bloomberg.cancelListing(listing.id)}>
                                 CANCEL
@@ -653,7 +657,7 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                         <div className="bb-ts-section-label">TRANSACTION HISTORY</div>
                         {runtimeProv.map((p, i) => (
                             <div key={i} className="bb-ts-prov-item">
-                                {p.type} — Week {p.week}{p.city ? `, ${p.city}` : ''}{p.price ? ` — $${p.price.toLocaleString()}` : ''}
+                                {p.type} — Week {p.week}{p.city ? `, ${p.city}` : ''}{p.price ? ` — $${fmtNum(p.price)}` : ''}
                             </div>
                         ))}
                     </div>
@@ -816,7 +820,7 @@ function NetWorthPanel({ intel }) {
         <div className="bb-panel bb-net-worth">
             <div className="bb-panel-header">NET WORTH</div>
             <div className="bb-nw-hero">
-                <span className="bb-nw-big">${netWorth.toLocaleString()}</span>
+                <span className="bb-nw-big">${fmtNum(netWorth)}</span>
                 <MiniSparkline
                     data={netWorths}
                     width={100}
@@ -827,11 +831,11 @@ function NetWorthPanel({ intel }) {
             <div className="bb-nw-grid">
                 <div className="bb-nw-stat">
                     <span className="bb-nw-stat-label">CASH</span>
-                    <span className="bb-nw-stat-value">${cash.toLocaleString()}</span>
+                    <span className="bb-nw-stat-value">${fmtNum(cash)}</span>
                 </div>
                 <div className="bb-nw-stat">
                     <span className="bb-nw-stat-label">PORTFOLIO</span>
-                    <span className="bb-nw-stat-value">${portfolioVal.toLocaleString()}</span>
+                    <span className="bb-nw-stat-value">${fmtNum(portfolioVal)}</span>
                 </div>
                 <div className="bb-nw-stat">
                     <span className="bb-nw-stat-label">UNREALIZED P&L</span>
@@ -842,16 +846,16 @@ function NetWorthPanel({ intel }) {
                 <div className="bb-nw-stat">
                     <span className="bb-nw-stat-label">REALIZED P&L</span>
                     <span className={`bb-nw-stat-value ${realizedPnl >= 0 ? 'up' : 'down'}`}>
-                        {realizedPnl >= 0 ? '+' : ''}${Math.abs(realizedPnl).toLocaleString()}
+                        {realizedPnl >= 0 ? '+' : ''}${fmtNum(Math.abs(realizedPnl))}
                     </span>
                 </div>
                 <div className="bb-nw-stat">
                     <span className="bb-nw-stat-label">52W HIGH</span>
-                    <span className="bb-nw-stat-value">${high52.toLocaleString()}</span>
+                    <span className="bb-nw-stat-value">${fmtNum(high52)}</span>
                 </div>
                 <div className="bb-nw-stat">
                     <span className="bb-nw-stat-label">52W LOW</span>
-                    <span className="bb-nw-stat-value">${low52.toLocaleString()}</span>
+                    <span className="bb-nw-stat-value">${fmtNum(low52)}</span>
                 </div>
             </div>
         </div>
@@ -894,7 +898,7 @@ function CollectionPanel({ intel, onSelectWork }) {
                     <div className="bb-coll-medium">{work.medium || 'Mixed Media'}</div>
                     {work.dimensions && <div className="bb-coll-dimensions">{work.dimensions}</div>}
                     <div className="bb-coll-prices">
-                        <span>Acquired ${(work.purchasePrice || 0).toLocaleString()} · W{work.purchaseWeek || '?'}</span>
+                        <span>Acquired ${fmtNum(work.purchasePrice)} · W{work.purchaseWeek || '?'}</span>
                         <span className="bb-coll-arrow">→</span>
                         <span>Est. {maskPrice(work.currentVal, intel)}</span>
                         <span className={`bb-coll-roi ${work.roi > 0 ? 'up' : work.roi < 0 ? 'down' : ''}`}>
@@ -925,7 +929,7 @@ function TransactionHistoryPanel({ intel }) {
                 TRANSACTION HISTORY
                 <span className="bb-txh-summary">
                     {buys}B / {sells}S · P&L: <span className={realizedPnl >= 0 ? 'up' : 'down'}>
-                        {realizedPnl >= 0 ? '+' : ''}${Math.abs(realizedPnl).toLocaleString()}
+                        {realizedPnl >= 0 ? '+' : ''}${fmtNum(Math.abs(realizedPnl))}
                     </span>
                 </span>
             </div>
@@ -942,7 +946,7 @@ function TransactionHistoryPanel({ intel }) {
                         <span className="bb-txh-price">{maskPrice(t.price, intel)}</span>
                         {t.action === 'SELL' && t.profit !== undefined && (
                             <span className={`bb-txh-pnl ${t.profit >= 0 ? 'up' : 'down'}`}>
-                                {t.profit >= 0 ? '+' : ''}${Math.abs(t.profit).toLocaleString()}
+                                {t.profit >= 0 ? '+' : ''}${fmtNum(Math.abs(t.profit))}
                                 {t.holdWeeks !== undefined && <span className="bb-txh-hold"> ({t.holdWeeks}w)</span>}
                             </span>
                         )}
@@ -1254,7 +1258,7 @@ function TearsheetView({ intel, onSelectWork, showPanel }) {
 // lot-by-lot auction results with estimate ranges and ROI.
 // Sortable columns (click header to sort).
 // ══════════════════════════════════════════════════════════════
-function ArtnetView({ intel, onSelectWork, showPanel }) {
+function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectOrder, onSelectTrade, onListWork }) {
     const s = GameState.state;
     const portfolio = s?.portfolio || [];
     const week = s?.week || 1;
@@ -1331,10 +1335,10 @@ function ArtnetView({ intel, onSelectWork, showPanel }) {
             {showPanel('networth') && (
                 <div className="an-summary">
                     <span>Collection: {ownedItems.length} lots</span>
-                    <span>Total Value: ${totalValue.toLocaleString()}</span>
-                    <span>Total Cost: ${totalCost.toLocaleString()}</span>
+                    <span>Total Value: ${fmtNum(totalValue)}</span>
+                    <span>Total Cost: ${fmtNum(totalCost)}</span>
                     <span>P&L: <span className={totalValue - totalCost >= 0 ? 'an-gain' : 'an-loss'}>
-                        {totalValue - totalCost >= 0 ? '+' : ''}${(totalValue - totalCost).toLocaleString()}
+                        {totalValue - totalCost >= 0 ? '+' : ''}${fmtNum(totalValue - totalCost)}
                     </span></span>
                 </div>
             )}
@@ -1387,13 +1391,13 @@ function ArtnetView({ intel, onSelectWork, showPanel }) {
                                     </td>
                                     <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
                                     <td className="an-td an-estimate">
-                                        ${work.estLow.toLocaleString()} – ${work.estHigh.toLocaleString()}
+                                        ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
                                     </td>
                                     <td className="an-td an-price">
-                                        <div className="an-price-main">${work.currentVal.toLocaleString()}</div>
+                                        <div className="an-price-main">${fmtNum(work.currentVal)}</div>
                                         {work._owned && work.purchasePrice > 0 && (
                                             <div className="an-price-sub">
-                                                Paid ${work.purchasePrice.toLocaleString()}
+                                                Paid ${fmtNum(work.purchasePrice)}
                                             </div>
                                         )}
                                     </td>
@@ -1415,6 +1419,35 @@ function ArtnetView({ intel, onSelectWork, showPanel }) {
                 </table>
             )}
 
+            {/* ── Additional panels below the table ── */}
+            <div className="an-panels">
+                {showPanel('playerstats') && <PlayerStatsPanel />}
+                {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                {showPanel('leaderboard') && feed && (
+                    <ArtistLeaderboard
+                        leaderboard={feed.leaderboard}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                        selectedArtist={selectedArtist}
+                        onSelect={onSelectArtist}
+                    />
+                )}
+                {showPanel('pricechart') && feed && (
+                    <PriceChart
+                        artistId={selectedArtist}
+                        priceHistory={feed.priceHistory}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                    />
+                )}
+                {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                {showPanel('watchlist') && <Watchlist intel={intel} />}
+                {showPanel('portfolio') && (
+                    <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                )}
+            </div>
+
             {/* Footer */}
             <div className="an-footer">
                 <span>artlife.game</span>
@@ -1431,7 +1464,7 @@ function ArtnetView({ intel, onSelectWork, showPanel }) {
 // generous margins, serif body + sans headers, blue lot numbers,
 // formal hierarchy matching Sotheby's PDF catalogue pages.
 // ══════════════════════════════════════════════════════════════
-function SothebysView({ intel, onSelectWork, showPanel }) {
+function SothebysView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectTrade, onListWork }) {
     const s = GameState.state;
     const portfolio = s?.portfolio || [];
     const playerName = s?.playerName || 'THE DEALER';
@@ -1472,7 +1505,7 @@ function SothebysView({ intel, onSelectWork, showPanel }) {
                 <div className="sb-sale-title">Contemporary Art</div>
                 <div className="sb-sale-info">{city} · Week {week} · {allItems.length} Lots</div>
                 <div className="sb-sale-estimate">
-                    Total Estimate ${Math.round(totalEstimate * 0.85).toLocaleString()} – ${Math.round(totalEstimate * 1.15).toLocaleString()}
+                    Total Estimate ${fmtNum(Math.round(totalEstimate * 0.85))} – ${fmtNum(Math.round(totalEstimate * 1.15))}
                 </div>
             </div>
 
@@ -1559,19 +1592,19 @@ function SothebysView({ intel, onSelectWork, showPanel }) {
 
                                 {/* Estimate */}
                                 <div className="sb-estimate">
-                                    ESTIMATE ${estLow.toLocaleString()} – ${estHigh.toLocaleString()}
+                                    ESTIMATE ${fmtNum(estLow)} – ${fmtNum(estHigh)}
                                 </div>
 
                                 {/* Sold / Current value */}
                                 {work._owned && work.purchasePrice > 0 && (
                                     <div className="sb-sold">
-                                        ACQUIRED FOR ${work.purchasePrice.toLocaleString()}
+                                        ACQUIRED FOR ${fmtNum(work.purchasePrice)}
                                         {work.purchaseWeek ? ` · WEEK ${work.purchaseWeek}` : ''}
                                     </div>
                                 )}
                                 {work._isMarket && (
                                     <div className="sb-sold sb-available">
-                                        OFFERED AT ${work.currentVal.toLocaleString()}
+                                        OFFERED AT ${fmtNum(work.currentVal)}
                                     </div>
                                 )}
 
@@ -1618,6 +1651,27 @@ function SothebysView({ intel, onSelectWork, showPanel }) {
                 </div>
             )}
 
+            {/* ── Additional panels below lots ── */}
+            <div className="sb-panels">
+                {showPanel('playerstats') && <PlayerStatsPanel />}
+                {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                {showPanel('leaderboard') && feed && (
+                    <ArtistLeaderboard
+                        leaderboard={feed.leaderboard}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                        selectedArtist={selectedArtist}
+                        onSelect={onSelectArtist}
+                    />
+                )}
+                {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                {showPanel('watchlist') && <Watchlist intel={intel} />}
+                {showPanel('portfolio') && (
+                    <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                )}
+            </div>
+
             {/* Sale footer */}
             <div className="sb-sale-footer">
                 <div className="sb-footer-brand">ARTLIFE</div>
@@ -1636,7 +1690,7 @@ function SothebysView({ intel, onSelectWork, showPanel }) {
 // collage/masonry grid. Giant artist names, fluorescent accents,
 // prices hidden by default (click to reveal), zine energy.
 // ══════════════════════════════════════════════════════════════
-function DeitchView({ intel, onSelectWork, showPanel }) {
+function DeitchView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectTrade, onListWork }) {
     const s = GameState.state;
     const portfolio = s?.portfolio || [];
     const week = s?.week || 1;
@@ -1746,7 +1800,7 @@ function DeitchView({ intel, onSelectWork, showPanel }) {
                                 {/* Price — hidden by default, click to reveal */}
                                 <div className="dp-card-price" onClick={(e) => togglePrice(work.id, e)}>
                                     {isRevealed && intel >= 40 ? (
-                                        <span className="dp-price-revealed">${work.currentVal.toLocaleString()}</span>
+                                        <span className="dp-price-revealed">${fmtNum(work.currentVal)}</span>
                                     ) : (
                                         <span className="dp-price-hidden">INQUIRE</span>
                                     )}
@@ -1764,6 +1818,27 @@ function DeitchView({ intel, onSelectWork, showPanel }) {
                     })}
                 </div>
             )}
+
+            {/* ── Additional panels below cards ── */}
+            <div className="dp-panels">
+                {showPanel('playerstats') && <PlayerStatsPanel />}
+                {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                {showPanel('leaderboard') && feed && (
+                    <ArtistLeaderboard
+                        leaderboard={feed.leaderboard}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                        selectedArtist={selectedArtist}
+                        onSelect={onSelectArtist}
+                    />
+                )}
+                {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                {showPanel('watchlist') && <Watchlist intel={intel} />}
+                {showPanel('portfolio') && (
+                    <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                )}
+            </div>
 
             {/* Footer */}
             <div className="dp-footer">
@@ -1949,7 +2024,7 @@ export default function BloombergTerminal({ onClose }) {
         useAP('Bloomberg purchase', 1);
         const result = TerminalAPI.bloomberg.buyFromOrder(order.id);
         if (result.success) {
-            setStatusMsg(`Acquired "${order.title}" for $${order.askPrice.toLocaleString()}`);
+            setStatusMsg(`Acquired "${order.title}" for $${fmtNum(order.askPrice)}`);
             GameEventBus.emit(GameEvents.BLOOMBERG_TRADE, result);
         } else {
             setStatusMsg(result.error || 'Purchase failed');
@@ -1982,7 +2057,7 @@ export default function BloombergTerminal({ onClose }) {
         useAP('Bloomberg listing', 2);
         const result = TerminalAPI.bloomberg.listForSale(work.id, tier);
         if (result.success) {
-            setStatusMsg(`Listed "${work.title}" (${tier}) at $${result.listing.askPrice.toLocaleString()}`);
+            setStatusMsg(`Listed "${work.title}" (${tier}) at $${fmtNum(result.listing?.askPrice)}`);
         } else {
             setStatusMsg(result.error || 'Listing failed');
         }
@@ -2061,17 +2136,23 @@ export default function BloombergTerminal({ onClose }) {
 
             {/* Artnet mode — tabular auction results */}
             {isArtnet && (
-                <ArtnetView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel} />
+                <ArtnetView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
+                    feed={feed} selectedArtist={selectedArtist} onSelectArtist={setSelectedArtist}
+                    onSelectOrder={handleSelectOrder} onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
             )}
 
             {/* Sotheby's mode — luxury lot-by-lot catalogue */}
             {isSothebys && (
-                <SothebysView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel} />
+                <SothebysView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
+                    feed={feed} selectedArtist={selectedArtist} onSelectArtist={setSelectedArtist}
+                    onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
             )}
 
             {/* Deitch mode — underground gallery masonry grid */}
             {isDeitch && (
-                <DeitchView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel} />
+                <DeitchView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
+                    feed={feed} selectedArtist={selectedArtist} onSelectArtist={setSelectedArtist}
+                    onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
             )}
 
             {/* Gallery mode: single-column document flow */}

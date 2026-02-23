@@ -3349,8 +3349,70 @@
     color: #999;
 }
 
+/* ── Artnet additional panels — styled for white/data theme ── */
+.an-panels {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bb-artnet .bb-panel {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    color: #333;
+}
+
+.bb-artnet .bb-panel-header {
+    color: #333;
+    border-bottom-color: #e0e0e0;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+.bb-artnet .bb-lb-row { border-bottom-color: #f0f0f0; }
+.bb-artnet .bb-lb-row:hover { background: #fafafa; }
+.bb-artnet .bb-lb-row.selected { background: #fff3f3; }
+.bb-artnet .bb-lb-name { color: #0066cc; }
+.bb-artnet .bb-lb-heat-fill { background: #cc0000; }
+.bb-artnet .bb-lb-index { color: #333; }
+.bb-artnet .bb-lb-index.up { color: #2a6e2a; }
+.bb-artnet .bb-lb-index.down { color: #cc0000; }
+
+.bb-artnet .bb-nw-big { color: #333; }
+.bb-artnet .bb-nw-stat-label { color: #999; }
+.bb-artnet .bb-nw-stat-value { color: #333; }
+.bb-artnet .bb-nw-grid { border-top-color: #e0e0e0; }
+
+.bb-artnet .bb-ps-grid { border-color: #e0e0e0; }
+.bb-artnet .bb-ps-value { color: #333; }
+.bb-artnet .bb-ps-label { color: #999; }
+.bb-artnet .bb-ps-subtitle { color: #999; }
+.bb-artnet .bb-ps-item { border-right-color: #e0e0e0; }
+
+.bb-artnet .bb-trade-row { border-bottom-color: #f0f0f0; }
+.bb-artnet .bb-trade-row:hover { background: #fafafa; }
+.bb-artnet .bb-trade-price { color: #333; }
+
+.bb-artnet .bb-port-row { border-bottom-color: #f0f0f0; }
+.bb-artnet .bb-port-list-btn {
+    background: #cc0000;
+    color: #fff;
+    border: none;
+}
+.bb-artnet .bb-port-list-btn:hover { background: #a00; }
+
+.bb-artnet .bb-ob-tab.active { border-bottom-color: #cc0000; color: #cc0000; }
+.bb-artnet .bb-txh-badge.buy { background: #e8f5e9; color: #2a6e2a; }
+.bb-artnet .bb-txh-badge.sell { background: #fff3f3; color: #cc0000; }
+
 /* Artnet mobile */
 @media (max-width: 768px) {
+    .an-panels { padding: 16px; }
     .an-table { font-size: 11px; }
     .an-th, .an-td { padding: 8px 6px; }
     .an-thumb { display: none; }
@@ -3753,8 +3815,77 @@
     padding: 0;
 }
 
+/* ── Sotheby's additional panels — luxury serif styling ── */
+.sb-panels {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.bb-sothebys .bb-panel {
+    background: #fafaf7;
+    border: none;
+    border-top: 1px solid #d0cbc4;
+    padding-top: 24px;
+    color: #1c1c1c;
+}
+
+.bb-sothebys .bb-panel-header {
+    color: #999;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    border-bottom: none;
+    padding-bottom: 12px;
+}
+
+.bb-sothebys .bb-lb-row { border-bottom-color: #e8e4de; }
+.bb-sothebys .bb-lb-row:hover { background: #f8f6f2; }
+.bb-sothebys .bb-lb-row.selected { background: #f0ede8; }
+.bb-sothebys .bb-lb-name { color: #003da5; font-family: Georgia, serif; }
+.bb-sothebys .bb-lb-heat-fill { background: #003da5; }
+.bb-sothebys .bb-lb-index { color: #1c1c1c; }
+.bb-sothebys .bb-lb-index.up { color: #2a6e2a; }
+.bb-sothebys .bb-lb-index.down { color: #cc0000; }
+
+.bb-sothebys .bb-nw-big {
+    color: #1c1c1c;
+    font-weight: 300;
+    font-size: 36px;
+    font-family: Georgia, serif;
+}
+.bb-sothebys .bb-nw-stat-label { color: #999; font-family: -apple-system, sans-serif; font-size: 8px; letter-spacing: 0.15em; }
+.bb-sothebys .bb-nw-stat-value { color: #1c1c1c; font-family: Georgia, serif; }
+.bb-sothebys .bb-nw-grid { border-top-color: #e8e4de; }
+
+.bb-sothebys .bb-ps-grid { border-color: #e8e4de; }
+.bb-sothebys .bb-ps-value { color: #1c1c1c; font-weight: 300; }
+.bb-sothebys .bb-ps-label { color: #999; }
+.bb-sothebys .bb-ps-item { border-right-color: #e8e4de; }
+
+.bb-sothebys .bb-trade-row { border-bottom-color: #e8e4de; }
+.bb-sothebys .bb-trade-row:hover { background: #f8f6f2; }
+
+.bb-sothebys .bb-port-list-btn {
+    background: #003da5;
+    color: #fff;
+    border: none;
+    font-family: -apple-system, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+}
+.bb-sothebys .bb-port-list-btn:hover { background: #002a7a; }
+
+.bb-sothebys .bb-txh-badge.buy { background: #f0f4fa; color: #003da5; }
+.bb-sothebys .bb-txh-badge.sell { background: #faf0f0; color: #cc0000; }
+
 /* Sotheby's mobile */
 @media (max-width: 768px) {
+    .sb-panels { padding: 24px 20px; }
     .sb-lot { padding: 32px 20px; }
     .sb-lot-number { font-size: 24px; }
     .sb-sale-header { padding: 32px 20px 24px; }
@@ -4147,8 +4278,76 @@
     letter-spacing: 0.04em;
 }
 
+/* ── Deitch additional panels — bold underground styling ── */
+.dp-panels {
+    padding: 3px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-deitch .bb-panel {
+    background: #ffffff;
+    border: 3px solid #000;
+    color: #000;
+}
+
+.bb-deitch .bb-panel-header {
+    color: #000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 2px solid #000;
+}
+
+.bb-deitch .bb-lb-row { border-bottom: 1px solid #e8e8e8; }
+.bb-deitch .bb-lb-row:hover { background: #f5f5f0; }
+.bb-deitch .bb-lb-row.selected { background: color-mix(in srgb, var(--dp-accent, #ff00ff) 10%, white); }
+.bb-deitch .bb-lb-name { color: #000; font-weight: 700; }
+.bb-deitch .bb-lb-heat-fill { background: var(--dp-accent, #ff00ff); }
+.bb-deitch .bb-lb-index { color: #000; font-weight: 700; }
+.bb-deitch .bb-lb-index.up { color: #000; }
+.bb-deitch .bb-lb-index.down { color: #cc0000; }
+
+.bb-deitch .bb-nw-big {
+    color: #000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 40px;
+}
+.bb-deitch .bb-nw-stat-label { color: #666; font-family: 'Courier New', monospace; font-size: 9px; }
+.bb-deitch .bb-nw-stat-value { color: #000; font-weight: 700; }
+.bb-deitch .bb-nw-grid { border-top: 2px solid #000; }
+
+.bb-deitch .bb-ps-grid { border-color: #000; }
+.bb-deitch .bb-ps-value { color: #000; font-weight: 900; font-family: Impact, sans-serif; font-size: 28px; }
+.bb-deitch .bb-ps-label { color: #666; font-family: 'Courier New', monospace; }
+.bb-deitch .bb-ps-item { border-right: 2px solid #000; }
+.bb-deitch .bb-ps-subtitle { color: #999; font-family: 'Courier New', monospace; }
+
+.bb-deitch .bb-trade-row { border-bottom: 1px solid #e8e8e8; }
+.bb-deitch .bb-trade-row:hover { background: #f5f5f0; }
+
+.bb-deitch .bb-port-list-btn {
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    border: 2px solid #000;
+    font-weight: 900;
+    font-family: Impact, sans-serif;
+    text-transform: uppercase;
+}
+.bb-deitch .bb-port-list-btn:hover { background: #000; color: var(--dp-accent, #ff00ff); }
+
+.bb-deitch .bb-txh-badge.buy { background: #000; color: var(--dp-accent, #ff00ff); font-weight: 900; }
+.bb-deitch .bb-txh-badge.sell { background: var(--dp-accent, #ff00ff); color: #000; font-weight: 900; }
+
+.bb-deitch .bb-ob-tab.active { border-bottom-color: var(--dp-accent, #ff00ff); color: #000; }
+
 /* Deitch mobile */
 @media (max-width: 768px) {
+    .dp-panels { padding: 2px; }
     .dp-header { padding: 24px 16px 20px; }
     .dp-header-title { font-size: 40px; }
     .dp-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px; padding: 2px; }
