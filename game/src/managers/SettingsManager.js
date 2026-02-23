@@ -68,12 +68,12 @@ export class SettingsManager {
             label: 'Market Terminal Style',
             type: 'cycle',
             options: [
-                { value: 'gallery', display: 'Gallery Dashboard' },
+                { value: 'gallery', display: 'Seventh House' },
                 { value: 'tearsheet', display: 'Gagosian Tearsheet' },
-                { value: 'artnet', display: 'Artnet Auction' },
+                { value: 'artnet', display: 'Artnet Price Database' },
                 { value: 'sothebys', display: "Sotheby's Catalogue" },
                 { value: 'deitch', display: 'Deitch Projects' },
-                { value: 'bloomberg', display: 'Bloomberg Dark' }
+                { value: 'bloomberg', display: 'Bloomberg Terminal' }
             ],
             default: 'gallery'
         },

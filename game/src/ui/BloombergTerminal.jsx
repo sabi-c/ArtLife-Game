@@ -1442,33 +1442,37 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                 </table>
             )}
 
-            {/* ── Additional panels below the table ── */}
-            <div className="an-panels">
-                {showPanel('playerstats') && <PlayerStatsPanel />}
-                {showPanel('networth') && <NetWorthPanel intel={intel} />}
-                {showPanel('leaderboard') && feed && (
-                    <ArtistLeaderboard
-                        leaderboard={feed.leaderboard}
-                        liveSparklines={feed.liveSparklines}
-                        intel={intel}
-                        selectedArtist={selectedArtist}
-                        onSelect={onSelectArtist}
-                    />
-                )}
-                {showPanel('pricechart') && feed && (
-                    <PriceChart
-                        artistId={selectedArtist}
-                        priceHistory={feed.priceHistory}
-                        liveSparklines={feed.liveSparklines}
-                        intel={intel}
-                    />
-                )}
-                {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
-                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
-                {showPanel('watchlist') && <Watchlist intel={intel} />}
-                {showPanel('portfolio') && (
-                    <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
-                )}
+            {/* ── Additional panels below the table — 2-col grid ── */}
+            <div className="an-panels an-panels-grid">
+                <div className="an-panels-col">
+                    {showPanel('playerstats') && <PlayerStatsPanel />}
+                    {showPanel('leaderboard') && feed && (
+                        <ArtistLeaderboard
+                            leaderboard={feed.leaderboard}
+                            liveSparklines={feed.liveSparklines}
+                            intel={intel}
+                            selectedArtist={selectedArtist}
+                            onSelect={onSelectArtist}
+                        />
+                    )}
+                    {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                    {showPanel('watchlist') && <Watchlist intel={intel} />}
+                </div>
+                <div className="an-panels-col">
+                    {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                    {showPanel('pricechart') && feed && (
+                        <PriceChart
+                            artistId={selectedArtist}
+                            priceHistory={feed.priceHistory}
+                            liveSparklines={feed.liveSparklines}
+                            intel={intel}
+                        />
+                    )}
+                    {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                    {showPanel('portfolio') && (
+                        <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                    )}
+                </div>
             </div>
 
             {/* Footer */}
@@ -1674,25 +1678,29 @@ function SothebysView({ intel, onSelectWork, showPanel, feed, selectedArtist, on
                 </div>
             )}
 
-            {/* ── Additional panels below lots ── */}
-            <div className="sb-panels">
-                {showPanel('playerstats') && <PlayerStatsPanel />}
-                {showPanel('networth') && <NetWorthPanel intel={intel} />}
-                {showPanel('leaderboard') && feed && (
-                    <ArtistLeaderboard
-                        leaderboard={feed.leaderboard}
-                        liveSparklines={feed.liveSparklines}
-                        intel={intel}
-                        selectedArtist={selectedArtist}
-                        onSelect={onSelectArtist}
-                    />
-                )}
-                {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
-                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
-                {showPanel('watchlist') && <Watchlist intel={intel} />}
-                {showPanel('portfolio') && (
-                    <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
-                )}
+            {/* ── Additional panels below lots — 2-col grid ── */}
+            <div className="sb-panels sb-panels-grid">
+                <div className="sb-panels-col">
+                    {showPanel('playerstats') && <PlayerStatsPanel />}
+                    {showPanel('leaderboard') && feed && (
+                        <ArtistLeaderboard
+                            leaderboard={feed.leaderboard}
+                            liveSparklines={feed.liveSparklines}
+                            intel={intel}
+                            selectedArtist={selectedArtist}
+                            onSelect={onSelectArtist}
+                        />
+                    )}
+                    {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                </div>
+                <div className="sb-panels-col">
+                    {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                    {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                    {showPanel('watchlist') && <Watchlist intel={intel} />}
+                    {showPanel('portfolio') && (
+                        <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                    )}
+                </div>
             </div>
 
             {/* Sale footer */}
@@ -1842,25 +1850,29 @@ function DeitchView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                 </div>
             )}
 
-            {/* ── Additional panels below cards ── */}
-            <div className="dp-panels">
-                {showPanel('playerstats') && <PlayerStatsPanel />}
-                {showPanel('networth') && <NetWorthPanel intel={intel} />}
-                {showPanel('leaderboard') && feed && (
-                    <ArtistLeaderboard
-                        leaderboard={feed.leaderboard}
-                        liveSparklines={feed.liveSparklines}
-                        intel={intel}
-                        selectedArtist={selectedArtist}
-                        onSelect={onSelectArtist}
-                    />
-                )}
-                {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
-                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
-                {showPanel('watchlist') && <Watchlist intel={intel} />}
-                {showPanel('portfolio') && (
-                    <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
-                )}
+            {/* ── Additional panels below cards — 2-col grid ── */}
+            <div className="dp-panels dp-panels-grid">
+                <div className="dp-panels-col">
+                    {showPanel('playerstats') && <PlayerStatsPanel />}
+                    {showPanel('leaderboard') && feed && (
+                        <ArtistLeaderboard
+                            leaderboard={feed.leaderboard}
+                            liveSparklines={feed.liveSparklines}
+                            intel={intel}
+                            selectedArtist={selectedArtist}
+                            onSelect={onSelectArtist}
+                        />
+                    )}
+                    {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                </div>
+                <div className="dp-panels-col">
+                    {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                    {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                    {showPanel('watchlist') && <Watchlist intel={intel} />}
+                    {showPanel('portfolio') && (
+                        <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />
+                    )}
+                </div>
             </div>
 
             {/* Footer */}
@@ -2128,7 +2140,7 @@ export default function BloombergTerminal({ onClose }) {
                     <span className="bb-cycle-label">{feed.cycle.state.toUpperCase()}</span>
                     <span className="bb-header-meta">W{week} · {month} {year}</span>
                     <button className="bb-style-toggle" onClick={toggleMarketStyle}
-                        title={`Style: ${marketStyle} — click to cycle`}>
+                        title={`${SettingsManager.getDisplayString('marketStyle')} — click to cycle`}>
                         {isTearsheet ? '◉' : isGallery ? '◐' : isArtnet ? '◆' : isSothebys ? '◈' : isDeitch ? '◎' : '◑'}
                     </button>
                     <PanelConfigDropdown
@@ -2178,31 +2190,41 @@ export default function BloombergTerminal({ onClose }) {
                     onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
             )}
 
-            {/* Gallery mode: single-column document flow */}
+            {/* Gallery mode: Seventh House-inspired 2-column dashboard */}
             {isGallery && (
-                <div className="bb-grid bb-grid-3col">
-                    <div className="bb-col">
+                <div className="gallery-body">
+                    {/* Hero section — player stats + net worth */}
+                    <div className="gallery-hero">
                         {showPanel('playerstats') && <PlayerStatsPanel />}
                         {showPanel('networth') && <NetWorthPanel intel={intel} />}
-                        {showPanel('collection') && <CollectionPanel intel={intel} onSelectWork={handleSelectPortfolioWork} />}
-                        {showPanel('leaderboard') && <ArtistLeaderboard
-                            leaderboard={feed.leaderboard}
-                            liveSparklines={feed.liveSparklines}
-                            intel={intel}
-                            selectedArtist={selectedArtist}
-                            onSelect={setSelectedArtist}
-                        />}
-                        {showPanel('pricechart') && <PriceChart
-                            artistId={selectedArtist}
-                            priceHistory={feed.priceHistory}
-                            liveSparklines={feed.liveSparklines}
-                            intel={intel}
-                        />}
-                        {showPanel('orderbook') && <OrderBook intel={intel} onSelectOrder={handleSelectOrder} />}
-                        {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} />}
-                        {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={handleSelectTrade} />}
-                        {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
-                        {showPanel('watchlist') && <Watchlist intel={intel} />}
+                    </div>
+
+                    {/* 2-column responsive grid for panels */}
+                    <div className="gallery-grid-2col">
+                        <div className="gallery-col">
+                            {showPanel('collection') && <CollectionPanel intel={intel} onSelectWork={handleSelectPortfolioWork} />}
+                            {showPanel('leaderboard') && <ArtistLeaderboard
+                                leaderboard={feed.leaderboard}
+                                liveSparklines={feed.liveSparklines}
+                                intel={intel}
+                                selectedArtist={selectedArtist}
+                                onSelect={setSelectedArtist}
+                            />}
+                            {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={handleSelectTrade} />}
+                            {showPanel('watchlist') && <Watchlist intel={intel} />}
+                        </div>
+                        <div className="gallery-col">
+                            {showPanel('orderbook') && <OrderBook intel={intel} onSelectOrder={handleSelectOrder} />}
+                            {showPanel('pricechart') && <PriceChart
+                                artistId={selectedArtist}
+                                priceHistory={feed.priceHistory}
+                                liveSparklines={feed.liveSparklines}
+                                intel={intel}
+                            />}
+                            {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} />}
+                            {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                            {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={handleListWork} onSelectWork={handleSelectPortfolioWork} />}
+                        </div>
                     </div>
                 </div>
             )}
