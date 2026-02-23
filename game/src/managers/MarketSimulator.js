@@ -1,15 +1,39 @@
 /**
- * MarketSimulator — Autonomous NPC-to-NPC art trading engine
+ * MarketSimulator.js — Autonomous NPC-to-NPC Art Trading Engine
  *
- * Runs each game week (called from WeekEngine), separate from the
- * player-facing haggle battle. Simulates a living art market where
- * NPCs buy, sell, and flip artworks based on their profiles.
+ * Runs each game week (called from WeekEngine), SEPARATE from the
+ * player-facing HaggleManager. This simulates a living art market
+ * where NPCs buy, sell, and flip artworks based on their profiles.
  *
- * 4-Phase Pipeline:
+ * ARCHITECTURE CONTEXT (for other agents):
+ * ┌──────────────────────────────────────────────────────┐
+ * │  MarketSimulator (THIS FILE)                         │
+ * │  └─ Owns: NPC trading, order book, trade log,       │
+ * │     market events, multi-week simulation             │
+ * │  └─ Depends on: MarketManager (for pricing),        │
+ * │     contacts.js (NPC profiles), artworks.js          │
+ * │  └─ Called by: WeekEngine (weekly), CMS dashboard    │
+ * │     (simulateMultipleWeeks for testing)               │
+ * │  └─ Produces: tradeLog, weeklyReports, priceHistory, │
+ * │     marketEvents — consumed by MarketSimDashboard    │
+ * └──────────────────────────────────────────────────────┘
+ *
+ * 4-Phase Pipeline (each week):
  *   1. NPC Decision Making — each NPC evaluates buy/sell/hold
- *   2. Order Matching      — pair buyers with sellers
- *   3. Trade Resolution    — simplified haggle between 2 NPCs
- *   4. Settlement          — transfer art, cash, boost heat, log
+ *      Uses: financial stress, cash, market cycle, collection size
+ *   2. Order Matching — pair buyers with sellers
+ *      Uses: genre preference, tier preference, price/budget ratio
+ *   3. Trade Resolution — simplified negotiation between 2 NPCs
+ *      Uses: NPC flexibility, urgency, relationship modifiers
+ *   4. Settlement — transfer art, cash, boost artist heat, log
+ *
+ * INTEGRATION POINTS:
+ * - _getPrice(work) → delegates to MarketManager.calculatePrice()
+ * - NPC state reads from contacts.js (wealth, taste, haggleProfile)  
+ * - MarketSimDashboard.jsx → calls simulateMultipleWeeks() for CMS
+ * - WeekEngine → calls simulate() each week for live game
+ * - priceHistory[] → powers Charts tab in dashboard
+ * - marketEvents[] → powers Events tab in dashboard
  *
  * Data Sources:
  *   contacts.js  → wealth, collection, taste, haggleProfile, network

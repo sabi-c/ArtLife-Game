@@ -1,8 +1,40 @@
 /**
- * HaggleManager.js — State machine for Pokémon-style art negotiation battles
- * 
- * Manages turn-based haggle rounds, tactic resolution, dealer AI responses,
- * and price convergence. Works with both buying and selling scenarios.
+ * HaggleManager.js — Pokémon-Style Art Negotiation Battle System
+ *
+ * Turn-based negotiation engine for PLAYER-facing deals.
+ * This is DIFFERENT from MarketSimulator (NPC-to-NPC trades).
+ *
+ * ARCHITECTURE CONTEXT (for other agents):
+ * ┌──────────────────────────────────────────────────────┐
+ * │  HaggleManager (THIS FILE)                           │
+ * │  └─ Owns: player haggle state machine, tactic        │
+ * │     resolution, dealer AI, price convergence          │
+ * │  └─ Depends on: haggle_config.js (tactics, types,    │
+ * │     dealer personalities), GameState (player stats),  │
+ * │     npcStore (CMS-edited NPC overrides)                │
+ * │  └─ Called by: HaggleScene (Phaser), dialogue system  │
+ * │  └─ CMS views: HaggleEditor.jsx, ArtworkEditor haggle │
+ * │     sub-tab                                            │
+ * └──────────────────────────────────────────────────────┘
+ *
+ * Battle Flow:
+ *   start() → player selects artwork + NPC → determines dealer type
+ *   getAvailableTactics() → returns unlocked tactics for this round
+ *   executeTactic(id) → resolves tactic, updates price, checks win/loss
+ *   applyResult() → if deal, transfers artwork+cash in GameState
+ *
+ * Type System (Rock-Paper-Scissors):
+ *   Emotional > Aggressive > Financial > Logical > Emotional
+ *   Each tactic has a type; each dealer has a style.
+ *   Super Effective = +20% success, 1.5× price shift
+ *   Not Very Effective = -15% success, 0.5× price shift
+ *
+ * INTEGRATION POINTS:
+ * - Asking price comes from MarketManager.calculatePrice() (via artwork.price)
+ * - NPC profiles read from contacts.js, overridden by npcStore (CMS edits)
+ * - Deal results write to GameState (cash, portfolio, provenance, flip history)
+ * - haggle_config.js defines ALL balance data (dealer types, tactics, dialogue)
+ * - ArtworkEditor "Haggle" sub-tab shows the full haggle matrix for CMS testing
  */
 
 import { DEALER_TYPES, TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG, HAGGLE_TYPES, TYPE_EFFECTIVENESS } from '../data/haggle_config.js';

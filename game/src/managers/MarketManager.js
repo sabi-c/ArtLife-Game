@@ -5,21 +5,45 @@ import { generateId } from '../utils/id.js';
 import { useMarketStore } from '../stores/marketStore.js';
 
 /**
- * Market simulation engine
- * Manages artist heat, price calculations, and available works
+ * MarketManager.js — Pricing Engine & Artist Index Calculator
  *
- * Economy Mechanics (Research-Backed):
+ * Core engine that drives all art pricing in the game. Everything that
+ * involves artwork value flows through this class.
+ *
+ * ARCHITECTURE CONTEXT (for other agents):
+ * ┌─────────────────────────────────────────────────────┐
+ * │  MarketManager (THIS FILE)                          │
+ * │  └─ Owns: artist heat, price calculation, market    │
+ * │     cycles, hedonic scoring, composite index        │
+ * │  └─ Called by: WeekEngine (weekly tick),             │
+ * │     MarketSimulator (NPC pricing), HaggleManager    │
+ * │     (player pricing), ArtworkEditor (CMS display)   │
+ * │  └─ Reads: artists.js, GameState                    │
+ * │  └─ Writes to: marketStore (Zustand, via sync)      │
+ * └─────────────────────────────────────────────────────┘
+ *
+ * KEY PRICING FORMULA:
+ *   targetPrice = basePrice × heatMult × marketMult × eraMod
+ *                 × flipperPenalty × hedonicMult [+ O-U jitter]
+ *
+ * Economy Model (Research-Backed):
  * - Ornstein-Uhlenbeck mean-reverting random walk for price jitter
  * - Gallery buyback floor simulation
  * - Real-world CAGR drift integration
  * - ArtNet-inspired Hedonic Pricing Model (provenance, medium, age)
  * - Market Cycle Evolution (bull/bear/flat) with momentum signals
- * - Comparable Grouping Artist Index
+ * - Comparable Grouping Artist Index (base 500)
+ * - Composite Market Index (cap-weighted, base 1000)
+ *
+ * INTEGRATION POINTS:
+ * - MarketSimulator._getPrice() → calls calculatePrice()
+ * - HaggleManager.start() → uses asking prices derived from calculatePrice()
+ * - ArtworkEditor metadata tab → shows per-artwork market panel using getMarketSnapshot()
+ * - marketStore.syncFromManager() → called after each weekly tick
  *
  * References:
- * - ArtNet Price Database methodology (median-price comparable grouping)
- * - bmjoy/EconomicSimulation (agent-based market simulation)
- * - Wally869/SimEconomica_Python (double-auction with imperfect information)
+ * - ArtNet Price Database methodology
+ * - bmjoy/EconomicSimulation (agent-based market)
  * - Ornstein-Uhlenbeck process for mean-reverting asset prices
  */
 export class MarketManager {
