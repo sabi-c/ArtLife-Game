@@ -2884,6 +2884,78 @@
         margin: 0.5in;
         size: letter;
     }
+
+    /* ── Artnet print: clean table on white ── */
+    .an-view {
+        overflow: visible;
+    }
+
+    .an-header-bar {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .an-row:hover { background: transparent; }
+
+    .an-badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .an-thumb-img {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Sotheby's print: lot per page ── */
+    .sb-view {
+        overflow: visible;
+    }
+
+    .sb-lot-nav { display: none; }
+
+    .sb-lot {
+        page-break-after: always;
+        page-break-inside: avoid;
+    }
+
+    .sb-lot:last-child {
+        page-break-after: auto;
+    }
+
+    .sb-lot:hover { background: transparent; }
+
+    .sb-lot-img {
+        max-height: 50vh;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sb-lot-placeholder {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Deitch print: cards flow naturally ── */
+    .dp-view {
+        overflow: visible;
+        background: #fff;
+    }
+
+    .dp-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .dp-card-img {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .dp-sticker {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -3865,6 +3937,7 @@
     background: #ffffff;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
+    animation: dp-card-in 0.4s ease-out both;
     position: relative;
     overflow: hidden;
 }
@@ -3872,6 +3945,19 @@
 .dp-card:hover {
     transform: translateY(-2px) rotate(-0.3deg);
     box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+}
+
+/* Staggered card entrance — each card fades/slides in */
+.dp-card:nth-child(1) { animation-delay: 0s; }
+.dp-card:nth-child(2) { animation-delay: 0.05s; }
+.dp-card:nth-child(3) { animation-delay: 0.1s; }
+.dp-card:nth-child(4) { animation-delay: 0.15s; }
+.dp-card:nth-child(5) { animation-delay: 0.2s; }
+.dp-card:nth-child(6) { animation-delay: 0.25s; }
+
+@keyframes dp-card-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .dp-card-lg {
