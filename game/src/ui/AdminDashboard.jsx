@@ -6,6 +6,7 @@ import { HaggleManager } from '../managers/HaggleManager.js';
 import { VIEW, OVERLAY } from '../constants/views.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
+import EmailOverlay from './email/EmailOverlay.jsx';
 
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
@@ -13,6 +14,7 @@ export default function AdminDashboard({ onClose }) {
     const [activeTab, setActiveTab] = useState('ui');
     const [gameStateVersion, setGameStateVersion] = useState(0);
     const [importData, setImportData] = useState('');
+    const [emailTestMode, setEmailTestMode] = useState(null); // null | { mode, haggleInfo?, event? }
 
     const forceUpdate = () => setGameStateVersion(v => v + 1);
 
@@ -62,6 +64,29 @@ export default function AdminDashboard({ onClose }) {
         onClose();
     };
 
+    /** Launch email-based haggle negotiation (replaces old Phaser HaggleScene) */
+    const launchEmailHaggle = (mockData = {}) => {
+        if (!GameState.state) {
+            GameState.quickDemoInit();
+            forceUpdate();
+            if (!GameState.state) {
+                GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Failed to initialize game state.');
+                return;
+            }
+        }
+        const haggleInfo = HaggleManager.start({
+            mode: mockData.mode || 'buy',
+            work: mockData.work || { id: 'debug_art_1', title: 'Debug Piece (Code)', artist: 'Admin', price: 50000, medium: 'Code' },
+            npc: mockData.npc || { id: 'dealer_shark', name: 'The Shark', role: 'mega-dealer' },
+            askingPrice: mockData.askingPrice || 50000,
+            playerOffer: mockData.playerOffer || 35000,
+        });
+        // Emit global event — App.jsx renders EmailOverlay on top of everything
+        GameEventBus.emit(GameEvents.EMAIL_HAGGLE_START, haggleInfo);
+        onClose();
+    };
+
+    /** Legacy Phaser haggle — kept for testing the old Pokemon-style battle */
     const launchHaggleBattle = () => {
         if (!GameState.state) {
             GameState.quickDemoInit();
@@ -136,6 +161,7 @@ export default function AdminDashboard({ onClose }) {
         { key: 'npcs', label: 'NPCs' },
         { key: 'flags', label: 'FLAGS' },
         { key: 'saves', label: 'SAVES' },
+        { key: 'email', label: 'EMAIL' },
     ];
 
     return (
@@ -314,9 +340,13 @@ export default function AdminDashboard({ onClose }) {
                         </div>
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>BATTLE & DIALOGUE</div>
-                            <button style={btnStyle} onClick={launchHaggleBattle}>
-                                [ Haggle Battle ]
-                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Pokemon-style negotiation</div>
+                            <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => launchEmailHaggle()}>
+                                [ Email Haggle (New) ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Gmail-style email negotiation</div>
+                            </button>
+                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={launchHaggleBattle}>
+                                [ Haggle Battle (Legacy) ]
+                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Pokemon-style negotiation (Phaser)</div>
                             </button>
                             <button style={btnStyle} onClick={() => triggerScene('MacDialogueScene', {
                                 bgKey: 'bg_gallery_main_1bit_1771587911969.png',
@@ -620,6 +650,127 @@ export default function AdminDashboard({ onClose }) {
                                 )}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* ── EMAIL HAGGLE TEST TAB ── */}
+                {activeTab === 'email' && (
+                    <div>
+                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>EMAIL CUTSCENE / HAGGLE TESTING</div>
+
+                        {/* Inline EmailOverlay for testing within admin */}
+                        {emailTestMode ? (
+                            <div style={{ position: 'relative', height: '70vh', border: '1px solid #333', overflow: 'hidden' }}>
+                                <EmailOverlay
+                                    mode={emailTestMode.mode}
+                                    haggleInfo={emailTestMode.haggleInfo}
+                                    event={emailTestMode.event}
+                                    onComplete={() => setEmailTestMode(null)}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
+                                <div>
+                                    <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>HAGGLE MODE</h3>
+                                    <div style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
+                                        Full email negotiation with AI agent guidance, tactic selection, and dealer responses.
+                                    </div>
+
+                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
+                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                        const haggleInfo = HaggleManager.start({
+                                            mode: 'buy',
+                                            work: { id: 'test_basquiat', title: 'Untitled (Skull)', artist: 'Jean-Michel Basquiat', price: 285000, medium: 'Acrylic on canvas' },
+                                            npc: { id: 'dealer_bellamy', name: 'Margaux Bellamy', role: 'patron' },
+                                            askingPrice: 285000,
+                                            playerOffer: 195000,
+                                        });
+                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
+                                    }}>
+                                        [ Patron Haggle — Basquiat $285K ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Buy negotiation with a patron dealer</div>
+                                    </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
+                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                        const haggleInfo = HaggleManager.start({
+                                            mode: 'buy',
+                                            work: { id: 'test_haring', title: 'Radiant Baby', artist: 'Keith Haring', price: 42000, medium: 'Sumi ink on paper' },
+                                            npc: { id: 'dealer_chen', name: 'Victor Chen', role: 'mega-dealer' },
+                                            askingPrice: 42000,
+                                            playerOffer: 28000,
+                                        });
+                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
+                                    }}>
+                                        [ Mega-Dealer Haggle — Haring $42K ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Tough negotiation with aggressive dealer</div>
+                                    </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
+                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                        const haggleInfo = HaggleManager.start({
+                                            mode: 'sell',
+                                            work: { id: 'test_koons', title: 'Balloon Dog (Orange)', artist: 'Jeff Koons', price: 1200000, medium: 'Mirror-polished stainless steel' },
+                                            npc: { id: 'collector_wu', name: 'Diana Wu', role: 'collector' },
+                                            askingPrice: 1200000,
+                                            playerOffer: 950000,
+                                        });
+                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
+                                    }}>
+                                        [ Sell Mode — Koons $1.2M ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Selling to a collector</div>
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>STATIC / EVENT MODE</h3>
+                                    <div style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
+                                        Non-interactive email events — deal offers, notifications, story beats.
+                                    </div>
+
+                                    <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => {
+                                        setEmailTestMode({
+                                            mode: 'static',
+                                            event: {
+                                                isEmail: true,
+                                                id: 'test_deal_offer',
+                                                title: 'Private Sale Opportunity',
+                                                emails: [
+                                                    { from: 'Margaux Bellamy', fromName: 'Margaux Bellamy', subject: 'Private Sale — Basquiat', body: 'Dear collector,\n\nI have a **rare early Basquiat** that just came off a private estate. Before it goes to auction, I wanted to offer it to a select few.\n\nThe asking price is **$285,000** — negotiable for the right buyer.\n\nLet me know if you\'d like to schedule a private viewing.', direction: 'incoming', time: '10:07 AM' },
+                                                ],
+                                            },
+                                        });
+                                    }}>
+                                        [ Deal Offer Email ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Incoming private sale offer</div>
+                                    </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => {
+                                        setEmailTestMode({
+                                            mode: 'static',
+                                            event: {
+                                                isEmail: true,
+                                                id: 'test_auction_result',
+                                                title: 'Auction Result',
+                                                emails: [
+                                                    { from: 'Sotheby\'s', fromName: 'Sotheby\'s Notification', subject: 'Lot #47 — Result', body: 'Your bid on **Lot #47 — "Untitled" by Cy Twombly** was successful.\n\nFinal hammer price: **$892,000**\n\nBuyer\'s premium (25%): $223,000\nTotal: **$1,115,000**\n\nPayment is due within 30 days. Congratulations.', direction: 'incoming', time: '8:45 PM' },
+                                                ],
+                                            },
+                                        });
+                                    }}>
+                                        [ Auction Result Email ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Sotheby's bid result notification</div>
+                                    </button>
+
+                                    <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>TOOLS</div>
+
+                                    <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.DESIGN_GUIDE)}>
+                                        [ Email Design Guide (F3) ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Component showcase with all email UI pieces</div>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

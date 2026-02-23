@@ -21,6 +21,7 @@ import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import BloombergTerminal from './ui/BloombergTerminal.jsx';
 import SalesGrid from './ui/SalesGrid.jsx';
 import EmailDesignGuide from './ui/email/EmailDesignGuide.jsx';
+import EmailOverlay from './ui/email/EmailOverlay.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import CharacterCreator from './ui/CharacterCreator.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
@@ -43,6 +44,7 @@ export default function App() {
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
     const [isGridSceneActive, setIsGridSceneActive] = useState(false);
+    const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null); // EmailOverlay haggle from any context
     const autoResumedRef = useRef(false);
 
     useEffect(() => {
@@ -246,12 +248,19 @@ export default function App() {
         GameEventBus.on(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
         GameEventBus.on(GameEvents.UI_TOGGLE_OVERLAY, overlayHandler);
 
+        // Global Email Haggle — any context (Phaser scenes, Admin, etc.) can launch
+        const emailHaggleHandler = (haggleInfo) => {
+            setGlobalHaggleEmail(haggleInfo);
+        };
+        GameEventBus.on(GameEvents.EMAIL_HAGGLE_START, emailHaggleHandler);
+
         return () => {
             GameEventBus.off(GameEvents.UI_ROUTE, handler);
             GameEventBus.off(GameEvents.SCENE_READY, sceneReadyHandler);
             GameEventBus.off(GameEvents.SCENE_EXIT, sceneExitHandler);
             GameEventBus.off(GameEvents.TOGGLE_DASHBOARD, legacyHandler);
             GameEventBus.off(GameEvents.UI_TOGGLE_OVERLAY, overlayHandler);
+            GameEventBus.off(GameEvents.EMAIL_HAGGLE_START, emailHaggleHandler);
         };
     }, []);
 
@@ -410,6 +419,15 @@ export default function App() {
 
             {activeOverlay === OVERLAY.DESIGN_GUIDE && (
                 <EmailDesignGuide onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {/* Global Email Haggle — rendered above all overlays when triggered from any context */}
+            {globalHaggleEmail && (
+                <EmailOverlay
+                    mode="haggle"
+                    haggleInfo={globalHaggleEmail}
+                    onComplete={() => setGlobalHaggleEmail(null)}
+                />
             )}
 
             {isGridSceneActive && <MobileJoypad />}

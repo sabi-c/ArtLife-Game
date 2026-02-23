@@ -287,28 +287,24 @@ export class DialogueScene extends BaseScene {
                 ? (CONTACTS || []).find(c => c.id === sellerId) || null
                 : null;
 
-            // Initialise HaggleManager state before launching HaggleScene
-            const haggleStart = HaggleManager.start({
+            // Initialise HaggleManager and launch email-based negotiation overlay
+            const haggleInfo = HaggleManager.start({
                 mode: 'buy',
                 work,
                 npc: npcContact,
                 askingPrice: basePrice,
             });
 
-            const haggleInfo = {
-                ...haggleStart,
-                openingDialogue: haggleStart.openingDialogue || `Let's talk about the price.`,
-                bgKey: 'bg_gallery_main_1bit_1771587911969.png',
-            };
+            // Emit global event — App.jsx renders EmailOverlay on top of everything
+            GameEventBus.emit(GameEvents.EMAIL_HAGGLE_START, haggleInfo);
 
+            // Fade out and return to the previous scene while email overlay runs
             this.cameras.main.fadeOut(300, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
-                this.scene.start(SCENE_KEYS.HAGGLE, {
-                    ui: this.ui,
-                    haggleInfo,
-                    returnScene: this.returnScene || SCENE_KEYS.LOCATION,
-                    returnArgs: this.returnArgs || {},
-                });
+                this.scene.start(
+                    this.returnScene || SCENE_KEYS.LOCATION,
+                    this.returnArgs || {},
+                );
             });
             return;
         }

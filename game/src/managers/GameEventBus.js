@@ -71,4 +71,7 @@ export const GameEvents = {
 
     // HUD messages
     HUD_MESSAGE: 'hud:message',
+
+    // Email Haggle — launches EmailOverlay from any context (Phaser scenes, Admin, etc.)
+    EMAIL_HAGGLE_START: 'email:haggle:start',
 };
