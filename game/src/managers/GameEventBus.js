@@ -64,4 +64,11 @@ export const GameEvents = {
 
     // Debug & Admin
     DEBUG_LAUNCH_SCENE: 'debug:launch:scene',
+
+    // Bloomberg Trading
+    BLOOMBERG_TRADE: 'bloomberg:trade',
+    BLOOMBERG_ORDER_FILLED: 'bloomberg:order:filled',
+
+    // HUD messages
+    HUD_MESSAGE: 'hud:message',
 };

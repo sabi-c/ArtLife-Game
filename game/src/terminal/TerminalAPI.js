@@ -151,6 +151,222 @@ export const TerminalAPI = {
         },
     },
 
+    // ═══════════════════════════════════════════════════════════
+    //  BLOOMBERG TRADING API — buy, sell, haggle from terminal
+    // ═══════════════════════════════════════════════════════════
+
+    bloomberg: {
+        /** Get open sell orders, intel-gated (masks NPC names < intel 60, prices < intel 20) */
+        getOpenSellOrders: () => MarketSimulator.getOpenSellOrders(),
+
+        /** Get open buy orders */
+        getOpenBuyOrders: () => MarketSimulator.getOpenBuyOrders(),
+
+        /**
+         * Player buys directly from a sell order.
+         * Returns { success, order, error } — caller handles AP deduction.
+         */
+        buyFromOrder: (orderId) => {
+            const s = GameState.state;
+            if (!s) return { success: false, error: 'No game state' };
+
+            const order = MarketSimulator.pendingSellOrders.find(o => o.id === orderId);
+            if (!order) return { success: false, error: 'Order no longer available' };
+            if (s.cash < order.askPrice) return { success: false, error: 'Insufficient funds' };
+
+            // Fill the order (updates NPC state, logs trade)
+            const filled = MarketSimulator.fillSellOrder(orderId);
+            if (!filled) return { success: false, error: 'Order fill failed' };
+
+            // Transfer to player: deduct cash, add to portfolio
+            s.cash -= filled.askPrice;
+            const work = filled.artwork || ARTWORKS.find(a => a.id === filled.artworkId) || {
+                id: filled.artworkId, title: filled.title, artist: filled.artist,
+                price: filled.askPrice,
+            };
+            work.onMarket = false;
+            work.purchasePrice = filled.askPrice;
+            work.purchaseWeek = s.week;
+            work.purchaseCity = s.currentCity;
+            work.storage = 'home';
+            work.provenance = work.provenance || [];
+            work.provenance.push({
+                type: 'acquired', week: s.week, city: s.currentCity,
+                price: filled.askPrice, source: `Bloomberg (from ${filled.npcName || 'NPC'})`,
+            });
+            s.portfolio.push(work);
+            s.totalWorksBought = (s.totalWorksBought || 0) + 1;
+
+            // Record transaction
+            (s.transactions = s.transactions || []).unshift({
+                id: `bb_buy_${Date.now()}`,
+                action: 'BUY', title: work.title, artist: work.artist,
+                price: filled.askPrice, week: s.week,
+            });
+            if (s.transactions.length > 50) s.transactions.pop();
+
+            GameState.addNews(`Acquired "${work.title}" via Bloomberg for $${filled.askPrice.toLocaleString()}`);
+            return { success: true, order: filled };
+        },
+
+        /**
+         * Prepare haggle data for launching a HaggleScene from Bloomberg.
+         * Returns haggleInfo object ready for HaggleManager.start().
+         */
+        prepareHaggle: (orderId) => {
+            const order = MarketSimulator.pendingSellOrders.find(o => o.id === orderId);
+            if (!order) return null;
+
+            const npc = CONTACTS.find(c => c.id === order.npcId) || {
+                id: order.npcId, name: order.npcName || 'Dealer', role: 'dealer',
+            };
+
+            return {
+                mode: 'buy',
+                work: order.artwork || { id: order.artworkId, title: order.title, artist: order.artist, price: order.askPrice },
+                npc,
+                askingPrice: order.askPrice,
+                playerOffer: Math.round(order.askPrice * 0.7),
+                bloombergOrderId: orderId, // Track which order this haggle is for
+            };
+        },
+
+        /**
+         * Player lists a portfolio piece for sale.
+         * @param {string} workId — portfolio work ID
+         * @param {'quick'|'market'|'premium'} tier — sale strategy
+         * Returns { success, listing, error }
+         */
+        listForSale: (workId, tier = 'market') => {
+            const s = GameState.state;
+            if (!s) return { success: false, error: 'No game state' };
+
+            const idx = s.portfolio.findIndex(w => w.id === workId);
+            if (idx === -1) return { success: false, error: 'Work not in portfolio' };
+
+            const work = s.portfolio[idx];
+            let currentValue = 0;
+            try { currentValue = MarketManager.calculatePrice(work, false); }
+            catch { currentValue = work.price || work.basePrice || 10000; }
+
+            // Tier multipliers and durations
+            const tiers = {
+                quick: { mult: 0.85, minWeeks: 0, maxWeeks: 1 },
+                market: { mult: 1.0, minWeeks: 2, maxWeeks: 4 },
+                premium: { mult: 1.15, minWeeks: 4, maxWeeks: 8 },
+            };
+            const t = tiers[tier] || tiers.market;
+            const askPrice = Math.round(currentValue * t.mult);
+            const duration = t.minWeeks + Math.floor(Math.random() * (t.maxWeeks - t.minWeeks + 1));
+
+            // Remove from portfolio
+            s.portfolio.splice(idx, 1);
+
+            // Create listing
+            const listing = {
+                id: `bl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                artworkId: work.id,
+                title: work.title,
+                artist: work.artist,
+                tier,
+                askPrice,
+                estimatedValue: currentValue,
+                weekListed: s.week,
+                expiresWeek: s.week + duration,
+                work, // Full work object for re-adding on cancel
+            };
+            if (!s.bloombergListings) s.bloombergListings = [];
+            s.bloombergListings.push(listing);
+
+            // Also add to activeDeals for the existing sell resolution system
+            s.activeDeals.push({
+                type: 'sale',
+                work,
+                strategy: tier === 'quick' ? 'public' : tier === 'premium' ? 'auction' : 'contact',
+                startWeek: s.week,
+                resolutionWeek: s.week + duration,
+                bloombergListingId: listing.id,
+            });
+
+            GameState.addNews(`Listed "${work.title}" via Bloomberg (${tier}) at $${askPrice.toLocaleString()}`);
+            return { success: true, listing };
+        },
+
+        /**
+         * Cancel a player Bloomberg listing.
+         * Returns the work to portfolio.
+         */
+        cancelListing: (listingId) => {
+            const s = GameState.state;
+            if (!s?.bloombergListings) return false;
+
+            const idx = s.bloombergListings.findIndex(l => l.id === listingId);
+            if (idx === -1) return false;
+
+            const listing = s.bloombergListings.splice(idx, 1)[0];
+
+            // Return work to portfolio
+            if (listing.work) {
+                s.portfolio.push(listing.work);
+            }
+
+            // Remove from activeDeals too
+            s.activeDeals = (s.activeDeals || []).filter(d => d.bloombergListingId !== listingId);
+
+            GameState.addNews(`Cancelled Bloomberg listing for "${listing.title}"`);
+            return true;
+        },
+
+        /** Get player's active Bloomberg sell listings */
+        getActiveListings: () => {
+            return GameState.state?.bloombergListings || [];
+        },
+
+        /**
+         * Compute notifications by cross-referencing watchlist against open orders.
+         * Returns array of { type, message, artworkId?, artistId?, orderId? }
+         */
+        getNotifications: () => {
+            const s = GameState.state;
+            if (!s) return [];
+            const watchlist = s.watchlist || [];
+            if (watchlist.length === 0) return [];
+
+            const notifications = [];
+            const sellOrders = MarketSimulator.getOpenSellOrders();
+
+            for (const item of watchlist) {
+                if (item.type === 'artist') {
+                    // Check if any sell orders match this watched artist
+                    const matching = sellOrders.filter(o => o.artwork?.artistId === item.id);
+                    for (const order of matching) {
+                        notifications.push({
+                            type: 'watchlist_match',
+                            message: `"${order.title}" by watched artist now on market — ${order.askPrice ? '$' + order.askPrice.toLocaleString() : ''}`,
+                            artworkId: order.artworkId,
+                            orderId: order.id,
+                        });
+                    }
+                } else if (item.type === 'artwork') {
+                    const matching = sellOrders.filter(o => o.artworkId === item.id);
+                    for (const order of matching) {
+                        const delta = item.addedPrice && order.askPrice
+                            ? ((order.askPrice - item.addedPrice) / item.addedPrice * 100).toFixed(1)
+                            : null;
+                        notifications.push({
+                            type: 'watchlist_match',
+                            message: `Watched artwork "${order.title}" available — $${order.askPrice.toLocaleString()}${delta ? ` (${delta > 0 ? '+' : ''}${delta}%)` : ''}`,
+                            artworkId: order.artworkId,
+                            orderId: order.id,
+                        });
+                    }
+                }
+            }
+
+            return notifications;
+        },
+    },
+
     npcMarket: {
         /**
          * Get full market profile for an NPC — combines static contacts data,

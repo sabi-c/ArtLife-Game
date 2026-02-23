@@ -14,6 +14,32 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
 
+### Bloomberg v2: Interactive Trading System (2026-02-22 Session 12)
+
+**Sprint 1: Order Book Data Layer**
+- **MarketSimulator order book** — `pendingSellOrders`/`pendingBuyOrders` arrays, `generateOpenOrders()` creates ~3-5 sell + ~3-5 buy orders on week advance. Orders expire after 2 weeks. `fillSellOrder()` for player purchases, `cancelOrder()` for withdrawals. 0.3% micro-trade visible order drip.
+- **TerminalAPI.bloomberg namespace** — `buyFromOrder()`, `prepareHaggle()`, `listForSale()`, `cancelListing()`, `getActiveListings()`, `getNotifications()`. Full trading facade.
+- **GameState.bloombergListings** — Player sell listings field in `init()`, `quickDemoInit()`, `seedDemoSave()`.
+- **GameEventBus events** — `BLOOMBERG_TRADE`, `BLOOMBERG_ORDER_FILLED`, `HUD_MESSAGE`.
+
+**Sprint 2: Order Book Panel + Artwork Tearsheet Modal**
+- **OrderBook component** — Sell listings / buy orders tabs. Click sell listing → opens ArtworkTearsheet. Urgency and expiry indicators.
+- **ArtworkTearsheet modal** — Seventh House gallery aesthetic (white/cream #f5f2ed bg, letter-spaced headers, bold artist name, structured metadata, "NET PRICE $ X,XXX.00"). CMS → ARTWORKS → MarketManager resolution chain. Buy Now (1 AP), Counter Offer (2 AP, launches HaggleScene), List for Sale (2 AP, 3 tiers).
+- **3-column grid layout** — Leaderboard+Chart (left), OrderBook (center), Overview+TradeFeed (right).
+- **NotificationBar** — Watchlist × open orders cross-reference with pulsing gold dot alerts.
+- **PortfolioTracker sell actions** — LIST button per work, active listings section with cancel.
+- **Status toast** — Auto-dismissing 3s feedback on trades/listings.
+
+**Sprint 3: Sell from Portfolio + Notifications**
+- All sell/list/notification flows already wired in Sprint 2 JSX. TerminalAPI.bloomberg handles all trading logic.
+
+**Sprint 4: CMS Integration + Polish**
+- **CMS artwork resolution** — Tearsheet checks `cmsStore.snapshots.artworks` first for edited metadata/images.
+- **Image display** — CMS artwork images shown in tearsheet (or placeholder).
+- **Enhanced metadata** — Origin, dimensions, description (intel-gated) shown in tearsheet.
+- **Enhanced ticker** — NEW listings prioritized, FILLED label on player trades.
+- **CSS polish** — Order book row fade-in animation, pulsing gold border on active listings, notification bar glow, modal slide-in, status toast animation.
+
 ### Bloomberg Terminal & Legacy Cleanup (2026-02-22 Session 11)
 
 **Sprint 1: Micro-Tick Engine**

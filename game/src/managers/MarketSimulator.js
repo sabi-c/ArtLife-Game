@@ -37,6 +37,14 @@ export class MarketSimulator {
     /** NPC collection state — initialized from CONTACTS on first tick */
     static _npcState = null;
 
+    // ── Open Order Book (visible to Bloomberg terminal) ──
+    /** NPC sell orders visible to the player before auto-matching */
+    static pendingSellOrders = [];
+    /** NPC buy orders visible to the player (shows demand) */
+    static pendingBuyOrders = [];
+    /** Monotonically increasing order ID counter */
+    static _nextOrderId = 1;
+
     // ══════════════════════════════════════════════════════════════
     // Initialization
     // ══════════════════════════════════════════════════════════════
@@ -189,6 +197,9 @@ export class MarketSimulator {
         if (MarketSimulator.tradeLog.length > MAX_LOG_SIZE) {
             MarketSimulator.tradeLog = MarketSimulator.tradeLog.slice(-MAX_LOG_SIZE);
         }
+
+        // Generate open orders for Bloomberg order book
+        MarketSimulator.generateOpenOrders(week, marketCycle);
 
         return MarketSimulator.weeklyReport;
     }
@@ -526,7 +537,14 @@ export class MarketSimulator {
     static simulateMicroTrade(hour, dayOfWeek, marketCycle) {
         // ~1% chance per micro-tick (each game-hour). With ~16 waking hours × 7 days
         // that's ~112 attempts per week, yielding ~1.1 trades/week on average.
-        if (Math.random() > 0.01) return null;
+        if (Math.random() > 0.01) {
+            // Even if no trade, 0.3% chance to post a visible order to the book
+            if (Math.random() < 0.003) {
+                const week = GameState.state?.week || 1;
+                MarketSimulator.generateOpenOrders(week, marketCycle);
+            }
+            return null;
+        }
 
         MarketSimulator._ensureState();
         const state = MarketSimulator._npcState;
@@ -624,10 +642,162 @@ export class MarketSimulator {
         };
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // Order Book — Visible NPC Orders for Bloomberg Trading
+    // ══════════════════════════════════════════════════════════════
+
+    /**
+     * Generate open NPC orders for the Bloomberg order book.
+     * Called at week advance and periodically during micro-trades.
+     * Creates ~3-5 sell orders and ~3-5 buy orders that persist until
+     * matched, filled by the player, or expired (2 weeks).
+     */
+    static generateOpenOrders(week, marketCycle = 'flat') {
+        MarketSimulator._ensureState();
+        const state = MarketSimulator._npcState;
+        const npcs = Object.values(state);
+
+        // Expire old orders (older than 2 weeks)
+        MarketSimulator.pendingSellOrders = MarketSimulator.pendingSellOrders.filter(
+            o => o.expiresWeek > week
+        );
+        MarketSimulator.pendingBuyOrders = MarketSimulator.pendingBuyOrders.filter(
+            o => o.expiresWeek > week
+        );
+
+        // Don't overpopulate — cap at 8 sell + 8 buy
+        const sellCap = 8 - MarketSimulator.pendingSellOrders.length;
+        const buyCap = 8 - MarketSimulator.pendingBuyOrders.length;
+
+        // Generate sell orders from NPC decisions
+        if (sellCap > 0) {
+            const shuffled = [...npcs].sort(() => Math.random() - 0.5);
+            let added = 0;
+            for (const npc of shuffled) {
+                if (added >= sellCap) break;
+                const sells = MarketSimulator._decideSells(npc, week, marketCycle);
+                for (const sell of sells) {
+                    if (added >= sellCap) break;
+                    // Skip if this artwork already has a pending order
+                    if (MarketSimulator.pendingSellOrders.some(o => o.artworkId === sell.artworkId)) continue;
+                    MarketSimulator.pendingSellOrders.push({
+                        id: `so_${MarketSimulator._nextOrderId++}`,
+                        ...sell,
+                        title: sell.artwork?.title || sell.artworkId,
+                        artist: sell.artwork?.artist || 'Unknown',
+                        npcName: npc.name,
+                        weekPosted: week,
+                        expiresWeek: week + 2,
+                    });
+                    added++;
+                }
+            }
+        }
+
+        // Generate buy orders from NPC decisions
+        if (buyCap > 0) {
+            const shuffled = [...npcs].sort(() => Math.random() - 0.5);
+            let added = 0;
+            for (const npc of shuffled) {
+                if (added >= buyCap) break;
+                const buys = MarketSimulator._decideBuys(npc, week, marketCycle);
+                for (const buy of buys) {
+                    if (added >= buyCap) break;
+                    // Skip if this NPC already has a pending buy order
+                    if (MarketSimulator.pendingBuyOrders.some(o => o.npcId === buy.npcId)) continue;
+                    MarketSimulator.pendingBuyOrders.push({
+                        id: `bo_${MarketSimulator._nextOrderId++}`,
+                        ...buy,
+                        npcName: npc.name,
+                        weekPosted: week,
+                        expiresWeek: week + 2,
+                    });
+                    added++;
+                }
+            }
+        }
+    }
+
+    /** Get open sell orders (for Bloomberg UI) */
+    static getOpenSellOrders() {
+        return [...MarketSimulator.pendingSellOrders];
+    }
+
+    /** Get open buy orders (for Bloomberg UI) */
+    static getOpenBuyOrders() {
+        return [...MarketSimulator.pendingBuyOrders];
+    }
+
+    /**
+     * Player fills a sell order — buys at the asking price.
+     * Returns the order if successful, null otherwise.
+     * Caller (TerminalAPI) handles cash deduction and portfolio update.
+     */
+    static fillSellOrder(orderId) {
+        const idx = MarketSimulator.pendingSellOrders.findIndex(o => o.id === orderId);
+        if (idx === -1) return null;
+
+        const order = MarketSimulator.pendingSellOrders.splice(idx, 1)[0];
+
+        // Update NPC state — remove artwork from seller's collection
+        MarketSimulator._ensureState();
+        const seller = MarketSimulator._npcState[order.npcId];
+        if (seller) {
+            seller.owned = seller.owned.filter(id => id !== order.artworkId);
+            seller.forSale = seller.forSale.filter(id => id !== order.artworkId);
+            seller.cash += order.askPrice;
+            seller.totalSold++;
+            seller.totalEarned += order.askPrice;
+            seller.financialStress = Math.max(0, seller.financialStress - 3);
+        }
+
+        // Log trade
+        const week = GameState.state?.week || 1;
+        const tradeEntry = {
+            buyer: 'player', seller: order.npcId,
+            artwork: order.artworkId, price: order.askPrice, week,
+        };
+        MarketSimulator.tradeLog.push(tradeEntry);
+        if (MarketSimulator.tradeLog.length > MAX_LOG_SIZE) {
+            MarketSimulator.tradeLog = MarketSimulator.tradeLog.slice(-MAX_LOG_SIZE);
+        }
+
+        // Boost artist heat from transaction
+        try {
+            const artistId = order.artwork?.artistId;
+            if (artistId && MarketManager.artists) {
+                const artist = MarketManager.artists.find(a => a.id === artistId);
+                if (artist) artist.heat = Math.min(100, (artist.heat || 50) + 3);
+            }
+        } catch { /* non-critical */ }
+
+        return order;
+    }
+
+    /**
+     * Cancel a player-originated order (for sell listings).
+     * Returns true if found and removed.
+     */
+    static cancelOrder(orderId) {
+        let idx = MarketSimulator.pendingSellOrders.findIndex(o => o.id === orderId);
+        if (idx !== -1) {
+            MarketSimulator.pendingSellOrders.splice(idx, 1);
+            return true;
+        }
+        idx = MarketSimulator.pendingBuyOrders.findIndex(o => o.id === orderId);
+        if (idx !== -1) {
+            MarketSimulator.pendingBuyOrders.splice(idx, 1);
+            return true;
+        }
+        return false;
+    }
+
     /** Reset all simulation state */
     static reset() {
         MarketSimulator._npcState = null;
         MarketSimulator.tradeLog = [];
         MarketSimulator.weeklyReport = null;
+        MarketSimulator.pendingSellOrders = [];
+        MarketSimulator.pendingBuyOrders = [];
     }
 }

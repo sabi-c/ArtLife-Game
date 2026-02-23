@@ -174,6 +174,8 @@ export class GameState {
             toneHistory: {},     // { npcId: [tone1, tone2, ...] }
             // ── Bloomberg Watchlist ──
             watchlist: [],       // Array of { type: 'artist'|'artwork', id: string, addedWeek: number, addedPrice?: number }
+            // ── Bloomberg Sell Listings ──
+            bloombergListings: [], // Player sell listings: { id, artworkId, title, tier, askPrice, weekListed, expiresWeek }
         };
 
         // Expose reference for React UI components (PlayerDashboard etc.)
@@ -876,6 +878,7 @@ export class GameState {
             },
             hoursUsedToday: 0,
             watchlist: [],
+            bloombergListings: [],
         };
 
         const saveData = {
@@ -968,6 +971,7 @@ export class GameState {
             eraModifier: 1.0,
             activeModifiers: [],
             watchlist: [], // Bloomberg watchlist
+            bloombergListings: [], // Bloomberg sell listings
         };
 
         window._artLifeState = GameState.state;
