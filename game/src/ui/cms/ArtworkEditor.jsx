@@ -748,6 +748,8 @@ export default function ArtworkEditor() {
     const [notification, setNotification] = useState(null);
     const [filter, setFilter] = useState('all');
     const [subTab, setSubTab] = useState('metadata');
+    const [artworkSearch, setArtworkSearch] = useState('');
+    const [artworkSort, setArtworkSort] = useState('name');
 
     // Load artworks from all sources on mount
     useEffect(() => {
@@ -776,8 +778,35 @@ export default function ArtworkEditor() {
         }
     }, []);
 
-    const filtered = filter === 'all' ? artworks
-        : artworks.filter(w => w._source === filter || (filter === 'data' && !w._source));
+    const filtered = useMemo(() => {
+        let list = filter === 'all' ? artworks
+            : artworks.filter(w => w._source === filter || (filter === 'data' && !w._source));
+        // Search
+        if (artworkSearch.trim()) {
+            const q = artworkSearch.toLowerCase();
+            list = list.filter(w => (
+                (w.title || '').toLowerCase().includes(q) ||
+                (w.artist || '').toLowerCase().includes(q) ||
+                (w.medium || '').toLowerCase().includes(q) ||
+                (w.genre || '').toLowerCase().includes(q) ||
+                (w.id || '').toLowerCase().includes(q)
+            ));
+        }
+        // Sort
+        const sortFns = {
+            name: (a, b) => (a.title || '').localeCompare(b.title || ''),
+            artist: (a, b) => (a.artist || '').localeCompare(b.artist || ''),
+            price_desc: (a, b) => (b.askingPrice || b.price || 0) - (a.askingPrice || a.price || 0),
+            price_asc: (a, b) => (a.askingPrice || a.price || 0) - (b.askingPrice || b.price || 0),
+            tier: (a, b) => (a.tier || '').localeCompare(b.tier || ''),
+            delta: (a, b) => {
+                const da = (a.basePrice && a.basePrice > 0) ? ((a.price || a.askingPrice || a.basePrice) - a.basePrice) / a.basePrice : 0;
+                const db = (b.basePrice && b.basePrice > 0) ? ((b.price || b.askingPrice || b.basePrice) - b.basePrice) / b.basePrice : 0;
+                return db - da;
+            },
+        };
+        return [...list].sort(sortFns[artworkSort] || sortFns.name);
+    }, [artworks, filter, artworkSearch, artworkSort]);
 
     const selected = artworks.find(w => w.id === selectedId);
 
@@ -986,40 +1015,75 @@ export default function ArtworkEditor() {
             {/* Main Layout */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
                 {/* Artwork List (only for metadata/haggle tabs that need selection) */}
-                {['metadata', 'haggle'].includes(subTab) && (
-                    <div style={{ width: 240, overflowY: 'auto', borderRight: '1px solid #1a1a2e', padding: '8px' }}>
-                        <div style={{ fontSize: 9, color: '#555', padding: '4px 0 8px', textAlign: 'center' }}>
+                {['metadata', 'market', 'controls', 'haggle'].includes(subTab) && (
+                    <div style={{ width: 260, overflowY: 'auto', borderRight: '1px solid #1a1a2e', display: 'flex', flexDirection: 'column' }}>
+                        {/* Search + Sort */}
+                        <div style={{ padding: '8px 8px 4px', borderBottom: '1px solid #1a1a2e' }}>
+                            <input
+                                type="text" placeholder="🔍 Search artworks..."
+                                value={artworkSearch} onChange={e => setArtworkSearch(e.target.value)}
+                                style={{ ...inputStyle, width: '100%', fontSize: 10, padding: '5px 8px', marginBottom: 4, boxSizing: 'border-box' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <select value={artworkSort} onChange={e => setArtworkSort(e.target.value)}
+                                    style={{ background: '#0a0a12', border: '1px solid #222', color: '#666', fontSize: 8, borderRadius: 3, padding: '2px 4px', fontFamily: mono }}>
+                                    <option value="name">A→Z Name</option>
+                                    <option value="artist">A→Z Artist</option>
+                                    <option value="price_desc">Price ↓</option>
+                                    <option value="price_asc">Price ↑</option>
+                                    <option value="delta">P&L ↓</option>
+                                    <option value="tier">Tier</option>
+                                </select>
+                                <span style={{ fontSize: 8, color: '#444' }}>{filtered.length} works</span>
+                            </div>
+                        </div>
+                        <div style={{ fontSize: 9, color: '#444', padding: '4px 8px', textAlign: 'center' }}>
                             Shift+click to bulk select
                         </div>
-                        {filtered.length === 0 && (
-                            <div style={{ color: '#555', fontSize: 10, textAlign: 'center', padding: 20 }}>No artworks found</div>
-                        )}
-                        {filtered.map(work => {
-                            const price = work.askingPrice || work.price || 0;
-                            const isBulk = selectedIds.has(work.id);
-                            return (
-                                <div key={work.id} onClick={(e) => handleSelect(work.id, e)} style={{
-                                    padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #111',
-                                    background: isBulk ? 'rgba(201,168,76,0.15)' : selectedId === work.id ? 'rgba(201,168,76,0.08)' : 'transparent',
-                                    borderLeft: isBulk ? '3px solid #f59e0b' : selectedId === work.id ? '3px solid #c9a84c' : '3px solid transparent',
-                                }}>
-                                    <div style={{ fontSize: 11, color: selectedId === work.id ? '#c9a84c' : '#eaeaea', fontWeight: 'bold' }}>
-                                        {work.title || 'Untitled'}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0 4px' }}>
+                            {filtered.length === 0 && (
+                                <div style={{ color: '#555', fontSize: 10, textAlign: 'center', padding: 20 }}>No artworks found</div>
+                            )}
+                            {filtered.map(work => {
+                                const price = work.askingPrice || work.price || 0;
+                                const baseP = work.basePrice || price;
+                                const delta = baseP > 0 ? ((price - baseP) / baseP) * 100 : 0;
+                                const isBulk = selectedIds.has(work.id);
+                                return (
+                                    <div key={work.id} onClick={(e) => handleSelect(work.id, e)} style={{
+                                        padding: '7px 8px', cursor: 'pointer', borderBottom: '1px solid #0a0a12',
+                                        background: isBulk ? 'rgba(201,168,76,0.15)' : selectedId === work.id ? 'rgba(201,168,76,0.08)' : 'transparent',
+                                        borderLeft: isBulk ? '3px solid #f59e0b' : selectedId === work.id ? '3px solid #c9a84c' : '3px solid transparent',
+                                        borderRadius: 3,
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                                            <span style={{ fontSize: 10, color: selectedId === work.id ? '#c9a84c' : '#eaeaea', fontWeight: 'bold', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {work.title || 'Untitled'}
+                                            </span>
+                                            <span style={{ fontSize: 9, color: '#4ade80', fontWeight: 'bold', whiteSpace: 'nowrap', marginLeft: 4 }}>
+                                                ${price.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: 9, color: '#555', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>{work.artist || 'Unknown'}{work.year ? `, ${work.year}` : ''}</span>
+                                            {delta !== 0 && (
+                                                <span style={{ fontSize: 8, color: delta > 0 ? '#4ade80' : '#f87171' }}>
+                                                    {delta > 0 ? '▲' : '▼'}{Math.abs(delta).toFixed(0)}%
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 3, marginTop: 3 }}>
+                                            <span style={{
+                                                fontSize: 7, padding: '1px 4px', borderRadius: 2,
+                                                background: `${sourceColors[work._source] || '#888'}15`, color: sourceColors[work._source] || '#888',
+                                            }}>{work._source}</span>
+                                            {work.tier && <span style={{ fontSize: 7, padding: '1px 4px', borderRadius: 2, background: '#c9a84c15', color: '#c9a84c' }}>{work.tier}</span>}
+                                            {work.medium && <span style={{ fontSize: 7, padding: '1px 4px', borderRadius: 2, background: '#60a5fa15', color: '#60a5fa' }}>{work.medium?.slice(0, 12)}</span>}
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: 9, color: '#666', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
-                                        <span>{work.artist || 'Unknown'}</span>
-                                        <span style={{ color: '#4ade80' }}>${price.toLocaleString()}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                                        <span style={{
-                                            fontSize: 7, padding: '1px 4px', borderRadius: 2,
-                                            background: `${sourceColors[work._source] || '#888'}15`, color: sourceColors[work._source] || '#888',
-                                        }}>{work._source}</span>
-                                        {work.tier && <span style={{ fontSize: 7, padding: '1px 4px', borderRadius: 2, background: '#c9a84c15', color: '#c9a84c' }}>{work.tier}</span>}
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
 
