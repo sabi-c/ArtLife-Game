@@ -149,6 +149,7 @@ export default function App() {
                                 phaserInstance.canvas.style.pointerEvents = 'none';
                             }
                             setActiveView(VIEW.TERMINAL);
+                            setActiveOverlay(OVERLAY.BLOOMBERG);
                         }
                         // If UI wasn't available, fall through to BOOT (default)
                     }
@@ -203,6 +204,7 @@ export default function App() {
                 });
             }
             setActiveView(VIEW.TERMINAL);
+            setActiveOverlay(OVERLAY.BLOOMBERG);
         } else {
             // New game: launch CharacterSelectScene directly (IntroScene already played)
             setActiveView(VIEW.PHASER);

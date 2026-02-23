@@ -226,6 +226,13 @@ export default function AdminDashboard({ onClose }) {
                                 [ Content Studio (Legacy) ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Visual content wiring & timeline editor</div>
                             </button>
+                            <button style={btnStyle} onClick={() => {
+                                SettingsManager.set('hasSeenBloombergIntro', false);
+                                GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Tutorial Reset. It will play next time Bloomberg opens.');
+                                forceUpdate();
+                            }}>
+                                [ Reset Bloomberg Tutorial ]
+                            </button>
 
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>BOOT FLOWS</div>
                             {['BOOT', 'PROFILE_MENU', 'PROFILE_CREATE', 'PROFILE_LOGIN', 'PRIMARY_MENU', 'DOSSIER_SELECT', 'CONFIRM', 'AUTH'].map(step => (

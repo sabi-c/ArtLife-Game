@@ -60,6 +60,7 @@ import { useCmsStore } from '../stores/cmsStore.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { CITY_DATA } from '../data/cities.js';
 import { WORLD_LOCATIONS } from '../data/world_locations.js';
+import BloombergTutorial from './BloombergTutorial.jsx';
 import './BloombergTerminal.css';
 
 // ── Intel-gated data masking ──
@@ -3465,6 +3466,9 @@ export default function BloombergTerminal({ onClose }) {
     const [statusMsg, setStatusMsg] = useState(null);
     const [, forceRender] = useState(0);
 
+    // Tutorial overlay state
+    const [showTutorial, setShowTutorial] = useState(() => !SettingsManager.get('hasSeenBloombergIntro'));
+
     // Market style — gallery, tearsheet, artnet, sothebys, deitch, or bloomberg dark
     const [marketStyle, setMarketStyle] = useState(() => SettingsManager.get('marketStyle'));
     const isGallery = marketStyle === 'gallery';
@@ -3635,9 +3639,17 @@ export default function BloombergTerminal({ onClose }) {
 
     return (
         <div className={`bb-overlay${isGallery ? ' bb-gallery' : ''}${isTearsheet ? ' bb-tearsheet-mode' : ''}${isArtnet ? ' bb-artnet' : ''}${isSothebys ? ' bb-sothebys' : ''}${isDeitch ? ' bb-deitch' : ''}${isByform ? ' bb-byform' : ''}${isWaterworks ? ' bb-waterworks' : ''}`}>
+            {/* Tutorial Overlay */}
+            {showTutorial && (
+                <BloombergTutorial onClose={() => {
+                    setShowTutorial(false);
+                    SettingsManager.set('hasSeenBloombergIntro', true);
+                }} />
+            )}
+
             {/* Header */}
             <div className="bb-header">
-                <div className="bb-header-left">
+                <div className="bb-header-left" style={{ display: 'flex', alignItems: 'center' }}>
                     {(isGallery || isTearsheet)
                         ? <span className="bb-logo">A R T L I F E</span>
                         : isArtnet
@@ -3652,6 +3664,21 @@ export default function BloombergTerminal({ onClose }) {
                                             ? <span className="bb-logo">WATERWORKS</span>
                                             : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
                     }
+                    {/* System Navigation */}
+                    <span className="bb-nav-links" style={{ marginLeft: 24, display: 'flex', gap: 16, fontFamily: "'SF Mono', Courier, monospace", fontSize: 11, color: '#888' }}>
+                        <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => {
+                            const ui = window.TerminalUIInstance;
+                            import('../terminal/screens/index.js').then(screens => ui?.pushScreen(screens.cityScreen(ui)));
+                            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+                            if (onClose) onClose();
+                        }} title="Access World Map & Locations">[ WORLD MAP ]</button>
+                        <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => {
+                            const ui = window.TerminalUIInstance;
+                            import('../terminal/screens/index.js').then(screens => ui?.pushScreen(screens.phoneScreen(ui)));
+                            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+                            if (onClose) onClose();
+                        }} title="Check Messages & Contacts">[ PHONE ]</button>
+                    </span>
                 </div>
                 <div className="bb-header-right">
                     <span className="bb-cash">${(s?.cash || 0).toLocaleString()}</span>
