@@ -58,6 +58,8 @@ import { TerminalAPI } from '../terminal/TerminalAPI.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 import { useCmsStore } from '../stores/cmsStore.js';
 import { useNPCStore } from '../stores/npcStore.js';
+import { useEventStore } from '../stores/eventStore.js';
+import { EventRegistry } from '../managers/EventRegistry.js';
 import { CITY_DATA } from '../data/cities.js';
 import { WORLD_LOCATIONS } from '../data/world_locations.js';
 import BloombergTutorial from './BloombergTutorial.jsx';
@@ -68,7 +70,8 @@ function mask(value, intel, threshold, fallback = '???') {
     return intel >= threshold ? value : fallback;
 }
 
-function maskPrice(price, intel) {
+function maskPrice(price, intel, inquire = false) {
+    if (inquire) return 'Price on Request';
     const p = Number(price) || 0;
     if (intel >= 40) return `$${p.toLocaleString()}`;
     if (intel >= 20) return `$${(Math.round(p / 10000) * 10000).toLocaleString()}`;
@@ -108,6 +111,27 @@ function useAP(label, cost = 1) {
     GameState.state.actionsThisWeek = (GameState.state.actionsThisWeek || 0) + cost;
     GameState.addNews(`⏱️ ${label} (${getAP()} AP left)`);
     return true;
+}
+
+/**
+ * Wrapper that uses AP and checks for intra-week timed events.
+ * Fires mid-week events when AP drops to 2, end-of-week events at 0 AP.
+ */
+function useAPAndCheckEvents(label, cost = 1) {
+    const before = getAP();
+    useAP(label, cost);
+    const after = getAP();
+
+    // Mid-week threshold: just crossed from >2 to <=2 AP remaining
+    if (after <= 2 && before > 2) {
+        const midEvent = EventRegistry.checkForTimedEvent('mid');
+        if (midEvent) useEventStore.getState().setPendingEvent(midEvent);
+    }
+    // End-of-week: AP hit 0
+    if (after === 0) {
+        const endEvent = EventRegistry.checkForTimedEvent('end');
+        if (endEvent) useEventStore.getState().setPendingEvent(endEvent);
+    }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -216,7 +240,7 @@ function OrderBook({ intel, onSelectOrder }) {
                         onClick={() => onSelectOrder(order)}>
                         <span className="bb-ob-title">"{order.title}"</span>
                         <span className="bb-ob-artist">{mask(order.artist, intel, 20)}</span>
-                        <span className="bb-ob-price">{maskPrice(order.askPrice, intel)}</span>
+                        <span className="bb-ob-price">{maskPrice(order.askPrice, intel, order.inquire)}</span>
                         <span className={`bb-ob-urgency ${order.urgency}`}>
                             {order.urgency === 'high' ? 'URG' : ''}
                         </span>
@@ -621,7 +645,7 @@ function PortfolioTracker({ intel, onListWork, onSelectWork }) {
                         <div key={listing.id} className="bb-listing-row">
                             <span className="bb-listing-title">"{listing.title}"</span>
                             <span className="bb-listing-tier">{listing.tier.toUpperCase()}</span>
-                            <span className="bb-listing-price">${fmtNum(listing.askPrice)}</span>
+                            <span className="bb-listing-price">{listing.inquire ? 'Inquire' : `$${fmtNum(listing.askPrice)}`}</span>
                             <button className="bb-listing-cancel"
                                 onClick={() => TerminalAPI.bloomberg.cancelListing(listing.id)}>
                                 CANCEL
@@ -840,16 +864,26 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                 {/* ── Action buttons ── */}
                 {mode === 'buy' && order && !confirmBuy && (
                     <div className="bb-ts-actions">
-                        <button className="bb-ts-btn bb-ts-btn-primary"
-                            disabled={!hasAP(1) || (s?.cash || 0) < order.askPrice}
-                            onClick={() => setConfirmBuy(true)}>
-                            BUY NOW {maskPrice(order.askPrice, intel)} <span className="bb-ts-ap">[1 AP]</span>
-                        </button>
-                        <button className="bb-ts-btn bb-ts-btn-secondary"
-                            disabled={!hasAP(2)}
-                            onClick={() => onHaggle(order)}>
-                            COUNTER OFFER <span className="bb-ts-ap">[2 AP]</span>
-                        </button>
+                        {!order.inquire ? (
+                            <>
+                                <button className="bb-ts-btn bb-ts-btn-primary"
+                                    disabled={!hasAP(1) || (s?.cash || 0) < order.askPrice}
+                                    onClick={() => setConfirmBuy(true)}>
+                                    BUY NOW {maskPrice(order.askPrice, intel)} <span className="bb-ts-ap">[1 AP]</span>
+                                </button>
+                                <button className="bb-ts-btn bb-ts-btn-secondary"
+                                    disabled={!hasAP(2)}
+                                    onClick={() => onHaggle(order)}>
+                                    COUNTER OFFER <span className="bb-ts-ap">[2 AP]</span>
+                                </button>
+                            </>
+                        ) : (
+                            <button className="bb-ts-btn bb-ts-btn-primary"
+                                disabled={!hasAP(2)}
+                                onClick={() => onHaggle(order)}>
+                                INQUIRE TO ACQUIRE <span className="bb-ts-ap">[2 AP]</span>
+                            </button>
+                        )}
                     </div>
                 )}
                 {mode === 'buy' && confirmBuy && (
@@ -1612,7 +1646,7 @@ function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, o
                 const literature = work.literature || [];
                 const signed = work.signed || '';
                 const price = work._isMarket
-                    ? work.askPrice || 0
+                    ? (work.inquire ? 'Price on Request' : work.askPrice || 0)
                     : work.currentVal || work.price || 0;
                 const isOwned = !work._isMarket;
 
@@ -2108,16 +2142,26 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
                     <div className="an-ld-actions">
                         {(work._isMarket || work._ownerType === 'market') && work._ownerData && (
                             <>
-                                <button className="an-ld-btn an-ld-btn-primary"
-                                    disabled={!hasAP(1) || (s?.cash || 0) < (work._ownerData.askPrice || 0)}
-                                    onClick={() => onBuy(work._ownerData)}>
-                                    BUY NOW <span className="an-ld-ap">[1 AP]</span>
-                                </button>
-                                <button className="an-ld-btn an-ld-btn-secondary"
-                                    disabled={!hasAP(2)}
-                                    onClick={() => onHaggle(work._ownerData)}>
-                                    COUNTER OFFER <span className="an-ld-ap">[2 AP]</span>
-                                </button>
+                                {!(work._ownerData.inquire || work.inquire) ? (
+                                    <>
+                                        <button className="an-ld-btn an-ld-btn-primary"
+                                            disabled={!hasAP(1) || (s?.cash || 0) < (work._ownerData.askPrice || 0)}
+                                            onClick={() => onBuy(work._ownerData)}>
+                                            BUY NOW <span className="an-ld-ap">[1 AP]</span>
+                                        </button>
+                                        <button className="an-ld-btn an-ld-btn-secondary"
+                                            disabled={!hasAP(2)}
+                                            onClick={() => onHaggle(work._ownerData)}>
+                                            COUNTER OFFER <span className="an-ld-ap">[2 AP]</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button className="an-ld-btn an-ld-btn-primary"
+                                        disabled={!hasAP(2)}
+                                        onClick={() => onHaggle(work._ownerData)}>
+                                        INQUIRE TO ACQUIRE <span className="an-ld-ap">[2 AP]</span>
+                                    </button>
+                                )}
                             </>
                         )}
                         {work._ownerType === 'npc' && (
@@ -2254,10 +2298,15 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                     ownerData = npcOwner;
                 } else if (artwork.ownerId) {
                     // Fallback to initial owner ID if not yet resolved and not empty
-                    const fallbackNpc = npcs.find(n => n.id === artwork.ownerId);
-                    ownerLabel = fallbackNpc ? (fallbackNpc.name || fallbackNpc.id) : (artwork.ownerId || 'Private Collection');
-                    ownerType = fallbackNpc ? 'npc' : 'unknown';
-                    ownerData = fallbackNpc || null;
+                    if (artwork.ownerId === 'unknown' || artwork.ownerId === 'market' || artwork.ownerId === 'player') {
+                        ownerLabel = 'Unknown Location';
+                        ownerType = 'unknown';
+                    } else {
+                        const fallbackNpc = npcs.find(n => n.id === artwork.ownerId);
+                        ownerLabel = fallbackNpc ? (fallbackNpc.name || fallbackNpc.id) : 'Private Collection';
+                        ownerType = fallbackNpc ? 'npc' : 'unknown';
+                        ownerData = fallbackNpc || null;
+                    }
                 } else {
                     ownerLabel = 'Private Collection';
                 }
@@ -3559,6 +3608,175 @@ function PanelConfigDropdown({ visiblePanels, setVisiblePanels, isGallery }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// EventOverlay — Inline event player for Bloomberg Terminal
+//
+// Displays stepped events (narrative, dialogue, choice) as a
+// slide-in notification panel. Auto-advances narrative/dialogue
+// steps; pauses on choice steps for player input.
+// ══════════════════════════════════════════════════════════════
+function EventOverlay({ event, onComplete }) {
+    const [stepIndex, setStepIndex] = useState(0);
+    const [displayedText, setDisplayedText] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const [selectedChoice, setSelectedChoice] = useState(null);
+    const [outcomeText, setOutcomeText] = useState(null);
+
+    const steps = event?.steps || [];
+    const step = steps[stepIndex];
+    const isLastStep = stepIndex >= steps.length - 1;
+
+    // Typewriter effect for narrative/dialogue
+    useEffect(() => {
+        if (!step) return;
+        const text = step.text || '';
+        if (step.type === 'choice') {
+            setDisplayedText(text);
+            setIsTyping(false);
+            return;
+        }
+        // Typewriter: reveal text character by character
+        setIsTyping(true);
+        setDisplayedText('');
+        let i = 0;
+        const interval = setInterval(() => {
+            i++;
+            setDisplayedText(text.slice(0, i));
+            if (i >= text.length) {
+                clearInterval(interval);
+                setIsTyping(false);
+            }
+        }, 18); // ~55 chars/sec
+        return () => clearInterval(interval);
+    }, [stepIndex, step]);
+
+    // Auto-advance for narrative/dialogue steps (after typing completes)
+    useEffect(() => {
+        if (!step || isTyping) return;
+        if (step.type === 'choice' || step.type === 'stat_change') return;
+        const delay = step.delay || 2500;
+        const timer = setTimeout(() => advanceStep(), delay);
+        return () => clearTimeout(timer);
+    }, [stepIndex, isTyping, step]);
+
+    const advanceStep = () => {
+        if (isLastStep) {
+            onComplete?.({});
+            return;
+        }
+        setSelectedChoice(null);
+        setOutcomeText(null);
+        setStepIndex(s => s + 1);
+    };
+
+    // Skip typing on click (fast-forward to full text)
+    const handleClick = () => {
+        if (isTyping) {
+            setDisplayedText(step?.text || '');
+            setIsTyping(false);
+            return;
+        }
+        if (step?.type !== 'choice') {
+            advanceStep();
+        }
+    };
+
+    const handleChoice = (choice, idx) => {
+        setSelectedChoice(idx);
+        // Apply effects via GameState
+        if (choice.effects) {
+            try { GameState.applyEffects(choice.effects); } catch (e) { console.warn('[EventOverlay] Effect error:', e); }
+        }
+        // Check storyline triggers
+        try {
+            EventRegistry.checkStorylineTrigger(event.id, idx, choice.label);
+        } catch (e) { console.warn('[EventOverlay] Storyline trigger error:', e); }
+
+        if (choice.outcome) {
+            setOutcomeText(choice.outcome);
+            // Auto-advance after showing outcome
+            setTimeout(() => {
+                if (isLastStep) onComplete?.({ choiceIndex: idx, choice });
+                else advanceStep();
+            }, 2500);
+        } else {
+            setTimeout(() => {
+                if (isLastStep) onComplete?.({ choiceIndex: idx, choice });
+                else advanceStep();
+            }, 500);
+        }
+    };
+
+    if (!step) return null;
+
+    return (
+        <div className="bb-event-overlay" onClick={handleClick}>
+            <div className="bb-event-panel" onClick={e => e.stopPropagation()}>
+                {/* Event title bar */}
+                <div className="bb-event-header">
+                    <span className="bb-event-tag">EVENT</span>
+                    <span className="bb-event-title">{event.title}</span>
+                    <span className="bb-event-progress">{stepIndex + 1}/{steps.length}</span>
+                </div>
+
+                {/* Speaker label for dialogue */}
+                {step.type === 'dialogue' && step.speakerName && (
+                    <div className="bb-event-speaker">{step.speakerName}</div>
+                )}
+
+                {/* Main text area */}
+                <div className="bb-event-text">
+                    {displayedText}
+                    {isTyping && <span className="bb-event-cursor">▌</span>}
+                </div>
+
+                {/* Stat change indicator */}
+                {step.type === 'stat_change' && step.changes && (
+                    <div className="bb-event-stats">
+                        {Object.entries(step.changes).map(([stat, val]) => (
+                            <span key={stat} className={`bb-event-stat ${val > 0 ? 'positive' : 'negative'}`}>
+                                {stat}: {val > 0 ? '+' : ''}{val}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Choice buttons */}
+                {step.type === 'choice' && !selectedChoice && selectedChoice !== 0 && (
+                    <div className="bb-event-choices">
+                        {(step.choices || []).map((choice, idx) => (
+                            <button
+                                key={idx}
+                                className="bb-event-choice-btn"
+                                onClick={() => handleChoice(choice, idx)}
+                            >
+                                {choice.label}
+                                {choice.effects && (
+                                    <span className="bb-event-choice-effects">
+                                        {Object.entries(choice.effects).map(([k, v]) =>
+                                            `${k}: ${v > 0 ? '+' : ''}${v}`
+                                        ).join(', ')}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Outcome text after choice */}
+                {outcomeText && (
+                    <div className="bb-event-outcome">{outcomeText}</div>
+                )}
+
+                {/* Click to continue hint */}
+                {step.type !== 'choice' && !isTyping && (
+                    <div className="bb-event-hint" onClick={handleClick}>Click to continue</div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // Main Bloomberg Terminal
 // ══════════════════════════════════════════════════════════════
 export default function BloombergTerminal({ onClose }) {
@@ -3572,6 +3790,9 @@ export default function BloombergTerminal({ onClose }) {
 
     // Tutorial overlay state
     const [showTutorial, setShowTutorial] = useState(() => !SettingsManager.get('hasSeenBloombergIntro'));
+
+    // Pending event overlay — driven by useEventStore
+    const pendingEvent = useEventStore(s => s.pendingEvent);
 
     // Market style — gallery, tearsheet, artnet, sothebys, deitch, or bloomberg dark
     const [marketStyle, setMarketStyle] = useState(() => SettingsManager.get('marketStyle'));
@@ -3680,7 +3901,7 @@ export default function BloombergTerminal({ onClose }) {
     // Buy action
     const handleBuy = useCallback((order) => {
         if (!hasAP(1)) { setStatusMsg('Not enough AP'); return; }
-        useAP('Bloomberg purchase', 1);
+        useAPAndCheckEvents('Bloomberg purchase', 1);
         const result = TerminalAPI.bloomberg.buyFromOrder(order.id);
         if (result.success) {
             setStatusMsg(`Acquired "${order.title}" for $${fmtNum(order.askPrice)}`);
@@ -3695,7 +3916,7 @@ export default function BloombergTerminal({ onClose }) {
     // Haggle action — closes Bloomberg, launches HaggleScene
     const handleHaggle = useCallback((order) => {
         if (!hasAP(2)) { setStatusMsg('Not enough AP (need 2)'); return; }
-        useAP('Bloomberg counter offer', 2);
+        useAPAndCheckEvents('Bloomberg counter offer', 2);
 
         const haggleData = TerminalAPI.bloomberg.prepareHaggle(order.id);
         if (!haggleData) { setStatusMsg('Order no longer available'); return; }
@@ -3713,7 +3934,7 @@ export default function BloombergTerminal({ onClose }) {
     // List for sale action
     const handleListConfirm = useCallback((work, tier) => {
         if (!hasAP(2)) { setStatusMsg('Not enough AP (need 2)'); return; }
-        useAP('Bloomberg listing', 2);
+        useAPAndCheckEvents('Bloomberg listing', 2);
         const result = TerminalAPI.bloomberg.listForSale(work.id, tier);
         if (result.success) {
             setStatusMsg(`Listed "${work.title}" (${tier}) at $${fmtNum(result.listing?.askPrice)}`);
@@ -3749,6 +3970,17 @@ export default function BloombergTerminal({ onClose }) {
                     setShowTutorial(false);
                     SettingsManager.set('hasSeenBloombergIntro', true);
                 }} />
+            )}
+
+            {/* Event Overlay — inline event player triggered by AP usage or week start */}
+            {pendingEvent && (
+                <EventOverlay
+                    event={pendingEvent}
+                    onComplete={(choiceData) => {
+                        useEventStore.getState().consumePendingEvent();
+                        forceRender(n => n + 1);
+                    }}
+                />
             )}
 
             {/* Header */}

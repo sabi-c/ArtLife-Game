@@ -10,6 +10,7 @@ import { TRAVEL_EVENTS } from './travel.js';
 import { OPPORTUNITY_EVENTS } from './opportunity.js';
 import { SCANDAL_EVENTS } from './scandal.js';
 import { CHAIN_EVENTS } from './chain.js';
+import { TUTORIAL_WEEK_EVENTS } from './tutorial_week.js';
 
 export {
     SOCIAL_EVENTS,
@@ -20,6 +21,7 @@ export {
     OPPORTUNITY_EVENTS,
     SCANDAL_EVENTS,
     CHAIN_EVENTS,
+    TUTORIAL_WEEK_EVENTS,
 };
 
 export const EVENTS = [
@@ -31,4 +33,5 @@ export const EVENTS = [
     ...OPPORTUNITY_EVENTS,
     ...SCANDAL_EVENTS,
     ...CHAIN_EVENTS,
+    ...TUTORIAL_WEEK_EVENTS,
 ];

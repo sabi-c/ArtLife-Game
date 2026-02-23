@@ -135,6 +135,7 @@ export default function AdminDashboard({ onClose }) {
         { key: 'consequences', label: 'QUEUE' },
         { key: 'npcs', label: 'NPCs' },
         { key: 'flags', label: 'FLAGS' },
+        { key: 'saves', label: 'SAVES' },
     ];
 
     return (
@@ -545,6 +546,77 @@ export default function AdminDashboard({ onClose }) {
                                             </li>
                                         ))}
                                     </ul>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── SAVES TAB ── */}
+                {activeTab === 'saves' && (
+                    <div>
+                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>GAME STATE MANAGEMENT</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
+                            <div>
+                                <button style={{ ...btnStyle, borderColor: '#4ade80', color: '#4ade80' }} onClick={() => {
+                                    try {
+                                        GameState.save(GameState.activeSlot || 0);
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Game saved to slot ${GameState.activeSlot || 0}`);
+                                        forceUpdate();
+                                    } catch (e) { GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Save failed: ' + e.message); }
+                                }}>
+                                    💾 SAVE GAME (Slot {GameState.activeSlot || 0})
+                                </button>
+                                <button style={btnStyle} onClick={() => {
+                                    try {
+                                        const slot = GameState.getMostRecentSlot?.() || GameState.activeSlot || 0;
+                                        GameState.load(slot);
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Game loaded from slot ${slot}`);
+                                        forceUpdate();
+                                    } catch (e) { GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Load failed: ' + e.message); }
+                                }}>
+                                    📂 LOAD GAME (Most Recent)
+                                </button>
+                            </div>
+                            <div>
+                                <button style={{ ...btnStyle, borderColor: '#f59e0b', color: '#f59e0b' }} onClick={() => {
+                                    if (!confirm('Reset game state? This clears the current session but keeps saves.')) return;
+                                    try {
+                                        GameState.state = null;
+                                        GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.BOOT || 'BOOT');
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Game state reset');
+                                        onClose();
+                                    } catch (e) { GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Reset failed: ' + e.message); }
+                                }}>
+                                    🔄 RESET GAME (Clear Session)
+                                </button>
+                                <button style={{ ...btnStyle, borderColor: '#ef4444', color: '#ef4444' }} onClick={() => {
+                                    if (!confirm('DELETE ALL SAVES? This cannot be undone!')) return;
+                                    try {
+                                        for (let i = 0; i < 5; i++) {
+                                            try { GameState.deleteSave(i); } catch (_) { /* slot may not exist */ }
+                                        }
+                                        GameState.state = null;
+                                        GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'All saves deleted');
+                                        forceUpdate();
+                                    } catch (e) { GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Delete failed: ' + e.message); }
+                                }}>
+                                    🗑️ DELETE ALL SAVES
+                                </button>
+                            </div>
+                        </div>
+                        {/* Save slot info */}
+                        <div style={{ marginTop: 16, background: '#0a0a0f', padding: 12, border: '1px solid #333' }}>
+                            <h4 style={{ margin: '0 0 8px 0', color: '#c9a84c', fontSize: 13 }}>Save Slot Info</h4>
+                            <div style={{ fontSize: 12, color: '#aaa' }}>
+                                <div>Active slot: <strong style={{ color: '#eaeaea' }}>{GameState.activeSlot ?? 'none'}</strong></div>
+                                <div>Game state: <strong style={{ color: GameState.state ? '#4ade80' : '#ef4444' }}>{GameState.state ? 'loaded' : 'empty'}</strong></div>
+                                {GameState.state && (
+                                    <>
+                                        <div>Week: <strong style={{ color: '#eaeaea' }}>{GameState.state.week || '?'}</strong></div>
+                                        <div>Cash: <strong style={{ color: '#eaeaea' }}>${(GameState.state.cash || 0).toLocaleString()}</strong></div>
+                                        <div>Portfolio: <strong style={{ color: '#eaeaea' }}>{(GameState.state.portfolio || []).length} works</strong></div>
+                                    </>
                                 )}
                             </div>
                         </div>

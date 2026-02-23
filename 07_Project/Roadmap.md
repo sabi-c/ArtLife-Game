@@ -7,13 +7,51 @@
 
 ## Current State (2026-02-23)
 
-**Version:** v0.4.2
+**Version:** v0.4.3
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **CI:** Build & Validate ✅ | Playwright Tests informational (continue-on-error)
 **Phase 3:** Complete. Phase 4 active.
+
+### Bloomberg Unification: Events + Admin + Bug Fixes (2026-02-23 Session 24)
+
+**Bloomberg Tutorial Persistence Fix:**
+- Added `hasSeenBloombergIntro` boolean to SettingsManager SCHEMA (hidden)
+- Added `boolean` type handling in `SettingsManager.get()` — validates strictly, falls back to default
+- Tutorial now correctly persists across refreshes
+
+**Intra-Week Event Timing System:**
+- `cmsStore.saveTimelineOverride(id, week, timing)` — stores `{ week, timing }` objects
+- Backward-compatible: plain number overrides treated as `{ week: N, timing: 'start' }`
+- `getTimelineOverrides()` normalizes to `{ week, timing }` objects
+- `getTimelineOverridesFlat()` for backward-compat week-only lookups
+- `EventRegistry.getAvailableEvents()` now accepts optional `timing` parameter
+- `EventRegistry.checkForTimedEvent(timing)` — checks for events at 'start', 'mid', or 'end' of week
+- `useAPAndCheckEvents()` wrapper: fires mid-week events when AP drops to ≤2, end-of-week at 0 AP
+- 3 tutorial events for Week 1 (`tutorial_week.js`): welcome, first gallery, week recap
+
+**Bloomberg EventOverlay Component:**
+- Inline event player rendered inside Bloomberg Terminal as slide-up panel
+- Typewriter text effect for narrative/dialogue steps (~55 chars/sec)
+- Auto-advance for narrative/dialogue, pause-on-choice for player input
+- Choice buttons show stat effect previews, apply effects via GameState.applyEffects()
+- Storyline trigger checking on choices via EventRegistry.checkStorylineTrigger()
+- CSS: `bb-event-*` prefix, slide-up animation, gold accent theming
+
+**Admin Save/Load/Reset:**
+- New SAVES tab in AdminDashboard with 4 buttons
+- Save Game (active slot), Load Game (most recent), Reset Game (clear session), Delete All Saves
+- Save slot info display: active slot, state status, week, cash, portfolio count
+
+**CMS Timeline Timing Selector:**
+- Detail panel now shows timing buttons (Start of Week / Mid-Week / End of Week)
+- Color-coded: green (start), amber (mid), red (end)
+- `handleTimingChange()` saves timing via `saveTimelineOverride(id, week, timing)`
+- Timeline card placement flattens `{ week, timing }` overrides to week-only for positioning
+
+**Files changed:** SettingsManager.js, EventRegistry.js, cmsStore.js, eventStore.js (import), BloombergTerminal.jsx, BloombergTerminal.css, AdminDashboard.jsx, TimelineCalendar.jsx, data/events/tutorial_week.js (new), data/events/index.js
 
 ### CMS Data Hub + Market Robustness (2026-02-23 Session 23)
 

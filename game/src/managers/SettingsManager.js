@@ -123,6 +123,13 @@ export class SettingsManager {
             default: {},
             hidden: true, // Not shown in cycle UI — managed by MarketConfig
         },
+        {
+            id: 'hasSeenBloombergIntro',
+            label: 'Bloomberg Tutorial Seen',
+            type: 'boolean',
+            default: false,
+            hidden: true, // Not shown in settings UI — set programmatically
+        },
     ];
 
     static _cache = null;
@@ -199,6 +206,9 @@ export class SettingsManager {
             if (val === undefined || val === null || typeof val !== 'object') {
                 val = def.default !== undefined ? { ...def.default } : {};
             }
+        } else if (def.type === 'boolean') {
+            // Boolean type — strict validation, fall back to default if not boolean
+            if (typeof val !== 'boolean') val = def.default;
         } else if (val === undefined) {
             val = def.default;
         }

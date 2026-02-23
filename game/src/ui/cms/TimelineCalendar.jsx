@@ -186,8 +186,15 @@ function WeekColumn({ weekNum, items, currentWeek, onCardClick }) {
     );
 }
 
+// ── Timing labels for intra-week event scheduling ──
+const TIMING_OPTIONS = [
+    { value: 'start', label: 'Start of Week', color: '#4ade80' },
+    { value: 'mid', label: 'Mid-Week (after 2 AP)', color: '#f59e0b' },
+    { value: 'end', label: 'End of Week (0 AP)', color: '#f87171' },
+];
+
 // ── Detail Panel ──
-function DetailPanel({ item, onClose }) {
+function DetailPanel({ item, onClose, timelineOverrides, onTimingChange }) {
     if (!item) return (
         <div style={{
             padding: 20, color: '#555', textAlign: 'center', fontSize: 12,
@@ -198,6 +205,9 @@ function DetailPanel({ item, onClose }) {
     );
 
     const colorSet = COLORS[item.type] || COLORS.event;
+    // Get current timing from override
+    const override = timelineOverrides?.[item.id];
+    const currentTiming = (typeof override === 'object' ? override?.timing : null) || 'start';
 
     return (
         <div style={{ padding: 16, overflowY: 'auto', height: '100%' }}>
@@ -258,6 +268,33 @@ function DetailPanel({ item, onClose }) {
                 </div>
             </div>
 
+            {/* ── Intra-week timing selector ── */}
+            {item.type !== 'milestone' && (
+                <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', marginBottom: 6, letterSpacing: 0.5 }}>
+                        INTRA-WEEK TIMING
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {TIMING_OPTIONS.map(opt => (
+                            <button
+                                key={opt.value}
+                                onClick={() => onTimingChange?.(item, opt.value)}
+                                style={{
+                                    background: currentTiming === opt.value ? `${opt.color}22` : 'transparent',
+                                    border: `1px solid ${currentTiming === opt.value ? opt.color : '#333'}`,
+                                    color: currentTiming === opt.value ? opt.color : '#666',
+                                    padding: '4px 10px', borderRadius: 3,
+                                    cursor: 'pointer', fontFamily: 'inherit', fontSize: 10,
+                                    transition: 'all 0.1s',
+                                }}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {item.raw && (
                 <div style={{ marginTop: 12 }}>
                     <div style={{ fontSize: 10, color: '#666', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -289,7 +326,15 @@ export default function TimelineCalendar() {
     const markDirty = useCmsStore(s => s.markDirty);
     const saveTimelineOverride = useCmsStore(s => s.saveTimelineOverride);
     const rawTimelineOverrides = useCmsStore(s => s.snapshots?.timelineOverrides);
-    const timelineOverrides = useMemo(() => rawTimelineOverrides || {}, [rawTimelineOverrides]);
+    // Flatten overrides to week numbers for timeline placement
+    const timelineOverrides = useMemo(() => {
+        const raw = rawTimelineOverrides || {};
+        const flat = {};
+        for (const [key, val] of Object.entries(raw)) {
+            flat[key] = typeof val === 'number' ? val : val?.week ?? 1;
+        }
+        return flat;
+    }, [rawTimelineOverrides]);
 
     // Get current game week (fallback to 1)
     const currentWeek = window._artLifeState?.week || 1;
@@ -400,6 +445,14 @@ export default function TimelineCalendar() {
 
         console.log(`[Timeline] Moved "${item.title}" to Week ${newWeek}`);
     }, [allItems, saveTimelineOverride, markDirty]);
+
+    // ── Handle timing change from detail panel ──
+    const handleTimingChange = useCallback((item, timing) => {
+        const week = item.week;
+        saveTimelineOverride(item.id, week, timing);
+        markDirty('timeline');
+        console.log(`[Timeline] Set "${item.title}" timing to "${timing}" in Week ${week}`);
+    }, [saveTimelineOverride, markDirty]);
 
     // ── Stats ──
     const stats = useMemo(() => {
@@ -551,6 +604,8 @@ export default function TimelineCalendar() {
                     <DetailPanel
                         item={selectedItem}
                         onClose={() => setSelectedItem(null)}
+                        timelineOverrides={rawTimelineOverrides || {}}
+                        onTimingChange={handleTimingChange}
                     />
                 </div>
             </div>

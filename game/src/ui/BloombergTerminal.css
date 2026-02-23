@@ -7621,3 +7621,186 @@
         font-size: 0.85rem;
     }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   Bloomberg Event Overlay — inline narrative/dialogue/choice player
+   Slides in from bottom like a Bloomberg alert panel.
+   ══════════════════════════════════════════════════════════════ */
+
+.bb-event-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: bb-event-fade-in 0.3s ease;
+}
+
+@keyframes bb-event-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.bb-event-panel {
+    width: 100%;
+    max-width: 700px;
+    max-height: 60vh;
+    margin: 0 auto 24px;
+    background: #0a0a14;
+    border: 1px solid #c9a84c44;
+    border-radius: 6px;
+    overflow-y: auto;
+    animation: bb-event-slide-up 0.35s ease;
+    box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(201, 168, 76, 0.08);
+}
+
+@keyframes bb-event-slide-up {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.bb-event-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a1a2e;
+    background: rgba(201, 168, 76, 0.04);
+}
+
+.bb-event-tag {
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #0a0a14;
+    background: #c9a84c;
+    padding: 2px 8px;
+    border-radius: 2px;
+}
+
+.bb-event-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #eaeaea;
+    flex: 1;
+}
+
+.bb-event-progress {
+    font-size: 10px;
+    color: #555;
+    font-family: 'SF Mono', Courier, monospace;
+}
+
+.bb-event-speaker {
+    padding: 8px 16px 0;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #c9a84c;
+}
+
+.bb-event-text {
+    padding: 12px 16px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #d4d4d4;
+    min-height: 48px;
+}
+
+.bb-event-cursor {
+    color: #c9a84c;
+    animation: bb-cursor-blink 0.8s infinite;
+}
+
+@keyframes bb-cursor-blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+.bb-event-stats {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px 12px;
+    flex-wrap: wrap;
+}
+
+.bb-event-stat {
+    font-size: 11px;
+    font-family: 'SF Mono', Courier, monospace;
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid;
+}
+
+.bb-event-stat.positive {
+    color: #4ade80;
+    border-color: #4ade8044;
+    background: rgba(74, 222, 128, 0.06);
+}
+
+.bb-event-stat.negative {
+    color: #f87171;
+    border-color: #f8717144;
+    background: rgba(248, 113, 113, 0.06);
+}
+
+.bb-event-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px 16px;
+}
+
+.bb-event-choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    background: rgba(201, 168, 76, 0.05);
+    border: 1px solid #c9a84c33;
+    border-radius: 4px;
+    color: #eaeaea;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+}
+
+.bb-event-choice-btn:hover {
+    background: rgba(201, 168, 76, 0.12);
+    border-color: #c9a84c;
+    color: #fff;
+}
+
+.bb-event-choice-effects {
+    display: block;
+    margin-top: 4px;
+    font-size: 10px;
+    color: #888;
+    font-family: 'SF Mono', Courier, monospace;
+}
+
+.bb-event-outcome {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #c9a84c;
+    font-style: italic;
+    line-height: 1.5;
+    border-top: 1px solid #1a1a2e;
+    background: rgba(201, 168, 76, 0.03);
+}
+
+.bb-event-hint {
+    padding: 8px 16px;
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    cursor: pointer;
+    border-top: 1px solid #111;
+}

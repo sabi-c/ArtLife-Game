@@ -412,15 +412,52 @@ export const useCmsStore = create(
             //  TIMELINE OVERRIDES  
             // ═══════════════════════════════════════════════════════════
 
-            saveTimelineOverride: (itemId, newWeek) => set((state) => {
+            /**
+             * Save a timeline override for an event/storyline step.
+             * @param {string} itemId - Override key (e.g. 'evt_some_event' or 'sl_arc_step_0')
+             * @param {number} newWeek - Target week number (1-26)
+             * @param {string} [timing='start'] - When within the week: 'start', 'mid', or 'end'
+             */
+            saveTimelineOverride: (itemId, newWeek, timing) => set((state) => {
                 if (!state.snapshots.timelineOverrides) {
                     state.snapshots.timelineOverrides = {};
                 }
-                state.snapshots.timelineOverrides[itemId] = newWeek;
+                // Store as { week, timing } object for new format
+                state.snapshots.timelineOverrides[itemId] = timing
+                    ? { week: newWeek, timing }
+                    : newWeek; // Plain number for backward compat when no timing specified
                 state.dirty.timeline = true;
             }),
 
-            getTimelineOverrides: () => get().snapshots.timelineOverrides || {},
+            /**
+             * Get timeline overrides, normalized to { week, timing } objects.
+             * Backward-compatible: plain number values become { week: N, timing: 'start' }.
+             */
+            getTimelineOverrides: () => {
+                const raw = get().snapshots.timelineOverrides || {};
+                const normalized = {};
+                for (const [key, val] of Object.entries(raw)) {
+                    if (typeof val === 'number') {
+                        normalized[key] = { week: val, timing: 'start' };
+                    } else if (val && typeof val === 'object') {
+                        normalized[key] = { week: val.week, timing: val.timing || 'start' };
+                    }
+                }
+                return normalized;
+            },
+
+            /**
+             * Get raw timeline overrides (for backward compat — week-only comparisons).
+             * Returns { [itemId]: weekNumber } flattening any { week, timing } objects.
+             */
+            getTimelineOverridesFlat: () => {
+                const raw = get().snapshots.timelineOverrides || {};
+                const flat = {};
+                for (const [key, val] of Object.entries(raw)) {
+                    flat[key] = typeof val === 'number' ? val : val?.week ?? 1;
+                }
+                return flat;
+            },
 
             // ═══════════════════════════════════════════════════════════
             //  RESET

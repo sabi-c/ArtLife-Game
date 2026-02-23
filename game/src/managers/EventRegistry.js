@@ -23,7 +23,7 @@ export class EventRegistry {
         return useEventStore.getState().getEvent(id);
     }
 
-    static getAvailableEvents(category = null, state = GameState.state) {
+    static getAvailableEvents(category = null, state = GameState.state, timing = null) {
         const store = useEventStore.getState();
         const allEvents = [...(this.jsonEvents || []), ...store.eventPool];
 
@@ -32,14 +32,25 @@ export class EventRegistry {
         allEvents.forEach(e => uniqueEventsMap.set(e.id, e));
         const uniqueEvents = Array.from(uniqueEventsMap.values());
 
-        // ── CMS timeline overrides: events can be pinned to specific weeks ──
+        // ── CMS timeline overrides: events can be pinned to specific weeks + timing ──
         const timelineOverrides = useCmsStore.getState().getTimelineOverrides?.() || {};
 
         return uniqueEvents.filter((event) => {
             if (category && event.category !== category) return false;
 
             // Timeline override: if CMS pinned this event to a specific week, only allow it then
-            if (timelineOverrides[event.id] != null && timelineOverrides[event.id] !== state.week) return false;
+            const override = timelineOverrides[`evt_${event.id}`] || timelineOverrides[event.id];
+            if (override != null) {
+                // Normalize: could be { week, timing } or plain number (legacy)
+                const oWeek = typeof override === 'number' ? override : override.week;
+                const oTiming = typeof override === 'number' ? 'start' : (override.timing || 'start');
+                if (oWeek !== state.week) return false;
+                // If caller requested a specific timing, filter by it
+                if (timing && oTiming !== timing) return false;
+            } else if (timing && timing !== 'start') {
+                // Events without timeline overrides only fire at 'start' by default
+                return false;
+            }
 
             // Class restriction check
             if (event.classRestriction && event.classRestriction !== state.character.id) return false;
@@ -102,6 +113,38 @@ export class EventRegistry {
         }
 
         // Record it
+        state.eventsTriggered.push(selected.id);
+        store.recordEventTriggered(selected.id, state.week);
+
+        return selected;
+    }
+
+    /**
+     * Check for an event pinned to a specific intra-week timing slot.
+     * Used by Bloomberg Terminal to fire mid-week and end-of-week events.
+     * @param {'start'|'mid'|'end'} timing - Which timing slot to check
+     * @returns {object|null} The selected event, or null
+     */
+    static checkForTimedEvent(timing = 'start') {
+        const state = GameState.state;
+        if (!state) return null;
+
+        // Get events available for this timing slot
+        const eligible = this.getAvailableEvents(null, state, timing);
+        if (eligible.length === 0) return null;
+
+        // Weighted random selection (same pattern as checkForEvent)
+        const totalWeight = eligible.reduce((sum, e) => sum + (e.weight || 1), 0);
+        let roll = Math.random() * totalWeight;
+        let selected = eligible[0];
+
+        for (const event of eligible) {
+            roll -= (event.weight || 1);
+            if (roll <= 0) { selected = event; break; }
+        }
+
+        // Record it
+        const store = useEventStore.getState();
         state.eventsTriggered.push(selected.id);
         store.recordEventTriggered(selected.id, state.week);
 
