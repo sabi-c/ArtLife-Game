@@ -207,7 +207,11 @@ export default function AdminDashboard({ onClose }) {
                             <button style={btnStyle} onClick={() => triggerUI(VIEW.TERMINAL)}>■ TERMINAL INTERFACE</button>
                             <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => triggerOverlay(OVERLAY.MASTER_CMS)}>🏗️ MASTER CMS & VISUAL EDITOR</button>
                             <button style={{ ...btnStyle, borderColor: '#00e5ff', color: '#00e5ff' }} onClick={() => triggerOverlay(OVERLAY.BLOOMBERG)}>📊 BLOOMBERG MARKET TERMINAL</button>
-                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.MARKET_DASHBOARD)}>📈 Market Dashboard</button>
+                            <button style={{ ...btnStyle, borderColor: '#8b7355', color: '#d4a843' }} onClick={() => triggerOverlay(OVERLAY.SALES_GRID)}>📊 SALES GRID (Beckmans)</button>
+                            <button style={{ ...btnStyle, borderColor: '#4040ff', color: '#8080ff' }} onClick={() => {
+                                SettingsManager.set('marketStyle', 'waterworks');
+                                triggerOverlay(OVERLAY.BLOOMBERG);
+                            }}>🗺️ WATERWORKS WORLD MAP</button>
                         </div>
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>SYSTEM DIALOGUES</div>

@@ -1,0 +1,352 @@
+/**
+ * SalesGrid.css — 1:1 Beckmans Examensutställning Clone
+ *
+ * Faithful recreation of https://beckmans.college/2024/ CSS patterns:
+ * - 72-column grid with viewport-filling rows
+ * - #ededed bg, #000 text, #9b9b9b lines, #1400ff ultramarine accent
+ * - Helvetica Neue, weight 400 everywhere, fluid font-size
+ * - Hover-to-expand with 0.5s ease-out transitions
+ * - Progressive cell reveal across 4 breakpoints
+ *
+ * CSS prefix: sg-
+ * Breakpoints mirror Beckmans: 40em (640px), 63em (1008px), 102em (1632px)
+ */
+
+/* ── CSS Custom Properties (from Beckmans :root) ── */
+.sg-overlay {
+    --sg-bg: #ededed;
+    --sg-black: #000;
+    --sg-line: #9b9b9b;
+    --sg-link: #1400ff;
+    --sg-grey: #828282;
+    --sg-p: max(0.95rem, 0.7vw);
+    --sg-lh: 1.3125;
+    --sg-row-h: 32px; /* overridden by JS */
+
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: var(--sg-bg);
+    color: var(--sg-black);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: var(--sg-p);
+    font-weight: 400;
+    line-height: var(--sg-lh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Hide scrollbar like Beckmans */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.sg-overlay::-webkit-scrollbar { display: none; }
+
+/* ── 72-Column Grid Row (the core Beckmans pattern) ── */
+.sg-table {
+    display: grid;
+    grid-template-columns: repeat(72, minmax(0, 1fr));
+    column-gap: 0;
+    row-gap: 0;
+    border-bottom: 1px solid var(--sg-line);
+    height: var(--sg-row-h);
+}
+.sg-table--header {
+    height: auto;
+}
+.sg-table--header > div {
+    min-height: var(--sg-row-h);
+}
+
+/* ── Cell Types ── */
+
+/* Faux spacer — hidden on mobile, visible at 1008px+ */
+.sg-cell-faux {
+    display: none;
+    grid-column: span 2;
+}
+@media (min-width: 63em) {
+    .sg-cell-faux { display: block; }
+}
+
+/* Index cell — row number or color pip */
+.sg-cell-index {
+    grid-column: span 5;
+    position: relative;
+    border-left: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+@media (min-width: 63em) {
+    .sg-cell-index {
+        grid-column: span 2;
+        border-left: 1px solid var(--sg-line);
+    }
+}
+
+/* Name cell — artist/title */
+.sg-cell-name {
+    grid-column: span 46;
+    border-left: 1px solid var(--sg-line);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+@media (min-width: 40em) {
+    .sg-cell-name { grid-column: span 32; }
+}
+@media (min-width: 63em) {
+    .sg-cell-name { grid-column: span 16; }
+}
+@media (min-width: 102em) {
+    .sg-cell-name { grid-column: span 14; }
+}
+
+/* Standard filler cells — the grid visual backbone */
+.sg-cell-std {
+    grid-column: span 8;
+    border-left: 1px solid var(--sg-line);
+    position: relative;
+}
+@media (min-width: 40em) {
+    .sg-cell-std { grid-column: span 5; }
+}
+@media (min-width: 63em) {
+    .sg-cell-std { grid-column: span 4; }
+}
+@media (min-width: 102em) {
+    .sg-cell-std { grid-column: span 2; }
+}
+
+/* Info cell — exhibition details in header */
+.sg-cell-info {
+    grid-column: span 62;
+    border-left: 1px solid var(--sg-line);
+    display: flex;
+    align-items: center;
+}
+@media (min-width: 63em) {
+    .sg-cell-info { grid-column: span 32; }
+}
+
+/* Info-small cells — nav links */
+.sg-cell-info-sm {
+    grid-column: span 20;
+    border-left: 1px solid var(--sg-line);
+    display: flex;
+    align-items: center;
+    padding-left: 0.2em;
+}
+@media (min-width: 40em) {
+    .sg-cell-info-sm { grid-column: span 14; }
+}
+@media (min-width: 63em) {
+    .sg-cell-info-sm { grid-column: span 8; }
+}
+
+/* ── Progressive Visibility (mirroring Beckmans breakpoint classes) ── */
+.sg-hide-xs { display: none; }
+@media (min-width: 40em) { .sg-hide-xs { display: block; } }
+
+.sg-hide-sm { display: none; }
+@media (min-width: 63em) { .sg-hide-sm { display: block; } }
+
+.sg-hide-md { display: none; }
+@media (min-width: 102em) { .sg-hide-md { display: block; } }
+
+/* ── Cell Content ── */
+.sg-cell-inner {
+    padding-left: 0.2em;
+    padding-right: 0.2em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sg-cell-center { text-align: center; }
+.sg-italic { font-style: italic; }
+
+/* ── Header ── */
+.sg-header-row {
+    background: var(--sg-bg);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    width: 100%;
+}
+@media (min-width: 63em) {
+    .sg-header-row { position: sticky; }
+}
+
+/* ── Main scrollable area ── */
+.sg-main {
+    flex: 1;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.sg-main::-webkit-scrollbar { display: none; }
+
+/* ── Empty/Spacer rows ── */
+.sg-empty-row {
+    height: var(--sg-row-h, 1.3em);
+    transition: height 0.2s ease-out;
+}
+
+/* ── Department Color Pip (in index cell) ── */
+.sg-color-pip {
+    height: calc(var(--sg-row-h) - 1px);
+    width: 100%;
+}
+
+/* ── Interactive Content Rows ── */
+.sg-content-row {
+    cursor: pointer;
+    transition: height 0.5s ease-out;
+}
+
+/* Hover state — blue text like Beckmans .hover--color--blue */
+@media (hover: hover) {
+    .sg-content-row:hover .sg-cell-name .sg-cell-inner {
+        color: var(--sg-link);
+    }
+}
+.sg-row-expanded .sg-cell-name .sg-cell-inner {
+    color: var(--sg-link);
+}
+
+/* ── Trade Indicator (in a standard cell) ── */
+.sg-cell-trade-pip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+.sg-trade-dot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--sg-black);
+    color: var(--sg-bg);
+    font-size: 10px;
+    line-height: 1;
+}
+.sg-dot-player {
+    background: var(--sg-link);
+}
+
+/* ── Expanded Detail Row ── */
+.sg-detail-row {
+    border-bottom: 1px solid var(--sg-line);
+    background: var(--sg-bg);
+    animation: sg-expand 0.3s ease-out;
+    overflow: hidden;
+}
+
+@keyframes sg-expand {
+    from { max-height: 0; opacity: 0; }
+    to { max-height: 300px; opacity: 1; }
+}
+
+.sg-detail-inner {
+    display: flex;
+    gap: 1em;
+    padding: 0.8em 1em 0.8em calc(0.2em + 5 * (100% / 72));
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.sg-detail-inner::-webkit-scrollbar { display: none; }
+
+/* Position detail content to align with name column */
+@media (min-width: 63em) {
+    .sg-detail-inner {
+        padding-left: calc(0.2em + 4 * (100% / 72));
+    }
+}
+
+.sg-detail-card {
+    display: flex;
+    gap: 0.6em;
+    flex-shrink: 0;
+    border: 1px solid var(--sg-line);
+    padding: 0.5em 0.8em;
+    background: #fff;
+    box-shadow: 0.5em 0.5em 0.5em rgba(0, 0, 0, 0.1);
+    min-width: 160px;
+    max-width: 220px;
+}
+
+.sg-detail-week {
+    color: var(--sg-grey);
+    white-space: nowrap;
+    padding-top: 0.1em;
+}
+
+.sg-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15em;
+    min-width: 0;
+}
+
+.sg-detail-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sg-detail-price {
+    /* same size/weight as everything else — Beckmans anti-hierarchy */
+}
+
+.sg-detail-profit { color: #1a7a3a; }
+.sg-detail-loss { color: #c0392b; }
+
+.sg-detail-parties {
+    color: var(--sg-grey);
+}
+
+.sg-detail-hold {
+    color: var(--sg-grey);
+}
+
+/* ── Links / Buttons (Beckmans style — no decoration, blue on hover) ── */
+.sg-link {
+    background: none;
+    border: none;
+    padding: 0.2em;
+    color: var(--sg-link);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+}
+@media (hover: hover) {
+    .sg-link:hover { text-decoration: underline; }
+}
+
+/* ── Visited state (purple, matching Beckmans .visited class) ── */
+.sg-row-visited .sg-cell-name .sg-cell-inner {
+    color: purple;
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 640px) {
+    .sg-overlay {
+        font-size: max(0.85rem, 3vw);
+    }
+    .sg-cell-info-sm {
+        display: none;
+    }
+    /* Show info-sm as row below header on mobile */
+    .sg-header-row {
+        height: auto;
+    }
+    .sg-detail-card {
+        min-width: 140px;
+        padding: 0.4em 0.6em;
+    }
+}

@@ -19,6 +19,7 @@ import MasterCMS from './ui/MasterCMS.jsx';
 import MarketDashboard from './ui/MarketDashboard.jsx';
 import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import BloombergTerminal from './ui/BloombergTerminal.jsx';
+import SalesGrid from './ui/SalesGrid.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
@@ -402,6 +403,12 @@ export default function App() {
             {activeOverlay === OVERLAY.BLOOMBERG && (
                 <ErrorBoundary>
                     <BloombergTerminal onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+                </ErrorBoundary>
+            )}
+
+            {activeOverlay === OVERLAY.SALES_GRID && (
+                <ErrorBoundary>
+                    <SalesGrid onClose={() => setActiveOverlay(OVERLAY.NONE)} />
                 </ErrorBoundary>
             )}
 
