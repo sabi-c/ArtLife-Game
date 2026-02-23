@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { useCmsStore } from '../stores/cmsStore.js';
 
@@ -33,11 +33,23 @@ export default function MasterCMS({ onClose }) {
     const [activeTab, setActiveTab] = useState('board');
     const [saveFlash, setSaveFlash] = useState(null);
     const [closeModal, setCloseModal] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [isMobile, setIsMobile] = useState(false);
     const fileInputRef = useRef(null);
 
+    // ── Responsive detection ──
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 768px)');
+        const handler = (e) => {
+            setIsMobile(e.matches);
+            if (e.matches) setSidebarOpen(false);
+        };
+        handler(mq);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
+
     // ── FIXED: Select raw state, derive values with useMemo ──
-    // Previously: useCmsStore(s => s.hasUnsavedChanges()) called get() inside selector,
-    // returning a new value every render and causing infinite re-render loop.
     const dirty = useCmsStore(s => s.dirty);
     const lastSaveTime = useCmsStore(s => s.lastSaveTime);
 
@@ -47,26 +59,22 @@ export default function MasterCMS({ onClose }) {
         [dirty]
     );
 
-    // Start auto-save on mount (use getState() to avoid selector re-renders)
+    // Start auto-save on mount
     useEffect(() => {
         useCmsStore.getState().startAutoSave();
-        return () => useCmsStore.getState().stopAutoSave();
     }, []);
 
-    // Close on ESC — with unsaved changes warning
+    // ESC to close
     useEffect(() => {
-        const onKey = (e) => {
+        const handler = (e) => {
             if (e.key === 'Escape') {
                 if (closeModal) { setCloseModal(false); return; }
-                if (hasUnsaved) {
-                    setCloseModal(true); // Show custom modal instead of window.confirm
-                    return;
-                }
+                if (hasUnsaved) { setCloseModal(true); return; }
                 onClose();
             }
         };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
     }, [onClose, hasUnsaved, closeModal]);
 
     const handleSave = () => {
@@ -98,11 +106,10 @@ export default function MasterCMS({ onClose }) {
         e.target.value = '';
     };
 
-    const formatSaveTime = (ts) => {
-        if (!ts) return 'never';
-        const d = new Date(ts);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
+    const handleTabClick = useCallback((tabId) => {
+        setActiveTab(tabId);
+        if (isMobile) setSidebarOpen(false);
+    }, [isMobile]);
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -123,9 +130,12 @@ export default function MasterCMS({ onClose }) {
 
     const btnStyle = {
         background: 'transparent', border: '1px solid #444', color: '#aaa',
-        padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-        transition: 'all 0.15s',
+        padding: isMobile ? '6px 8px' : '5px 12px', cursor: 'pointer',
+        fontFamily: 'inherit', fontSize: isMobile ? 10 : 11,
+        transition: 'all 0.15s', borderRadius: 3,
     };
+
+    const activeLabel = TABS.find(t => t.id === activeTab);
 
     return (
         <div style={{
@@ -137,26 +147,48 @@ export default function MasterCMS({ onClose }) {
             {/* Header */}
             <header style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 20px', background: '#111', borderBottom: '1px solid #333'
+                padding: isMobile ? '8px 10px' : '10px 20px',
+                background: '#111', borderBottom: '1px solid #333',
+                flexWrap: isMobile ? 'wrap' : 'nowrap', gap: 8,
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <h1 style={{ margin: 0, color: '#c9a84c', fontSize: 18, letterSpacing: 2 }}>
-                        MASTER CMS
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16, minWidth: 0 }}>
+                    {/* Hamburger menu on mobile */}
+                    <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{
+                        background: 'transparent', border: 'none', color: '#c9a84c',
+                        fontSize: 20, padding: '2px 6px', cursor: 'pointer',
+                        display: isMobile ? 'block' : 'none',
+                    }}>☰</button>
+
+                    <h1 style={{
+                        margin: 0, color: '#c9a84c',
+                        fontSize: isMobile ? 13 : 18, letterSpacing: 2, whiteSpace: 'nowrap',
+                    }}>
+                        {isMobile ? 'CMS' : 'MASTER CMS'}
                     </h1>
-                    {/* Save status indicator */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{
-                            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-                            background: hasUnsaved ? '#ff6b35' : '#4caf50',
-                            boxShadow: hasUnsaved ? '0 0 6px #ff6b35' : '0 0 4px #4caf50',
-                        }} />
-                        <span style={{ color: '#666', fontSize: 11 }}>
-                            {hasUnsaved
-                                ? `Unsaved: ${dirtyDomains.join(', ')}`
-                                : `Saved ${formatSaveTime(lastSaveTime)}`
-                            }
+
+                    {/* Active tab indicator on mobile */}
+                    {isMobile && activeLabel && (
+                        <span style={{ color: '#888', fontSize: 10 }}>
+                            {activeLabel.icon} {activeLabel.label}
                         </span>
-                    </div>
+                    )}
+
+                    {/* Save status indicator */}
+                    {!isMobile && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{
+                                display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+                                background: hasUnsaved ? '#ff6b35' : '#4caf50',
+                                boxShadow: hasUnsaved ? '0 0 6px #ff6b35' : '0 0 4px #4caf50',
+                            }} />
+                            <span style={{ color: '#666', fontSize: 11 }}>
+                                {hasUnsaved
+                                    ? `Unsaved: ${dirtyDomains.join(', ')}`
+                                    : `Saved ${formatSaveTime(lastSaveTime)}`
+                                }
+                            </span>
+                        </div>
+                    )}
                     {saveFlash && (
                         <span style={{ color: '#4caf50', fontSize: 12, fontWeight: 'bold' }}>
                             {saveFlash}
@@ -164,20 +196,24 @@ export default function MasterCMS({ onClose }) {
                     )}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'center', flexShrink: 0 }}>
                     <button onClick={handleSave} style={{
                         ...btnStyle,
                         borderColor: hasUnsaved ? '#c9a84c' : '#444',
                         color: hasUnsaved ? '#c9a84c' : '#666',
                     }}>
-                        💾 Save All
+                        {isMobile ? '💾' : '💾 Save All'}
                     </button>
-                    <button onClick={handleExport} style={btnStyle}>
-                        📦 Export
-                    </button>
-                    <button onClick={handleImport} style={btnStyle}>
-                        📥 Import
-                    </button>
+                    {!isMobile && (
+                        <>
+                            <button onClick={handleExport} style={btnStyle}>
+                                📦 Export
+                            </button>
+                            <button onClick={handleImport} style={btnStyle}>
+                                📥 Import
+                            </button>
+                        </>
+                    )}
                     <input
                         ref={fileInputRef}
                         type="file"
@@ -185,7 +221,7 @@ export default function MasterCMS({ onClose }) {
                         onChange={handleImportFile}
                         style={{ display: 'none' }}
                     />
-                    <div style={{ width: 1, height: 20, background: '#333', margin: '0 4px' }} />
+                    <div style={{ width: 1, height: 20, background: '#333', margin: '0 2px' }} />
                     <button onClick={() => {
                         if (hasUnsaved) {
                             setCloseModal(true);
@@ -195,38 +231,70 @@ export default function MasterCMS({ onClose }) {
                     }} style={{
                         ...btnStyle, color: '#888',
                     }}>
-                        [ ESC ] CLOSE
+                        {isMobile ? '✕' : '[ ESC ] CLOSE'}
                     </button>
                 </div>
             </header>
 
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
                 {/* Sidebar Navigation */}
-                <nav style={{
-                    width: '240px', background: 'rgba(0,0,0,0.5)',
-                    borderRight: '1px solid #333', display: 'flex', flexDirection: 'column'
-                }}>
-                    <div style={{ padding: '16px', color: '#666', fontSize: 10, letterSpacing: 1, borderBottom: '1px solid #222' }}>
-                        DATABASE DOMAINS
-                    </div>
-                    {TABS.map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            style={{
-                                background: activeTab === tab.id ? 'rgba(201,168,76,0.1)' : 'transparent',
-                                color: activeTab === tab.id ? '#c9a84c' : '#aaa',
-                                border: 'none', borderLeft: activeTab === tab.id ? '3px solid #c9a84c' : '3px solid transparent',
-                                borderBottom: '1px solid #1a1a2e', padding: '16px', cursor: 'pointer',
-                                textAlign: 'left', display: 'flex', gap: '12px', alignItems: 'center',
-                                fontFamily: 'inherit', fontSize: 13, transition: 'all 0.1s'
-                            }}
-                        >
-                            <span style={{ fontSize: 16 }}>{tab.icon}</span>
-                            {tab.label}
-                        </button>
-                    ))}
-                </nav>
+                {/* On mobile: overlay. On desktop: static. */}
+                {sidebarOpen && (
+                    <>
+                        {/* Mobile backdrop */}
+                        {isMobile && (
+                            <div onClick={() => setSidebarOpen(false)} style={{
+                                position: 'absolute', inset: 0, zIndex: 10,
+                                background: 'rgba(0,0,0,0.6)',
+                            }} />
+                        )}
+                        <nav style={{
+                            width: isMobile ? '260px' : '240px',
+                            background: isMobile ? '#0a0a12' : 'rgba(0,0,0,0.5)',
+                            borderRight: '1px solid #333',
+                            display: 'flex', flexDirection: 'column',
+                            overflow: 'auto',
+                            ...(isMobile ? {
+                                position: 'absolute', top: 0, left: 0, bottom: 0,
+                                zIndex: 20, boxShadow: '4px 0 20px rgba(0,0,0,0.5)',
+                            } : {}),
+                        }}>
+                            <div style={{
+                                padding: isMobile ? '12px 14px' : '16px',
+                                color: '#666', fontSize: 10, letterSpacing: 1,
+                                borderBottom: '1px solid #222',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            }}>
+                                DATABASE DOMAINS
+                                {isMobile && (
+                                    <button onClick={() => setSidebarOpen(false)} style={{
+                                        background: 'transparent', border: 'none', color: '#666',
+                                        fontSize: 16, cursor: 'pointer',
+                                    }}>✕</button>
+                                )}
+                            </div>
+                            {TABS.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => handleTabClick(tab.id)}
+                                    style={{
+                                        background: activeTab === tab.id ? 'rgba(201,168,76,0.1)' : 'transparent',
+                                        color: activeTab === tab.id ? '#c9a84c' : '#aaa',
+                                        border: 'none', borderLeft: activeTab === tab.id ? '3px solid #c9a84c' : '3px solid transparent',
+                                        borderBottom: '1px solid #1a1a2e',
+                                        padding: isMobile ? '14px' : '16px', cursor: 'pointer',
+                                        textAlign: 'left', display: 'flex', gap: '12px', alignItems: 'center',
+                                        fontFamily: 'inherit', fontSize: isMobile ? 12 : 13,
+                                        transition: 'all 0.1s',
+                                    }}
+                                >
+                                    <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </nav>
+                    </>
+                )}
 
                 {/* Main Content Area */}
                 <main style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -238,31 +306,39 @@ export default function MasterCMS({ onClose }) {
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 9999999,
                     background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: isMobile ? 16 : 0,
                 }}>
                     <div style={{
                         background: '#111', border: '1px solid #333', borderRadius: 8,
-                        padding: 24, minWidth: 380, maxWidth: 420, textAlign: 'center',
+                        padding: isMobile ? 16 : 24,
+                        minWidth: isMobile ? 'auto' : 380,
+                        maxWidth: isMobile ? '100%' : 420,
+                        width: isMobile ? '100%' : 'auto',
+                        textAlign: 'center',
                     }}>
                         <div style={{ fontSize: 16, color: '#c9a84c', marginBottom: 6 }}>⚠️ Unsaved Changes</div>
                         <div style={{ fontSize: 11, color: '#888', marginBottom: 20 }}>
                             You have unsaved changes in: <strong style={{ color: '#ff6b35' }}>{dirtyDomains.join(', ')}</strong>
                         </div>
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                        <div style={{
+                            display: 'flex', gap: 8, justifyContent: 'center',
+                            flexWrap: isMobile ? 'wrap' : 'nowrap',
+                        }}>
                             <button onClick={() => {
                                 useCmsStore.getState().saveAll();
                                 setCloseModal(false);
                                 setSaveFlash('✅ Saved');
                                 setTimeout(() => { setSaveFlash(null); onClose(); }, 600);
-                            }} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50', padding: '8px 16px', fontSize: 12 }}>
+                            }} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50', padding: '8px 16px', fontSize: 12, flex: isMobile ? '1 1 auto' : 'none' }}>
                                 💾 Save & Close
                             </button>
                             <button onClick={() => {
                                 setCloseModal(false);
                                 onClose();
-                            }} style={{ ...btnStyle, borderColor: '#f87171', color: '#f87171', padding: '8px 16px', fontSize: 12 }}>
-                                🗑️ Discard & Close
+                            }} style={{ ...btnStyle, borderColor: '#f87171', color: '#f87171', padding: '8px 16px', fontSize: 12, flex: isMobile ? '1 1 auto' : 'none' }}>
+                                🗑️ Discard
                             </button>
-                            <button onClick={() => setCloseModal(false)} style={{ ...btnStyle, padding: '8px 16px', fontSize: 12 }}>
+                            <button onClick={() => setCloseModal(false)} style={{ ...btnStyle, padding: '8px 16px', fontSize: 12, flex: isMobile ? '1 1 100%' : 'none' }}>
                                 ← Cancel
                             </button>
                         </div>
@@ -272,3 +348,10 @@ export default function MasterCMS({ onClose }) {
         </div>
     );
 }
+
+function formatSaveTime(t) {
+    if (!t) return 'never';
+    const d = new Date(t);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
