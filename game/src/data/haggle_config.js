@@ -1101,6 +1101,100 @@ export const HAGGLE_CONFIG = {
 
     // Max stats for calculation clamping
     maxStatValue: 100,
+
+    // ════════════════════════════════════════════
+    // Formula-as-Data (SoonFx-inspired)
+    // JSON expression trees evaluated by ExpressionEngine
+    // Context variables available during haggle:
+    //   tactic.baseSuccess, tactic.priceShift, tactic.statWeight
+    //   statVal, isWeakTo, isStrongAgainst, isBlueOption
+    //   typeMult (1.0 / 1.5 / 0.5)
+    //   suspicion, marketHeat
+    //   blueCollectorBonus (1 if blue+collector, else 0)
+    //   dealerGreed, npcFlexibility
+    //   askingPrice, currentOffer, gap
+    // ════════════════════════════════════════════
+    formulas: {
+        // Success chance for any tactic (clamped 5%-95%)
+        successChance: {
+            op: 'clamp', min: 0.05, max: 0.95,
+            value: {
+                op: '+', args: [
+                    { ref: 'tactic.baseSuccess' },
+                    { op: '*', args: [{ ref: 'statVal' }, { ref: 'tactic.statWeight' }] },
+                    { op: 'if', cond: { ref: 'isWeakTo' }, then: 0.2, else: 0 },
+                    { op: 'if', cond: { ref: 'isStrongAgainst' }, then: -0.15, else: 0 },
+                    { op: 'if', cond: { ref: 'blueCollectorBonus' }, then: 0.15, else: 0 },
+                    { op: 'if', cond: { op: '>', args: [{ ref: 'typeMult' }, 1.0] }, then: 0.20, else: 0 },
+                    { op: 'if', cond: { op: '<', args: [{ ref: 'typeMult' }, 1.0] }, then: -0.15, else: 0 },
+                    { op: '*', args: [{ ref: 'suspicion' }, -0.005] },
+                    { op: '*', args: [{ ref: 'marketHeat' }, -0.01] },
+                ]
+            },
+        },
+
+        // Price shift multiplier on success (applied to askingPrice)
+        // Super effective = 1.5×, not effective = 0.5×
+        priceShiftMultiplier: {
+            op: 'if', cond: { op: '>', args: [{ ref: 'typeMult' }, 1.0] },
+            then: 1.5,
+            else: {
+                op: 'if', cond: { op: '<', args: [{ ref: 'typeMult' }, 1.0] },
+                then: 0.5,
+                else: 1.0,
+            },
+        },
+
+        // Deal threshold: gap must be ≤ this fraction of askingPrice
+        dealThreshold: 0.05,
+
+        // Timeout threshold: at maxRounds, deal closes if gap ≤ this fraction
+        timeoutThreshold: 0.15,
+
+        // Final deal price: split the difference
+        dealClosurePrice: {
+            op: 'round', value: {
+                op: '/', args: [
+                    { op: '+', args: [{ ref: 'currentOffer' }, { ref: 'askingPrice' }] },
+                    2,
+                ],
+            },
+        },
+
+        // Flex adjustment for initial asking price: inflexible NPCs add premium
+        flexAdjust: {
+            op: '+', args: [
+                1,
+                {
+                    op: '*', args: [
+                        { op: '-', args: [1, { ref: 'npcFlexibility' }] },
+                        0.1,
+                    ]
+                },
+            ],
+        },
+
+        // Initial asking price formula
+        adjustedAskingPrice: {
+            op: 'round', value: {
+                op: '*', args: [
+                    { ref: 'baseAskingPrice' },
+                    { ref: 'dealerGreed' },
+                    {
+                        op: '+', args: [
+                            1,
+                            {
+                                op: '*', args: [
+                                    { op: '-', args: [1, { ref: 'npcFlexibility' }] },
+                                    0.1,
+                                ]
+                            },
+                        ]
+                    },
+                ],
+            },
+        },
+    },
 };
 
 // ════════════════════════════════════════════

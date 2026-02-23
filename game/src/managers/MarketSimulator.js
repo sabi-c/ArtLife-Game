@@ -47,9 +47,89 @@ import { MarketManager } from './MarketManager.js';
 import { GameState } from './GameState.js';
 import { ActivityLogger } from './ActivityLogger.js';
 import { useNPCStore } from '../stores/npcStore.js';
+import { ExpressionEngine } from '../engine/ExpressionEngine.js';
 
 // ── Trade Log (persisted per session) ──
 const MAX_LOG_SIZE = 200;
+
+// ════════════════════════════════════════════
+// Market Formulas — SoonFx-inspired expression trees
+// Editable without code changes, evaluated by ExpressionEngine
+// ════════════════════════════════════════════
+export const MARKET_FORMULAS = {
+    // NPC sell probability per artwork per week
+    // Context: financialStress, cashRatio, isBear, profitRatio, capacityRatio, isForSale
+    sellProbability: {
+        op: 'clamp', min: 0, max: 0.95,
+        value: {
+            op: '+', args: [
+                0.05,  // base 5%
+                { op: 'if', cond: { op: '>', args: [{ ref: 'financialStress' }, 50] }, then: 0.15, else: 0 },
+                { op: 'if', cond: { op: '<', args: [{ ref: 'cashRatio' }, 0.3] }, then: 0.20, else: 0 },
+                { op: 'if', cond: { ref: 'isBear' }, then: 0.10, else: 0 },
+                { op: 'if', cond: { op: '>', args: [{ ref: 'profitRatio' }, 1.4] }, then: 0.15, else: 0 },
+                { op: 'if', cond: { op: '>', args: [{ ref: 'capacityRatio' }, 0.8] }, then: 0.10, else: 0 },
+                { op: 'if', cond: { ref: 'isForSale' }, then: 0.20, else: 0 },
+            ]
+        },
+    },
+
+    // Match score: how well a sell order fits a buy order
+    // Context: genreMatch, genreAvoided, tierMatch, priceRatio, isAlly, isRival, isUrgent
+    matchScore: {
+        op: 'max', args: [0, {
+            op: '+', args: [
+                10,  // base score
+                { op: 'if', cond: { ref: 'genreMatch' }, then: 30, else: 0 },
+                { op: 'if', cond: { ref: 'genreAvoided' }, then: -999, else: 0 },
+                { op: 'if', cond: { ref: 'tierMatch' }, then: 20, else: 0 },
+                {
+                    op: 'if', cond: { op: '<', args: [{ ref: 'priceRatio' }, 0.5] }, then: 15, else:
+                    {
+                        op: 'if', cond: { op: '<', args: [{ ref: 'priceRatio' }, 0.8] }, then: 10, else:
+                            { op: 'if', cond: { op: '>', args: [{ ref: 'priceRatio' }, 1.0] }, then: -10, else: 0 },
+                    },
+                },
+                { op: 'if', cond: { ref: 'isAlly' }, then: 15, else: 0 },
+                { op: 'if', cond: { ref: 'isRival' }, then: -20, else: 0 },
+                { op: 'if', cond: { ref: 'isUrgent' }, then: 10, else: 0 },
+            ]
+        }],
+    },
+
+    // Deal closure probability for NPC-to-NPC trades
+    // Context: isAlly, isRival, buyerPatience, sellerPatience
+    dealClosure: {
+        op: 'clamp', min: 0.1, max: 0.99,
+        value: {
+            op: '+', args: [
+                0.85,  // base 85%
+                { op: 'if', cond: { ref: 'isAlly' }, then: 0.10, else: 0 },
+                { op: 'if', cond: { ref: 'isRival' }, then: -0.25, else: 0 },
+                {
+                    op: '*', args: [
+                        { op: '+', args: [{ ref: 'buyerPatience' }, { ref: 'sellerPatience' }] },
+                        0.01,
+                    ]
+                },
+            ]
+        },
+    },
+
+    // Ask price multiplier for sell orders
+    // Context: npcFlexibility
+    askPriceMultiplier: {
+        op: '+', args: [
+            1,
+            {
+                op: '*', args: [
+                    { op: '-', args: [1, { ref: 'npcFlexibility' }] },
+                    0.15,
+                ]
+            },
+        ],
+    },
+};
 
 export class MarketSimulator {
     /** All trades executed this session */
@@ -240,30 +320,41 @@ export class MarketSimulator {
             .filter(Boolean);
 
         for (const work of ownedWorks) {
-            let sellProbability = 0.05; // Base 5% chance per week
-
-            // Financial pressure increases selling
-            if (npc.financialStress > 50) sellProbability += 0.15;
-            if (npc.cash < npc.spendingCeiling * 0.3) sellProbability += 0.20;
-
-            // Bear market → more selling
-            if (marketCycle === 'bear') sellProbability += 0.10;
-
-            // Profit motive: sell if current price >> what they might have paid
             const currentPrice = MarketSimulator._getPrice(work);
-            const askPrice = work.askingPrice || currentPrice;
-            if (currentPrice > askPrice * 1.4) sellProbability += 0.15; // >40% profit
+            const askPriceBase = work.askingPrice || currentPrice;
 
-            // Collection too full
-            if (npc.owned.length >= npc.maxCapacity * 0.8) sellProbability += 0.10;
+            // Build formula context
+            const ctx = {
+                financialStress: npc.financialStress || 0,
+                cashRatio: npc.spendingCeiling > 0 ? npc.cash / npc.spendingCeiling : 1,
+                isBear: marketCycle === 'bear' ? 1 : 0,
+                profitRatio: askPriceBase > 0 ? currentPrice / askPriceBase : 1,
+                capacityRatio: npc.maxCapacity > 0 ? npc.owned.length / npc.maxCapacity : 0,
+                isForSale: npc.forSale.includes(work.id) ? 1 : 0,
+            };
 
-            // Already marked for sale gets a boost
-            if (npc.forSale.includes(work.id)) sellProbability += 0.20;
+            // Evaluate sell probability via formula or fallback
+            let sellProbability;
+            if (MARKET_FORMULAS.sellProbability) {
+                sellProbability = ExpressionEngine.evaluate(MARKET_FORMULAS.sellProbability, ctx);
+            } else {
+                sellProbability = 0.05;
+                if (npc.financialStress > 50) sellProbability += 0.15;
+                if (npc.cash < npc.spendingCeiling * 0.3) sellProbability += 0.20;
+                if (marketCycle === 'bear') sellProbability += 0.10;
+                if (currentPrice > askPriceBase * 1.4) sellProbability += 0.15;
+                if (npc.owned.length >= npc.maxCapacity * 0.8) sellProbability += 0.10;
+                if (npc.forSale.includes(work.id)) sellProbability += 0.20;
+            }
 
-            // Dice roll
             if (Math.random() < sellProbability) {
-                // Ask price: current market + NPC flexibility
-                const flex = 1 + (1 - npc.priceFlexibility) * 0.15;
+                // Ask price via formula or fallback
+                let flex;
+                if (MARKET_FORMULAS.askPriceMultiplier) {
+                    flex = ExpressionEngine.evaluate(MARKET_FORMULAS.askPriceMultiplier, { npcFlexibility: npc.priceFlexibility || 0 });
+                } else {
+                    flex = 1 + (1 - npc.priceFlexibility) * 0.15;
+                }
                 orders.push({
                     type: 'sell',
                     npcId: npc.id,
@@ -354,34 +445,37 @@ export class MarketSimulator {
 
     /** Score how well a sell matches a buy (higher = better) */
     static _matchScore(buy, sell, npcState) {
-        let score = 10; // Base
-
         const work = sell.artwork;
         if (!work) return 0;
 
-        // Genre match
-        if (buy.preferredGenres.length > 0) {
-            if (buy.preferredGenres.includes(work.genre)) score += 30;
-            else if (buy.avoidedGenres.includes(work.genre)) return 0; // Hard no
+        // Build formula context
+        const buyer = npcState[buy.npcId];
+        const ctx = {
+            genreMatch: (buy.preferredGenres.length > 0 && buy.preferredGenres.includes(work.genre)) ? 1 : 0,
+            genreAvoided: (buy.preferredGenres.length > 0 && buy.avoidedGenres?.includes(work.genre)) ? 1 : 0,
+            tierMatch: buy.preferredTiers?.includes(work.tier) ? 1 : 0,
+            priceRatio: buy.budget > 0 ? sell.askPrice / buy.budget : 99,
+            isAlly: buyer?.allies?.includes(sell.npcId) ? 1 : 0,
+            isRival: buyer?.rivals?.includes(sell.npcId) ? 1 : 0,
+            isUrgent: sell.urgency === 'high' ? 1 : 0,
+        };
+
+        if (ctx.genreAvoided) return 0; // Hard no, skip formula
+
+        if (MARKET_FORMULAS.matchScore) {
+            return ExpressionEngine.evaluate(MARKET_FORMULAS.matchScore, ctx);
         }
 
-        // Tier match
-        if (buy.preferredTiers.includes(work.tier)) score += 20;
-
-        // Price vs budget (closer to budget = lower score, bargains preferred)
-        const priceRatio = sell.askPrice / buy.budget;
-        if (priceRatio < 0.5) score += 15; // Bargain
-        else if (priceRatio < 0.8) score += 10;
-        else if (priceRatio > 1.0) score -= 10;
-
-        // Ally bonus
-        const buyer = npcState[buy.npcId];
-        if (buyer?.allies?.includes(sell.npcId)) score += 15;
-        if (buyer?.rivals?.includes(sell.npcId)) score -= 20;
-
-        // Urgent sellers are more attractive (willing to deal)
-        if (sell.urgency === 'high') score += 10;
-
+        // Hardcoded fallback
+        let score = 10;
+        if (ctx.genreMatch) score += 30;
+        if (ctx.tierMatch) score += 20;
+        if (ctx.priceRatio < 0.5) score += 15;
+        else if (ctx.priceRatio < 0.8) score += 10;
+        else if (ctx.priceRatio > 1.0) score -= 10;
+        if (ctx.isAlly) score += 15;
+        if (ctx.isRival) score -= 20;
+        if (ctx.isUrgent) score += 10;
         return Math.max(0, score);
     }
 
@@ -429,13 +523,23 @@ export class MarketSimulator {
         if (finalPrice > maxBid) return null; // Buyer can't afford
         if (finalPrice > buyer.cash) return null; // Liquidity check
 
-        // Relationship modifier
-        let dealChance = 0.85; // Base 85% deal closure
-        if (buyer.allies?.includes(seller.id)) dealChance += 0.10;
-        if (buyer.rivals?.includes(seller.id)) dealChance -= 0.25;
+        // Relationship modifier — use formula
+        const closureCtx = {
+            isAlly: buyer.allies?.includes(seller.id) ? 1 : 0,
+            isRival: buyer.rivals?.includes(seller.id) ? 1 : 0,
+            buyerPatience: buyer.patience || 0,
+            sellerPatience: seller.patience || 0,
+        };
 
-        // Patience modifier
-        dealChance += (buyer.patience + seller.patience) * 0.01;
+        let dealChance;
+        if (MARKET_FORMULAS.dealClosure) {
+            dealChance = ExpressionEngine.evaluate(MARKET_FORMULAS.dealClosure, closureCtx);
+        } else {
+            dealChance = 0.85;
+            if (buyer.allies?.includes(seller.id)) dealChance += 0.10;
+            if (buyer.rivals?.includes(seller.id)) dealChance -= 0.25;
+            dealChance += (buyer.patience + seller.patience) * 0.01;
+        }
 
         if (Math.random() > dealChance) return null; // Deal fell through
 

@@ -38,6 +38,7 @@
  */
 
 import { DEALER_TYPES, TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG, HAGGLE_TYPES, TYPE_EFFECTIVENESS } from '../data/haggle_config.js';
+import { ExpressionEngine } from '../engine/ExpressionEngine.js';
 import { GameState } from './GameState.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { ARTWORK_MAP } from '../data/artworks.js';
@@ -122,9 +123,19 @@ class _HaggleManager {
         }
 
         // Adjusted asking price based on dealer greed + NPC flexibility
-        // Flexible NPCs ask closer to market; inflexible ones add a premium
-        const flexAdjust = 1 + ((1 - npcFlexibility) * 0.1); // 0.30 flex = 1.07x, 0.05 flex = 1.095x
-        const adjustedAsk = Math.round(askingPrice * dealerType.greedFactor * flexAdjust);
+        // Uses formula-as-data if available, falls back to hardcoded
+        const F = HAGGLE_CONFIG.formulas;
+        let adjustedAsk;
+        if (F?.adjustedAskingPrice) {
+            adjustedAsk = ExpressionEngine.evaluate(F.adjustedAskingPrice, {
+                baseAskingPrice: askingPrice,
+                dealerGreed: dealerType.greedFactor,
+                npcFlexibility: npcFlexibility,
+            });
+        } else {
+            const flexAdjust = 1 + ((1 - npcFlexibility) * 0.1);
+            adjustedAsk = Math.round(askingPrice * dealerType.greedFactor * flexAdjust);
+        }
 
         // Player's opening offer
         const opening = playerOffer || Math.round(adjustedAsk * 0.7);
@@ -265,53 +276,49 @@ class _HaggleManager {
         const tactic = allTactics.find(t => t.id === tacticId);
         if (!tactic || tactic.locked) return null;
 
-        // ── Calculate success ──
-        let successChance = tactic.baseSuccess;
-
-        // Stat bonus — check both base TACTICS and BLUE_OPTIONS dictionaries
-        const tacticDef = TACTICS[tacticId] || BLUE_OPTIONS.find(b => b.id === tacticId);
-        if (tactic.statBonus && tacticDef) {
-            const statVal = h.playerStats[tactic.statBonus] || 0;
-            successChance += statVal * (tactic.statWeight || 0);
-        }
-
-        // Dealer weakness/strength modifier
-        if (h.dealerType.weakTo === tacticId) {
-            successChance += 0.2;
-        }
-        if (h.dealerType.strongAgainst === tacticId) {
-            successChance -= 0.15;
-        }
-
-        // Blue option bonus against collector-type dealers
-        if (tactic.isBlueOption && h.dealerTypeKey === 'collector') {
-            successChance += 0.15;
-        }
-
-        // ── Type Effectiveness System ──
+        // ── Type Effectiveness (computed before formula context) ──
         let effectivenessMult = 1.0;
         let effectivenessMessage = null;
-
         if (tactic.type && h.dealerType.haggleStyle) {
             effectivenessMult = this._getTypeEffectiveness(tactic.type, h.dealerType.haggleStyle);
-
-            if (effectivenessMult > 1.0) {
-                effectivenessMessage = 'It\'s super effective!';
-                successChance += 0.20; // Big boost to success chance
-            } else if (effectivenessMult < 1.0) {
-                effectivenessMessage = 'It\'s not very effective...';
-                successChance -= 0.15; // Penalty to success chance
-            }
+            if (effectivenessMult > 1.0) effectivenessMessage = 'It\'s super effective!';
+            else if (effectivenessMult < 1.0) effectivenessMessage = 'It\'s not very effective...';
         }
 
-        // Suspicion penalty
-        successChance -= h.playerStats.suspicion * HAGGLE_CONFIG.suspicionPenalty;
+        // ── Calculate success via ExpressionEngine ──
+        const F = HAGGLE_CONFIG.formulas;
+        const formulaCtx = {
+            tactic: { baseSuccess: tactic.baseSuccess, priceShift: tactic.priceShift, statWeight: tactic.statWeight || 0 },
+            statVal: (tactic.statBonus ? (h.playerStats[tactic.statBonus] || 0) : 0),
+            isWeakTo: h.dealerType.weakTo === tacticId ? 1 : 0,
+            isStrongAgainst: h.dealerType.strongAgainst === tacticId ? 1 : 0,
+            isBlueOption: tactic.isBlueOption ? 1 : 0,
+            blueCollectorBonus: (tactic.isBlueOption && h.dealerTypeKey === 'collector') ? 1 : 0,
+            typeMult: effectivenessMult,
+            suspicion: h.playerStats.suspicion || 0,
+            marketHeat: h.playerStats.marketHeat || 0,
+        };
 
-        // Heat penalty
-        successChance -= h.playerStats.marketHeat * HAGGLE_CONFIG.heatMemory;
-
-        // Clamp
-        successChance = Math.max(0.05, Math.min(0.95, successChance));
+        let successChance;
+        if (F?.successChance) {
+            successChance = ExpressionEngine.evaluate(F.successChance, formulaCtx);
+        } else {
+            // Hardcoded fallback (original logic)
+            successChance = tactic.baseSuccess;
+            const tacticDef = TACTICS[tacticId] || BLUE_OPTIONS.find(b => b.id === tacticId);
+            if (tactic.statBonus && tacticDef) {
+                const statVal = h.playerStats[tactic.statBonus] || 0;
+                successChance += statVal * (tactic.statWeight || 0);
+            }
+            if (h.dealerType.weakTo === tacticId) successChance += 0.2;
+            if (h.dealerType.strongAgainst === tacticId) successChance -= 0.15;
+            if (tactic.isBlueOption && h.dealerTypeKey === 'collector') successChance += 0.15;
+            if (effectivenessMult > 1.0) successChance += 0.20;
+            else if (effectivenessMult < 1.0) successChance -= 0.15;
+            successChance -= h.playerStats.suspicion * HAGGLE_CONFIG.suspicionPenalty;
+            successChance -= h.playerStats.marketHeat * HAGGLE_CONFIG.heatMemory;
+            successChance = Math.max(0.05, Math.min(0.95, successChance));
+        }
 
         // ── Roll ──
         const roll = Math.random();
@@ -322,10 +329,15 @@ class _HaggleManager {
         let patienceChange = tactic.patienceEffect || 0;
 
         if (success) {
-            // Price moves in player's favor, multiplied by effectiveness if it's a good move
-            let actualPriceShift = tactic.priceShift;
-            if (effectivenessMult > 1.0) actualPriceShift *= 1.5; // 50% more shift if super effective
-            else if (effectivenessMult < 1.0) actualPriceShift *= 0.5; // 50% less shift if not very effective
+            // Price moves in player's favor, multiplied by effectiveness
+            let shiftMult = 1.0;
+            if (F?.priceShiftMultiplier) {
+                shiftMult = ExpressionEngine.evaluate(F.priceShiftMultiplier, formulaCtx);
+            } else {
+                if (effectivenessMult > 1.0) shiftMult = 1.5;
+                else if (effectivenessMult < 1.0) shiftMult = 0.5;
+            }
+            const actualPriceShift = tactic.priceShift * shiftMult;
 
             priceChange = Math.round(h.askingPrice * Math.abs(actualPriceShift));
             if (h.mode === 'buy') {
@@ -365,8 +377,9 @@ class _HaggleManager {
         let dealReached = false;
         let dealFailed = false;
 
-        // Deal: gap is ≤ 5% of asking price
-        if (h.gap <= h.askingPrice * 0.05) {
+        // Deal: gap is ≤ threshold of asking price
+        const dealThresh = F?.dealThreshold != null ? ExpressionEngine.evaluate(F.dealThreshold, formulaCtx) : 0.05;
+        if (h.gap <= h.askingPrice * dealThresh) {
             dealReached = true;
         }
 
@@ -375,12 +388,11 @@ class _HaggleManager {
             dealFailed = true;
         }
         if (tacticId === 'walkAway' && !success) {
-            // They let you walk — deal fails
             dealFailed = true;
         }
         if (h.round >= h.maxRounds) {
-            // Time out — close at current price if gap is small, otherwise fail
-            if (h.gap <= h.askingPrice * 0.15) {
+            const timeoutThresh = F?.timeoutThreshold != null ? ExpressionEngine.evaluate(F.timeoutThreshold, formulaCtx) : 0.15;
+            if (h.gap <= h.askingPrice * timeoutThresh) {
                 dealReached = true;
             } else {
                 dealFailed = true;
@@ -414,7 +426,11 @@ class _HaggleManager {
         if (dealReached) {
             h.resolved = true;
             h.result = 'deal';
-            h.finalPrice = Math.round((h.currentOffer + h.askingPrice) / 2); // Split the difference
+            // Final price via formula or fallback
+            const priceCtx = { currentOffer: h.currentOffer, askingPrice: h.askingPrice };
+            h.finalPrice = F?.dealClosurePrice
+                ? ExpressionEngine.evaluate(F.dealClosurePrice, priceCtx)
+                : Math.round((h.currentOffer + h.askingPrice) / 2);
             roundResult.finalDialogue = this._getDialogue('onDeal');
             roundResult.finalPrice = h.finalPrice;
         } else if (dealFailed) {
