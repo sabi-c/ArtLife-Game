@@ -1,5 +1,5 @@
 import { ARTISTS, generateInitialWorks } from '../data/artists.js';
-import { ARTWORK_MAP } from '../data/artworks.js';
+import { ARTWORKS, ARTWORK_MAP } from '../data/artworks.js';
 import { MarketManager } from './MarketManager.js';
 import { PhoneManager } from './PhoneManager.js';
 import { ConsequenceScheduler } from './ConsequenceScheduler.js';
@@ -678,8 +678,27 @@ export class GameState {
      * Save to a specific slot (0-4). Stores both full state and lightweight metadata.
      */
     static save(slotIndex = GameState.activeSlot) {
+        // ── Snapshot artwork runtime state (only artworks with changes) ──
+        const artworkState = {};
+        try {
+            for (const w of ARTWORKS) {
+                if (w.tradeHistory?.length > 0 || w.owner !== 'gallery') {
+                    artworkState[w.id] = {
+                        owner: w.owner,
+                        tradeHistory: w.tradeHistory,
+                        lastTradePrice: w.lastTradePrice,
+                        lastTradeWeek: w.lastTradeWeek,
+                        listedForSale: w.listedForSale || false,
+                        listStrategy: w.listStrategy,
+                        listWeek: w.listWeek,
+                    };
+                }
+            }
+        } catch { /* artworks module may not be loaded */ }
+
         const saveData = {
             state: GameState.state,
+            artworkState,  // persisted artwork runtime fields
             meta: {
                 playerName: GameState.state.playerName || 'The Dealer',
                 characterName: GameState.state.character?.name || 'Unknown',
@@ -743,6 +762,24 @@ export class GameState {
             // are not serialised). Reset so we start clean rather than corrupt.
             ConsequenceScheduler.reset();
             resetSystemicTriggers();
+
+            // ── Restore artwork runtime state from save ──
+            try {
+                if (saveData.artworkState) {
+                    for (const [artId, data] of Object.entries(saveData.artworkState)) {
+                        const artRef = ARTWORK_MAP[artId];
+                        if (artRef) {
+                            artRef.owner = data.owner || 'gallery';
+                            artRef.tradeHistory = data.tradeHistory || [];
+                            artRef.lastTradePrice = data.lastTradePrice;
+                            artRef.lastTradeWeek = data.lastTradeWeek;
+                            artRef.listedForSale = data.listedForSale || false;
+                            artRef.listStrategy = data.listStrategy;
+                            artRef.listWeek = data.listWeek;
+                        }
+                    }
+                }
+            } catch { /* non-critical */ }
 
             return true;
         } catch (e) {
