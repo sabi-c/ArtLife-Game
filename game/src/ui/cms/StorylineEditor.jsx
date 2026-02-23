@@ -141,6 +141,85 @@ export default function StorylineEditor() {
         showNotif(`🔗 Linked event: ${evt?.title || eventId}`);
     };
 
+    // ── Create / Delete / Duplicate ──
+    const syncToRegistry = useCallback((updated) => {
+        EventRegistry.jsonStorylines = updated;
+        useCmsStore.getState().markDirty('storylines');
+    }, []);
+
+    const handleCreateStoryline = useCallback(() => {
+        const id = 'storyline_' + Date.now();
+        const newSl = {
+            id,
+            title: 'New Storyline',
+            description: 'Describe this arc...',
+            npcId: '',
+            triggerEventId: '',
+            triggerChoiceIndex: 0,
+            steps: [],
+            rewards: {},
+        };
+        setStorylines(prev => {
+            const updated = [...prev, newSl];
+            syncToRegistry(updated);
+            return updated;
+        });
+        setSelectedId(id);
+        setEditingStep(null);
+        showNotif('➕ Created new storyline');
+    }, [syncToRegistry]);
+
+    const handleDeleteStoryline = useCallback(() => {
+        if (!selectedId) return;
+        const sl = storylines.find(s => s.id === selectedId);
+        if (!confirm(`Delete "${sl?.title || selectedId}"? This cannot be undone.`)) return;
+        setStorylines(prev => {
+            const updated = prev.filter(s => s.id !== selectedId);
+            syncToRegistry(updated);
+            return updated;
+        });
+        setSelectedId(null);
+        setEditingStep(null);
+        showNotif('🗑️ Deleted storyline');
+    }, [selectedId, storylines, syncToRegistry]);
+
+    const handleDuplicateStoryline = useCallback(() => {
+        if (!selected) return;
+        const clone = JSON.parse(JSON.stringify(selected));
+        clone.id = selected.id + '_copy_' + Date.now();
+        clone.title = selected.title + ' (Copy)';
+        setStorylines(prev => {
+            const updated = [...prev, clone];
+            syncToRegistry(updated);
+            return updated;
+        });
+        setSelectedId(clone.id);
+        showNotif('📋 Duplicated storyline');
+    }, [selected, syncToRegistry]);
+
+    // ── Step management ──
+    const handleDeleteStep = useCallback((stepIdx) => {
+        if (!selected) return;
+        const newSteps = selected.steps.filter((_, i) => i !== stepIdx);
+        handleStorylineUpdate(selected.id, 'steps', newSteps);
+        setEditingStep(null);
+        showNotif('🗑️ Deleted step ' + stepIdx);
+    }, [selected, handleStorylineUpdate]);
+
+    const handleMoveStep = useCallback((stepIdx, direction) => {
+        if (!selected) return;
+        const newSteps = [...selected.steps];
+        const targetIdx = stepIdx + direction;
+        if (targetIdx < 0 || targetIdx >= newSteps.length) return;
+        [newSteps[stepIdx], newSteps[targetIdx]] = [newSteps[targetIdx], newSteps[stepIdx]];
+        handleStorylineUpdate(selected.id, 'steps', newSteps);
+        if (editingStep?.stepIdx === stepIdx) setEditingStep({ stepIdx: targetIdx });
+        showNotif(`↕️ Moved step ${stepIdx} ${direction < 0 ? 'up' : 'down'}`);
+    }, [selected, handleStorylineUpdate, editingStep]);
+
+    // ── Event preview state ──
+    const [hoveredEvent, setHoveredEvent] = useState(null);
+
     const handleTestStoryline = () => {
         if (!selected || !selected.steps?.length) return;
         const firstStep = selected.steps[0];
@@ -208,9 +287,12 @@ export default function StorylineEditor() {
                     </span>
                     {notification && <span style={{ color: '#4caf50' }}>{notification}</span>}
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                    <button onClick={handleDownload} style={btnStyle}>📥 Export JSON</button>
-                    <button style={btnStyle}>➕ New Storyline</button>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button onClick={handleCreateStoryline} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }}>➕ New</button>
+                    {selected && <button onClick={handleDuplicateStoryline} style={{ ...btnStyle, borderColor: '#60a5fa', color: '#60a5fa' }}>📋 Clone</button>}
+                    {selected && <button onClick={handleDeleteStoryline} style={{ ...btnStyle, borderColor: '#f87171', color: '#f87171' }}>🗑️ Delete</button>}
+                    <button onClick={handleDownload} style={btnStyle}>📥 Export</button>
+                    <button onClick={() => useCmsStore.getState().saveAll()} style={{ ...btnStyle, borderColor: '#c9a84c', color: '#c9a84c' }}>💾 Save All</button>
                 </div>
             </div>
 
@@ -274,6 +356,37 @@ export default function StorylineEditor() {
                             <div style={{ marginBottom: 16 }}>
                                 <div style={{ fontSize: 18, fontWeight: 'bold', color: '#c9a84c' }}>{selected.title}</div>
                                 <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{selected.description}</div>
+                                {/* Trigger Mapping */}
+                                <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(201,168,76,0.05)', border: '1px dashed #333', borderRadius: 4 }}>
+                                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginBottom: 4 }}>TRIGGER MAP</div>
+                                    <div style={{ fontSize: 11, color: '#c9a84c' }}>
+                                        Event: <span style={{ color: '#fff' }}>{selected.triggerEventId || 'None'}</span>
+                                        {selected.triggerNodeId && <span style={{ color: '#88bbdd', marginLeft: 8 }}>Node: {selected.triggerNodeId}</span>}
+                                        {selected.triggerChoice && <span style={{ color: '#aaa', marginLeft: 8 }}>Choice: "{selected.triggerChoice}"</span>}
+                                        {selected.triggerChoiceIndex !== undefined && !selected.triggerChoice && <span style={{ color: '#aaa', marginLeft: 8 }}>Choice Index: {selected.triggerChoiceIndex}</span>}
+                                    </div>
+                                    {selected.triggerEventId && (
+                                        <div style={{ fontSize: 10, color: eventExistsMap[selected.triggerEventId]?.exists !== false ? '#4caf50' : '#f87171', marginTop: 2 }}>
+                                            {(EventRegistry.jsonEvents || []).find(e => e.id === selected.triggerEventId) ? '✅ Trigger event exists' : '⚠️ Trigger event not found'}
+                                        </div>
+                                    )}
+                                    {/* Editable trigger fields */}
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                                        <input
+                                            value={selected.triggerEventId || ''}
+                                            onChange={(e) => handleStorylineUpdate(selected.id, 'triggerEventId', e.target.value)}
+                                            placeholder="triggerEventId"
+                                            style={{ flex: 1, background: '#111', color: '#eaeaea', border: '1px solid #333', padding: '3px 6px', fontSize: 10, fontFamily: 'inherit' }}
+                                        />
+                                        <input
+                                            value={selected.triggerChoiceIndex ?? ''}
+                                            onChange={(e) => handleStorylineUpdate(selected.id, 'triggerChoiceIndex', parseInt(e.target.value) || 0)}
+                                            placeholder="idx"
+                                            type="number"
+                                            style={{ width: 50, background: '#111', color: '#eaeaea', border: '1px solid #333', padding: '3px 6px', fontSize: 10, fontFamily: 'inherit' }}
+                                        />
+                                    </div>
+                                </div>
                                 <div style={{ marginTop: 8 }}>
                                     <button onClick={() => handleTestFire(selected)} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }}>
                                         ▶ Activate
@@ -313,8 +426,38 @@ export default function StorylineEditor() {
                                     editingStepIdx={editingStep?.stepIdx}
                                     onUpdateStoryline={handleStorylineUpdate}
                                     activeInfo={storeStatus.active.find(a => a.id === selected.id)}
+                                    onHoverEvent={setHoveredEvent}
                                 />
                             </div>
+
+                            {/* Event Preview Tooltip */}
+                            {hoveredEvent && (() => {
+                                const evt = (EventRegistry.jsonEvents || []).find(e => e.id === hoveredEvent);
+                                if (!evt) return null;
+                                return (
+                                    <div style={{
+                                        marginTop: 8, padding: '10px 14px',
+                                        background: 'rgba(20,20,30,0.98)', border: '1px solid #c9a84c',
+                                        borderRadius: 4, fontSize: 11, color: '#eaeaea'
+                                    }}>
+                                        <div style={{ fontSize: 13, fontWeight: 'bold', color: '#c9a84c', marginBottom: 4 }}>
+                                            {evt.title || evt.id}
+                                        </div>
+                                        <div style={{ color: '#888', fontSize: 10, marginBottom: 6 }}>
+                                            {evt.category} · NPC: {evt.npcId || 'none'} · {(evt.steps || []).length} steps
+                                        </div>
+                                        {(evt.steps || []).slice(0, 2).map((s, i) => (
+                                            <div key={i} style={{ padding: '4px 0', borderTop: '1px solid #222', fontSize: 10, color: '#aaa' }}>
+                                                {s.type === 'narrative' ? '💬 ' : '🎯 '}
+                                                {s.type === 'choice' ? `${(s.choices || []).length} choices` : (s.text || '').slice(0, 80) + '...'}
+                                            </div>
+                                        ))}
+                                        {(evt.steps || []).length > 2 && (
+                                            <div style={{ fontSize: 9, color: '#666', marginTop: 4 }}>+{(evt.steps || []).length - 2} more steps</div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Rewards */}
                             {selected.rewards && (
@@ -345,6 +488,10 @@ export default function StorylineEditor() {
                             stepIdx={editingStep.stepIdx}
                             onChange={handleStepEdit}
                             onClose={() => setEditingStep(null)}
+                            onDelete={() => handleDeleteStep(editingStep.stepIdx)}
+                            onMoveUp={() => handleMoveStep(editingStep.stepIdx, -1)}
+                            onMoveDown={() => handleMoveStep(editingStep.stepIdx, 1)}
+                            totalSteps={selected.steps.length}
                         />
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -374,7 +521,7 @@ export default function StorylineEditor() {
     );
 }
 
-function StepEditor({ step, stepIdx, onChange, onClose }) {
+function StepEditor({ step, stepIdx, onChange, onClose, onDelete, onMoveUp, onMoveDown, totalSteps }) {
     const labelStyle = {
         display: 'block',
         color: '#888',
@@ -403,7 +550,12 @@ function StepEditor({ step, stepIdx, onChange, onClose }) {
                 <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold' }}>
                     EDITING STEP {stepIdx}
                 </div>
-                <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    {stepIdx > 0 && <button onClick={onMoveUp} style={{ background: 'none', border: '1px solid #444', color: '#aaa', cursor: 'pointer', padding: '2px 6px', fontSize: 10 }} title="Move up">↑</button>}
+                    {stepIdx < totalSteps - 1 && <button onClick={onMoveDown} style={{ background: 'none', border: '1px solid #444', color: '#aaa', cursor: 'pointer', padding: '2px 6px', fontSize: 10 }} title="Move down">↓</button>}
+                    <button onClick={onDelete} style={{ background: 'none', border: '1px solid #f87171', color: '#f87171', cursor: 'pointer', padding: '2px 6px', fontSize: 10 }} title="Delete step">🗑️</button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
+                </div>
             </div>
 
             <label style={labelStyle}>Step Type</label>
@@ -488,8 +640,12 @@ const StoryStepNode = ({ data }) => {
             opacity: isPast ? 0.5 : 1,
             boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.2)' : '0 4px 6px rgba(0,0,0,0.3)',
             borderRadius: 4,
-            display: 'flex', flexDirection: 'column'
-        }}>
+            display: 'flex', flexDirection: 'column',
+            position: 'relative'
+        }}
+            onMouseEnter={() => data.onHoverEvent?.(step.eventId)}
+            onMouseLeave={() => data.onHoverEvent?.(null)}
+        >
             <Handle type="target" position={Position.Top} style={{ background: '#555' }} />
             <div style={{ fontWeight: 'bold', color: missing ? '#f87171' : '#fff', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                 {isCurrent && '▶ '}{missing && '⚠️ '}{step.eventId}
@@ -542,7 +698,7 @@ const nodeTypes = {
     storyStepNode: StoryStepNode
 };
 
-function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdateStoryline, activeInfo }) {
+function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdateStoryline, activeInfo, onHoverEvent }) {
     if (!storyline) return null;
 
     // Get available events for the linking dropdown
@@ -595,6 +751,7 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
                     choiceCount: eventDef ? (eventDef.steps || []).filter(s => s.type === 'choice').length : 0,
                     availableEvents: editingStepIdx === idx ? availableEvents : null,
                     onLinkEvent: (newId) => handleLinkEvent(idx, newId),
+                    onHoverEvent: onHoverEvent,
                 },
                 draggable: true,
             });
@@ -721,10 +878,10 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
     );
 }
 
-export function StorylineGraph({ storyline, onNodeClick, editingStepIdx, onUpdateStoryline, activeInfo }) {
+export function StorylineGraph({ storyline, onNodeClick, editingStepIdx, onUpdateStoryline, activeInfo, onHoverEvent }) {
     return (
         <ReactFlowProvider>
-            <StorylineGraphWrapper storyline={storyline} onNodeClick={onNodeClick} editingStepIdx={editingStepIdx} onUpdateStoryline={onUpdateStoryline} activeInfo={activeInfo} />
+            <StorylineGraphWrapper storyline={storyline} onNodeClick={onNodeClick} editingStepIdx={editingStepIdx} onUpdateStoryline={onUpdateStoryline} activeInfo={activeInfo} onHoverEvent={onHoverEvent} />
         </ReactFlowProvider>
     );
 }
