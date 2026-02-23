@@ -25,6 +25,7 @@ import { CONTACTS } from '../../data/contacts.js';
 import { DEALER_TYPES, HAGGLE_CONFIG } from '../../data/haggle_config.js';
 import { MarketSimulator } from '../../managers/MarketSimulator.js';
 import TearSheetView from './TearSheetView.jsx';
+import { resolveArtworkUrl } from '../../utils/assets.js';
 
 // ── Style Constants ──
 const mono = '"IBM Plex Mono", "Courier New", monospace';
@@ -680,7 +681,7 @@ function DataTablePanel({ filtered, selectedIds, handleSelect, handleFieldEdit, 
                                     </td>
                                     <td style={{ padding: 4, textAlign: 'center' }}>
                                         {w.sprite ? (
-                                            <img src={`/artworks/${w.sprite}`} style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, background: '#111' }} onError={e => e.target.style.display = 'none'} />
+                                            <img src={resolveArtworkUrl(w)} style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, background: '#111' }} onError={e => e.target.style.display = 'none'} />
                                         ) : (
                                             <div style={{ width: 32, height: 32, background: '#222', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#555' }}>?</div>
                                         )}
@@ -1356,7 +1357,7 @@ export default function ArtworkEditor() {
                                                 >
                                                     {selected.sprite ? (
                                                         <>
-                                                            <img src={selected.sprite.startsWith('/') ? selected.sprite : `/artworks/${selected.sprite}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                                                            <img src={resolveArtworkUrl(selected)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
                                                             <div style={{ display: 'none', color: '#555', fontSize: 10 }}>Image not found. Drop new file.</div>
                                                         </>
                                                     ) : (

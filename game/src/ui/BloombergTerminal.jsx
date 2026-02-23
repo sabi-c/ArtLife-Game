@@ -67,14 +67,9 @@ import BloombergTutorial from './BloombergTutorial.jsx';
 import EmailOverlay from './email/EmailOverlay.jsx';
 import './BloombergTerminal.css';
 
-// ── Robust image URL resolution ──
-// Checks imageUrl -> image -> sprite, normalizing bare filenames to /artworks/ paths
-const resolveImageUrl = (work) => {
-    const raw = work?.imageUrl || work?.image || work?.sprite;
-    if (!raw) return null;
-    if (raw.startsWith('http') || raw.startsWith('/')) return raw;
-    return `/artworks/${raw}`;
-};
+// ── Robust image URL resolution (base-path-aware for GitHub Pages) ──
+import { resolveArtworkUrl } from '../utils/assets.js';
+const resolveImageUrl = resolveArtworkUrl;
 
 // ── Intel-gated data masking ──
 function mask(value, intel, threshold, fallback = '???') {
