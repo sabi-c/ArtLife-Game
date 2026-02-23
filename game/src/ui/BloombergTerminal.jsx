@@ -1611,6 +1611,32 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
 
     const SortIcon = ({ k }) => sortKey === k ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
 
+    // Sale statistics from trade log
+    const tradeLog = MarketSimulator.getTradeLog();
+    const transactions = s?.transactions || [];
+
+    // Aggregate by artist
+    const artistStats = useMemo(() => {
+        const stats = {};
+        allItems.forEach(w => {
+            const name = w.artist || 'Unknown';
+            if (!stats[name]) stats[name] = { name, lots: 0, totalValue: 0, owned: 0, market: 0 };
+            stats[name].lots++;
+            stats[name].totalValue += w.currentVal || 0;
+            if (w._owned) stats[name].owned++;
+            else stats[name].market++;
+        });
+        return Object.values(stats).sort((a, b) => b.totalValue - a.totalValue);
+    }, [allItems]);
+
+    // Trade volume this session
+    const totalTradeVolume = tradeLog.reduce((s, t) => s + (t.price || 0), 0);
+    const playerSales = transactions.filter(t => t.action === 'SELL');
+    const playerBuys = transactions.filter(t => t.action === 'BUY');
+    const realizedPnl = playerSales.reduce((s, t) => s + (t.profit || 0), 0);
+
+    const [showSaleStats, setShowSaleStats] = useState(false);
+
     return (
         <div className="an-view">
             {/* Red header bar */}
@@ -1640,6 +1666,82 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                     <span>P&L: <span className={totalValue - totalCost >= 0 ? 'an-gain' : 'an-loss'}>
                         {totalValue - totalCost >= 0 ? '+' : ''}${fmtNum(totalValue - totalCost)}
                     </span></span>
+                </div>
+            )}
+
+            {/* Sale statistics toggle */}
+            <div className="an-stats-toggle">
+                <button className="an-stats-btn" onClick={() => setShowSaleStats(!showSaleStats)}>
+                    {showSaleStats ? '▼' : '▶'} SALE STATISTICS
+                </button>
+                <span className="an-stats-summary">
+                    {tradeLog.length} trades · Volume ${fmtNum(totalTradeVolume)}
+                    {playerSales.length > 0 && ` · ${playerSales.length} sales`}
+                    {playerBuys.length > 0 && ` · ${playerBuys.length} purchases`}
+                </span>
+            </div>
+
+            {showSaleStats && (
+                <div className="an-sale-stats">
+                    <div className="an-ss-grid">
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">TOTAL LOTS</div>
+                            <div className="an-ss-card-value">{allItems.length}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">COLLECTION</div>
+                            <div className="an-ss-card-value">{ownedItems.length}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">ON MARKET</div>
+                            <div className="an-ss-card-value">{marketItems.length}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">TRADE VOLUME</div>
+                            <div className="an-ss-card-value">${fmtNum(totalTradeVolume)}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">REALIZED P&L</div>
+                            <div className={`an-ss-card-value ${realizedPnl >= 0 ? 'an-gain' : 'an-loss'}`}>
+                                {realizedPnl >= 0 ? '+' : ''}${fmtNum(Math.abs(realizedPnl))}
+                            </div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">UNREALIZED P&L</div>
+                            <div className={`an-ss-card-value ${totalValue - totalCost >= 0 ? 'an-gain' : 'an-loss'}`}>
+                                {totalValue - totalCost >= 0 ? '+' : ''}${fmtNum(Math.abs(totalValue - totalCost))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* By artist breakdown */}
+                    {artistStats.length > 0 && (
+                        <div className="an-ss-artist-table">
+                            <div className="an-ss-artist-header">PERFORMANCE BY ARTIST</div>
+                            <table className="an-ss-table">
+                                <thead>
+                                    <tr>
+                                        <th className="an-ss-th">Artist</th>
+                                        <th className="an-ss-th">Lots</th>
+                                        <th className="an-ss-th">Total Value</th>
+                                        <th className="an-ss-th">Owned</th>
+                                        <th className="an-ss-th">Market</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {artistStats.map(a => (
+                                        <tr key={a.name} className="an-ss-row">
+                                            <td className="an-ss-td an-ss-artist-name">{a.name}</td>
+                                            <td className="an-ss-td">{a.lots}</td>
+                                            <td className="an-ss-td">${fmtNum(a.totalValue)}</td>
+                                            <td className="an-ss-td">{a.owned}</td>
+                                            <td className="an-ss-td">{a.market}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             )}
 
