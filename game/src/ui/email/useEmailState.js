@@ -2,13 +2,15 @@
  * useEmailState.js — Unified state machine for email overlay
  *
  * Normalizes both static (scripted deal events) and haggle (HaggleManager-driven)
- * negotiation flows into a single phase machine. Provides typewriter text,
- * thread accumulation, tactic selection, and phase transitions.
+ * negotiation flows into a single phase machine with AI agent guidance.
  *
- * Phases: reading -> choosing -> sending -> waiting -> receiving -> complete
+ * Phases (haggle mode):
+ *   reading -> agentPrompting -> choosingCategory -> agentTacticPrompt ->
+ *   choosingTactic -> choosingDialogue -> composingReply -> sending ->
+ *   waiting -> receiving -> (loop or complete)
  *
- * Static mode: reads event.steps[], advances stepIndex on choice
- * Haggle mode: calls HaggleManager.executeTactic(), reads HaggleManager.getState()
+ * Phases (static mode):
+ *   reading -> choosingCategory -> sending -> waiting -> receiving -> complete
  *
  * @see EmailOverlay.jsx for the top-level shell that consumes this hook
  * @see HaggleManager.js for the negotiation engine
@@ -41,6 +43,18 @@ const interpolate = (text) => {
     return (text || '').replace(/\{\{playerName\}\}/g, playerName);
 };
 
+/** Agent prompt text constants */
+const AGENT_PROMPTS = {
+    chooseCategory: 'What would you like your reply to be?',
+    chooseTactic: (category) => `Here are your ${category.toLowerCase()} options:`,
+    chooseDialogue: (tacticLabel) => `How would you like to ${tacticLabel.toLowerCase()}?`,
+};
+
+/** Email typewriter speed (ms per character) */
+const EMAIL_TYPE_SPEED = 25;
+/** Agent typewriter speed — slower for conversational feel */
+const AGENT_TYPE_SPEED = 45;
+
 /**
  * @param {Object} params
  * @param {'static'|'haggle'} params.mode
@@ -49,38 +63,48 @@ const interpolate = (text) => {
  * @param {Function} params.onComplete - Called when overlay should close
  */
 export function useEmailState({ mode, event, haggleInfo, onComplete }) {
-    // Phase machine
+    // ── Phase machine ──
     const [phase, setPhase] = useState('reading');
 
-    // Thread of all messages exchanged
+    // ── Thread of all messages exchanged ──
     const [thread, setThread] = useState([]);
 
-    // Current email being displayed in the compose/read pane
+    // ── Current email being displayed ──
     const [currentEmail, setCurrentEmail] = useState(null);
 
-    // Typewriter progress
+    // ── Email typewriter progress ──
     const [displayedText, setDisplayedText] = useState('');
     const typingRef = useRef(null);
 
-    // Outcome text shown at completion
+    // ── Agent typewriter progress ──
+    const [agentText, setAgentText] = useState('');
+    const [agentDisplayed, setAgentDisplayed] = useState('');
+    const agentTypingRef = useRef(null);
+
+    // ── Compose (outgoing reply) typewriter ──
+    const [composeText, setComposeText] = useState('');
+    const [composeDisplayed, setComposeDisplayed] = useState('');
+    const composeTypingRef = useRef(null);
+
+    // ── Outcome text shown at completion ──
     const [outcomeText, setOutcomeText] = useState(null);
 
-    // Selected message in thread (for click-to-view)
-    const [selectedMessageId, setSelectedMessageId] = useState(null);
-
-    // Static mode: step tracking
+    // ── Static mode: step tracking ──
     const [stepIndex, setStepIndex] = useState(0);
     const [selectedChoice, setSelectedChoice] = useState(null);
 
-    // Haggle mode: derived state
+    // ── Haggle mode: derived state ──
     const [haggleState, setHaggleState] = useState(null);
     const [availableTactics, setAvailableTactics] = useState([]);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedTactic, setSelectedTactic] = useState(null);
 
-    // Message ID counter
+    // ── Message ID counter ──
     const msgIdRef = useRef(0);
     const nextMsgId = () => `msg-${++msgIdRef.current}`;
+
+    // ── Track round count for agent speed scaling ──
+    const roundRef = useRef(0);
 
     // ── Derived values ──
     const steps = event?.steps || [];
@@ -115,7 +139,7 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         setAvailableTactics(HaggleManager.getAvailableTactics());
     }, []);
 
-    // ── Typewriter effect ──
+    // ── Email typewriter effect (reading / receiving phases) ──
     useEffect(() => {
         if (phase !== 'reading' && phase !== 'receiving') return;
         if (!currentEmail?.body) return;
@@ -134,21 +158,75 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
                 typingRef.current = null;
                 onTypewriterComplete();
             }
-        }, 25); // 25ms/char for polished feel
+        }, EMAIL_TYPE_SPEED);
 
         return () => {
             if (typingRef.current) clearInterval(typingRef.current);
         };
     }, [phase, currentEmail]);
 
-    /** Called when typewriter finishes (or is skipped) */
+    // ── Agent typewriter effect (agentPrompting / agentTacticPrompt phases) ──
+    useEffect(() => {
+        if (phase !== 'agentPrompting' && phase !== 'agentTacticPrompt' && phase !== 'choosingDialoguePrompt') return;
+        if (!agentText) return;
+
+        let i = 0;
+        setAgentDisplayed('');
+
+        if (agentTypingRef.current) clearInterval(agentTypingRef.current);
+
+        // Speed up on subsequent rounds (45ms first round, 30ms after)
+        const speed = roundRef.current > 1 ? 30 : AGENT_TYPE_SPEED;
+
+        agentTypingRef.current = setInterval(() => {
+            i += 1;
+            setAgentDisplayed(agentText.slice(0, i));
+            if (i >= agentText.length) {
+                clearInterval(agentTypingRef.current);
+                agentTypingRef.current = null;
+                onAgentTypewriterComplete();
+            }
+        }, speed);
+
+        return () => {
+            if (agentTypingRef.current) clearInterval(agentTypingRef.current);
+        };
+    }, [phase, agentText]);
+
+    // ── Compose typewriter effect (composingReply phase) ──
+    useEffect(() => {
+        if (phase !== 'composingReply') return;
+        if (!composeText) return;
+
+        let i = 0;
+        setComposeDisplayed('');
+
+        if (composeTypingRef.current) clearInterval(composeTypingRef.current);
+
+        composeTypingRef.current = setInterval(() => {
+            i += 1;
+            setComposeDisplayed(composeText.slice(0, i));
+            if (i >= composeText.length) {
+                clearInterval(composeTypingRef.current);
+                composeTypingRef.current = null;
+                onComposeTypewriterComplete();
+            }
+        }, EMAIL_TYPE_SPEED);
+
+        return () => {
+            if (composeTypingRef.current) clearInterval(composeTypingRef.current);
+        };
+    }, [phase, composeText]);
+
+    /** Called when email typewriter finishes (reading/receiving) */
     const onTypewriterComplete = useCallback(() => {
         if (mode === 'static') {
             if (phase === 'reading') {
                 const nextStep = steps[stepIndex + 1];
                 if (nextStep?.type === 'choice') {
                     setStepIndex(s => s + 1);
-                    setPhase('choosing');
+                    // Static mode goes straight to choices, no agent
+                    setPhase('choosingCategory');
                 } else if (stepIndex >= steps.length - 1) {
                     setPhase('complete');
                 } else {
@@ -163,22 +241,41 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
                 }
             }
         } else if (mode === 'haggle') {
-            if (phase === 'reading') {
-                setPhase('choosing');
-            } else if (phase === 'receiving') {
+            if (phase === 'reading' || phase === 'receiving') {
                 const st = HaggleManager.getState();
-                if (st?.resolved) {
+                if (phase === 'receiving' && st?.resolved) {
                     setPhase('complete');
                     const isDeal = st.result === 'deal';
                     setOutcomeText(isDeal
                         ? `Deal closed at $${fmtNum(st.finalPrice)}`
                         : 'Negotiation collapsed.');
                 } else {
-                    setPhase('choosing');
+                    // Transition to agent prompting
+                    roundRef.current += 1;
+                    setAgentText(AGENT_PROMPTS.chooseCategory);
+                    setPhase('agentPrompting');
                 }
             }
         }
     }, [mode, phase, stepIndex, steps]);
+
+    /** Called when agent typewriter finishes */
+    const onAgentTypewriterComplete = useCallback(() => {
+        if (phase === 'agentPrompting') {
+            setPhase('choosingCategory');
+        } else if (phase === 'agentTacticPrompt') {
+            setPhase('choosingTactic');
+        } else if (phase === 'choosingDialoguePrompt') {
+            setPhase('choosingDialogue');
+        }
+    }, [phase]);
+
+    /** Called when compose typewriter finishes */
+    const onComposeTypewriterComplete = useCallback(() => {
+        // Add the completed outgoing message to thread
+        addToThread('You', composeText, 'outgoing');
+        setPhase('sending');
+    }, [composeText]);
 
     // ── Process static step changes ──
     useEffect(() => {
@@ -190,7 +287,7 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         }
     }, [stepIndex]);
 
-    // ── Skip typewriter on click ──
+    // ── Skip email typewriter on click ──
     const skipTypewriter = useCallback(() => {
         if (phase !== 'reading' && phase !== 'receiving') return;
         if (!currentEmail?.body) return;
@@ -203,20 +300,44 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         onTypewriterComplete();
     }, [phase, currentEmail, onTypewriterComplete]);
 
+    // ── Skip agent typewriter on click ──
+    const skipAgentTypewriter = useCallback(() => {
+        if (phase !== 'agentPrompting' && phase !== 'agentTacticPrompt' && phase !== 'choosingDialoguePrompt') return;
+        if (!agentText) return;
+
+        if (agentTypingRef.current) {
+            clearInterval(agentTypingRef.current);
+            agentTypingRef.current = null;
+        }
+        setAgentDisplayed(agentText);
+        onAgentTypewriterComplete();
+    }, [phase, agentText, onAgentTypewriterComplete]);
+
+    // ── Skip compose typewriter on click ──
+    const skipComposeTypewriter = useCallback(() => {
+        if (phase !== 'composingReply') return;
+        if (!composeText) return;
+
+        if (composeTypingRef.current) {
+            clearInterval(composeTypingRef.current);
+            composeTypingRef.current = null;
+        }
+        setComposeDisplayed(composeText);
+        // Add to thread and advance
+        addToThread('You', composeText, 'outgoing');
+        setPhase('sending');
+    }, [phase, composeText]);
+
     // ── Add message to thread ──
     const addToThread = useCallback((fromName, body, direction) => {
         const id = nextMsgId();
-        setThread(prev => {
-            const newThread = [...prev, {
-                id,
-                fromName,
-                body: interpolate(body),
-                direction,
-                time: getTime(prev.length),
-            }];
-            return newThread;
-        });
-        setSelectedMessageId(id);
+        setThread(prev => [...prev, {
+            id,
+            fromName,
+            body: interpolate(body),
+            direction,
+            time: getTime(prev.length),
+        }]);
         return id;
     }, []);
 
@@ -260,52 +381,60 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
             } else {
                 setPhase('complete');
             }
-        }, 800); // Send animation duration
+        }, 800);
     }, [currentEmail, addToThread]);
 
     // ── Haggle mode: select category ──
     const selectCategory = useCallback((categoryId) => {
-        setSelectedCategory(categoryId === selectedCategory ? null : categoryId);
+        setSelectedCategory(categoryId);
         setSelectedTactic(null);
-    }, [selectedCategory]);
 
-    // ── Haggle mode: select tactic (shows dialogue choices) ──
+        // INFO and DEAL show inline, no agent prompt needed
+        if (categoryId === 'info' || categoryId === 'deal') {
+            setPhase('choosingTactic');
+        } else {
+            // TACTIC or POWER — agent types tactic intro
+            const catLabel = categoryId === 'tactics' ? 'tactic' : 'power';
+            setAgentText(AGENT_PROMPTS.chooseTactic(catLabel));
+            setPhase('agentTacticPrompt');
+        }
+    }, []);
+
+    // ── Haggle mode: select tactic ──
     const selectTactic = useCallback((tactic) => {
         if (tactic.locked) return;
         setSelectedTactic(tactic);
+
+        const choices = TACTIC_DIALOGUE_CHOICES[tactic.id] || [];
+        if (choices.length > 0) {
+            // Agent prompts for dialogue variant
+            setAgentText(AGENT_PROMPTS.chooseDialogue(stripEmoji(tactic.label)));
+            setPhase('choosingDialoguePrompt');
+        } else {
+            // No dialogue choices — execute directly
+            executeDirectTactic(tactic);
+        }
     }, []);
 
-    // ── Haggle mode: execute tactic with optional dialogue choice ──
-    const executeTactic = useCallback((tacticId, dialogueChoiceId) => {
+    // ── Execute a tactic directly (no dialogue choices) ──
+    const executeDirectTactic = useCallback((tactic) => {
+        const replyText = tactic.dialogue
+            || `Let's discuss this further. I'd like to ${stripEmoji(tactic.label).toLowerCase()}.`;
+
         // Add NPC's last email to thread
         if (currentEmail) {
             addToThread(currentEmail.fromName, currentEmail.body, 'incoming');
         }
 
-        // Find the tactic for a descriptive player reply
-        const allTactics = HaggleManager.getAvailableTactics();
-        const tactic = allTactics.find(t => t.id === tacticId);
-
-        // Build player reply text
-        let playerReplyText;
-        if (dialogueChoiceId) {
-            const choices = TACTIC_DIALOGUE_CHOICES[tacticId];
-            const chosen = choices?.find(c => c.id === dialogueChoiceId);
-            playerReplyText = chosen?.line || `Let's discuss this further.`;
-        } else {
-            playerReplyText = tactic
-                ? `Let's discuss this further. I'd like to ${stripEmoji(tactic.label).toLowerCase()}.`
-                : `Let's discuss this further.`;
-        }
-        addToThread('You', playerReplyText, 'outgoing');
+        // Add player reply
+        addToThread('You', replyText, 'outgoing');
 
         setPhase('sending');
 
-        // Execute the tactic in HaggleManager
-        const roundResult = HaggleManager.executeTactic(tacticId);
+        // Execute in HaggleManager
+        const roundResult = HaggleManager.executeTactic(tactic.id);
         refreshHaggle();
 
-        // Reset tactic selection
         setSelectedTactic(null);
         setSelectedCategory(null);
 
@@ -313,11 +442,9 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
             setPhase('waiting');
             setTimeout(() => {
                 let nextBody = roundResult.dialogue;
-
                 if (roundResult.dealReached || roundResult.dealFailed) {
                     nextBody += `\n\n${roundResult.finalDialogue}`;
                 }
-
                 setCurrentEmail({
                     fromName: haggleInfo.dealerName,
                     body: nextBody,
@@ -328,6 +455,106 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         }, 800);
     }, [currentEmail, haggleInfo, addToThread, refreshHaggle]);
 
+    // ── Execute from dialogue choice ──
+    const executeDialogueChoice = useCallback((dialogueChoiceId) => {
+        if (!selectedTactic) return;
+        const tacticId = selectedTactic.id;
+
+        const choices = TACTIC_DIALOGUE_CHOICES[tacticId];
+        const chosen = choices?.find(c => c.id === dialogueChoiceId);
+        const replyText = chosen?.line || `Let's discuss this further.`;
+
+        // Add NPC's last email to thread
+        if (currentEmail) {
+            addToThread(currentEmail.fromName, currentEmail.body, 'incoming');
+        }
+
+        // Add player reply to thread
+        addToThread('You', replyText, 'outgoing');
+
+        setPhase('sending');
+
+        // Execute in HaggleManager
+        const roundResult = HaggleManager.executeTactic(tacticId);
+        refreshHaggle();
+
+        setSelectedTactic(null);
+        setSelectedCategory(null);
+
+        setTimeout(() => {
+            setPhase('waiting');
+            setTimeout(() => {
+                let nextBody = roundResult.dialogue;
+                if (roundResult.dealReached || roundResult.dealFailed) {
+                    nextBody += `\n\n${roundResult.finalDialogue}`;
+                }
+                setCurrentEmail({
+                    fromName: haggleInfo.dealerName,
+                    body: nextBody,
+                });
+                setDisplayedText('');
+                setPhase('receiving');
+            }, 1200);
+        }, 800);
+    }, [selectedTactic, currentEmail, haggleInfo, addToThread, refreshHaggle]);
+
+    // ── Haggle mode: execute tactic (legacy path, kept for compatibility) ──
+    const executeTactic = useCallback((tacticId, dialogueChoiceId) => {
+        let playerReplyText;
+        if (dialogueChoiceId) {
+            const choices = TACTIC_DIALOGUE_CHOICES[tacticId];
+            const chosen = choices?.find(c => c.id === dialogueChoiceId);
+            playerReplyText = chosen?.line || `Let's discuss this further.`;
+        } else {
+            const allTactics = HaggleManager.getAvailableTactics();
+            const tactic = allTactics.find(t => t.id === tacticId);
+            playerReplyText = tactic
+                ? `Let's discuss this further. I'd like to ${stripEmoji(tactic.label).toLowerCase()}.`
+                : `Let's discuss this further.`;
+        }
+
+        if (currentEmail) {
+            addToThread(currentEmail.fromName, currentEmail.body, 'incoming');
+        }
+        addToThread('You', playerReplyText, 'outgoing');
+
+        setPhase('sending');
+
+        const roundResult = HaggleManager.executeTactic(tacticId);
+        refreshHaggle();
+
+        setSelectedTactic(null);
+        setSelectedCategory(null);
+
+        setTimeout(() => {
+            setPhase('waiting');
+            setTimeout(() => {
+                let nextBody = roundResult.dialogue;
+                if (roundResult.dealReached || roundResult.dealFailed) {
+                    nextBody += `\n\n${roundResult.finalDialogue}`;
+                }
+                setCurrentEmail({
+                    fromName: haggleInfo.dealerName,
+                    body: nextBody,
+                });
+                setDisplayedText('');
+                setPhase('receiving');
+            }, 1200);
+        }, 800);
+    }, [currentEmail, haggleInfo, addToThread, refreshHaggle]);
+
+    // ── Back navigation ──
+    const goBack = useCallback(() => {
+        if (phase === 'choosingTactic' || phase === 'agentTacticPrompt') {
+            setSelectedCategory(null);
+            setSelectedTactic(null);
+            setPhase('choosingCategory');
+        } else if (phase === 'choosingDialogue' || phase === 'choosingDialoguePrompt') {
+            setSelectedTactic(null);
+            setPhase('choosingTactic');
+        }
+    }, [phase]);
+
     // ── Haggle mode: accept deal at current price ──
     const acceptDeal = useCallback(() => {
         if (currentEmail) {
@@ -336,7 +563,6 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         const st = HaggleManager.getState();
         addToThread('You', `I accept at $${fmtNum(st?.askingPrice)}.`, 'outgoing');
 
-        // Force deal resolution in HaggleManager
         if (HaggleManager.active) {
             HaggleManager.active.resolved = true;
             HaggleManager.active.result = 'deal';
@@ -379,10 +605,18 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         onComplete?.({ choiceIndex: selectedChoice });
     }, [mode, selectedChoice, onComplete]);
 
-    // ── Categorized tactics for the chip UI ──
+    // ── Categorized tactics with email body previews ──
     const categorizedTactics = mode === 'haggle' ? {
-        tactics: availableTactics.filter(t => !t.isBlueOption),
-        powers: availableTactics.filter(t => t.isBlueOption),
+        tactics: availableTactics.filter(t => !t.isBlueOption).map(t => ({
+            ...t,
+            dialogueChoices: TACTIC_DIALOGUE_CHOICES[t.id] || [],
+            previewText: (TACTIC_DIALOGUE_CHOICES[t.id]?.[0]?.line) || t.dialogue || null,
+        })),
+        powers: availableTactics.filter(t => t.isBlueOption).map(t => ({
+            ...t,
+            dialogueChoices: TACTIC_DIALOGUE_CHOICES[t.id] || [],
+            previewText: t.dialogue || (TACTIC_DIALOGUE_CHOICES[t.id]?.[0]?.line) || null,
+        })),
     } : {};
 
     // ── Dialogue choices for currently selected tactic ──
@@ -398,9 +632,13 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
         currentEmail,
         displayedText,
         outcomeText,
-        selectedMessageId,
         subject,
         step,
+
+        // Agent state
+        agentText,
+        agentDisplayed,
+        composeDisplayed,
 
         // Haggle-specific
         haggleState,
@@ -412,14 +650,17 @@ export function useEmailState({ mode, event, haggleInfo, onComplete }) {
 
         // Actions
         skipTypewriter,
+        skipAgentTypewriter,
+        skipComposeTypewriter,
         handleStaticChoice,
         selectCategory,
         selectTactic,
         executeTactic,
+        executeDialogueChoice,
         acceptDeal,
         walkAway,
         handleClose,
-        setSelectedMessageId,
+        goBack,
 
         // Helpers
         interpolate,
