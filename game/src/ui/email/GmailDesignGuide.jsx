@@ -279,6 +279,7 @@ export default function GmailDesignGuide({ onClose }) {
     const [aiTypedText, setAiTypedText] = useState('');
     const [aiFullText, setAiFullText] = useState('');
     const aiIntervalRef = useRef(null);
+    const [showAiAssistant, setShowAiAssistant] = useState(false);
 
     // ── Derived ──
     const selectedEmail = useMemo(() => emails.find(e => e.id === selectedEmailId), [emails, selectedEmailId]);
@@ -363,6 +364,7 @@ export default function GmailDesignGuide({ onClose }) {
         setAiState('idle');
         setAiTypedText('');
         setAiFullText('');
+        setShowAiAssistant(true); // Show AI assistant when starting a reply
         if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
         setTimeout(() => replyBoxRef.current?.focus(), 100);
     }, []);
@@ -375,6 +377,7 @@ export default function GmailDesignGuide({ onClose }) {
         setAiState('thinking');
         setAiTypedText('');
         setAiFullText(fullReply);
+        setShowAiAssistant(false); // Dismiss assistant when AI starts
 
         // Phase 1: "Thinking" for 1.2–2s
         const thinkDelay = 1200 + Math.random() * 800;
@@ -958,6 +961,22 @@ export default function GmailDesignGuide({ onClose }) {
                         </div>
                     )}
 
+                    {/* Mobile Smart Replies */}
+                    {!replyMode && selectedEmail.smartReplies?.length > 0 && (
+                        <div className="gmail-mobile-only" style={{ padding: '8px 16px', gap: 8, flexWrap: 'wrap' }}>
+                            {selectedEmail.smartReplies.map((reply) => (
+                                <button
+                                    key={reply}
+                                    className="gmail-smart-reply"
+                                    onClick={() => triggerAiReply(reply)}
+                                    style={{ fontSize: 13, padding: '6px 12px' }}
+                                >
+                                    ✨ {reply}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Inline reply for mobile */}
                     {replyMode && (
                         <div style={{ margin: '8px 16px 16px', border: '1px solid #dadce0', borderRadius: 8, background: '#fff' }}>
@@ -1012,6 +1031,44 @@ export default function GmailDesignGuide({ onClose }) {
                     Meet
                 </button>
             </div>
+
+            {/* ═══ AI Assistant Popup ═══ */}
+            {showAiAssistant && replyMode && selectedEmail?.smartReplies?.length > 0 && (
+                <div className="gmail-ai-assistant">
+                    <div className="gmail-ai-assistant-header">
+                        <span className="gmail-ai-assistant-icon">🤖</span>
+                        <span className="gmail-ai-assistant-title">AI Reply Assistant</span>
+                        <button className="gmail-ai-assistant-close" onClick={() => setShowAiAssistant(false)}>✕</button>
+                    </div>
+                    <div className="gmail-ai-assistant-body">
+                        <div className="gmail-ai-assistant-prompt">What would you like to reply?</div>
+                        <div className="gmail-ai-assistant-suggestions">
+                            {selectedEmail.smartReplies.map((reply) => (
+                                <button
+                                    key={reply}
+                                    className="gmail-ai-assistant-chip"
+                                    onClick={() => triggerAiReply(reply)}
+                                >
+                                    ✨ {reply}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="gmail-ai-assistant-custom">
+                            <input
+                                type="text"
+                                placeholder="Or describe what you want to say..."
+                                className="gmail-ai-assistant-input"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && e.target.value.trim()) {
+                                        triggerAiReply(e.target.value.trim());
+                                        e.target.value = '';
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

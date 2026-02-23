@@ -129,6 +129,7 @@ export default function IMessageUI({ onClose }) {
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [mobileShowChat, setMobileShowChat] = useState(false);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -229,7 +230,7 @@ export default function IMessageUI({ onClose }) {
     return (
         <div className="imsg-overlay">
             {/* ═══ Sidebar ═══ */}
-            <div className="imsg-sidebar">
+            <div className={`imsg-sidebar${mobileShowChat ? ' imsg-sidebar--hidden' : ''}`}>
                 <div className="imsg-sidebar-header">
                     <button className="imsg-sidebar-close" onClick={onClose}>←</button>
                     <h2 className="imsg-sidebar-title">Messages</h2>
@@ -251,7 +252,7 @@ export default function IMessageUI({ onClose }) {
                             <div
                                 key={contact.id}
                                 className={`imsg-contact${activeContactId === contact.id ? ' imsg-contact--active' : ''}`}
-                                onClick={() => setActiveContactId(contact.id)}
+                                onClick={() => { setActiveContactId(contact.id); setMobileShowChat(true); }}
                             >
                                 <div className="imsg-contact-avatar" style={{ background: contact.color }}>
                                     {contact.avatar}
@@ -274,9 +275,14 @@ export default function IMessageUI({ onClose }) {
             </div>
 
             {/* ═══ Chat Area ═══ */}
-            <div className="imsg-chat">
+            <div className={`imsg-chat${!mobileShowChat ? ' imsg-chat--hidden' : ''}`}>
                 {/* Chat Header */}
                 <div className="imsg-chat-header">
+                    <button
+                        className="imsg-chat-header-back"
+                        style={{ display: 'none' }}
+                        onClick={() => setMobileShowChat(false)}
+                    >←</button>
                     <div className="imsg-chat-header-avatar" style={{ background: activeContact?.color }}>
                         {activeContact?.avatar}
                     </div>

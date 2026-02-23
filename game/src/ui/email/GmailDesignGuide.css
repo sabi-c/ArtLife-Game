@@ -1014,63 +1014,7 @@
     color: rgba(0, 0, 0, 0.54);
 }
 
-/* ── Responsive ── */
-@media (max-width: 768px) {
-    .gmail-sidebar {
-        display: none;
-    }
-
-    .gmail-compose {
-        width: calc(100% - 32px);
-        right: 16px;
-    }
-
-    .gmail-thread-subject {
-        font-size: 18px;
-    }
-
-    .gmail-email-sender {
-        width: 120px;
-    }
-
-    .gmail-message {
-        padding-left: 56px;
-    }
-
-    .gmail-message-avatar {
-        left: 12px;
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
-    }
-
-    .gmail-smart-replies {
-        padding-left: 56px;
-        flex-wrap: wrap;
-    }
-
-    .gmail-inline-reply {
-        margin: 0 12px 24px 56px;
-    }
-
-    .gmail-attachment {
-        margin-left: 56px;
-        margin-right: 12px;
-    }
-
-    .gmail-thread-header {
-        padding: 12px;
-    }
-
-    .gmail-topbar {
-        gap: 8px;
-        padding: 0 8px;
-    }
-
-    .gmail-topbar-logo {
-        display: none;
-    }
-}
+/* Old responsive block removed — replaced by comprehensive mobile query below */
 
 /* ── Inline Reply Compose ── */
 .gmail-inline-reply {
@@ -1548,11 +1492,150 @@
     margin: 0 0 12px;
 }
 
+/* ═══ AI Assistant Popup ═══ */
+.gmail-ai-assistant {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    width: 320px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18),
+        0 0 0 1px rgba(26, 115, 232, 0.15);
+    z-index: 9010;
+    overflow: hidden;
+    animation: gmail-ai-popup-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes gmail-ai-popup-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.gmail-ai-assistant-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+    color: #fff;
+}
+
+.gmail-ai-assistant-icon {
+    font-size: 18px;
+}
+
+.gmail-ai-assistant-title {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.gmail-ai-assistant-close {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gmail-ai-assistant-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.gmail-ai-assistant-body {
+    padding: 12px 14px;
+}
+
+.gmail-ai-assistant-prompt {
+    font-size: 13px;
+    font-weight: 500;
+    color: #202124;
+    margin-bottom: 10px;
+}
+
+.gmail-ai-assistant-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.gmail-ai-assistant-chip {
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid #d2e3fc;
+    border-radius: 10px;
+    background: #f0f5ff;
+    cursor: pointer;
+    font-size: 13px;
+    color: #1967d2;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.gmail-ai-assistant-chip:hover {
+    background: #d2e3fc;
+    border-color: #1a73e8;
+    transform: translateX(4px);
+}
+
+.gmail-ai-assistant-custom {
+    border-top: 1px solid #e8eaed;
+    padding-top: 10px;
+}
+
+.gmail-ai-assistant-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: 1px solid #dadce0;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    color: #202124;
+    transition: border-color 0.15s;
+}
+
+.gmail-ai-assistant-input:focus {
+    border-color: #1a73e8;
+}
+
+.gmail-ai-assistant-input::placeholder {
+    color: #80868b;
+}
+
+/* AI Assistant mobile positioning */
+@media (max-width: 768px) {
+    .gmail-ai-assistant {
+        bottom: 140px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+    }
+}
+
 /* ═══ Mobile Media Query ═══ */
 @media (max-width: 768px) {
 
-    /* Hide desktop components */
-    .gmail-sidebar {
+    /* Hide the ENTIRE desktop layout */
+    .gmail-main {
         display: none !important;
     }
 
@@ -1560,27 +1643,11 @@
         display: none !important;
     }
 
-    .gmail-category-tabs {
-        display: none !important;
-    }
-
-    .gmail-action-bar {
-        display: none !important;
-    }
-
-    .gmail-email-list {
-        display: none !important;
-    }
-
-    .gmail-thread {
-        display: none !important;
-    }
-
-    .gmail-compose {
-        width: 100%;
-        right: 0;
-        bottom: 64px;
-        border-radius: 8px 8px 0 0;
+    /* Make overlay truly full-screen */
+    .gmail-guide-overlay {
+        flex-direction: column !important;
+        padding-bottom: 0 !important;
+        overflow: hidden !important;
     }
 
     /* Show mobile components */
@@ -1600,12 +1667,42 @@
         display: flex !important;
     }
 
-    .gmail-content {
-        border-radius: 0;
+    /* Mobile search fills width */
+    .gmail-mobile-searchbar {
+        display: flex !important;
     }
 
-    /* Bottom padding for fixed nav */
-    .gmail-guide-overlay {
-        padding-bottom: 64px;
+    /* Mobile inbox scrolls full height */
+    .gmail-mobile-inbox {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding-bottom: 140px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile thread scrolls full height */
+    .gmail-mobile-thread {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding-bottom: 200px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Compose on mobile */
+    .gmail-compose {
+        width: 100% !important;
+        right: 0 !important;
+        bottom: 64px !important;
+        border-radius: 8px 8px 0 0 !important;
+        max-height: 70vh !important;
+    }
+
+    /* Mobile close button */
+    .gmail-mobile-close {
+        display: flex !important;
     }
 }

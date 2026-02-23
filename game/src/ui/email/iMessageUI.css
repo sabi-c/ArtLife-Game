@@ -288,6 +288,22 @@
     background: rgba(0, 0, 0, 0.05);
 }
 
+.imsg-chat-header-back {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: #007AFF;
+    display: none;
+    /* shown on mobile via media query */
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
 /* Messages */
 .imsg-messages {
     flex: 1;
@@ -552,9 +568,28 @@
 @media (max-width: 768px) {
     .imsg-sidebar {
         width: 100%;
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        transition: transform 0.3s ease;
+    }
+
+    .imsg-sidebar--hidden {
+        transform: translateX(-100%);
     }
 
     .imsg-chat {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+    }
+
+    .imsg-chat--hidden {
         display: none;
+    }
+
+    /* Show back button on mobile */
+    .imsg-chat-header-back {
+        display: flex !important;
     }
 }
