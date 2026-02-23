@@ -1,0 +1,162 @@
+/**
+ * EmailDesignGuide.css — Layout styles for the email component showcase
+ *
+ * Prefixed with `edg-` to avoid collisions. Dark background matching the
+ * email overlay (#0e0e14) with section cards and swatch grids.
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   Overlay Shell
+   ══════════════════════════════════════════════════════════════ */
+
+.edg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: #0e0e14;
+    overflow-y: auto;
+    animation: email-fade-in 0.4s ease-out;
+}
+
+.edg-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Header
+   ══════════════════════════════════════════════════════════════ */
+
+.edg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 48px;
+    border-bottom: 1px solid #2a2a34;
+    padding-bottom: 20px;
+}
+
+.edg-title {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #6a6a7a;
+}
+
+.edg-close {
+    background: none;
+    border: 1px solid #2a2a34;
+    color: #6a6a7a;
+    padding: 6px 18px;
+    cursor: pointer;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.edg-close:hover {
+    border-color: #6a6a7a;
+    color: #e0e0e0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Sections
+   ══════════════════════════════════════════════════════════════ */
+
+.edg-section {
+    margin-bottom: 40px;
+}
+
+.edg-section-label {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #6a6a7a;
+    margin-bottom: 16px;
+}
+
+.edg-card {
+    background: #141420;
+    border: 1px solid #2a2a34;
+    padding: 24px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Token Swatches
+   ══════════════════════════════════════════════════════════════ */
+
+.edg-swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.edg-swatch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.edg-swatch-color {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    flex-shrink: 0;
+}
+
+.edg-swatch-info {
+    min-width: 0;
+}
+
+.edg-swatch-name {
+    font-family: 'IBM Plex Mono', Courier, monospace;
+    font-size: 10px;
+    color: #e0e0e0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.edg-swatch-value {
+    font-family: 'IBM Plex Mono', Courier, monospace;
+    font-size: 9px;
+    color: #6a6a7a;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Component Showcase Helpers
+   ══════════════════════════════════════════════════════════════ */
+
+.edg-row {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.edg-inline {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.edg-note {
+    font-family: 'IBM Plex Mono', Courier, monospace;
+    font-size: 10px;
+    color: #555;
+    margin-top: 12px;
+    font-style: italic;
+}
+
+/* Provide email-overlay context so child components inherit CSS vars */
+.edg-email-context {
+    /* Inherits from .email-overlay vars via the class */
+}

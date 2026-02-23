@@ -20,6 +20,7 @@ import MarketDashboard from './ui/MarketDashboard.jsx';
 import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import BloombergTerminal from './ui/BloombergTerminal.jsx';
 import SalesGrid from './ui/SalesGrid.jsx';
+import EmailDesignGuide from './ui/email/EmailDesignGuide.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import CharacterCreator from './ui/CharacterCreator.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
@@ -52,6 +53,9 @@ export default function App() {
             } else if (e.key === 'F2') {
                 e.preventDefault();
                 setActiveOverlay(prev => prev === OVERLAY.DEBUG_LOG ? OVERLAY.NONE : OVERLAY.DEBUG_LOG);
+            } else if (e.key === 'F3') {
+                e.preventDefault();
+                setActiveOverlay(prev => prev === OVERLAY.DESIGN_GUIDE ? OVERLAY.NONE : OVERLAY.DESIGN_GUIDE);
             } else if (e.key === '`' || e.key === '~') {
                 setActiveOverlay(prev => {
                     const next = prev === OVERLAY.ADMIN ? OVERLAY.NONE : OVERLAY.ADMIN;
@@ -402,6 +406,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.DEBUG_LOG && (
                 <DiagnosticsOverlay onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.DESIGN_GUIDE && (
+                <EmailDesignGuide onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {isGridSceneActive && <MobileJoypad />}
