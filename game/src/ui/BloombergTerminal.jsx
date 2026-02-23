@@ -1,19 +1,46 @@
 /**
- * BloombergTerminal.jsx — Interactive art market trading terminal.
+ * BloombergTerminal.jsx — Multi-Style Art Market Trading Terminal
  *
- * Bloomberg v2: Full trading interface with:
- *   1. Scrolling ticker bar (headlines + recent trades + new orders)
- *   2. Artist leaderboard with heat bars and index scores
- *   3. Order Book — live NPC sell/buy orders (new)
- *   4. Market overview panel (composite index, cycle, volume)
- *   5. Price chart (sparkline per selected artist)
- *   6. Live trade feed
- *   7. Player watchlist
- *   8. Portfolio tracker with sell actions (new)
- *   9. Artwork Tearsheet modal — gallery-style detail + buy/haggle (new)
- *  10. Notification bar for watchlist alerts (new)
+ * ARCHITECTURE CONTEXT (for other agents):
+ * ┌──────────────────────────────────────────────────────────┐
+ * │  BloombergTerminal (THIS FILE)                           │
+ * │  └─ 6 VIEW STYLES, switched via SettingsManager:         │
+ * │     • bloomberg (dark) — default terminal panels          │
+ * │     • gallery   — Seventh House staggered grid (cream)    │
+ * │     • tearsheet — Gagosian paginated catalogue (white)    │
+ * │     • artnet    — Price database tabular (white+red)      │
+ * │     • sothebys  — Luxury catalogue (serif, centered)      │
+ * │     • deitch    — Underground gallery (raw, bold)          │
+ * │  └─ CSS PREFIXES: bb- (bloomberg), sh- (seventh house),   │
+ * │     ts- (tearsheet), an- (artnet), sb- (sotheby's),       │
+ * │     dt- (deitch)                                          │
+ * │  └─ PANEL SYSTEM: showPanel(name) + PanelConfigDropdown   │
+ * │     Panels: overview, leaderboard, orderbook, pricechart, │
+ * │     tradefeed, watchlist, portfolio, playerstats,          │
+ * │     collection, txhistory, networth, directory             │
+ * │  └─ DATA FLOW:                                            │
+ * │     MarketManager → prices, heat, composite index         │
+ * │     MarketSimulator → trade log, open orders, events      │
+ * │     GameState → portfolio, cash, stats, transactions       │
+ * │     useMarketStore → sparklines, price history             │
+ * │     ARTWORKS/CONTACTS → static data enrichment             │
+ * │  └─ INTEL GATING: player intel stat gates data visibility  │
+ * │     (prices at 40, exhibitions at 50, literature at 70)    │
+ * └──────────────────────────────────────────────────────────┘
  *
- * Data gated by player `intel` stat for progressive disclosure.
+ * Components (54 total):
+ *   1-9: Shared panels (TickerBar, Leaderboard, OrderBook, etc.)
+ *  10: ArtworkTearsheet modal (Gagosian detail popup)
+ *  11-14: Player panels (Stats, NetWorth, Collection, TxHistory)
+ *  14B: GalleryView (Seventh House staggered grid)
+ *  15: TearsheetView (Gagosian paginated catalogue)
+ *  15B: ArtistDetailCard (inline artist bio)
+ *  16: ArtnetView (price database table)
+ *  17: SothebysView (luxury catalogue)
+ *  18: DeitchView (underground gallery)
+ *  19: PanelConfigDropdown (show/hide panels)
+ *  Main: BloombergTerminal (router + style switcher)
+ *
  * Uses TerminalAPI.bloomberg namespace for all trading actions.
  */
 
@@ -1142,8 +1169,34 @@ function GalleryView({ intel, showPanel, feed, selectedArtist, onSelectArtist, o
 
     const allWorks = [...items, ...marketItems];
 
+    // Live market summary
+    const tickSnap = useMemo(() => {
+        try { return MarketManager.getTickSnapshot(); } catch { return null; }
+    }, [items]);
+    const composite = tickSnap?.composite || 0;
+    const cycle = tickSnap?.cycle || 'flat';
+    const collectionVal = items.reduce((s, w) => s + (w.currentVal || 0), 0);
+    const cycleProse = { bull: 'bullish', bear: 'bearish', flat: 'stable' };
+    const cycleIcon = { bull: '↑', bear: '↓', flat: '—' };
+
     return (
         <div className="gallery-body">
+            {/* ── Market Pulse Banner — editorial style ── */}
+            <div style={{
+                padding: '24px 32px', borderBottom: '1px solid #d5d0c8',
+                fontFamily: '\'Courier New\', monospace', letterSpacing: 1.5,
+                textTransform: 'uppercase', fontSize: 10, color: '#666',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                flexWrap: 'wrap', gap: 8,
+            }}>
+                <span>The market is <strong style={{ color: cycle === 'bull' ? '#2f5a2f' : cycle === 'bear' ? '#8b2020' : '#555' }}>
+                    {cycleProse[cycle] || 'stable'}
+                </strong> {cycleIcon[cycle]}</span>
+                <span>Art Index {composite.toLocaleString()}</span>
+                {collectionVal > 0 && <span>Collection {tearsheetPrice(collectionVal)}</span>}
+                <span>{allWorks.length} works</span>
+            </div>
+
             {/* Hero section — player stats + net worth */}
             <div className="gallery-hero">
                 {showPanel('playerstats') && <PlayerStatsPanel />}
@@ -1178,14 +1231,34 @@ function GalleryView({ intel, showPanel, feed, selectedArtist, onSelectArtist, o
                                         )}
                                     </div>
                                     <div className="sh-card-info">
-                                        <div className="sh-card-artist">{artistName}</div>
+                                        <div className="sh-card-artist" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {artistName}
+                                            {(() => {
+                                                const artist = MarketManager.artists?.find(a => a.name?.toUpperCase() === artistName);
+                                                if (!artist) return null;
+                                                const h = artist.heat || 0;
+                                                const dotClr = h > 60 ? '#c9a84c' : h > 30 ? '#8b7332' : '#999';
+                                                return <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotClr, display: 'inline-block', flexShrink: 0 }} title={`Heat: ${Math.round(h)}`} />;
+                                            })()}
+                                        </div>
                                         <div className="sh-card-title">
                                             <em>{title}</em>{year ? `, ${year}` : ''}
                                         </div>
                                         <div className="sh-card-medium">{medium}</div>
                                         {intel >= 40 && (
-                                            <div className="sh-card-price">
+                                            <div className="sh-card-price" style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                                                 {tearsheetPrice(work.currentVal)}
+                                                {!work._isMarket && work.purchasePrice > 0 && (() => {
+                                                    const roi = ((work.currentVal - work.purchasePrice) / work.purchasePrice * 100);
+                                                    return (
+                                                        <span style={{
+                                                            fontSize: 8, letterSpacing: 0, textTransform: 'none',
+                                                            color: roi >= 0 ? '#2f5a2f' : '#8b2020',
+                                                        }}>
+                                                            {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
                                         )}
                                         {work._isMarket && (
@@ -1321,6 +1394,52 @@ function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, o
                 <div className="ts-cover-brand">A R T L I F E</div>
             </div>
 
+            {/* ── Market Context Page ── */}
+            {(() => {
+                let snap = null;
+                try { snap = MarketManager.getTickSnapshot(); } catch { }
+                const mCycle = snap?.cycle || 'flat';
+                const mComp = snap?.composite || 0;
+                const mSectors = snap?.sectors || {};
+                const cycleProse = { bull: 'bullish, with strong collector demand', bear: 'bearish, with cautious buying', flat: 'stable, with steady trading' };
+                const artistsInCollection = [...new Set(items.map(w => w.artistId || w._artist?.id).filter(Boolean))];
+                const artistSnaps = (snap?.artists || []).filter(a => artistsInCollection.includes(a.id));
+                return (
+                    <div className="ts-page ts-text-page">
+                        <div className="ts-text-body">
+                            <p style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>Market Conditions</p>
+                            <p>
+                                The art market is currently {cycleProse[mCycle] || 'stable'}.
+                                The ArtLife Composite Index stands at <strong>{mComp.toLocaleString()}</strong>,
+                                tracking {snap?.artists?.length || 0} artists across {Object.keys(mSectors).length} market tiers.
+                            </p>
+                            {Object.keys(mSectors).length > 0 && (
+                                <p>
+                                    Sector performance:
+                                    {Object.entries(mSectors).map(([tier, d]) =>
+                                        ` ${tier.replace('-', ' ')} (${d.index})`
+                                    ).join(' · ')}.
+                                </p>
+                            )}
+                            {artistSnaps.length > 0 && (
+                                <>
+                                    <p style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginTop: 24, marginBottom: 8 }}>Artists in this Presentation</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {artistSnaps.map(a => (
+                                            <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                                                <span style={{ fontWeight: 'bold' }}>{a.name}</span>
+                                                <span style={{ color: '#666' }}>Index {a.index} · Heat {a.heat} · {a.tier}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="ts-page-brand">G A G O S I A N</div>
+                    </div>
+                );
+            })()}
+
             {/* Intro text page */}
             <div className="ts-page ts-text-page">
                 <div className="ts-text-body">
@@ -1412,8 +1531,11 @@ function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, o
 
                             {/* Artist + metadata block */}
                             <div className="ts-info-body">
-                                <div className="ts-info-artist">
-                                    <strong>{artistName}</strong>{lifespan ? ` (${lifespan})` : ''}
+                                <div className="ts-info-artist" style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                    <span><strong>{artistName}</strong>{lifespan ? ` (${lifespan})` : ''}</span>
+                                    {work._artist && (work._artist.heat || 0) > 0 && (
+                                        <span style={{ fontSize: 8, color: '#999' }}>Heat {Math.round(work._artist.heat)}</span>
+                                    )}
                                 </div>
                                 <div className="ts-info-title-line">
                                     <em>{title}</em>{year ? `, ${year}` : ''}
@@ -1760,12 +1882,49 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
 
     const [showSaleStats, setShowSaleStats] = useState(false);
 
+    // Live market data for pulse header
+    const tickSnap = useMemo(() => {
+        try { return MarketManager.getTickSnapshot(); } catch { return null; }
+    }, [allItems]);
+    const composite = tickSnap?.composite || 0;
+    const cycle = tickSnap?.cycle || 'flat';
+    const sectors = tickSnap?.sectors || {};
+    const cycleLabel = { bull: '📈 BULL', bear: '📉 BEAR', flat: '📊 FLAT' };
+    const cycleClr = { bull: '#2f7a3b', bear: '#b91c1c', flat: '#555' };
+    const sectorClr = { 'blue-chip': '#8b7332', hot: '#b91c1c', 'mid-career': '#1d4ed8', emerging: '#15803d' };
+
     return (
         <div className="an-view">
             {/* Red header bar */}
             <div className="an-header-bar">
                 <span className="an-header-title">ARTLIFE PRICE DATABASE</span>
                 <span className="an-header-sub">Week {week} · {city}</span>
+            </div>
+
+            {/* ── Market Pulse Strip ── */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: '6px 16px',
+                background: '#f8f7f5', borderBottom: '1px solid #e5e5e5',
+                fontFamily: '\'Helvetica Neue\', Arial, sans-serif', fontSize: 11, color: '#333',
+                flexWrap: 'wrap',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 9, color: '#999', textTransform: 'uppercase', letterSpacing: 1 }}>Art Index</span>
+                    <span style={{ fontSize: 16, fontWeight: 'bold', color: '#111' }}>{composite.toLocaleString()}</span>
+                    {tickSnap && <MiniSparkline data={tickSnap.artists?.map(a => a.index) || []} width={50} height={14} color="#cc0000" />}
+                </div>
+                <span style={{
+                    fontSize: 9, padding: '2px 8px', borderRadius: 2, fontWeight: 'bold',
+                    background: `${cycleClr[cycle]}11`, color: cycleClr[cycle], letterSpacing: 0.5,
+                }}>{cycleLabel[cycle] || 'FLAT'}</span>
+                {Object.entries(sectors).map(([tier, data]) => (
+                    <span key={tier} style={{ fontSize: 9, color: sectorClr[tier] || '#666' }}>
+                        {tier.replace('-', ' ').split(' ').map(w => w[0]?.toUpperCase()).join('')} {data.index}
+                    </span>
+                ))}
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: '#bbb' }}>
+                    {tradeLog.length} trades · Vol ${fmtNum(totalTradeVolume)}
+                </span>
             </div>
 
             {/* Search bar — artnet-style */}
@@ -1879,6 +2038,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                             <th className="an-th" onClick={() => toggleSort('artist')}>Artist{SortIcon({ k: 'artist' })}</th>
                             <th className="an-th" onClick={() => toggleSort('title')}>Title{SortIcon({ k: 'title' })}</th>
                             <th className="an-th">Medium</th>
+                            <th className="an-th" style={{ width: 50 }}>Heat</th>
                             <th className="an-th">Estimate</th>
                             <th className="an-th" onClick={() => toggleSort('price')}>Price{SortIcon({ k: 'price' })}</th>
                             <th className="an-th">Status</th>
@@ -1919,6 +2079,26 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                         {work.yearCreated ? `, ${work.yearCreated}` : ''}
                                     </td>
                                     <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
+                                    <td className="an-td" style={{ padding: '4px 6px' }}>
+                                        {work._artist && (() => {
+                                            const h = work._artist.heat || 0;
+                                            const tier = work._artist.tier || 'emerging';
+                                            const tClr = { 'blue-chip': '#8b7332', hot: '#cc0000', 'mid-career': '#1d4ed8', emerging: '#15803d' };
+                                            return (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <div style={{
+                                                        width: 32, height: 4, background: '#eee', borderRadius: 2, overflow: 'hidden',
+                                                    }}>
+                                                        <div style={{
+                                                            width: `${Math.min(h, 100)}%`, height: '100%',
+                                                            background: tClr[tier] || '#999', borderRadius: 2,
+                                                        }} />
+                                                    </div>
+                                                    <span style={{ fontSize: 8, color: '#999' }}>{Math.round(h)}</span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
                                     <td className="an-td an-estimate">
                                         ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
                                     </td>
@@ -2632,10 +2812,10 @@ export default function BloombergTerminal({ onClose }) {
     const intelGateMsg = intel < 20
         ? 'LOW INTEL — Most market data obscured. Increase your intel stat to reveal more.'
         : intel < 40
-        ? 'LIMITED INTEL — Prices rounded. Increase intel for precise data.'
-        : intel < 60
-        ? 'MODERATE INTEL — Trade parties hidden. Intel 60+ reveals identities.'
-        : null;
+            ? 'LIMITED INTEL — Prices rounded. Increase intel for precise data.'
+            : intel < 60
+                ? 'MODERATE INTEL — Trade parties hidden. Intel 60+ reveals identities.'
+                : null;
 
     return (
         <div className={`bb-overlay${isGallery ? ' bb-gallery' : ''}${isTearsheet ? ' bb-tearsheet-mode' : ''}${isArtnet ? ' bb-artnet' : ''}${isSothebys ? ' bb-sothebys' : ''}${isDeitch ? ' bb-deitch' : ''}`}>
@@ -2645,12 +2825,12 @@ export default function BloombergTerminal({ onClose }) {
                     {(isGallery || isTearsheet)
                         ? <span className="bb-logo">A R T L I F E</span>
                         : isArtnet
-                        ? <span className="bb-logo">artlife</span>
-                        : isSothebys
-                        ? <span className="bb-logo">ARTLIFE</span>
-                        : isDeitch
-                        ? <span className="bb-logo">DEITCH</span>
-                        : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
+                            ? <span className="bb-logo">artlife</span>
+                            : isSothebys
+                                ? <span className="bb-logo">ARTLIFE</span>
+                                : isDeitch
+                                    ? <span className="bb-logo">DEITCH</span>
+                                    : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
                     }
                 </div>
                 <div className="bb-header-right">
