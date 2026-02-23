@@ -19,6 +19,7 @@ import MarketSimDashboard from './cms/MarketSimDashboard.jsx';
 import ArtTerminal from './cms/ArtTerminal.jsx';
 import ActivityLogViewer from './cms/ActivityLogViewer.jsx';
 import DataHub from './cms/DataHub.jsx';
+import EngineOverview from './cms/EngineOverview.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board', dirtyDomain: 'kanban' },
@@ -33,6 +34,7 @@ const TABS = [
     { id: 'venues', icon: '🏢', label: 'Venues / Map', dirtyDomain: 'maps' },
     { id: 'actlog', icon: '📋', label: 'Activity Log' },
     { id: 'ingest', icon: '📦', label: 'Data Hub' },
+    { id: 'engines', icon: '⚙️', label: 'Engines' },
 ];
 
 export default function MasterCMS({ onClose }) {
@@ -172,6 +174,7 @@ export default function MasterCMS({ onClose }) {
             case 'actlog': return <ActivityLogViewer />;
             case 'venues': return <VenueEditor />;
             case 'ingest': return <DataHub />;
+            case 'engines': return <EngineOverview />;
             default: return null;
         }
     };
