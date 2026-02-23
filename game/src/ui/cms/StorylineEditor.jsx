@@ -34,6 +34,33 @@ export default function StorylineEditor() {
 
     const selected = storylines.find(s => s.id === selectedId);
 
+    // ── Event existence map ──
+    const eventExistsMap = useMemo(() => {
+        const events = EventRegistry.jsonEvents || [];
+        const map = {};
+        for (const sl of storylines) {
+            for (const step of (sl.steps || [])) {
+                if (step.eventId && !(step.eventId in map)) {
+                    const found = events.find(e => e.id === step.eventId);
+                    map[step.eventId] = found ? { exists: true, title: found.title || step.eventId, choiceCount: (found.steps || []).filter(s => s.type === 'choice').length } : { exists: false };
+                }
+            }
+        }
+        return map;
+    }, [storylines]);
+
+    const healthSummary = useMemo(() => {
+        let total = 0, existing = 0, missing = 0;
+        for (const sl of storylines) {
+            for (const step of (sl.steps || [])) {
+                total++;
+                const info = eventExistsMap[step.eventId];
+                if (info?.exists) existing++; else missing++;
+            }
+        }
+        return { total, existing, missing };
+    }, [storylines, eventExistsMap]);
+
     const showNotif = (msg) => {
         setNotification(msg);
         setTimeout(() => setNotification(null), 3000);
@@ -172,9 +199,14 @@ export default function StorylineEditor() {
                 padding: '10px 20px', background: '#111', borderBottom: '1px solid #333',
                 fontSize: 12, color: '#c9a84c'
             }}>
-                <div>
-                    <strong>{storylines.length} chains</strong> · {storeStatus.totalActive} active · {storeStatus.totalCompleted} completed
-                    {notification && <span style={{ color: '#4caf50', marginLeft: 16 }}>{notification}</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <strong>{storylines.length} chains</strong>
+                    <span style={{ color: '#4caf50' }}>● {storeStatus.totalActive} active</span>
+                    <span style={{ color: '#666' }}>● {storeStatus.totalCompleted} completed</span>
+                    <span style={{ color: healthSummary.missing > 0 ? '#f87171' : '#4caf50', fontSize: 10, padding: '2px 8px', border: `1px solid ${healthSummary.missing > 0 ? '#f87171' : '#4caf50'}`, borderRadius: 3 }}>
+                        {healthSummary.missing > 0 ? `⚠️ ${healthSummary.missing} missing events` : `✅ ${healthSummary.existing}/${healthSummary.total} events linked`}
+                    </span>
+                    {notification && <span style={{ color: '#4caf50' }}>{notification}</span>}
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button onClick={handleDownload} style={btnStyle}>📥 Export JSON</button>
@@ -192,6 +224,11 @@ export default function StorylineEditor() {
                     {storylines.map((sl) => {
                         const isActive = storeStatus.active.some(a => a.id === sl.id);
                         const isCompleted = storeStatus.completed.includes(sl.id);
+                        const activeEntry = storeStatus.active.find(a => a.id === sl.id);
+                        const stepsOk = (sl.steps || []).filter(s => eventExistsMap[s.eventId]?.exists).length;
+                        const stepsTotal = (sl.steps || []).length;
+                        const allOk = stepsOk === stepsTotal;
+                        const progress = activeEntry ? ((activeEntry.currentStep + 1) / stepsTotal) * 100 : 0;
                         return (
                             <div key={sl.id}
                                 onClick={() => { setSelectedId(sl.id); setEditingStep(null); }}
@@ -203,14 +240,24 @@ export default function StorylineEditor() {
                                     borderLeft: selectedId === sl.id ? '3px solid #c9a84c' : '3px solid transparent',
                                     transition: 'all 0.15s',
                                 }}>
-                                <div style={{ fontWeight: 'bold', color: '#fff' }}>
+                                <div style={{ fontWeight: 'bold', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
                                     {sl.title}
-                                    {isActive && <span style={{ color: '#4caf50', marginLeft: 8, fontSize: 10 }}>[ACTIVE]</span>}
-                                    {isCompleted && <span style={{ color: '#666', marginLeft: 8, fontSize: 10 }}>[DONE]</span>}
+                                    {isActive && <span style={{ color: '#4caf50', fontSize: 10, padding: '1px 4px', background: 'rgba(76,175,80,0.15)', borderRadius: 3 }}>ACTIVE</span>}
+                                    {isCompleted && <span style={{ color: '#666', fontSize: 10, padding: '1px 4px', background: 'rgba(100,100,100,0.15)', borderRadius: 3 }}>DONE</span>}
                                 </div>
-                                <div style={{ fontSize: 10, color: '#888', marginTop: 4 }}>
-                                    NPC: {sl.npcId || 'None'} · {sl.steps.length} steps
+                                <div style={{ fontSize: 10, color: '#888', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span>{sl.npcId || 'None'}</span>
+                                    <span>·</span>
+                                    <span style={{ color: allOk ? '#4caf50' : '#f87171' }}>
+                                        {allOk ? '✅' : '⚠️'} {stepsOk}/{stepsTotal} events
+                                    </span>
                                 </div>
+                                {/* Progress bar for active storylines */}
+                                {isActive && (
+                                    <div style={{ marginTop: 6, height: 3, background: '#222', borderRadius: 2 }}>
+                                        <div style={{ width: `${progress}%`, height: '100%', background: '#c9a84c', borderRadius: 2, transition: 'width 0.3s' }} />
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -430,29 +477,37 @@ const TriggerNode = ({ data }) => {
 };
 
 const StoryStepNode = ({ data }) => {
-    const { step, isCurrent, isPast, isSelected, eventTitle, availableEvents, onLinkEvent } = data;
-    const borderColor = isCurrent ? '#4caf50' : isPast ? '#666' : '#c9a84c';
+    const { step, isCurrent, isPast, isSelected, eventTitle, eventExists, choiceCount, availableEvents, onLinkEvent } = data;
+    const missing = eventExists === false;
+    const borderColor = missing ? '#f87171' : isCurrent ? '#4caf50' : isPast ? '#666' : '#c9a84c';
     return (
         <div style={{
             width: 220, padding: '10px 14px',
             border: `${isSelected ? 'solid' : 'dashed'} 1px ${borderColor}`,
-            background: '#1a1a2e',
+            background: missing ? 'rgba(248,113,113,0.05)' : '#1a1a2e',
             opacity: isPast ? 0.5 : 1,
             boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.2)' : '0 4px 6px rgba(0,0,0,0.3)',
             borderRadius: 4,
             display: 'flex', flexDirection: 'column'
         }}>
             <Handle type="target" position={Position.Top} style={{ background: '#555' }} />
-            <div style={{ fontWeight: 'bold', color: '#fff', fontSize: 12 }}>
-                {isCurrent && '▶ '}{step.eventId}
+            <div style={{ fontWeight: 'bold', color: missing ? '#f87171' : '#fff', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {isCurrent && '▶ '}{missing && '⚠️ '}{step.eventId}
             </div>
-            {eventTitle && eventTitle !== step.eventId && (
+            {missing && (
+                <div style={{ fontSize: 9, color: '#f87171', marginTop: 2, fontWeight: 'bold' }}>
+                    EVENT NOT FOUND
+                </div>
+            )}
+            {eventTitle && eventTitle !== step.eventId && !missing && (
                 <div style={{ fontSize: 10, color: '#88bbdd', marginTop: 2, fontStyle: 'italic' }}>
                     “{eventTitle}”
+                    {choiceCount > 0 && <span style={{ color: '#666', marginLeft: 4 }}>({choiceCount} choices)</span>}
                 </div>
             )}
             <div style={{ fontSize: 10, color: '#aaa', marginTop: 4 }}>
                 Delay: {step.delayWeeks || 0}w
+                {step.description && <div style={{ color: '#777', marginTop: 2, fontStyle: 'italic' }}>{step.description}</div>}
                 {Object.keys(step.requirements || {}).length > 0 && (
                     <div style={{ color: '#88bbdd', marginTop: 2 }}>Req: {Object.entries(step.requirements).map(([k, v]) => `${k}≥${v}`).join(', ')}</div>
                 )}
@@ -536,6 +591,8 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
                     step, isCurrent, isPast,
                     isSelected: editingStepIdx === idx,
                     eventTitle: eventDef?.title || null,
+                    eventExists: !!eventDef,
+                    choiceCount: eventDef ? (eventDef.steps || []).filter(s => s.type === 'choice').length : 0,
                     availableEvents: editingStepIdx === idx ? availableEvents : null,
                     onLinkEvent: (newId) => handleLinkEvent(idx, newId),
                 },

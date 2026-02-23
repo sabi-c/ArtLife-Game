@@ -162,7 +162,7 @@
         "steps": [
             {
                 "type": "narrative",
-                "text": "A headline in ArtNews: \"Chelsea Forgery Ring Busted — Six Galleries Under Investigation.\" Your phone won't stop ringing.",
+                "text": "A headline in ArtNews: \"Chelsea Forgery Ring Busted \u2014 Six Galleries Under Investigation.\" Your phone won't stop ringing.",
                 "characterId": "narrator"
             },
             {
@@ -321,7 +321,7 @@
         "steps": [
             {
                 "type": "narrative",
-                "text": "It happens overnight. Vandermeer dumps his entire position — 15 works — through three different auction houses simultaneously.",
+                "text": "It happens overnight. Vandermeer dumps his entire position \u2014 15 works \u2014 through three different auction houses simultaneously.",
                 "characterId": "narrator"
             },
             {
@@ -379,7 +379,7 @@
             {
                 "type": "dialogue",
                 "speaker": "Elena Ross",
-                "text": "A stunning abstract by Kai Renard — fresh from Basel. Chromatic Drift. The colors are extraordinary in person."
+                "text": "A stunning abstract by Kai Renard \u2014 fresh from Basel. Chromatic Drift. The colors are extraordinary in person."
             },
             {
                 "type": "choice",
@@ -449,7 +449,7 @@
                     },
                     {
                         "label": "\"Interesting. Tell me more about the artist.\"",
-                        "outcome": "You file away the name for later research. Suki Tanaka — one to watch.",
+                        "outcome": "You file away the name for later research. Suki Tanaka \u2014 one to watch.",
                         "statChange": {
                             "intel": 2
                         }
@@ -502,6 +502,839 @@
                         }
                     }
                 ]
+            }
+        ]
+    },
+    {
+        "id": "event_philippe_rivalry_1",
+        "category": "storyline",
+        "title": "Outbid at Sotheby's",
+        "requirements": {
+            "reputation": 8
+        },
+        "npcId": "philippe_noir",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "The auction at Sotheby's Contemporary Evening Sale is electric. Lot 47 \u2014 a Franz Kline study \u2014 is the one you've been tracking for months.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "You raise your paddle at $85,000. Silence. Then, from across the room, Philippe Noir raises his without even looking at the lot. $90,000. His eyes find yours. He smiles.",
+                "characterId": "philippe_noir"
+            },
+            {
+                "type": "choice",
+                "text": "The room watches. The auctioneer's gavel hovers.",
+                "choices": [
+                    {
+                        "label": "Bid $100,000. Don't let him win.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "audacity": 3,
+                            "cash": -100000
+                        },
+                        "requires": {
+                            "cash": 100000
+                        }
+                    },
+                    {
+                        "label": "Let it go. Save your powder for a bigger fight.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "reputation": -2
+                        }
+                    },
+                    {
+                        "label": "Catch his eye and nod. Acknowledge the better play.",
+                        "nextStep": 5,
+                        "statChange": {
+                            "intel": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe's smile falters for a fraction of a second. He doesn't counter. The Kline is yours at $100,000. But he leans over to his companion and whispers something. You've made your first move.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe takes the lot at $90,000. He waves the catalogue at you from across the room like a victory flag. Whispers ripple through the crowd. You've been publicly outmaneuvered.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe looks surprised, then nods back \u2014 a rare gesture of respect. \"Smart,\" he mouths. After the auction, his assistant slips you a card. \"Drinks? \u2014 PN\"",
+                "characterId": "philippe_noir",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_philippe_rivalry_2",
+        "category": "storyline",
+        "title": "The Rothko Fragment",
+        "requirements": {
+            "reputation": 15
+        },
+        "npcId": "philippe_noir",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Word reaches you through an intermediary: a private collection in Geneva is quietly deaccessioning a rare Mark Rothko study on paper. Only two people have been contacted \u2014 you, and Philippe Noir.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "The asking price is $350,000 \u2014 a fraction of what it would fetch at auction. But only one buyer gets it. The seller wants discretion, and the first to wire gets the piece.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "choice",
+                "text": "Time is critical. Philippe probably already knows.",
+                "choices": [
+                    {
+                        "label": "Wire immediately. Speed beats strategy.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "audacity": 5,
+                            "taste": 3
+                        },
+                        "requires": {
+                            "cash": 350000
+                        }
+                    },
+                    {
+                        "label": "Call the seller and negotiate 10% lower. Risk losing it.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 3
+                        }
+                    },
+                    {
+                        "label": "Propose a joint acquisition with Philippe. Split ownership.",
+                        "nextStep": 5,
+                        "statChange": {
+                            "reputation": 3
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "You wire at 7:14 AM. Philippe wires at 7:22 AM. Eight minutes. The Rothko is yours. Philippe sends you one text: \"Next time.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "While you negotiate, Philippe wires asking price. The seller apologizes. You learn that in the art world, hesitation is more expensive than overpaying.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe is intrigued. \"Interesting. A collector who understands game theory.\" You agree to co-own, trading exhibition rights annually. The rivalry takes on a new, more complex shape.",
+                "characterId": "philippe_noir",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_philippe_rivalry_climax",
+        "category": "storyline",
+        "title": "Art Basel: The Reckoning",
+        "requirements": {
+            "reputation": 25
+        },
+        "npcId": "philippe_noir",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Art Basel Miami Beach. The fair that separates the serious from the spectators. Both you and Philippe Noir have been invited to the Collector's Lounge \u2014 a VIP-only space where the real deals happen.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe approaches. No preamble. \"I have a proposal. One of Yuki Tanaka's early triptychs has surfaced. The gallery is offering it privately \u2014 but they want a single buyer. They asked us both. Only one walks away with it.\"",
+                "characterId": "philippe_noir"
+            },
+            {
+                "type": "choice",
+                "text": "Philippe extends his hand. \"May the better collector win.\"",
+                "choices": [
+                    {
+                        "label": "\"Game on, Philippe.\" Shake and compete head-to-head.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "reputation": 10,
+                            "audacity": 5
+                        }
+                    },
+                    {
+                        "label": "\"I've got nothing to prove to you.\" Walk away.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "reputation": -5
+                        }
+                    },
+                    {
+                        "label": "\"What if we stop competing and start collaborating?\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "reputation": 8,
+                            "intel": 5
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "The head-to-head negotiation lasts three hours. In the end, the gallery chooses you \u2014 not based on money, but on your vision for the work. Philippe slow-claps, genuinely impressed. \"You've earned it.\" The rivalry reaches its peak, and somehow, it might become something else entirely.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe watches you leave and shakes his head. \"Disappointing.\" Word gets around Basel that you couldn't handle the pressure. The triptych goes to Philippe. The art world takes note.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Philippe stares at you for a long moment. Then he laughs \u2014 a real, genuine laugh. \"You know what? I like you.\" You propose a joint collection fund. By the end of Basel, the two of you have acquired three works together. The rivalry evolves into the most formidable partnership in contemporary collecting.",
+                "characterId": "philippe_noir",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_kwame_commission_1",
+        "category": "storyline",
+        "title": "The Commission Revealed",
+        "requirements": {},
+        "npcId": "kwame_asante",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Kwame Asante calls you to his studio. The video call connects and you see it behind him \u2014 your commission. It's larger than you expected.",
+                "characterId": "kwame_asante"
+            },
+            {
+                "type": "narrative",
+                "text": "\"I used earth pigments from my mother's village for the base layer. Then gold leaf, then acrylic. It's called 'Homecoming.' It's about the tension between where you're from and where you end up.\" He pauses. \"I think you'll understand.\"",
+                "characterId": "kwame_asante"
+            },
+            {
+                "type": "choice",
+                "text": "The piece is extraordinary \u2014 museum-quality work at the commission price you agreed on.",
+                "choices": [
+                    {
+                        "label": "\"It's magnificent, Kwame. When can I see it in person?\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "taste": 5,
+                            "reputation": 3
+                        }
+                    },
+                    {
+                        "label": "\"This is worth ten times what we agreed. Let me pay you more.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "reputation": 5,
+                            "cash": -15000
+                        },
+                        "requires": {
+                            "cash": 15000
+                        }
+                    },
+                    {
+                        "label": "\"Could we sell this at auction? The market is ready for you.\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "audacity": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Kwame smiles warmly. \"Come to Accra. See it on the wall. And while you're here, my friend Nana runs a gallery in Lagos. She's been asking about collectors with genuine eye.\" A new door opens.",
+                "characterId": "kwame_asante",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Kwame is stunned. \"You don't have to do that.\" But you insist. His voice cracks slightly. \"I've never had a patron like you. My whole career, it's been fighting for every bit.\" From that day, Kwame considers you family.",
+                "characterId": "kwame_asante",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Kwame's expression cools. \"I made this for you, not for an auction house. If you flip my work, we're done.\" The lesson is clear: in some corners of the art world, relationships matter more than returns.",
+                "characterId": "kwame_asante",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_kwame_commission_2",
+        "category": "storyline",
+        "title": "The Lagos Exhibition",
+        "requirements": {
+            "reputation": 10
+        },
+        "npcId": "kwame_asante",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Nana Osei-Mensah, director of the Yemisi Shyllon Museum of Art in Lagos, contacts you directly. \"Kwame spoke highly of you. We're mounting a major show of West African contemporary \u2014 and we'd like to exhibit your Homecoming piece.\"",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "\"In exchange, we can offer institutional validation \u2014 a catalogue entry, provenance documentation, and exhibition history that would significantly increase the work's value. But we need it for three months.\"",
+                "characterId": "narrator"
+            },
+            {
+                "type": "choice",
+                "text": "Lending your prized commission to a museum in Lagos. It's a risk \u2014 but it's also a statement.",
+                "choices": [
+                    {
+                        "label": "\"Absolutely. Art belongs where it can be seen.\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "reputation": 8,
+                            "taste": 3
+                        }
+                    },
+                    {
+                        "label": "\"Only if I get first refusal on any Asante works they deaccession.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 3,
+                            "audacity": 2
+                        }
+                    },
+                    {
+                        "label": "\"I'm not comfortable with the logistics. Too risky.\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "reputation": -3
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "The exhibition is a sensation. Your name appears in the catalogue alongside collectors from the Tate and MoMA. Three African art fairs invite you as a VIP. Kwame texts you a photo of your piece on the museum wall: \"This is what it was made for.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Nana considers your request, then agrees. Over the next year, she quietly offers you two early Asante works before they hit the market. Your African contemporary collection becomes one of the most respected private holdings outside the continent.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Kwame hears about your refusal and is silent for weeks. When he finally calls, he says only: \"I thought you were different.\" The Lagos door closes. Some opportunities don't come twice.",
+                "characterId": "kwame_asante",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_lorenzo_network_1",
+        "category": "storyline",
+        "title": "The VIP Dinner",
+        "requirements": {
+            "reputation": 12
+        },
+        "npcId": "lorenzo_gallo",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Lorenzo Gallo's car arrives at 8 PM. Black Mercedes. No small talk from the driver. You're taken to a private restaurant on the Upper East Side with no signage \u2014 just a brass number above the door.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "Three people are already seated: a Swiss hedge fund manager who collects Richter, a Hong Kong shipping heiress with the largest private Basquiat collection in Asia, and a retired Silicon Valley CEO who donated his entire collection to SFMOMA last year.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "Lorenzo introduces you simply: \"My newest discovery.\" The table goes quiet. They're assessing you.",
+                "characterId": "lorenzo_gallo"
+            },
+            {
+                "type": "choice",
+                "text": "The conversation turns to you. \"So tell us \u2014 what's your thesis?\"",
+                "choices": [
+                    {
+                        "label": "\"I invest in artists, not assets. Relationships first, returns second.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "reputation": 5,
+                            "taste": 3
+                        }
+                    },
+                    {
+                        "label": "\"I find undervalued talent before the market catches up. Pure alpha.\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "audacity": 3,
+                            "intel": 2
+                        }
+                    },
+                    {
+                        "label": "\"I'm still figuring it out. That's why I'm at this table.\"",
+                        "nextStep": 6,
+                        "statChange": {
+                            "reputation": 3
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "The shipping heiress puts down her wine glass. \"I like this one,\" she says to Lorenzo. By dessert, she's offering you a private viewing of her Hong Kong collection. The Swiss banker slips you his card. \"If you ever need capital, call me first.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "The CEO nods appreciatively. \"Finally, someone who speaks my language.\" He offers to connect you with three emerging galleries in LA that he's been quietly backing. Lorenzo looks pleased.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "The table relaxes. \"Refreshingly honest,\" the heiress says. Lorenzo squeezes your shoulder. \"This is why I brought you. Everyone else here pretends to have all the answers.\" The evening becomes warmer, more personal. Real connections form.",
+                "characterId": "lorenzo_gallo",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_lorenzo_network_2",
+        "category": "storyline",
+        "title": "The Private Offering",
+        "requirements": {
+            "reputation": 18,
+            "cash": 100000
+        },
+        "npcId": "lorenzo_gallo",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Lorenzo calls at midnight. \"I have something. Once in a decade. A complete set of Zao Wou-Ki's 'Untitled' lithographs from 1971. The family is selling privately. No auction houses, no publicity.\"",
+                "characterId": "lorenzo_gallo"
+            },
+            {
+                "type": "narrative",
+                "text": "\"The price is $280,000 for the set. At auction, they'd fetch $500,000 minimum. But the family wants a collector, not a speculator. I told them about you.\"",
+                "characterId": "lorenzo_gallo"
+            },
+            {
+                "type": "choice",
+                "text": "Lorenzo's voice is serious. \"This is the kind of deal that defines a collection. What do you say?\"",
+                "choices": [
+                    {
+                        "label": "\"Wire it tonight. I trust you, Lorenzo.\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "taste": 8,
+                            "reputation": 5,
+                            "cash": -280000
+                        },
+                        "requires": {
+                            "cash": 280000
+                        }
+                    },
+                    {
+                        "label": "\"I want to see them first. Can we arrange a viewing?\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 3
+                        }
+                    },
+                    {
+                        "label": "\"I can't move that much capital right now. Can you hold it?\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "reputation": -2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Two weeks later, a wooden crate arrives at your door. Inside: nine lithographs, each more luminous than the last. Lorenzo texts: \"Welcome to the inner circle. This is just the beginning.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Lorenzo arranges a private viewing in Paris. The lithographs are breathtaking in person. You negotiate $260,000 and shake hands with the family. They invite you to their villa in Provence. \"Collectors of this caliber are rare,\" the patriarch says.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Lorenzo sighs. \"I understand. But the family won't wait. I'll offer it to Philippe Noir instead.\" A week later, you see the lithographs in Philippe's Instagram story. The sting lingers for months.",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_marcus_lesson_1",
+        "category": "storyline",
+        "title": "Reading the Room at Christie's",
+        "requirements": {},
+        "npcId": "marcus_price",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Marcus Price meets you in the lobby of Christie's thirty minutes before a Contemporary Art auction. He's wearing a perfectly tailored charcoal suit and an expression of supreme calm.",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "narrative",
+                "text": "\"Lesson one: the auction isn't about the art. It's about the room. Watch the paddles, not the lots. See that woman in row three? She bids on everything but buys nothing \u2014 she's scouting for someone else. The man on the phone in the back? That's where the real money is.\"",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "choice",
+                "text": "Marcus points to lot 12 \u2014 a small Agnes Martin drawing. \"This one is going to go for double the estimate. Can you tell me why?\"",
+                "choices": [
+                    {
+                        "label": "\"Because the two phone bidders are from different regions \u2014 cross-border competition.\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "intel": 5,
+                            "taste": 2
+                        }
+                    },
+                    {
+                        "label": "\"The estate is de-cataloguing. Scarcity will drive price.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 3
+                        }
+                    },
+                    {
+                        "label": "\"Honestly? I have no idea.\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "intel": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus smiles. \"Exactly right. When you see two international phone bidders on a small lot, there's a principal behind each one who wants it badly. That's your signal to either ride their wave or stay out.\" The lot hammers at 3x estimate. You were right.",
+                "characterId": "marcus_price",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "\"Good instinct, but that's not it today. Look at the condition report \u2014 this one has been stored improperly. The smart money knows that and is bidding anyway. Why? Because they want the provenance, not the paper.\" Marcus taps his temple. \"Always ask who owned it before.\"",
+                "characterId": "marcus_price",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus laughs warmly. \"Good. Honesty is the most valuable currency in this room. Half the people here pretend to understand what they're bidding on.\" He walks you through the room, explaining every signal. By the end, you see the auction differently.",
+                "characterId": "marcus_price",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_marcus_lesson_2",
+        "category": "storyline",
+        "title": "The Psychology of the Seller",
+        "requirements": {
+            "intel": 5
+        },
+        "npcId": "marcus_price",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Marcus takes you to a cramped office above a gallery in Chelsea. On the wall: a stunning de Kooning drawing. \"The gallery owner is selling this privately. Financial trouble. Watch and learn.\"",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "narrative",
+                "text": "The gallery owner, a nervous man named Gerald, starts high: $180,000. Marcus doesn't flinch. He asks about Gerald's upcoming exhibitions, his artists, his lease. Small talk. Gerald relaxes. Twenty minutes pass before Marcus mentions the drawing.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "\"The framing is wrong for a de Kooning of this period,\" Marcus says casually. \"And the provenance has a gap between 1987 and 2003. That matters to institutional buyers.\" Gerald's face changes. Marcus turns to you.",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "choice",
+                "text": "\"What do you think this is worth?\" Marcus asks you, in front of Gerald.",
+                "choices": [
+                    {
+                        "label": "\"The provenance gap is a risk. I'd say $120,000 is fair.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 3,
+                            "audacity": 2
+                        }
+                    },
+                    {
+                        "label": "\"It's a beautiful piece regardless. $150,000 respects both sides.\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "reputation": 3,
+                            "taste": 2
+                        }
+                    },
+                    {
+                        "label": "\"I'm not comfortable putting Gerald on the spot like this.\"",
+                        "nextStep": 6,
+                        "statChange": {
+                            "reputation": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus nods approvingly. They settle at $125,000. Outside, Marcus says: \"You identified the leverage without being cruel. That's the difference between a shark and a dealer. A shark takes. A dealer creates value for both sides.\"",
+                "characterId": "marcus_price",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Gerald looks relieved. They agree on $148,000. Outside, Marcus is thoughtful: \"Generosity in negotiation isn't weakness. Gerald will remember you. Next time he has something special, you'll be the first call.\"",
+                "characterId": "marcus_price",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus looks at you hard. Then he nods. \"Empathy is a tool too. Just don't let it make you blind to the numbers.\" Gerald thanks you quietly as you leave. Marcus buys the drawing himself at $130,000 \u2014 and notes that you passed the real test.",
+                "characterId": "marcus_price",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_marcus_final",
+        "category": "storyline",
+        "title": "Solo Deal: Sink or Swim",
+        "requirements": {
+            "intel": 8,
+            "reputation": 15
+        },
+        "npcId": "marcus_price",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Marcus sends you a text at 6 AM: \"There's a collection in Connecticut. Estate of a late publisher. The family wants $500K for the lot \u2014 40 works, mostly postwar American. I've seen photos. There's gold in there. This one is yours. I'll be watching.\"",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "narrative",
+                "text": "You drive to Greenwich alone. The house is a colonial with peeling paint. Inside, the walls are covered floor to ceiling. A small Twombly drawing. Two Diebenkorn prints. A possible Frankenthaler watercolor. And thirty-five works by unknown artists.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "choice",
+                "text": "The family's lawyer is waiting. $500,000 for the entire lot, take it or leave it.",
+                "choices": [
+                    {
+                        "label": "Take the whole lot at $500K. The Twombly alone could be worth half.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "audacity": 8,
+                            "taste": 5,
+                            "cash": -500000
+                        },
+                        "requires": {
+                            "cash": 500000
+                        }
+                    },
+                    {
+                        "label": "Counter at $350K and explain your valuation piece by piece.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "intel": 5,
+                            "reputation": 3
+                        }
+                    },
+                    {
+                        "label": "Walk away. The unknowns are too risky. Call Marcus for advice.",
+                        "nextStep": 5,
+                        "statChange": {
+                            "reputation": -5
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "You shake hands and write the check. Six months later, the Twombly authenticates at $320,000. The Diebenkorn prints together fetch $95,000. The Frankenthaler was indeed genuine \u2014 $180,000. Total recovery: $595,000, plus the unknown works. Marcus calls: \"You're ready. I have nothing left to teach you.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "You make your case meticulously. The lawyer consults the family. They counter at $420,000. You agree. Marcus texts that night: \"You left money on the table \u2014 but you earned their respect. That family will call you next time too.\" The mentorship is complete.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus picks up on the first ring. His silence is heavy. \"I said this one was yours.\" He pauses. \"Some people need a safety net. That's okay. But the collectors I respect? They jump.\" He hangs up. The lesson is the harshest one yet.",
+                "characterId": "marcus_price",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_elena_cold_1",
+        "category": "storyline",
+        "title": "The Invitations Stop",
+        "requirements": {},
+        "npcId": "elena_ross",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "It starts subtly. A gallery opening you used to receive invitations to \u2014 nothing. A dinner that your contact mentions offhand \u2014 you weren't invited. The Chelsea circuit is a small world, and someone has been editing you out of it.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "narrative",
+                "text": "Then you see the sign: Ross Gallery's spring show preview list is posted online. Your name is conspicuously absent. Elena Ross has frozen you out.",
+                "characterId": "narrator"
+            },
+            {
+                "type": "choice",
+                "text": "The gallery world runs on access. Without it, you're invisible.",
+                "choices": [
+                    {
+                        "label": "Send Elena flowers and a handwritten apology.",
+                        "nextStep": 3,
+                        "statChange": {
+                            "reputation": 2,
+                            "cash": -500
+                        }
+                    },
+                    {
+                        "label": "Focus on other channels. Show up at rival galleries instead.",
+                        "nextStep": 4,
+                        "statChange": {
+                            "audacity": 3
+                        }
+                    },
+                    {
+                        "label": "Ask a mutual contact to mediate.",
+                        "nextStep": 5,
+                        "statChange": {
+                            "intel": 2
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Elena doesn't respond for two weeks. Then a short text: \"I appreciate the gesture. But trust is rebuilt through actions, not flowers.\" The door is cracked open \u2014 barely.",
+                "characterId": "elena_ross",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "You pivot hard. Three months at alternative venues builds your reputation outside the traditional circuit. Street art, digital spaces, pop-up shows. You discover artists Elena's world hasn't noticed yet. Sometimes detours lead somewhere better.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "James Whitfield, a dealer who knows everyone, agrees to reach out. \"Elena is principled,\" he warns. \"She doesn't freeze people lightly.\" After a week, James reports back: \"She'll consider it. But you need to show up differently next time.\"",
+                "characterId": "narrator",
+                "isEnd": true
+            }
+        ]
+    },
+    {
+        "id": "event_elena_cold_2",
+        "category": "storyline",
+        "title": "Marcus Price Intervenes",
+        "requirements": {
+            "reputation": 10
+        },
+        "npcId": "marcus_price",
+        "steps": [
+            {
+                "type": "narrative",
+                "text": "Marcus Price corners you at a benefit dinner. \"I hear you've been persona non grata in Elena's world. Care to tell me what happened?\"",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "narrative",
+                "text": "\"Elena and I go back thirty years. She doesn't waste energy on people she doesn't care about. The fact that she froze you out? It means she once saw potential.\" Marcus stirs his whiskey. \"I can make a call. But you need to deserve it.\"",
+                "characterId": "marcus_price"
+            },
+            {
+                "type": "choice",
+                "text": "Marcus is offering a lifeline, but it comes with expectations.",
+                "choices": [
+                    {
+                        "label": "\"Please. I know I messed up. I want to learn from it.\"",
+                        "nextStep": 3,
+                        "statChange": {
+                            "reputation": 5,
+                            "intel": 2
+                        }
+                    },
+                    {
+                        "label": "\"I don't need Elena's approval. I'll find my own way.\"",
+                        "nextStep": 4,
+                        "statChange": {
+                            "audacity": 5
+                        }
+                    },
+                    {
+                        "label": "\"What would I owe you, Marcus?\"",
+                        "nextStep": 5,
+                        "statChange": {
+                            "intel": 3
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus calls Elena that night. Two days later, you receive an invitation to her next opening \u2014 but with a note: \"Marcus vouched for you. Don't make him regret it.\" The cold shoulder thaws, one degree at a time.",
+                "characterId": "narrator",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus nods slowly. \"I respect that.\" He raises his glass. \"Independence is the rarest quality in this world. Most people need to be liked. You might not need Elena \u2014 but she needs to see that to respect you again.\" The path forward is lonelier, but more authentic.",
+                "characterId": "marcus_price",
+                "isEnd": true
+            },
+            {
+                "type": "narrative",
+                "text": "Marcus laughs. \"Nothing. That's not how this works. Favors between collectors aren't ledgered \u2014 they're cultural. You owe me a great story someday.\" He makes the call. Elena agrees to coffee. \"This better be worth my time,\" she texts.",
+                "characterId": "marcus_price",
+                "isEnd": true
             }
         ]
     }

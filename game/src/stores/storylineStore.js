@@ -137,6 +137,53 @@ export const useStorylineStore = create(
                 };
             },
 
+            /**
+             * Get progress map — completion % and ETA for each active storyline.
+             * @param {Array} storylineDefs - all storyline definitions
+             * @returns {Object} { [storylineId]: { progress, currentStep, totalSteps, stalled, nextFireWeek } }
+             */
+            getProgressMap: (storylineDefs) => {
+                const state = get();
+                const map = {};
+                for (const active of state.activeStorylines) {
+                    const def = (storylineDefs || []).find(s => s.id === active.id);
+                    const totalSteps = def ? def.steps.length : 1;
+                    map[active.id] = {
+                        progress: Math.round(((active.currentStep + 1) / totalSteps) * 100),
+                        currentStep: active.currentStep,
+                        totalSteps,
+                        stalled: active.stalled,
+                        nextFireWeek: active.nextFireWeek,
+                        activatedWeek: active.activatedWeek,
+                    };
+                }
+                return map;
+            },
+
+            /**
+             * Get NPC-grouped arc summary for the CMS.
+             * @param {Array} storylineDefs - all storyline definitions
+             * @returns {Object} { [npcId]: [{ id, title, status, progress }] }
+             */
+            getArcSummary: (storylineDefs) => {
+                const state = get();
+                const byNpc = {};
+                for (const def of (storylineDefs || [])) {
+                    const npc = def.npcId || 'unknown';
+                    if (!byNpc[npc]) byNpc[npc] = [];
+                    const isActive = state.activeStorylines.find(a => a.id === def.id);
+                    const isCompleted = state.completedStorylines.includes(def.id);
+                    byNpc[npc].push({
+                        id: def.id,
+                        title: def.title,
+                        status: isCompleted ? 'completed' : isActive ? 'active' : 'pending',
+                        progress: isActive ? Math.round(((isActive.currentStep + 1) / def.steps.length) * 100) : isCompleted ? 100 : 0,
+                        stepsCount: def.steps.length,
+                    });
+                }
+                return byNpc;
+            },
+
             reset: () => set((state) => {
                 state.activeStorylines = [];
                 state.completedStorylines = [];
