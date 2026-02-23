@@ -653,8 +653,10 @@ function ArtworkMarketPanel({ work }) {
     // Hedonic score
     const hedonicScore = MarketManager._hedonicScore?.(work) || 1.0;
 
-    // Artist index
-    const artistIndex = artist?.artistIndex || (MarketManager._computeArtistIndex?.(artist) || 500);
+    // Artist index — only compute if artist exists
+    const artistIndex = artist
+        ? (artist.artistIndex || MarketManager._computeArtistIndex(artist) || 500)
+        : 500;
 
     // Market cycle
     const cycle = marketStore?.marketCycle || 'flat';

@@ -307,8 +307,9 @@ export class MarketManager {
      * Base 500 + heat contribution + price velocity + tier bonus.
      */
     static _computeArtistIndex(artist) {
+        if (!artist) return 500;
         const base = 500;
-        const heatContribution = artist.heat * 5;
+        const heatContribution = (artist.heat || 0) * 5;
 
         // Price velocity: average price change across this artist's works
         const artistWorks = MarketManager.works.filter(w => w.artistId === artist.id);
