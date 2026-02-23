@@ -31,18 +31,49 @@ if (typeof document !== 'undefined' && !document.getElementById(PRINT_STYLE_ID))
     style.id = PRINT_STYLE_ID;
     style.textContent = `
         @media print {
-            body * { visibility: hidden !important; }
-            .tearsheet-container, .tearsheet-container * { visibility: visible !important; }
+            /* Hide everything outside tearsheet */
+            body > *:not(#root),
+            .cms-sidebar, .cms-header, .cms-tabs,
+            nav, header, footer, aside { display: none !important; }
+
+            /* Make tearsheet container fill full flow */
+            .tearsheet-container,
+            .tearsheet-container * { visibility: visible !important; }
             .tearsheet-container {
-                position: fixed !important; left: 0 !important; top: 0 !important;
+                position: absolute !important; left: 0 !important; top: 0 !important;
                 width: 100% !important; height: auto !important;
                 overflow: visible !important; background: white !important;
                 z-index: 999999 !important;
             }
+
+            /* Un-clip ALL ancestor scroll containers */
+            #root, #root > *, #root > * > *, #root > * > * > * {
+                overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
+                position: static !important;
+            }
+
+            /* Hide toolbar */
             .tearsheet-toolbar { display: none !important; }
-            .tearsheet-page { page-break-after: always; break-after: page; }
-            .tearsheet-page:last-child { page-break-after: auto; }
-            @page { margin: 0.75in; size: letter; }
+
+            /* Page breaks — each tearsheet page = one printed page */
+            .tearsheet-page {
+                page-break-after: always;
+                break-after: page;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                min-height: 0 !important;
+            }
+            .tearsheet-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+
+            /* Print color fidelity */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+            @page { margin: 0.5in; size: letter; }
         }
     `;
     document.head.appendChild(style);

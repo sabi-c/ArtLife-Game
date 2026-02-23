@@ -99,12 +99,35 @@ function TickerTab({ simResult, priceHistory }) {
     if (!simResult) return <EmptyState />;
     const latest = priceHistory?.[priceHistory.length - 1];
     const prev = priceHistory?.[priceHistory.length - 2];
+    const first = priceHistory?.[0];
     const compositeData = priceHistory?.map(p => p.compositeIndex) || [];
     const compositeNow = latest?.compositeIndex || 1000;
     const compositePrev = prev?.compositeIndex || compositeNow;
     const compositeDelta = compositePrev > 0 ? ((compositeNow - compositePrev) / compositePrev) * 100 : 0;
 
-    // Get sector data from latest snapshot
+    // Market cap: sum of all artist avg prices × estimated work count
+    const marketCap = latest?.artists
+        ? Object.values(latest.artists).reduce((s, a) => s + (a.avgPrice * 3), 0)
+        : 0;
+    const marketCapHistory = priceHistory?.map(p =>
+        p.artists ? Object.values(p.artists).reduce((s, a) => s + (a.avgPrice * 3), 0) : 0
+    ) || [];
+    const prevMarketCap = prev?.artists
+        ? Object.values(prev.artists).reduce((s, a) => s + (a.avgPrice * 3), 0) : marketCap;
+    const marketCapDelta = prevMarketCap > 0 ? ((marketCap - prevMarketCap) / prevMarketCap) * 100 : 0;
+
+    // Top movers: compare first week to latest
+    const movers = latest?.artists && first?.artists
+        ? Object.entries(latest.artists).map(([id, a]) => {
+            const firstA = first.artists[id];
+            const delta = firstA ? ((a.avgPrice - firstA.avgPrice) / firstA.avgPrice) * 100 : 0;
+            return { id, name: a.name, tier: a.tier, price: a.avgPrice, heat: a.heat, delta };
+        }).sort((a, b) => b.delta - a.delta)
+        : [];
+    const gainers = movers.slice(0, 5);
+    const losers = movers.slice(-5).reverse();
+
+    // Sector data
     const sectors = {};
     if (latest?.artists) {
         for (const [id, a] of Object.entries(latest.artists)) {
@@ -116,7 +139,7 @@ function TickerTab({ simResult, priceHistory }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Composite Index Hero */}
+            {/* Composite Index + Market Cap Hero */}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 24, padding: 16,
                 background: 'linear-gradient(135deg, #0a0a12 0%, #111 100%)',
@@ -136,7 +159,18 @@ function TickerTab({ simResult, priceHistory }) {
                     </div>
                 </div>
                 <div style={{ flex: 1 }}>
-                    <Sparkline data={compositeData} width={300} height={50} color="#c9a84c" showArea />
+                    <Sparkline data={compositeData} width={200} height={50} color="#c9a84c" showArea />
+                </div>
+                {/* Market Cap */}
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 8, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>MKT CAP</div>
+                    <div style={{ fontSize: 20, fontWeight: 'bold', color: '#4ade80', fontFamily: mono }}>
+                        ${(marketCap / 1000).toFixed(0)}K
+                    </div>
+                    <div style={{ fontSize: 9, color: marketCapDelta >= 0 ? '#4ade80' : '#f87171' }}>
+                        {marketCapDelta >= 0 ? '▲' : '▼'}{Math.abs(marketCapDelta).toFixed(1)}%
+                    </div>
+                    <Sparkline data={marketCapHistory} width={80} height={20} color="#4ade80" />
                 </div>
                 <div style={{
                     padding: '6px 16px', borderRadius: 4,
@@ -149,6 +183,34 @@ function TickerTab({ simResult, priceHistory }) {
                 </div>
             </div>
 
+            {/* Top Movers — Gainers vs Losers */}
+            {movers.length > 0 && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ ...card, flex: 1, padding: 0 }}>
+                        <div style={{ fontSize: 8, color: '#4ade80', padding: '6px 10px', borderBottom: '1px solid #1a1a2e', letterSpacing: 1 }}>
+                            ▲ TOP GAINERS
+                        </div>
+                        {gainers.map((m) => (
+                            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 10px', borderBottom: '1px solid #0a0a14', fontSize: 9 }}>
+                                <span style={{ color: tierColors[m.tier] || '#aaa' }}>{m.name}</span>
+                                <span style={{ color: '#4ade80', fontWeight: 'bold' }}>+{m.delta.toFixed(1)}%</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ ...card, flex: 1, padding: 0 }}>
+                        <div style={{ fontSize: 8, color: '#f87171', padding: '6px 10px', borderBottom: '1px solid #1a1a2e', letterSpacing: 1 }}>
+                            ▼ TOP LOSERS
+                        </div>
+                        {losers.map((m) => (
+                            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 10px', borderBottom: '1px solid #0a0a14', fontSize: 9 }}>
+                                <span style={{ color: tierColors[m.tier] || '#aaa' }}>{m.name}</span>
+                                <span style={{ color: '#f87171', fontWeight: 'bold' }}>{m.delta.toFixed(1)}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Sector Indices */}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {Object.entries(sectors).map(([tier, data]) => {
@@ -158,18 +220,21 @@ function TickerTab({ simResult, priceHistory }) {
                             color={tierColors[tier] || '#aaa'} sub={`${data.count} artists`} />
                     );
                 })}
+                <StatBox label="TOTAL VOL" value={`$${(simResult.totalVolume / 1000).toFixed(0)}K`} color="#60a5fa" sub={`${simResult.totalTrades} trades`} />
             </div>
 
-            {/* Artist Ticker Strip */}
+            {/* Artist Ticker Strip with Heat Timeline */}
             <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
-                <div style={{ fontSize: 8, color: '#555', padding: '6px 10px', borderBottom: '1px solid #1a1a2e', letterSpacing: 1 }}>
-                    ARTIST TICKER
+                <div style={{ fontSize: 8, color: '#555', padding: '6px 10px', borderBottom: '1px solid #1a1a2e', letterSpacing: 1, display: 'flex', justifyContent: 'space-between' }}>
+                    <span>ARTIST TICKER</span>
+                    <span style={{ color: '#333' }}>PRICE · HEAT · INDEX</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                     {latest?.artists && Object.entries(latest.artists).map(([id, a]) => {
                         const prevA = prev?.artists?.[id];
                         const delta = prevA ? ((a.avgPrice - prevA.avgPrice) / prevA.avgPrice) * 100 : 0;
                         const artistHistory = priceHistory.map(p => p.artists?.[id]?.avgPrice).filter(Boolean);
+                        const heatHistory = priceHistory.map(p => p.artists?.[id]?.heat).filter(h => h !== undefined);
                         return (
                             <div key={id} style={{
                                 padding: '8px 12px', borderRight: '1px solid #1a1a2e',
@@ -193,8 +258,13 @@ function TickerTab({ simResult, priceHistory }) {
                                     <Sparkline data={artistHistory} width={60} height={18}
                                         color={delta >= 0 ? '#4ade80' : '#f87171'} />
                                 </div>
-                                <div style={{ fontSize: 8, color: '#444', marginTop: 2 }}>
-                                    Heat {a.heat} · Idx {a.index}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
+                                    <span style={{ fontSize: 8, color: '#444' }}>
+                                        🔥{a.heat} · Idx {a.index}
+                                    </span>
+                                    {heatHistory.length > 2 && (
+                                        <Sparkline data={heatHistory} width={40} height={10} color="#fbbf24" />
+                                    )}
                                 </div>
                             </div>
                         );
@@ -700,7 +770,15 @@ export default function MarketSimDashboard() {
 
     const showNotif = useCallback((msg) => {
         setNotification(msg);
-        setTimeout(() => setNotification(null), 4000);
+        setTimeout(() => setNotification(null), 3000);
+    }, []);
+
+    // Flash market events during playback
+    const [eventFlash, setEventFlash] = useState(null);
+    const flashEvent = useCallback((evt) => {
+        if (!evt) return;
+        setEventFlash(evt);
+        setTimeout(() => setEventFlash(null), 2500);
     }, []);
 
     // ── Step one simulated week ──
@@ -724,7 +802,10 @@ export default function MarketSimDashboard() {
             let evt = null;
             try {
                 evt = MarketSimulator._generateMarketEvent?.(week, cycle) || null;
-                if (evt) MarketSimulator._applyMarketEvent?.(evt);
+                if (evt) {
+                    MarketSimulator._applyMarketEvent?.(evt);
+                    flashEvent(evt);
+                }
             } catch { /* optional */ }
 
             // Run one week
@@ -772,7 +853,7 @@ export default function MarketSimDashboard() {
             console.error('[SimPlayback] Week error:', e);
             return null;
         }
-    }, [playbackCycle]);
+    }, [playbackCycle, flashEvent]);
 
     // ── Start playback ──
     const startPlayback = useCallback(() => {
@@ -784,6 +865,7 @@ export default function MarketSimDashboard() {
         setPlaybackCycle('flat');
         setPlaybackState('running');
         setSimResult(null);
+        setActiveTab('ticker'); // Auto-switch to ticker for visual feedback
         showNotif(`▶ Starting ${weekCount}-week simulation...`);
     }, [weekCount, showNotif]);
 
@@ -888,6 +970,10 @@ export default function MarketSimDashboard() {
                         {cycleIcons[currentCycle]} {currentCycle.toUpperCase()}
                     </span>
                     {notification && <span style={{ color: '#4ade80', fontSize: 9, marginLeft: 8 }}>{notification}</span>}
+                    {eventFlash && <span style={{
+                        color: '#e879f9', fontSize: 9, marginLeft: 8, fontWeight: 'bold',
+                        animation: 'pulse 0.3s ease',
+                    }}>⚡ {eventFlash.type || eventFlash.description || 'EVENT'}</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <select value={weekCount} onChange={e => setWeekCount(Number(e.target.value))}
