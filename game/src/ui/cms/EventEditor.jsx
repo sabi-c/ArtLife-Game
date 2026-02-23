@@ -725,47 +725,60 @@ export default function EventEditor() {
         setTimeout(() => setNotification(null), 3500);
     }, []);
 
-    // Load trees on mount
+    // Load trees on mount — use dynamic import to prevent stale localStorage
     useEffect(() => {
-        const allTrees = [];
-        // Load DIALOGUE_TREES
-        if (Array.isArray(DIALOGUE_TREES)) {
-            DIALOGUE_TREES.forEach(t => {
-                allTrees.push({ ...t, _source: 'dialogue_trees' });
-            });
-        }
-        // Load legacy events (step-based)
-        const legacyEvents = EventRegistry.jsonEvents || [];
-        legacyEvents.forEach(ev => {
-            if (ev.steps && !ev.nodes) {
-                // Convert step-based to named-node format
-                const nodes = {};
-                ev.steps.forEach((step, i) => {
-                    const nid = step.nodeId || `step_${i}`;
-                    nodes[nid] = {
-                        speaker: step.speaker,
-                        text: step.text,
-                        emote: step.emote,
-                        topics: step.type === 'choice' ? (step.choices || []).map(c => ({
-                            label: c.label || c.text,
-                            next: c.nextStep !== undefined ? `step_${c.nextStep}` : null,
-                            tone: c.tone || null,
-                        })) : (step.isEnd ? [] : [{ label: '→', next: step.nextStep !== undefined ? `step_${step.nextStep}` : `step_${i + 1}` }]),
-                        _position: step.position,
-                    };
-                });
-                allTrees.push({
-                    id: ev.id,
-                    npcId: ev.npcId,
-                    venue: ev.category || 'unknown',
-                    trigger: ev.trigger || 'event',
-                    nodes,
-                    _source: 'events',
-                    _originalEvent: ev,
+        const buildTrees = (events) => {
+            const allTrees = [];
+            // Load DIALOGUE_TREES
+            if (Array.isArray(DIALOGUE_TREES)) {
+                DIALOGUE_TREES.forEach(t => {
+                    allTrees.push({ ...t, _source: 'dialogue_trees' });
                 });
             }
+            // Load legacy events (step-based)
+            (events || []).forEach(ev => {
+                if (ev.steps && !ev.nodes) {
+                    const nodes = {};
+                    ev.steps.forEach((step, i) => {
+                        const nid = step.nodeId || `step_${i}`;
+                        nodes[nid] = {
+                            speaker: step.speaker,
+                            text: step.text,
+                            emote: step.emote,
+                            topics: step.type === 'choice' ? (step.choices || []).map(c => ({
+                                label: c.label || c.text,
+                                next: c.nextStep !== undefined ? `step_${c.nextStep}` : null,
+                                tone: c.tone || null,
+                            })) : (step.isEnd ? [] : [{ label: '→', next: step.nextStep !== undefined ? `step_${step.nextStep}` : `step_${i + 1}` }]),
+                            _position: step.position,
+                        };
+                    });
+                    allTrees.push({
+                        id: ev.id,
+                        npcId: ev.npcId,
+                        venue: ev.category || 'unknown',
+                        trigger: ev.trigger || 'event',
+                        nodes,
+                        _source: 'events',
+                        _originalEvent: ev,
+                    });
+                }
+            });
+            return allTrees;
+        };
+
+        const registryEvents = EventRegistry.jsonEvents || [];
+        // Dynamic import to compare against source file — prevents stale cmsStore snapshots
+        import('../../data/events.js').then(mod => {
+            const sourceEvents = mod.EVENTS || mod.default || [];
+            const events = sourceEvents.length > registryEvents.length ? sourceEvents : registryEvents;
+            if (events.length > registryEvents.length) {
+                EventRegistry.jsonEvents = JSON.parse(JSON.stringify(events));
+            }
+            setTrees(buildTrees(events));
+        }).catch(() => {
+            setTrees(buildTrees(registryEvents));
         });
-        setTrees(allTrees);
     }, []);
 
     const selectedTree = trees.find(t => t.id === selectedTreeId);

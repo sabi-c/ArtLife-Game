@@ -3,6 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { useNPCStore } from './npcStore.js';
+import { MarketManager } from '../managers/MarketManager.js';
 
 /**
  * cmsStore.js — Unified CMS Persistence Layer
@@ -34,6 +35,8 @@ export const useCmsStore = create(
                 kanban: false,
                 timeline: false,
                 maps: false,
+                haggle: false,
+                market: false,
             },
 
             // ── Modification Snapshots ──
@@ -121,13 +124,22 @@ export const useCmsStore = create(
                     const events = EventRegistry.jsonEvents || [];
                     const storylines = EventRegistry.jsonStorylines || [];
                     const npcs = useNPCStore.getState().contacts || [];
+                    const artists = MarketManager.artists || [];
+                    const parts = [];
 
                     set((state) => {
-                        if (events.length > 0) state.snapshots.events = JSON.parse(JSON.stringify(events));
-                        if (storylines.length > 0) state.snapshots.storylines = JSON.parse(JSON.stringify(storylines));
-                        if (npcs.length > 0) state.snapshots.npcs = JSON.parse(JSON.stringify(npcs));
-                        // Note: artworks and artists snapshots are saved directly by ArtworkEditor
-                        // via saveSnapshot('artworks')/saveSnapshot('artists') — no need to re-save here
+                        if (events.length > 0) { state.snapshots.events = JSON.parse(JSON.stringify(events)); parts.push(`${events.length} events`); }
+                        if (storylines.length > 0) { state.snapshots.storylines = JSON.parse(JSON.stringify(storylines)); parts.push(`${storylines.length} storylines`); }
+                        if (npcs.length > 0) { state.snapshots.npcs = JSON.parse(JSON.stringify(npcs)); parts.push(`${npcs.length} NPCs`); }
+                        if (artists.length > 0) { state.snapshots.artists = JSON.parse(JSON.stringify(artists)); parts.push(`${artists.length} artists`); }
+                        // maps, timelineOverrides, haggle_config, artworks are already
+                        // saved incrementally via saveMapSnapshot/saveTimelineOverride/saveSnapshot
+                        // — they live in state.snapshots and get auto-persisted by zustand persist.
+                        // We just note them in the log if present.
+                        if (state.snapshots.maps) parts.push(`${Object.keys(state.snapshots.maps).length} maps`);
+                        if (state.snapshots.timelineOverrides) parts.push(`${Object.keys(state.snapshots.timelineOverrides).length} timeline overrides`);
+                        if (state.snapshots.haggle_config) parts.push('haggle config');
+                        if (state.snapshots.artworks) parts.push(`${(state.snapshots.artworks || []).length} artworks`);
 
                         // Clear all dirty flags
                         Object.keys(state.dirty).forEach(k => { state.dirty[k] = false; });
@@ -137,11 +149,11 @@ export const useCmsStore = create(
                             timestamp: Date.now(),
                             domain: 'all',
                             action: 'saveAll',
-                            details: `Saved ${events.length} events, ${storylines.length} storylines, ${npcs.length} NPCs`,
+                            details: `Saved ${parts.join(', ') || 'nothing'}`,
                         });
                     });
 
-                    console.log('[CmsStore] 💾 All data saved to localStorage');
+                    console.log(`[CmsStore] 💾 All data saved: ${parts.join(', ')}`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Save failed:', err);
@@ -176,6 +188,21 @@ export const useCmsStore = create(
                         console.log(`[CmsStore] ♻️ Restored ${state.snapshots.npcs.length} NPCs`);
                     }
 
+                    if (state.snapshots.artists?.length) {
+                        try {
+                            MarketManager.artists = JSON.parse(JSON.stringify(state.snapshots.artists));
+                            loaded++;
+                            console.log(`[CmsStore] ♻️ Restored ${state.snapshots.artists.length} artists`);
+                        } catch (_) { /* MarketManager may not be initialized yet */ }
+                    }
+
+                    // Maps, timeline overrides, haggle_config are restored automatically
+                    // by zustand persist — they live in state.snapshots and are read
+                    // directly by their respective editors on mount.
+                    if (state.snapshots.maps) { loaded++; console.log(`[CmsStore] ♻️ ${Object.keys(state.snapshots.maps).length} maps available`); }
+                    if (state.snapshots.timelineOverrides) { loaded++; console.log(`[CmsStore] ♻️ ${Object.keys(state.snapshots.timelineOverrides).length} timeline overrides available`); }
+                    if (state.snapshots.haggle_config) { loaded++; console.log('[CmsStore] ♻️ Haggle config available'); }
+
                     if (loaded > 0) {
                         console.log(`[CmsStore] ✅ Rehydrated ${loaded} domain(s) from saved CMS state`);
                     }
@@ -192,17 +219,21 @@ export const useCmsStore = create(
              */
             exportBundle: () => {
                 try {
+                    const state = get();
                     const bundle = {
                         _meta: {
                             exportedAt: new Date().toISOString(),
-                            version: '1.1.0',
+                            version: '1.2.0',
                             game: 'ArtLife',
                         },
                         events: EventRegistry.jsonEvents || [],
                         storylines: EventRegistry.jsonStorylines || [],
                         npcs: useNPCStore.getState().contacts || [],
-                        artworks: get().snapshots.artworks || null,
-                        artists: get().snapshots.artists || null,
+                        artworks: state.snapshots.artworks || null,
+                        artists: state.snapshots.artists || (MarketManager.artists || null),
+                        maps: state.snapshots.maps || null,
+                        timelineOverrides: state.snapshots.timelineOverrides || null,
+                        haggle_config: state.snapshots.haggle_config || null,
                     };
 
                     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(bundle, null, 2));
@@ -211,16 +242,25 @@ export const useCmsStore = create(
                     anchor.download = `artlife_cms_export_${new Date().toISOString().slice(0, 10)}.json`;
                     anchor.click();
 
+                    const parts = [
+                        `${bundle.events.length} events`,
+                        `${bundle.storylines.length} storylines`,
+                        `${bundle.npcs.length} NPCs`,
+                    ];
+                    if (bundle.maps) parts.push(`${Object.keys(bundle.maps).length} maps`);
+                    if (bundle.timelineOverrides) parts.push(`${Object.keys(bundle.timelineOverrides).length} timeline`);
+                    if (bundle.haggle_config) parts.push('haggle');
+
                     set((state) => {
                         state.changeLog.push({
                             timestamp: Date.now(),
                             domain: 'all',
                             action: 'export',
-                            details: `Exported bundle: ${bundle.events.length} events, ${bundle.storylines.length} storylines, ${bundle.npcs.length} NPCs`,
+                            details: `Exported: ${parts.join(', ')}`,
                         });
                     });
 
-                    console.log('[CmsStore] 📦 Bundle exported');
+                    console.log(`[CmsStore] 📦 Bundle exported: ${parts.join(', ')}`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Export failed:', err);
@@ -234,27 +274,46 @@ export const useCmsStore = create(
             importBundle: (bundleJson) => {
                 try {
                     const bundle = typeof bundleJson === 'string' ? JSON.parse(bundleJson) : bundleJson;
+                    const parts = [];
 
                     if (bundle.events?.length) {
                         EventRegistry.jsonEvents = bundle.events;
                         set((state) => { state.snapshots.events = bundle.events; state.dirty.events = true; });
+                        parts.push(`${bundle.events.length} events`);
                     }
                     if (bundle.storylines?.length) {
                         EventRegistry.jsonStorylines = bundle.storylines;
                         set((state) => { state.snapshots.storylines = bundle.storylines; state.dirty.storylines = true; });
+                        parts.push(`${bundle.storylines.length} storylines`);
                     }
                     if (bundle.npcs?.length) {
                         useNPCStore.setState({ contacts: bundle.npcs });
                         set((state) => { state.snapshots.npcs = bundle.npcs; state.dirty.npcs = true; });
+                        parts.push(`${bundle.npcs.length} NPCs`);
                     }
                     if (bundle.artworks?.length) {
                         set((state) => { state.snapshots.artworks = bundle.artworks; state.dirty.artworks = true; });
+                        parts.push(`${bundle.artworks.length} artworks`);
                     }
                     if (bundle.artists?.length) {
-                        set((state) => { state.snapshots.artists = bundle.artists; state.dirty.artworks = true; });
+                        try { MarketManager.artists = bundle.artists; } catch (_) { }
+                        set((state) => { state.snapshots.artists = bundle.artists; state.dirty.market = true; });
+                        parts.push(`${bundle.artists.length} artists`);
+                    }
+                    if (bundle.maps) {
+                        set((state) => { state.snapshots.maps = bundle.maps; state.dirty.maps = true; });
+                        parts.push(`${Object.keys(bundle.maps).length} maps`);
+                    }
+                    if (bundle.timelineOverrides) {
+                        set((state) => { state.snapshots.timelineOverrides = bundle.timelineOverrides; state.dirty.timeline = true; });
+                        parts.push(`${Object.keys(bundle.timelineOverrides).length} timeline`);
+                    }
+                    if (bundle.haggle_config) {
+                        set((state) => { state.snapshots.haggle_config = bundle.haggle_config; state.dirty.haggle = true; });
+                        parts.push('haggle config');
                     }
 
-                    console.log('[CmsStore] 📥 Bundle imported successfully');
+                    console.log(`[CmsStore] 📥 Imported: ${parts.join(', ')}`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Import failed:', err);
@@ -363,8 +422,8 @@ export const useCmsStore = create(
             // ═══════════════════════════════════════════════════════════
 
             reset: () => set((state) => {
-                state.dirty = { events: false, storylines: false, npcs: false, artworks: false, venues: false, kanban: false, timeline: false, maps: false };
-                state.snapshots = { events: null, storylines: null, npcs: null, kanbanColumns: null, graphPositions: null, timelineOverrides: null, maps: null };
+                state.dirty = { events: false, storylines: false, npcs: false, artworks: false, venues: false, kanban: false, timeline: false, maps: false, haggle: false, market: false };
+                state.snapshots = { events: null, storylines: null, npcs: null, kanbanColumns: null, graphPositions: null, timelineOverrides: null, maps: null, haggle_config: null, artists: null, artworks: null };
                 state.changeLog = [];
                 state.lastSaveTime = null;
             }),

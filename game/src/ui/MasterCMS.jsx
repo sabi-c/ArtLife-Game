@@ -16,15 +16,15 @@ import MarketSimDashboard from './cms/MarketSimDashboard.jsx';
 import ActivityLogViewer from './cms/ActivityLogViewer.jsx';
 
 const TABS = [
-    { id: 'board', icon: '📋', label: 'Project Board' },
-    { id: 'timeline', icon: '📅', label: 'Timeline' },
-    { id: 'storylines', icon: '⛓️', label: 'Storylines' },
-    { id: 'events', icon: '🌳', label: 'Events / Dialogue' },
-    { id: 'npcs', icon: '👤', label: 'NPCs & Roles' },
-    { id: 'artworks', icon: '🖼️', label: 'Artworks / Market' },
-    { id: 'haggle', icon: '⚔️', label: 'Haggle Battles' },
-    { id: 'marketsim', icon: '📊', label: 'Market Sim' },
-    { id: 'venues', icon: '🏢', label: 'Venues / Map' },
+    { id: 'board', icon: '📋', label: 'Project Board', dirtyDomain: 'kanban' },
+    { id: 'timeline', icon: '📅', label: 'Timeline', dirtyDomain: 'timeline' },
+    { id: 'storylines', icon: '⛓️', label: 'Storylines', dirtyDomain: 'storylines' },
+    { id: 'events', icon: '🎭', label: 'Events / Dialogue', dirtyDomain: 'events' },
+    { id: 'npcs', icon: '👤', label: 'NPCs & Roles', dirtyDomain: 'npcs' },
+    { id: 'artworks', icon: '🎨', label: 'Artworks / Market', dirtyDomain: 'artworks' },
+    { id: 'haggle', icon: '⚔️', label: 'Haggle Battles', dirtyDomain: 'haggle' },
+    { id: 'marketsim', icon: '📊', label: 'Market Sim', dirtyDomain: 'market' },
+    { id: 'venues', icon: '🏢', label: 'Venues / Map', dirtyDomain: 'maps' },
     { id: 'actlog', icon: '📋', label: 'Activity Log' },
     { id: 'ingest', icon: '🤖', label: 'AI Ingestion Port' },
 ];
@@ -273,25 +273,35 @@ export default function MasterCMS({ onClose }) {
                                     }}>✕</button>
                                 )}
                             </div>
-                            {TABS.map(tab => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => handleTabClick(tab.id)}
-                                    style={{
-                                        background: activeTab === tab.id ? 'rgba(201,168,76,0.1)' : 'transparent',
-                                        color: activeTab === tab.id ? '#c9a84c' : '#aaa',
-                                        border: 'none', borderLeft: activeTab === tab.id ? '3px solid #c9a84c' : '3px solid transparent',
-                                        borderBottom: '1px solid #1a1a2e',
-                                        padding: isMobile ? '14px' : '16px', cursor: 'pointer',
-                                        textAlign: 'left', display: 'flex', gap: '12px', alignItems: 'center',
-                                        fontFamily: 'inherit', fontSize: isMobile ? 12 : 13,
-                                        transition: 'all 0.1s',
-                                    }}
-                                >
-                                    <span style={{ fontSize: 16 }}>{tab.icon}</span>
-                                    {tab.label}
-                                </button>
-                            ))}
+                            {TABS.map(tab => {
+                                const isDirty = tab.dirtyDomain && dirty[tab.dirtyDomain];
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => handleTabClick(tab.id)}
+                                        style={{
+                                            background: activeTab === tab.id ? 'rgba(201,168,76,0.1)' : 'transparent',
+                                            color: activeTab === tab.id ? '#c9a84c' : '#aaa',
+                                            border: 'none', borderLeft: activeTab === tab.id ? '3px solid #c9a84c' : '3px solid transparent',
+                                            borderBottom: '1px solid #1a1a2e',
+                                            padding: isMobile ? '14px' : '16px', cursor: 'pointer',
+                                            textAlign: 'left', display: 'flex', gap: '12px', alignItems: 'center',
+                                            fontFamily: 'inherit', fontSize: isMobile ? 12 : 13,
+                                            transition: 'all 0.1s',
+                                        }}
+                                    >
+                                        <span style={{ fontSize: 16 }}>{tab.icon}</span>
+                                        {tab.label}
+                                        {isDirty && (
+                                            <span style={{
+                                                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                                                background: '#ff6b35', marginLeft: 'auto', flexShrink: 0,
+                                                boxShadow: '0 0 4px #ff6b35',
+                                            }} />
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </nav>
                     </>
                 )}
