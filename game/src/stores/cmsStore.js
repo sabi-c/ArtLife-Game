@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { useNPCStore } from './npcStore.js';
 import { MarketManager } from '../managers/MarketManager.js';
+import { ARTWORKS } from '../data/artworks.js';
 
 /**
  * cmsStore.js — Unified CMS Persistence Layer
@@ -233,7 +234,7 @@ export const useCmsStore = create(
                         events: EventRegistry.jsonEvents || [],
                         storylines: EventRegistry.jsonStorylines || [],
                         npcs: useNPCStore.getState().contacts || [],
-                        artworks: state.snapshots.artworks || null,
+                        artworks: state.snapshots.artworks || ARTWORKS || null,
                         artists: state.snapshots.artists || (MarketManager.artists || null),
                         maps: state.snapshots.maps || null,
                         timelineOverrides: state.snapshots.timelineOverrides || null,
@@ -444,7 +445,7 @@ export const useCmsStore = create(
                         events: EventRegistry.jsonEvents || [],
                         storylines: EventRegistry.jsonStorylines || [],
                         npcs: useNPCStore.getState().contacts || [],
-                        artworks: get().snapshots.artworks || null,
+                        artworks: get().snapshots.artworks || ARTWORKS || null,
                         artists: get().snapshots.artists || (MarketManager.artists || null),
                         maps: get().snapshots.maps || null,
                         timelineOverrides: get().snapshots.timelineOverrides || null,
@@ -512,7 +513,7 @@ export const useCmsStore = create(
                         storylines: (EventRegistry.jsonStorylines || []).length,
                         npcs: (useNPCStore.getState().contacts || []).length,
                         artists: (MarketManager.artists || []).length,
-                        artworks: (get().snapshots.artworks || []).length,
+                        artworks: (get().snapshots.artworks || ARTWORKS || []).length,
                     };
                 } catch { return { events: 0, storylines: 0, npcs: 0, artists: 0, artworks: 0 }; }
             },

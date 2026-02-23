@@ -1118,7 +1118,8 @@ function MarketActivityTab({ npc }) {
                                 <th style={{ padding: '6px 8px' }}>Action</th>
                                 <th style={{ padding: '6px 8px' }}>Artwork</th>
                                 <th style={{ padding: '6px 8px' }}>Counterparty</th>
-                                <th style={{ padding: '6px 8px', textAlign: 'right' }}>Price</th>
+                                <th style={{ padding: '6px 8px' }}>Price</th>
+                                <th style={{ padding: '6px 8px' }}>Type</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1127,6 +1128,8 @@ function MarketActivityTab({ npc }) {
                                 const other = isBuyer ? t.seller : t.buyer;
                                 const otherContact = CONTACTS.find(c => c.id === other);
                                 const artwork = ARTWORKS.find(a => a.id === t.artwork);
+                                const typeLabel = t.type ? t.type.replace('_', ' ').toUpperCase() : (isBuyer ? 'BUY' : 'SELL');
+                                const typeColor = t.type === 'player_buy' ? '#60a5fa' : t.type === 'npc_trade' ? '#a78bfa' : '#888';
                                 return (
                                     <tr key={i} style={{ borderBottom: '1px solid #1a1a2e' }}>
                                         <td style={{ padding: '6px 8px', color: '#666' }}>W{t.week}</td>
@@ -1136,6 +1139,9 @@ function MarketActivityTab({ npc }) {
                                         <td style={{ padding: '6px 8px', color: '#eaeaea' }}>{artwork?.title || t.artwork}</td>
                                         <td style={{ padding: '6px 8px', color: '#888' }}>{otherContact?.name || other}</td>
                                         <td style={{ padding: '6px 8px', textAlign: 'right', color: '#c9a84c' }}>{fmt$(t.price)}</td>
+                                        <td style={{ padding: '6px 8px' }}>
+                                            <span style={{ fontSize: 8, color: typeColor, background: `${typeColor}15`, padding: '1px 5px', borderRadius: 3 }}>{typeLabel}</span>
+                                        </td>
                                     </tr>
                                 );
                             })}

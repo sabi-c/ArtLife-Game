@@ -294,6 +294,9 @@ export class MarketSimulator {
             trades: trades.map(t => ({
                 buyer: t.buyerId, seller: t.sellerId,
                 artwork: t.artworkId, price: t.price, week,
+                type: 'npc_trade',
+                title: t.artwork?.title || '',
+                artistId: t.artwork?.artistId || '',
             })),
         };
 
@@ -634,9 +637,20 @@ export class MarketSimulator {
                 work.tradeHistory.push({
                     buyer: trade.buyerId,
                     seller: trade.sellerId,
+                    buyerName: buyer?.name || trade.buyerId,
+                    sellerName: seller?.name || trade.sellerId,
                     price: trade.price,
                     week,
                     discount: trade.discount,
+                    type: 'npc_trade',
+                });
+                // Update provenance chain
+                if (!work.provenance) work.provenance = [];
+                work.provenance.push({
+                    owner: trade.buyerId,
+                    acquiredWeek: week,
+                    acquiredFrom: trade.sellerId,
+                    price: trade.price,
                 });
             }
         } catch { /* non-critical */ }
@@ -736,6 +750,7 @@ export class MarketSimulator {
         const tradeEntry = {
             buyer: result.buyerId, seller: result.sellerId,
             artwork: result.artworkId, price: result.price, week,
+            type: 'sim_manual',
         };
         MarketSimulator.tradeLog.push(tradeEntry);
         if (MarketSimulator.tradeLog.length > MAX_LOG_SIZE) {
@@ -1047,6 +1062,9 @@ export class MarketSimulator {
         const tradeEntry = {
             buyer: 'player', seller: order.npcId,
             artwork: order.artworkId, price: order.askPrice, week,
+            type: 'player_buy',
+            title: order.artwork?.title || '',
+            artistId: order.artwork?.artistId || '',
         };
         MarketSimulator.tradeLog.push(tradeEntry);
         if (MarketSimulator.tradeLog.length > MAX_LOG_SIZE) {
