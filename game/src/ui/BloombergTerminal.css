@@ -1046,6 +1046,35 @@
         justify-content: center;
     }
 
+    /* Style toggle + config gear — touch-friendly on mobile */
+    .bb-style-toggle,
+    .bb-config-btn {
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Config dropdown — wider on mobile for easier tapping */
+    .bb-config-dropdown {
+        min-width: 240px;
+        right: -8px;
+    }
+
+    .bb-config-item {
+        padding: 6px 0;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+    }
+
+    .bb-config-preset {
+        min-height: 36px;
+        padding: 8px 4px;
+    }
+
     /* Collapse to single column */
     .bb-grid,
     .bb-grid-3col {
@@ -3249,7 +3278,20 @@
     .an-thumb { display: none; }
     .an-medium { display: none; }
     .an-estimate { display: none; }
-    .an-summary { flex-wrap: wrap; gap: 8px 16px; }
+    .an-summary { flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; }
+    .an-header-bar { padding: 10px 16px; }
+    .an-row { min-height: 44px; }
+    .an-footer { padding: 12px 16px; }
+}
+
+@media (max-width: 380px) {
+    .an-header-title { font-size: 11px; }
+    .an-th { font-size: 8px; }
+    .an-td { padding: 6px 4px; }
+    .an-price-main { font-size: 11px; }
+    .an-artist-name { font-size: 11px; }
+    .an-title-cell { font-size: 10px; }
+    .an-status { display: none; }
 }
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -3633,7 +3675,24 @@
     .sb-lot-number { font-size: 24px; }
     .sb-sale-header { padding: 32px 20px 24px; }
     .sb-sale-title { font-size: 22px; }
-    .sb-lot-nav { padding: 10px 16px; }
+    .sb-lot-nav { padding: 10px 16px; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; }
+    .sb-lot-pill { min-height: 36px; min-width: 36px; display: flex; align-items: center; justify-content: center; }
+    .sb-lot-artist { font-size: 12px; }
+    .sb-lot-title { font-size: 13px; }
+    .sb-estimate { font-size: 11px; }
+    .sb-lot-img { max-height: 280px; }
+    .sb-sale-footer { padding: 28px 20px; }
+}
+
+@media (max-width: 380px) {
+    .sb-lot { padding: 24px 14px; }
+    .sb-lot-number { font-size: 20px; }
+    .sb-sale-header { padding: 24px 14px 20px; }
+    .sb-sale-title { font-size: 18px; }
+    .sb-sale-brand { font-size: 9px; letter-spacing: 0.35em; }
+    .sb-lot-pill { min-height: 32px; min-width: 32px; font-size: 9px; }
+    .sb-catalogue-note p { font-size: 11px; }
+    .sb-section-item { font-size: 10px; }
 }
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -3986,10 +4045,25 @@
 
 /* Deitch mobile */
 @media (max-width: 768px) {
+    .dp-header { padding: 24px 16px 20px; }
     .dp-header-title { font-size: 40px; }
-    .dp-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .dp-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px; padding: 2px; }
     .dp-card-lg { grid-column: span 1; }
-    .dp-card-artist { font-size: 20px; }
+    .dp-card-artist { font-size: 20px; padding: 10px 12px 2px; }
     .dp-card-lg .dp-card-artist { font-size: 24px; }
+    .dp-card-title { padding: 0 12px; font-size: 11px; }
+    .dp-card-medium { padding: 2px 12px 0; }
+    .dp-card-price { padding: 6px 12px 12px; min-height: 44px; display: flex; align-items: center; }
     .dp-empty-text { font-size: 24px; }
+    .dp-footer { padding: 24px 16px; }
+    .dp-sticker { font-size: 7px; padding: 3px 28px; top: 8px; right: -24px; }
+}
+
+@media (max-width: 380px) {
+    .dp-header-title { font-size: 32px; }
+    .dp-grid { grid-template-columns: 1fr 1fr; }
+    .dp-card-artist { font-size: 16px; }
+    .dp-card-lg .dp-card-artist { font-size: 18px; }
+    .dp-card-image { aspect-ratio: 1; }
+    .dp-footer-brand { font-size: 14px; }
 }
