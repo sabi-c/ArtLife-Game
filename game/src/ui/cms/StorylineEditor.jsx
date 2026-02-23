@@ -365,7 +365,7 @@ export default function StorylineEditor() {
                             Select a storyline to view its timeline
                         </div>
                     ) : (
-                        <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
                             <div style={{ marginBottom: 16 }}>
                                 <div style={{ fontSize: 18, fontWeight: 'bold', color: '#c9a84c' }}>{selected.title}</div>
                                 <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{selected.description}</div>
@@ -432,7 +432,7 @@ export default function StorylineEditor() {
                                 </div>
                             </div>
 
-                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#050508', border: '1px dashed #333', minHeight: 400 }}>
+                            <div style={{ position: 'relative', overflow: 'hidden', background: '#050508', border: '1px dashed #333', height: 500, minHeight: 400, flexShrink: 0 }}>
                                 <StorylineGraph
                                     storyline={selected}
                                     onNodeClick={(idx) => setEditingStep({ stepIdx: idx })}
@@ -926,19 +926,66 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
                     const isCurrent = activeInfo && activeInfo.currentStep === idx;
                     const isPast = activeInfo && activeInfo.currentStep > idx;
                     const eventDef = availableEvents.find(e => e.id === step.eventId);
+                    const hasBranch = step.branchTo && typeof step.branchTo === 'object';
                     newNodes.push({
                         id: String(idx),
                         type: 'storyStepNode',
-                        position: existing?.position || step.position || { x: 250, y: 180 + idx * 130 },
+                        position: existing?.position || step.position || { x: 300, y: 180 + idx * 140 },
                         data: {
                             step, isCurrent, isPast,
                             isSelected: editingStepIdx === idx,
                             eventTitle: eventDef?.title || null,
+                            eventExists: !!eventDef,
+                            choiceCount: eventDef ? (eventDef.steps || []).filter(s => s.type === 'choice').length : 0,
                             availableEvents: editingStepIdx === idx ? availableEvents : null,
                             onLinkEvent: (newId) => handleLinkEvent(idx, newId),
+                            onHoverEvent: onHoverEvent,
+                            hasBranch,
                         },
                         draggable: true,
                     });
+
+                    // Rebuild branch nodes too
+                    if (hasBranch && storyline.branches) {
+                        const branchEntries = Object.entries(step.branchTo);
+                        branchEntries.forEach(([choiceIdx, branchId], bIdx) => {
+                            const branch = storyline.branches[branchId];
+                            if (!branch) return;
+                            const color = BRANCH_COLORS[bIdx % BRANCH_COLORS.length];
+                            const branchNodeId = `branch_${idx}_${branchId}`;
+                            const xOffset = (bIdx - (branchEntries.length - 1) / 2) * 260;
+                            const existingBranch = nds.find(n => n.id === branchNodeId);
+
+                            newNodes.push({
+                                id: branchNodeId,
+                                type: 'branchLabelNode',
+                                position: existingBranch?.position || { x: 300 + xOffset, y: 180 + (idx + 1) * 140 },
+                                data: { branchId, label: branch.label, condition: branch.condition, stepsCount: (branch.steps || []).length },
+                                draggable: true,
+                            });
+
+                            (branch.steps || []).forEach((bStep, bsIdx) => {
+                                const bStepId = `${branchNodeId}_s${bsIdx}`;
+                                const bEventDef = availableEvents.find(e => e.id === bStep.eventId);
+                                const existingBs = nds.find(n => n.id === bStepId);
+                                newNodes.push({
+                                    id: bStepId,
+                                    type: 'storyStepNode',
+                                    position: existingBs?.position || { x: 300 + xOffset, y: 180 + (idx + 2 + bsIdx) * 140 },
+                                    data: {
+                                        step: bStep, isCurrent: false, isPast: false,
+                                        isSelected: false,
+                                        eventTitle: bEventDef?.title || null,
+                                        eventExists: !!bEventDef,
+                                        choiceCount: bEventDef ? (bEventDef.steps || []).filter(s => s.type === 'choice').length : 0,
+                                        onHoverEvent: onHoverEvent,
+                                        isBranch: true, branchColor: color,
+                                    },
+                                    draggable: true,
+                                });
+                            });
+                        });
+                    }
                 });
             }
             return newNodes;
