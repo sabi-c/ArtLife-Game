@@ -7,6 +7,7 @@ import { GameState } from './GameState.js';
 import { MarketManager } from './MarketManager.js';
 import { PhoneManager } from './PhoneManager.js';
 import { generateId } from '../utils/id.js';
+import { ARTWORK_MAP } from '../data/artworks.js';
 
 export class DealResolver {
     /**
@@ -59,6 +60,25 @@ export class DealResolver {
                 if (state.transactions.length > 50) state.transactions.pop();
 
                 GameState.addNews(`SALE COMPLETE: "${deal.work.title}" sold via ${deal.strategy} for $${finalPrice.toLocaleString()}`);
+
+                // ── Update global artwork registry ──
+                try {
+                    const artRef = ARTWORK_MAP[deal.work.id];
+                    if (artRef) {
+                        artRef.owner = 'sold';
+                        artRef.lastTradePrice = finalPrice;
+                        artRef.lastTradeWeek = state.week;
+                        artRef.listedForSale = false;
+                        if (!artRef.tradeHistory) artRef.tradeHistory = [];
+                        artRef.tradeHistory.push({
+                            buyer: 'npc',
+                            seller: 'player',
+                            price: finalPrice,
+                            week: state.week,
+                            type: deal.strategy,
+                        });
+                    }
+                } catch { /* non-critical */ }
             }
         });
     }

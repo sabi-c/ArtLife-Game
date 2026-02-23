@@ -1,4 +1,5 @@
 import { ARTISTS, generateInitialWorks } from '../data/artists.js';
+import { ARTWORK_MAP } from '../data/artworks.js';
 import { MarketManager } from './MarketManager.js';
 import { PhoneManager } from './PhoneManager.js';
 import { ConsequenceScheduler } from './ConsequenceScheduler.js';
@@ -267,9 +268,9 @@ export class GameState {
                     if (trade) {
                         import('./ActivityLogger.js').then(({ ActivityLogger }) => {
                             ActivityLogger.logMarket('micro_trade', trade);
-                        }).catch(() => {});
+                        }).catch(() => { });
                     }
-                }).catch(() => {});
+                }).catch(() => { });
             } catch { /* non-critical */ }
         }
 
@@ -337,6 +338,25 @@ export class GameState {
         if (GameState.state.transactions.length > 50) GameState.state.transactions.pop();
 
         GameState.addNews(`Acquired "${work.title}" by ${work.artist} for $${work.price.toLocaleString()}`);
+
+        // ── Update global artwork registry ──
+        try {
+            const artRef = ARTWORK_MAP[work.id];
+            if (artRef) {
+                artRef.owner = 'player';
+                artRef.lastTradePrice = work.price;
+                artRef.lastTradeWeek = GameState.state.week;
+                if (!artRef.tradeHistory) artRef.tradeHistory = [];
+                artRef.tradeHistory.push({
+                    buyer: 'player',
+                    seller: 'market',
+                    price: work.price,
+                    week: GameState.state.week,
+                    type: 'market_buy',
+                });
+            }
+        } catch { /* non-critical */ }
+
         return true;
     }
 
@@ -374,6 +394,17 @@ export class GameState {
         });
 
         GameState.addNews(`Listed "${work.title}" via ${strategy}. Expected resolve in ${delay} weeks.`);
+
+        // ── Mark artwork as listed in global registry ──
+        try {
+            const artRef = ARTWORK_MAP[work.id];
+            if (artRef) {
+                artRef.listedForSale = true;
+                artRef.listStrategy = strategy;
+                artRef.listWeek = state.week;
+            }
+        } catch { /* non-critical */ }
+
         return true;
     }
 
