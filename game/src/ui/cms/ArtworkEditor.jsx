@@ -1,3 +1,18 @@
+/**
+ * ArtworkEditor.jsx — Comprehensive Artwork & Market CMS
+ *
+ * 7 sub-tabs covering the full artwork pipeline:
+ *   1. Metadata   — Edit individual artwork fields, JSON hot-swap
+ *   2. Artists     — Edit simulation artists (heat, volatility, tier, price ranges)
+ *   3. Market      — Live market stats (artist heat index, sparklines, cycle)
+ *   4. Controls    — Tick market, force cycles, era modifier, run sim previews
+ *   5. Portfolio   — Player's owned works with ROI tracking
+ *   6. Calendar    — Art world calendar events
+ *   7. Haggle      — Haggle price matrix across all dealer types
+ *
+ * CMS persistence: artwork edits are saved to cmsStore snapshots.
+ * Bulk operations: multi-select artworks for batch tier/price changes.
+ */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { GameState } from '../../managers/GameState.js';
 import { MarketManager } from '../../managers/MarketManager.js';
@@ -5,7 +20,8 @@ import { useCmsStore } from '../../stores/cmsStore.js';
 import { useMarketStore } from '../../stores/marketStore.js';
 import { CALENDAR_EVENTS } from '../../data/calendar_events.js';
 import { ARTWORKS } from '../../data/artworks.js';
-import { DEALER_TYPES, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG } from '../../data/haggle_config.js';
+import { ARTISTS } from '../../data/artists.js';
+import { DEALER_TYPES, HAGGLE_CONFIG } from '../../data/haggle_config.js';
 
 // ── Style Constants ──
 const mono = '"IBM Plex Mono", "Courier New", monospace';
@@ -27,7 +43,7 @@ const cardStyle = {
     background: panelBg, border: '1px solid #1a1a2e', borderRadius: 4, padding: 10,
 };
 
-// ── Tiny Sparkline ──
+// ── Tiny Sparkline (shared) ──
 function Sparkline({ data, width = 100, height = 24, color = '#4ade80' }) {
     if (!data || data.length < 2) return <span style={{ color: '#555', fontSize: 9 }}>—</span>;
     const min = Math.min(...data);
@@ -38,7 +54,6 @@ function Sparkline({ data, width = 100, height = 24, color = '#4ade80' }) {
         const y = height - ((v - min) / range) * (height - 4) - 2;
         return `${x},${y}`;
     }).join(' ');
-
     return (
         <svg width={width} height={height} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
             <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -46,7 +61,9 @@ function Sparkline({ data, width = 100, height = 24, color = '#4ade80' }) {
     );
 }
 
-// ── Market Stats Panel ──
+// ════════════════════════════════════════════════════════════
+// SUB-TAB: Market Stats (artist heat index, sparklines)
+// ════════════════════════════════════════════════════════════
 function MarketStatsPanel() {
     const artistSnapshots = useMarketStore(s => s.artistSnapshots);
     const marketCycle = useMarketStore(s => s.marketCycle);
@@ -67,7 +84,6 @@ function MarketStatsPanel() {
 
     return (
         <div>
-            {/* Market Cycle Banner */}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', marginBottom: 12,
                 background: `${cycleColors[marketCycle] || '#888'}11`, border: `1px solid ${cycleColors[marketCycle] || '#888'}33`,
@@ -82,7 +98,6 @@ function MarketStatsPanel() {
                 </div>
             </div>
 
-            {/* Weekly Intel */}
             {weeklyNews && weeklyNews.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
                     <div style={{ color: '#c9a84c', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>📰 WEEKLY INTEL</div>
@@ -90,14 +105,11 @@ function MarketStatsPanel() {
                         <div key={i} style={{
                             fontSize: 10, color: news.includes('[INTEL]') ? '#f59e0b' : '#888',
                             padding: '3px 0', borderBottom: '1px solid #1a1a2e',
-                        }}>
-                            {news}
-                        </div>
+                        }}>{news}</div>
                     ))}
                 </div>
             )}
 
-            {/* Artist Heat Table */}
             <div style={{ color: '#c9a84c', fontSize: 10, fontWeight: 'bold', marginBottom: 8 }}>🔥 ARTIST HEAT INDEX</div>
             {artists.length === 0 ? (
                 <div style={{ color: '#555', fontSize: 10, textAlign: 'center', padding: 20 }}>No market data yet — advance the game week</div>
@@ -143,7 +155,385 @@ function MarketStatsPanel() {
     );
 }
 
-// ── Calendar Events Panel ──
+// ════════════════════════════════════════════════════════════
+// SUB-TAB: Artists Editor (edit simulation artists in real-time)
+// ════════════════════════════════════════════════════════════
+function ArtistsPanel({ onNotify }) {
+    // Read live from MarketManager.artists (mutable during session)
+    const [artists, setArtists] = useState(() => {
+        return (MarketManager.artists?.length > 0 ? MarketManager.artists : ARTISTS).map(a => ({ ...a }));
+    });
+    const [selectedIdx, setSelectedIdx] = useState(0);
+
+    const selected = artists[selectedIdx];
+    const tierColors = { 'blue-chip': '#c9a84c', 'hot': '#f87171', 'mid-career': '#f59e0b', 'emerging': '#4ade80' };
+
+    const updateField = (field, value) => {
+        const updated = artists.map((a, i) => i === selectedIdx ? { ...a, [field]: value } : a);
+        setArtists(updated);
+        // Hot-swap into MarketManager so changes take effect immediately
+        if (MarketManager.artists?.length > 0) {
+            const mmArtist = MarketManager.artists.find(a => a.id === updated[selectedIdx].id);
+            if (mmArtist) Object.assign(mmArtist, { [field]: value });
+        }
+        useCmsStore.getState().markDirty('artworks');
+    };
+
+    const handleSaveArtists = () => {
+        useCmsStore.getState().saveSnapshot('artists', artists);
+        onNotify?.('💾 Artists saved to CMS');
+    };
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold' }}>🎨 SIMULATION ARTISTS ({artists.length})</div>
+                <button onClick={handleSaveArtists} style={btnPrimary}>💾 Save Artists</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 16 }}>
+                {/* Artist list */}
+                <div style={{ width: 220 }}>
+                    {artists.map((a, i) => (
+                        <div key={a.id} onClick={() => setSelectedIdx(i)} style={{
+                            padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #111',
+                            background: selectedIdx === i ? 'rgba(201,168,76,0.08)' : 'transparent',
+                            borderLeft: selectedIdx === i ? '3px solid #c9a84c' : '3px solid transparent',
+                        }}>
+                            <div style={{ fontSize: 11, color: selectedIdx === i ? '#c9a84c' : '#eaeaea', fontWeight: 'bold' }}>
+                                {a.name}
+                            </div>
+                            <div style={{ fontSize: 9, display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+                                <span style={{ color: tierColors[a.tier] || '#888' }}>{a.tier}</span>
+                                <span style={{ color: '#888' }}>🔥 {Math.round(a.heat)}</span>
+                            </div>
+                            {/* Heat bar */}
+                            <div style={{ height: 3, background: '#1a1a2e', borderRadius: 2, marginTop: 3 }}>
+                                <div style={{
+                                    height: '100%', borderRadius: 2,
+                                    width: `${Math.min(a.heat, 100)}%`,
+                                    background: a.heat > 60 ? '#f87171' : a.heat > 30 ? '#f59e0b' : '#4ade80',
+                                }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Artist detail editor */}
+                {selected && (
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 16, fontWeight: 'bold', color: '#c9a84c', marginBottom: 4 }}>{selected.name}</div>
+                        <div style={{ fontSize: 10, color: '#888', fontStyle: 'italic', marginBottom: 16 }}>{selected.flavor}</div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                            <div>
+                                <label style={labelStyle}>Tier</label>
+                                <select value={selected.tier} onChange={e => updateField('tier', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                                    <option value="blue-chip">Blue-Chip</option>
+                                    <option value="hot">Hot</option>
+                                    <option value="mid-career">Mid-Career</option>
+                                    <option value="emerging">Emerging</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Medium</label>
+                                <input value={selected.medium || ''} onChange={e => updateField('medium', e.target.value)} style={inputStyle} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Heat (0-100)</label>
+                                <input type="range" min={0} max={100} value={Math.round(selected.heat)} onChange={e => updateField('heat', Number(e.target.value))}
+                                    style={{ width: '100%', accentColor: selected.heat > 60 ? '#f87171' : '#4ade80' }} />
+                                <span style={{ fontSize: 10, color: '#888' }}>{Math.round(selected.heat)}</span>
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Heat Volatility</label>
+                                <input type="number" min={0} max={20} value={selected.heatVolatility} onChange={e => updateField('heatVolatility', Number(e.target.value))} style={inputStyle} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Base Price Min ($)</label>
+                                <input type="number" value={selected.basePriceMin} onChange={e => updateField('basePriceMin', Number(e.target.value))} style={{ ...inputStyle, color: '#4ade80' }} />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Base Price Max ($)</label>
+                                <input type="number" value={selected.basePriceMax} onChange={e => updateField('basePriceMax', Number(e.target.value))} style={{ ...inputStyle, color: '#4ade80' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: 12 }}>
+                            <label style={labelStyle}>Flavor Text</label>
+                            <textarea value={selected.flavor || ''} onChange={e => updateField('flavor', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontStyle: 'italic', color: '#888' }} />
+                        </div>
+
+                        {/* Quick actions */}
+                        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                            <button onClick={() => { updateField('heat', Math.min(100, selected.heat + 10)); onNotify?.(`🔥 +10 heat for ${selected.name}`); }}
+                                style={{ ...btnStyle, borderColor: '#f87171', color: '#f87171' }}>+10 Heat</button>
+                            <button onClick={() => { updateField('heat', Math.max(0, selected.heat - 10)); onNotify?.(`❄️ -10 heat for ${selected.name}`); }}
+                                style={{ ...btnStyle, borderColor: '#60a5fa', color: '#60a5fa' }}>-10 Heat</button>
+                            <button onClick={() => { updateField('buybackActive', !selected.buybackActive); onNotify?.(`${selected.buybackActive ? '🔓 Buyback OFF' : '🔒 Buyback ON'} for ${selected.name}`); }}
+                                style={{ ...btnStyle, borderColor: selected.buybackActive ? '#4ade80' : '#f59e0b', color: selected.buybackActive ? '#4ade80' : '#f59e0b' }}>
+                                {selected.buybackActive ? '🔓 Stop Buyback' : '🔒 Force Buyback'}
+                            </button>
+                        </div>
+
+                        {/* Linked artworks */}
+                        <div style={{ marginTop: 16 }}>
+                            <div style={{ color: '#666', fontSize: 9, textTransform: 'uppercase', marginBottom: 6 }}>Linked Artworks</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {ARTWORKS.filter(w => w.artistId === selected.id || w.artist === selected.name).map(w => (
+                                    <span key={w.id} style={{
+                                        fontSize: 9, padding: '2px 6px', background: '#111', border: '1px solid #222',
+                                        borderRadius: 3, color: '#aaa',
+                                    }}>{w.title} (${(w.askingPrice || 0).toLocaleString()})</span>
+                                ))}
+                                {MarketManager.works?.filter(w => w.artistId === selected.id).map(w => (
+                                    <span key={w.id} style={{
+                                        fontSize: 9, padding: '2px 6px', background: '#111', border: '1px solid #60a5fa33',
+                                        borderRadius: 3, color: '#60a5fa',
+                                    }}>{w.title} (${(w.price || 0).toLocaleString()})</span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════
+// SUB-TAB: Market Controls (tick, force cycles, era modifier)
+// ════════════════════════════════════════════════════════════
+function MarketControlsPanel({ onNotify }) {
+    const [tickCount, setTickCount] = useState(1);
+    const [results, setResults] = useState([]);
+
+    const forceCycle = (cycle) => {
+        const s = GameState.state;
+        if (!s) { onNotify?.('No game state'); return; }
+        s.marketState = cycle;
+        onNotify?.(`📊 Forced market to ${cycle.toUpperCase()}`);
+    };
+
+    const tickMarket = () => {
+        for (let i = 0; i < tickCount; i++) {
+            MarketManager.tick();
+        }
+        // Sync to store
+        const s = GameState.state;
+        if (s) {
+            useMarketStore.getState().syncFromManager(
+                MarketManager.artists, MarketManager.works, s.marketState, s.week || 1
+            );
+            useMarketStore.getState().generateWeeklyNews(MarketManager.artists);
+        }
+        // Capture results
+        const snapshot = MarketManager.artists.map(a => ({
+            name: a.name, heat: Math.round(a.heat),
+            buyback: a.buybackActive || false,
+            index: MarketManager._computeArtistIndex(a),
+        }));
+        setResults(snapshot);
+        onNotify?.(`📈 Ticked market ${tickCount}x`);
+    };
+
+    const adjustEra = (delta) => {
+        const s = GameState.state;
+        if (!s) return;
+        s.eraModifier = Math.max(0.5, Math.min(2.0, (s.eraModifier || 1.0) + delta));
+        onNotify?.(`🕰️ Era modifier: ${s.eraModifier.toFixed(2)}x`);
+    };
+
+    const eraModifier = GameState.state?.eraModifier || 1.0;
+    const marketState = GameState.state?.marketState || 'flat';
+
+    return (
+        <div>
+            <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold', marginBottom: 16 }}>🎮 MARKET CONTROLS</div>
+
+            {/* Force Market Cycle */}
+            <div style={{ ...cardStyle, marginBottom: 12 }}>
+                <div style={{ ...labelStyle, marginBottom: 8 }}>Force Market Cycle (current: {marketState.toUpperCase()})</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {['bull', 'flat', 'bear'].map(c => (
+                        <button key={c} onClick={() => forceCycle(c)} style={{
+                            ...btnStyle, flex: 1,
+                            borderColor: marketState === c ? ({ bull: '#4ade80', flat: '#888', bear: '#f87171' }[c]) : '#333',
+                            color: marketState === c ? ({ bull: '#4ade80', flat: '#888', bear: '#f87171' }[c]) : '#555',
+                        }}>
+                            {{ bull: '📈', flat: '➡️', bear: '📉' }[c]} {c.toUpperCase()}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Tick Market */}
+            <div style={{ ...cardStyle, marginBottom: 12 }}>
+                <div style={{ ...labelStyle, marginBottom: 8 }}>Tick Market Simulation</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <select value={tickCount} onChange={e => setTickCount(Number(e.target.value))}
+                        style={{ ...inputStyle, width: 80, cursor: 'pointer' }}>
+                        {[1, 5, 10, 26, 52].map(n => <option key={n} value={n}>{n}x</option>)}
+                    </select>
+                    <button onClick={tickMarket} style={btnPrimary}>▶ TICK</button>
+                    <span style={{ fontSize: 9, color: '#555' }}>
+                        {tickCount === 1 ? '1 week' : `${tickCount} weeks`} of market movement
+                    </span>
+                </div>
+            </div>
+
+            {/* Era Modifier */}
+            <div style={{ ...cardStyle, marginBottom: 12 }}>
+                <div style={{ ...labelStyle, marginBottom: 8 }}>Era Modifier ({eraModifier.toFixed(2)}x)</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button onClick={() => adjustEra(-0.1)} style={btnStyle}>-0.1</button>
+                    <div style={{ flex: 1, height: 6, background: '#1a1a2e', borderRadius: 3, position: 'relative' }}>
+                        <div style={{
+                            position: 'absolute', left: `${((eraModifier - 0.5) / 1.5) * 100}%`,
+                            top: -2, width: 10, height: 10, borderRadius: '50%',
+                            background: eraModifier > 1.2 ? '#f87171' : eraModifier < 0.8 ? '#60a5fa' : '#4ade80',
+                            border: '2px solid #222',
+                        }} />
+                    </div>
+                    <button onClick={() => adjustEra(0.1)} style={btnStyle}>+0.1</button>
+                    <button onClick={() => { if (GameState.state) GameState.state.eraModifier = 1.0; onNotify?.('🔄 Era reset to 1.0x'); }}
+                        style={{ ...btnStyle, fontSize: 9 }}>Reset</button>
+                </div>
+                <div style={{ fontSize: 9, color: '#555', marginTop: 4 }}>
+                    {'< 1.0 = recession / deflation  |  > 1.0 = boom / inflation'}
+                </div>
+            </div>
+
+            {/* Tick Results */}
+            {results.length > 0 && (
+                <div style={{ ...cardStyle }}>
+                    <div style={{ ...labelStyle, marginBottom: 8 }}>Last Tick Results</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #333' }}>
+                                <th style={{ textAlign: 'left', padding: 4, color: '#666' }}>Artist</th>
+                                <th style={{ textAlign: 'center', padding: 4, color: '#666' }}>Heat</th>
+                                <th style={{ textAlign: 'center', padding: 4, color: '#666' }}>Index</th>
+                                <th style={{ textAlign: 'center', padding: 4, color: '#666' }}>Buyback</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {results.map(r => (
+                                <tr key={r.name} style={{ borderBottom: '1px solid #111' }}>
+                                    <td style={{ padding: 4, color: '#eaeaea' }}>{r.name}</td>
+                                    <td style={{ textAlign: 'center', padding: 4, color: r.heat > 60 ? '#f87171' : '#4ade80' }}>{r.heat}</td>
+                                    <td style={{ textAlign: 'center', padding: 4, color: r.index > 500 ? '#4ade80' : '#f87171' }}>{r.index}</td>
+                                    <td style={{ textAlign: 'center', padding: 4, color: r.buyback ? '#f59e0b' : '#333' }}>{r.buyback ? 'ACTIVE' : '—'}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════
+// SUB-TAB: Portfolio (player's owned works + ROI)
+// ════════════════════════════════════════════════════════════
+function PortfolioPanel() {
+    const portfolio = GameState.state?.portfolio || [];
+    const cash = GameState.state?.cash || 0;
+    const week = GameState.state?.week || 0;
+
+    const enriched = useMemo(() => {
+        return portfolio.map(w => {
+            const currentValue = MarketManager.getWorkValue(w) || w.price || w.askingPrice || 0;
+            const purchasePrice = w.purchasePrice || w.askingPrice || currentValue;
+            const holdWeeks = week - (w.purchaseWeek || 0);
+            const roi = purchasePrice > 0 ? ((currentValue - purchasePrice) / purchasePrice * 100) : 0;
+            return { ...w, currentValue, purchasePrice, holdWeeks, roi };
+        }).sort((a, b) => b.currentValue - a.currentValue);
+    }, [portfolio, week]);
+
+    const totalCost = enriched.reduce((s, w) => s + w.purchasePrice, 0);
+    const totalValue = enriched.reduce((s, w) => s + w.currentValue, 0);
+    const totalROI = totalCost > 0 ? ((totalValue - totalCost) / totalCost * 100) : 0;
+
+    return (
+        <div>
+            <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>💼 PLAYER PORTFOLIO</div>
+
+            {/* Summary cards */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                <div style={{ ...cardStyle, flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, color: '#666', textTransform: 'uppercase' }}>Cash</div>
+                    <div style={{ fontSize: 16, color: '#4ade80', fontWeight: 'bold' }}>${cash.toLocaleString()}</div>
+                </div>
+                <div style={{ ...cardStyle, flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, color: '#666', textTransform: 'uppercase' }}>Portfolio Value</div>
+                    <div style={{ fontSize: 16, color: '#c9a84c', fontWeight: 'bold' }}>${totalValue.toLocaleString()}</div>
+                </div>
+                <div style={{ ...cardStyle, flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, color: '#666', textTransform: 'uppercase' }}>Total Cost</div>
+                    <div style={{ fontSize: 16, color: '#888', fontWeight: 'bold' }}>${totalCost.toLocaleString()}</div>
+                </div>
+                <div style={{ ...cardStyle, flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, color: '#666', textTransform: 'uppercase' }}>Total ROI</div>
+                    <div style={{ fontSize: 16, color: totalROI >= 0 ? '#4ade80' : '#f87171', fontWeight: 'bold' }}>
+                        {totalROI >= 0 ? '+' : ''}{totalROI.toFixed(1)}%
+                    </div>
+                </div>
+                <div style={{ ...cardStyle, flex: 1, textAlign: 'center' }}>
+                    <div style={{ fontSize: 8, color: '#666', textTransform: 'uppercase' }}>Net Worth</div>
+                    <div style={{ fontSize: 16, color: '#eaeaea', fontWeight: 'bold' }}>${(cash + totalValue).toLocaleString()}</div>
+                </div>
+            </div>
+
+            {/* Works list */}
+            {enriched.length === 0 ? (
+                <div style={{ color: '#555', textAlign: 'center', padding: 40 }}>No artworks in portfolio — buy some works first</div>
+            ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                    <thead>
+                        <tr style={{ borderBottom: '1px solid #333' }}>
+                            <th style={{ textAlign: 'left', padding: 6, color: '#666' }}>Artwork</th>
+                            <th style={{ textAlign: 'left', padding: 6, color: '#666' }}>Artist</th>
+                            <th style={{ textAlign: 'right', padding: 6, color: '#666' }}>Bought At</th>
+                            <th style={{ textAlign: 'right', padding: 6, color: '#666' }}>Current</th>
+                            <th style={{ textAlign: 'right', padding: 6, color: '#666' }}>ROI</th>
+                            <th style={{ textAlign: 'center', padding: 6, color: '#666' }}>Hold</th>
+                            <th style={{ textAlign: 'center', padding: 6, color: '#666' }}>Tier</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {enriched.map(w => (
+                            <tr key={w.id} style={{ borderBottom: '1px solid #111' }}>
+                                <td style={{ padding: 6, color: '#eaeaea' }}>{w.title || 'Untitled'}</td>
+                                <td style={{ padding: 6, color: '#888' }}>{w.artist || '?'}</td>
+                                <td style={{ padding: 6, textAlign: 'right', color: '#888' }}>${w.purchasePrice.toLocaleString()}</td>
+                                <td style={{ padding: 6, textAlign: 'right', color: '#4ade80' }}>${w.currentValue.toLocaleString()}</td>
+                                <td style={{
+                                    padding: 6, textAlign: 'right', fontWeight: 'bold',
+                                    color: w.roi >= 0 ? '#4ade80' : '#f87171',
+                                }}>
+                                    {w.roi >= 0 ? '+' : ''}{w.roi.toFixed(1)}%
+                                </td>
+                                <td style={{ padding: 6, textAlign: 'center', color: '#555' }}>{w.holdWeeks}w</td>
+                                <td style={{ padding: 6, textAlign: 'center' }}>
+                                    <span style={{
+                                        fontSize: 8, padding: '1px 5px', borderRadius: 2,
+                                        background: '#c9a84c15', color: '#c9a84c',
+                                    }}>{w.tier}</span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            )}
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════
+// SUB-TAB: Calendar Events
+// ════════════════════════════════════════════════════════════
 function CalendarEventsPanel() {
     const events = useMemo(() => {
         return CALENDAR_EVENTS.map(ev => ({
@@ -184,13 +574,13 @@ function CalendarEventsPanel() {
     );
 }
 
-// ── Haggle Price Calculator ──
+// ════════════════════════════════════════════════════════════
+// SUB-TAB: Haggle Price Matrix
+// ════════════════════════════════════════════════════════════
 function HagglePricePanel({ work }) {
     if (!work) return null;
-
     const price = work.price || work.askingPrice || work.originalPrice || 0;
     const dealerTypes = Object.entries(DEALER_TYPES);
-
     return (
         <div style={{ marginTop: 16 }}>
             <div style={{ color: '#c9a84c', fontSize: 10, fontWeight: 'bold', marginBottom: 8 }}>⚔️ HAGGLE PRICE MATRIX</div>
@@ -216,44 +606,33 @@ function HagglePricePanel({ work }) {
     );
 }
 
-// ═══════════════════════════════════════════════════
-// MAIN EXPORT: Enhanced ArtworkEditor
-// ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// MAIN EXPORT: Enhanced ArtworkEditor with 7 sub-tabs
+// ═══════════════════════════════════════════════════════════════
 export default function ArtworkEditor() {
     const [artworks, setArtworks] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
+    const [selectedIds, setSelectedIds] = useState(new Set()); // bulk selection
     const [jsonEdit, setJsonEdit] = useState('');
     const [notification, setNotification] = useState(null);
     const [filter, setFilter] = useState('all');
-    const [subTab, setSubTab] = useState('metadata'); // metadata, market, calendar, haggle
+    const [subTab, setSubTab] = useState('metadata');
 
+    // Load artworks from all sources on mount
     useEffect(() => {
         try {
             const allWorks = [];
-
-            // From static ARTWORKS data
             if (Array.isArray(ARTWORKS)) {
                 ARTWORKS.forEach(w => { if (w) allWorks.push({ ...w, _source: 'data' }); });
             }
-
             if (GameState.state) {
-                const inv = GameState.state.inventory;
-                if (Array.isArray(inv)) inv.forEach(w => { if (w) allWorks.push({ ...w, _source: 'inventory' }); });
+                const portfolio = GameState.state.portfolio;
+                if (Array.isArray(portfolio)) portfolio.forEach(w => { if (w) allWorks.push({ ...w, _source: 'inventory' }); });
             }
-
             if (MarketManager.works && Array.isArray(MarketManager.works)) {
                 MarketManager.works.forEach(w => { if (w) allWorks.push({ ...w, _source: 'market' }); });
             }
-
-            if (MarketManager.artists && Array.isArray(MarketManager.artists)) {
-                MarketManager.artists.forEach(artist => {
-                    if (artist && Array.isArray(artist.works)) {
-                        artist.works.forEach(w => { if (w) allWorks.push({ ...w, _source: 'artist', _artistName: artist.name }); });
-                    }
-                });
-            }
-
-            // Deduplicate
+            // Deduplicate by id
             const unique = [], seen = new Set();
             for (const w of allWorks) {
                 if (!w || !w.id) continue;
@@ -271,10 +650,20 @@ export default function ArtworkEditor() {
 
     const selected = artworks.find(w => w.id === selectedId);
 
-    const showNotif = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
+    const showNotif = useCallback((msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); }, []);
 
-    const handleSelect = (id) => {
+    const handleSelect = (id, evt) => {
+        // Shift-click for bulk selection
+        if (evt?.shiftKey) {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+            });
+            return;
+        }
         setSelectedId(id);
+        setSelectedIds(new Set());
         const work = artworks.find(w => w.id === id);
         if (work) setJsonEdit(JSON.stringify(work, null, 4));
     };
@@ -285,7 +674,8 @@ export default function ArtworkEditor() {
         setArtworks(updated);
         const updatedWork = updated.find(w => w.id === selected.id);
         if (updatedWork) setJsonEdit(JSON.stringify(updatedWork, null, 4));
-        useCmsStore.getState().markDirty('artworks');
+        // Persist to CMS store
+        useCmsStore.getState().saveSnapshot('artworks', updated.filter(w => w._source === 'data'));
     }, [selected, artworks]);
 
     const handleHotSwap = () => {
@@ -293,34 +683,114 @@ export default function ArtworkEditor() {
             const parsed = JSON.parse(jsonEdit);
             const updated = artworks.map(w => w.id === parsed.id ? { ...parsed, _source: w._source } : w);
             setArtworks(updated);
-            useCmsStore.getState().markDirty('artworks');
+            useCmsStore.getState().saveSnapshot('artworks', updated.filter(w => w._source === 'data'));
             showNotif('🔥 Hot-swapped artwork');
         } catch (err) { showNotif('❌ JSON Error: ' + err.message); }
     };
 
+    // ── Bulk Operations ──
+    const handleBulkTier = (tier) => {
+        const updated = artworks.map(w => selectedIds.has(w.id) ? { ...w, tier } : w);
+        setArtworks(updated);
+        useCmsStore.getState().saveSnapshot('artworks', updated.filter(w => w._source === 'data'));
+        showNotif(`📦 Set ${selectedIds.size} works to tier: ${tier}`);
+        setSelectedIds(new Set());
+    };
+
+    const handleBulkPriceAdjust = (factor) => {
+        const updated = artworks.map(w => {
+            if (!selectedIds.has(w.id)) return w;
+            const price = w.askingPrice || w.price || 0;
+            return { ...w, askingPrice: Math.round(price * factor), basePrice: Math.round((w.basePrice || price) * factor) };
+        });
+        setArtworks(updated);
+        useCmsStore.getState().saveSnapshot('artworks', updated.filter(w => w._source === 'data'));
+        showNotif(`💰 Adjusted ${selectedIds.size} works by ${factor > 1 ? '+' : ''}${Math.round((factor - 1) * 100)}%`);
+        setSelectedIds(new Set());
+    };
+
     const handleDownload = () => {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(artworks, null, 4));
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(artworks, null, 4));
         const anchor = document.createElement('a');
-        anchor.href = dataStr; anchor.download = "artworks_dump.json"; anchor.click();
+        anchor.href = dataStr; anchor.download = 'artworks_dump.json'; anchor.click();
         showNotif('📥 Downloaded artworks_dump.json');
     };
 
-    // Tier stats
+    // ── Import CSV/JSON ──
+    const handleImport = (evt) => {
+        const file = evt.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target.result;
+                let imported;
+                if (file.name.endsWith('.csv')) {
+                    // Parse Artnet-style CSV: title,artist,year,medium,askingPrice,genre,tier
+                    const lines = text.split('\n').filter(l => l.trim());
+                    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                    imported = lines.slice(1).map((line, idx) => {
+                        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                        const obj = {};
+                        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+                        return {
+                            id: obj.id || `import_${Date.now()}_${idx}`,
+                            title: obj.title || 'Untitled',
+                            artist: obj.artist || 'Unknown',
+                            year: obj.year || '',
+                            medium: obj.medium || '',
+                            askingPrice: parseInt(obj.askingprice || obj.price || '0') || 0,
+                            basePrice: parseInt(obj.askingprice || obj.price || '0') || 0,
+                            genre: obj.genre || 'contemporary painting',
+                            tier: obj.tier || 'speculative',
+                            provenance: obj.provenance || '',
+                            sprite: 'art_object_red_squares.png',
+                            _source: 'data',
+                        };
+                    });
+                } else {
+                    imported = JSON.parse(text);
+                    if (!Array.isArray(imported)) imported = [imported];
+                    imported = imported.map(w => ({ ...w, _source: 'data', basePrice: w.basePrice || w.askingPrice || 0 }));
+                }
+                const merged = [...artworks];
+                const existingIds = new Set(merged.map(w => w.id));
+                let added = 0;
+                for (const w of imported) {
+                    if (!existingIds.has(w.id)) {
+                        merged.push(w);
+                        existingIds.add(w.id);
+                        added++;
+                    }
+                }
+                setArtworks(merged);
+                useCmsStore.getState().saveSnapshot('artworks', merged.filter(w => w._source === 'data'));
+                showNotif(`📥 Imported ${added} new artworks (${imported.length - added} duplicates skipped)`);
+            } catch (err) {
+                showNotif('❌ Import error: ' + err.message);
+            }
+        };
+        reader.readAsText(file);
+        evt.target.value = '';
+    };
+
+    // Stats
     const tierStats = useMemo(() => {
-        const stats = { classic: 0, mid_career: 0, speculative: 0, other: 0 };
+        const stats = { classic: 0, mid_career: 0, speculative: 0 };
         artworks.forEach(w => { stats[w.tier] = (stats[w.tier] || 0) + 1; });
         return stats;
     }, [artworks]);
-
     const totalValue = useMemo(() => artworks.reduce((sum, w) => sum + (w.askingPrice || w.price || 0), 0), [artworks]);
-
     const sourceColors = { data: '#888', inventory: '#4ade80', market: '#60a5fa', artist: '#c084fc' };
 
     const subTabs = [
         { id: 'metadata', icon: '📝', label: 'Metadata' },
-        { id: 'market', icon: '📊', label: 'Market Stats' },
+        { id: 'artists', icon: '🎨', label: 'Artists' },
+        { id: 'market', icon: '📊', label: 'Market' },
+        { id: 'controls', icon: '🎮', label: 'Controls' },
+        { id: 'portfolio', icon: '💼', label: 'Portfolio' },
         { id: 'calendar', icon: '📅', label: 'Calendar' },
-        { id: 'haggle', icon: '⚔️', label: 'Haggle Matrix' },
+        { id: 'haggle', icon: '⚔️', label: 'Haggle' },
     ];
 
     return (
@@ -329,67 +799,102 @@ export default function ArtworkEditor() {
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '8px 16px', background: '#111', borderBottom: '1px solid #333',
+                flexWrap: 'wrap', gap: 6,
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <strong style={{ color: '#c9a84c', fontSize: 13 }}>🖼️ Artworks & Market</strong>
-                    {['all', 'data', 'inventory', 'market', 'artist'].map(f => (
+                    {['all', 'data', 'inventory', 'market'].map(f => (
                         <button key={f} onClick={() => setFilter(f)} style={{
                             ...btnStyle, fontSize: 9,
                             borderColor: filter === f ? '#c9a84c' : '#333',
                             color: filter === f ? '#c9a84c' : '#555',
                         }}>
-                            {f === 'all' ? '🏷️ All' : f === 'data' ? '📁 Data' : f === 'inventory' ? '🎒 Owned' : f === 'market' ? '📊 Market' : '🎨 Artists'}
+                            {f === 'all' ? 'All' : f === 'data' ? '📁 Catalogue' : f === 'inventory' ? '🎒 Owned' : '📊 Market'}
                         </button>
                     ))}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 9, color: '#555' }}>
-                        {artworks.length} works · ${totalValue.toLocaleString()} total ·
-                        C:{tierStats.classic} M:{tierStats.mid_career} S:{tierStats.speculative}
+                        {artworks.length} works · ${totalValue.toLocaleString()} ·
+                        C:{tierStats.classic || 0} M:{tierStats.mid_career || 0} S:{tierStats.speculative || 0}
                     </span>
                     {notification && <span style={{ color: '#4ade80', fontSize: 10 }}>{notification}</span>}
-                    <button onClick={handleDownload} style={{ ...btnStyle, fontSize: 9 }}>📥 Export</button>
+                    <button onClick={handleDownload} style={{ ...btnStyle, fontSize: 9 }}>📥 Export JSON</button>
+                    <label style={{ ...btnStyle, fontSize: 9, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        📤 Import
+                        <input type="file" accept=".json,.csv" onChange={handleImport} style={{ display: 'none' }} />
+                    </label>
                 </div>
             </div>
 
+            {/* Bulk operations bar (visible when items are selected) */}
+            {selectedIds.size > 0 && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px',
+                    background: 'rgba(201,168,76,0.08)', borderBottom: '1px solid #c9a84c33',
+                }}>
+                    <span style={{ fontSize: 10, color: '#c9a84c' }}>{selectedIds.size} selected</span>
+                    <div style={{ width: 1, height: 16, background: '#333' }} />
+                    <span style={{ fontSize: 9, color: '#666' }}>Tier:</span>
+                    {['classic', 'mid_career', 'speculative'].map(t => (
+                        <button key={t} onClick={() => handleBulkTier(t)} style={{ ...btnStyle, fontSize: 8, padding: '2px 8px' }}>{t}</button>
+                    ))}
+                    <div style={{ width: 1, height: 16, background: '#333' }} />
+                    <span style={{ fontSize: 9, color: '#666' }}>Price:</span>
+                    {[0.8, 0.9, 1.1, 1.2, 1.5].map(f => (
+                        <button key={f} onClick={() => handleBulkPriceAdjust(f)}
+                            style={{ ...btnStyle, fontSize: 8, padding: '2px 8px', color: f > 1 ? '#4ade80' : '#f87171' }}>
+                            {f > 1 ? '+' : ''}{Math.round((f - 1) * 100)}%
+                        </button>
+                    ))}
+                    <button onClick={() => setSelectedIds(new Set())} style={{ ...btnStyle, fontSize: 8, padding: '2px 8px', marginLeft: 'auto' }}>Clear</button>
+                </div>
+            )}
+
             {/* Main Layout */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Artwork List */}
-                <div style={{ width: 240, overflowY: 'auto', borderRight: '1px solid #1a1a2e', padding: '8px' }}>
-                    {filtered.length === 0 && (
-                        <div style={{ color: '#555', fontSize: 10, textAlign: 'center', padding: 20 }}>No artworks found</div>
-                    )}
-                    {filtered.map(work => {
-                        const price = work.askingPrice || work.price || 0;
-                        return (
-                            <div key={work.id} onClick={() => handleSelect(work.id)} style={{
-                                padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #111',
-                                background: selectedId === work.id ? 'rgba(201,168,76,0.08)' : 'transparent',
-                                borderLeft: selectedId === work.id ? '3px solid #c9a84c' : '3px solid transparent',
-                            }}>
-                                <div style={{ fontSize: 11, color: selectedId === work.id ? '#c9a84c' : '#eaeaea', fontWeight: 'bold' }}>
-                                    {work.title || 'Untitled'}
+                {/* Artwork List (only for metadata/haggle tabs that need selection) */}
+                {['metadata', 'haggle'].includes(subTab) && (
+                    <div style={{ width: 240, overflowY: 'auto', borderRight: '1px solid #1a1a2e', padding: '8px' }}>
+                        <div style={{ fontSize: 9, color: '#555', padding: '4px 0 8px', textAlign: 'center' }}>
+                            Shift+click to bulk select
+                        </div>
+                        {filtered.length === 0 && (
+                            <div style={{ color: '#555', fontSize: 10, textAlign: 'center', padding: 20 }}>No artworks found</div>
+                        )}
+                        {filtered.map(work => {
+                            const price = work.askingPrice || work.price || 0;
+                            const isBulk = selectedIds.has(work.id);
+                            return (
+                                <div key={work.id} onClick={(e) => handleSelect(work.id, e)} style={{
+                                    padding: '8px 10px', cursor: 'pointer', borderBottom: '1px solid #111',
+                                    background: isBulk ? 'rgba(201,168,76,0.15)' : selectedId === work.id ? 'rgba(201,168,76,0.08)' : 'transparent',
+                                    borderLeft: isBulk ? '3px solid #f59e0b' : selectedId === work.id ? '3px solid #c9a84c' : '3px solid transparent',
+                                }}>
+                                    <div style={{ fontSize: 11, color: selectedId === work.id ? '#c9a84c' : '#eaeaea', fontWeight: 'bold' }}>
+                                        {work.title || 'Untitled'}
+                                    </div>
+                                    <div style={{ fontSize: 9, color: '#666', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>{work.artist || 'Unknown'}</span>
+                                        <span style={{ color: '#4ade80' }}>${price.toLocaleString()}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
+                                        <span style={{
+                                            fontSize: 7, padding: '1px 4px', borderRadius: 2,
+                                            background: `${sourceColors[work._source] || '#888'}15`, color: sourceColors[work._source] || '#888',
+                                        }}>{work._source}</span>
+                                        {work.tier && <span style={{ fontSize: 7, padding: '1px 4px', borderRadius: 2, background: '#c9a84c15', color: '#c9a84c' }}>{work.tier}</span>}
+                                    </div>
                                 </div>
-                                <div style={{ fontSize: 9, color: '#666', marginTop: 2, display: 'flex', justifyContent: 'space-between' }}>
-                                    <span>{work.artist || 'Unknown'}</span>
-                                    <span style={{ color: '#4ade80' }}>${price.toLocaleString()}</span>
-                                </div>
-                                <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                                    <span style={{
-                                        fontSize: 7, padding: '1px 4px', borderRadius: 2,
-                                        background: `${sourceColors[work._source] || '#888'}15`, color: sourceColors[work._source] || '#888',
-                                    }}>{work._source}</span>
-                                    {work.tier && <span style={{ fontSize: 7, padding: '1px 4px', borderRadius: 2, background: '#c9a84c15', color: '#c9a84c' }}>{work.tier}</span>}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
                 {/* Content Area */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {/* Sub-tab bar */}
-                    <div style={{ display: 'flex', gap: 4, padding: '6px 12px', borderBottom: '1px solid #1a1a2e' }}>
+                    <div style={{ display: 'flex', gap: 4, padding: '6px 12px', borderBottom: '1px solid #1a1a2e', flexWrap: 'wrap' }}>
                         {subTabs.map(st => (
                             <button key={st.id} onClick={() => setSubTab(st.id)} style={{
                                 ...btnStyle, fontSize: 9,
@@ -400,7 +905,7 @@ export default function ArtworkEditor() {
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                        {/* METADATA SUB-TAB */}
+                        {/* METADATA */}
                         {subTab === 'metadata' && (
                             <div style={{ display: 'flex', gap: 12, height: '100%' }}>
                                 <div style={{ flex: 2 }}>
@@ -426,7 +931,13 @@ export default function ArtworkEditor() {
                                                         <option value="speculative">Speculative</option>
                                                     </select>
                                                 </div>
-                                                <div><label style={labelStyle}>Source</label><input readOnly value={selected._source || 'unknown'} style={{ ...inputStyle, color: '#555' }} /></div>
+                                                <div><label style={labelStyle}>Artist ID</label>
+                                                    <select value={selected.artistId || ''} onChange={e => handleFieldEdit('artistId', e.target.value || null)}
+                                                        style={{ ...inputStyle, cursor: 'pointer', color: selected.artistId ? '#60a5fa' : '#555' }}>
+                                                        <option value="">— Not linked —</option>
+                                                        {ARTISTS.map(a => <option key={a.id} value={a.id}>{a.name} ({a.id})</option>)}
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div style={{ marginTop: 10 }}>
                                                 <label style={labelStyle}>Provenance</label>
@@ -436,13 +947,10 @@ export default function ArtworkEditor() {
                                                 <label style={labelStyle}>Notes</label>
                                                 <textarea value={selected.notes || ''} onChange={e => handleFieldEdit('notes', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Add notes..." />
                                             </div>
-
-                                            {/* Haggle price matrix for selected work */}
                                             <HagglePricePanel work={selected} />
                                         </div>
                                     )}
                                 </div>
-
                                 {/* JSON Panel */}
                                 <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -461,21 +969,29 @@ export default function ArtworkEditor() {
                             </div>
                         )}
 
-                        {/* MARKET STATS SUB-TAB */}
+                        {/* ARTISTS */}
+                        {subTab === 'artists' && <ArtistsPanel onNotify={showNotif} />}
+
+                        {/* MARKET STATS */}
                         {subTab === 'market' && <MarketStatsPanel />}
 
-                        {/* CALENDAR SUB-TAB */}
+                        {/* MARKET CONTROLS */}
+                        {subTab === 'controls' && <MarketControlsPanel onNotify={showNotif} />}
+
+                        {/* PORTFOLIO */}
+                        {subTab === 'portfolio' && <PortfolioPanel />}
+
+                        {/* CALENDAR */}
                         {subTab === 'calendar' && <CalendarEventsPanel />}
 
-                        {/* HAGGLE MATRIX SUB-TAB */}
+                        {/* HAGGLE MATRIX */}
                         {subTab === 'haggle' && (
                             <div>
                                 <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>
                                     ⚔️ HAGGLE PRICE SIMULATION
                                 </div>
                                 <div style={{ fontSize: 10, color: '#888', marginBottom: 16 }}>
-                                    Shows projected asking prices for every artwork × dealer type combination.
-                                    Lower greed factor = better starting price for the player.
+                                    Projected asking prices by dealer type. Lower greed factor = better starting price.
                                 </div>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
                                     <thead>
@@ -490,7 +1006,7 @@ export default function ArtworkEditor() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {artworks.slice(0, 20).map(w => {
+                                        {artworks.slice(0, 30).map(w => {
                                             const base = w.askingPrice || w.price || 0;
                                             return (
                                                 <tr key={w.id} style={{ borderBottom: '1px solid #111' }}>

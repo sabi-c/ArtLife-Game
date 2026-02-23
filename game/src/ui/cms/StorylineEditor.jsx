@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { EventRegistry } from '../../managers/EventRegistry.js';
 import { useStorylineStore } from '../../stores/storylineStore.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { CONTACTS } from '../../data/contacts.js';
+import { ContentExporter } from '../../utils/ContentExporter.js';
 import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, addEdge, Handle, Position, MarkerType, ReactFlowProvider } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -97,6 +100,37 @@ export default function StorylineEditor() {
         };
         handleStorylineUpdate(selected.id, 'steps', [...(selected.steps || []), newStep]);
     };
+
+    const handleAddLinkedStep = (eventId) => {
+        if (!selected || !eventId) return;
+        const evt = (EventRegistry.jsonEvents || []).find(e => e.id === eventId);
+        const newStep = {
+            eventId,
+            delayWeeks: 1,
+            stepType: 'event_ref',
+            position: { x: 300, y: 100 },
+        };
+        handleStorylineUpdate(selected.id, 'steps', [...(selected.steps || []), newStep]);
+        showNotif(`🔗 Linked event: ${evt?.title || eventId}`);
+    };
+
+    const handleTestStoryline = () => {
+        if (!selected || !selected.steps?.length) return;
+        const firstStep = selected.steps[0];
+        if (!firstStep.eventId || firstStep.eventId === 'new_event_id') {
+            showNotif('❌ First step has no valid event ID');
+            return;
+        }
+        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'DialogueScene', {
+            eventId: firstStep.eventId,
+            returnScene: 'MainMenuScene',
+            returnArgs: {},
+        });
+        showNotif(`▶ Testing first step: ${firstStep.eventId}`);
+    };
+
+    const [showEventPicker, setShowEventPicker] = useState(false);
+    const availableEvents = useMemo(() => EventRegistry.jsonEvents || [], []);
 
     // ── Styles ──
     const panel = {
@@ -195,11 +229,33 @@ export default function StorylineEditor() {
                                 <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>{selected.description}</div>
                                 <div style={{ marginTop: 8 }}>
                                     <button onClick={() => handleTestFire(selected)} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }}>
-                                        ▶ Test Fire
+                                        ▶ Activate
+                                    </button>
+                                    <button onClick={handleTestStoryline} style={{ ...btnStyle, marginLeft: 8, borderColor: '#60a5fa', color: '#60a5fa' }}>
+                                        🎮 Test Scene
                                     </button>
                                     <button onClick={handleAddStep} style={{ ...btnStyle, marginLeft: 8, borderColor: '#88bbdd', color: '#88bbdd' }}>
                                         + Add Step
                                     </button>
+                                    <button onClick={() => setShowEventPicker(!showEventPicker)} style={{ ...btnStyle, marginLeft: 8, borderColor: '#c9a84c', color: '#c9a84c' }}>
+                                        🔗 Link Event
+                                    </button>
+                                    {showEventPicker && (
+                                        <div style={{ position: 'absolute', top: 40, left: 0, zIndex: 100, background: '#111', border: '1px solid #333', borderRadius: 4, padding: 8, maxHeight: 200, overflow: 'auto', minWidth: 280 }}>
+                                            <div style={{ fontSize: 9, color: '#666', marginBottom: 6, textTransform: 'uppercase' }}>Select event to link:</div>
+                                            {availableEvents.map(evt => (
+                                                <div key={evt.id}
+                                                    onClick={() => { handleAddLinkedStep(evt.id); setShowEventPicker(false); }}
+                                                    style={{ padding: '6px 8px', cursor: 'pointer', fontSize: 11, color: '#eaeaea', borderBottom: '1px solid #1a1a2e' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,0.1)'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                    <div>{evt.title || evt.id}</div>
+                                                    <div style={{ fontSize: 9, color: '#888' }}>{evt.category} · {evt.nodes?.length || 0} nodes</div>
+                                                </div>
+                                            ))}
+                                            {availableEvents.length === 0 && <div style={{ color: '#666', fontSize: 10 }}>No events found</div>}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -303,11 +359,30 @@ function StepEditor({ step, stepIdx, onChange, onClose }) {
                 <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>✕</button>
             </div>
 
+            <label style={labelStyle}>Step Type</label>
+            <select
+                value={step.stepType || 'event_ref'}
+                onChange={(e) => onChange('stepType', e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="event_ref">🔗 Event Reference</option>
+                <option value="inline">📝 Inline Step</option>
+            </select>
+
             <label style={labelStyle}>Event ID (Target)</label>
+            <select
+                value={step.eventId || ''}
+                onChange={(e) => onChange('eventId', e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer' }}>
+                <option value="">— Select Event —</option>
+                {(EventRegistry.jsonEvents || []).map(evt => (
+                    <option key={evt.id} value={evt.id}>{evt.title || evt.id} ({evt.category})</option>
+                ))}
+            </select>
             <input
                 value={step.eventId || ''}
                 onChange={(e) => onChange('eventId', e.target.value)}
-                style={inputStyle}
+                placeholder="Or type custom ID..."
+                style={{ ...inputStyle, marginTop: 4, fontSize: 10, color: '#888' }}
             />
 
             <label style={labelStyle}>Delay (weeks)</label>

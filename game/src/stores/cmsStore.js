@@ -1,13 +1,19 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
+import { EventRegistry } from '../managers/EventRegistry.js';
+import { useNPCStore } from './npcStore.js';
 
 /**
  * cmsStore.js — Unified CMS Persistence Layer
- * 
+ *
  * Tracks all CMS modifications as a diff layer on top of the original JSON files.
  * Provides save/load/export capabilities for the entire content pipeline.
- * 
+ *
+ * Dependencies: EventRegistry (events/storylines), useNPCStore (NPC contacts).
+ * These are imported as ES modules at the top level to avoid intermittent
+ * build errors from inline require() calls.
+ *
  * This store persists to localStorage so CMS work survives page reloads.
  */
 
@@ -112,10 +118,6 @@ export const useCmsStore = create(
              */
             saveAll: () => {
                 try {
-                    // Import live data from registries and stores
-                    const { EventRegistry } = require('../managers/EventRegistry.js');
-                    const { useNPCStore } = require('../stores/npcStore.js');
-
                     const events = EventRegistry.jsonEvents || [];
                     const storylines = EventRegistry.jsonStorylines || [];
                     const npcs = useNPCStore.getState().contacts || [];
@@ -124,6 +126,8 @@ export const useCmsStore = create(
                         if (events.length > 0) state.snapshots.events = JSON.parse(JSON.stringify(events));
                         if (storylines.length > 0) state.snapshots.storylines = JSON.parse(JSON.stringify(storylines));
                         if (npcs.length > 0) state.snapshots.npcs = JSON.parse(JSON.stringify(npcs));
+                        // Note: artworks and artists snapshots are saved directly by ArtworkEditor
+                        // via saveSnapshot('artworks')/saveSnapshot('artists') — no need to re-save here
 
                         // Clear all dirty flags
                         Object.keys(state.dirty).forEach(k => { state.dirty[k] = false; });
@@ -155,21 +159,18 @@ export const useCmsStore = create(
                     let loaded = 0;
 
                     if (state.snapshots.events?.length) {
-                        const { EventRegistry } = require('../managers/EventRegistry.js');
                         EventRegistry.jsonEvents = JSON.parse(JSON.stringify(state.snapshots.events));
                         loaded++;
                         console.log(`[CmsStore] ♻️ Restored ${state.snapshots.events.length} events`);
                     }
 
                     if (state.snapshots.storylines?.length) {
-                        const { EventRegistry } = require('../managers/EventRegistry.js');
                         EventRegistry.jsonStorylines = JSON.parse(JSON.stringify(state.snapshots.storylines));
                         loaded++;
                         console.log(`[CmsStore] ♻️ Restored ${state.snapshots.storylines.length} storylines`);
                     }
 
                     if (state.snapshots.npcs?.length) {
-                        const { useNPCStore } = require('../stores/npcStore.js');
                         useNPCStore.setState({ contacts: JSON.parse(JSON.stringify(state.snapshots.npcs)) });
                         loaded++;
                         console.log(`[CmsStore] ♻️ Restored ${state.snapshots.npcs.length} NPCs`);
@@ -191,18 +192,17 @@ export const useCmsStore = create(
              */
             exportBundle: () => {
                 try {
-                    const { EventRegistry } = require('../managers/EventRegistry.js');
-                    const { useNPCStore } = require('../stores/npcStore.js');
-
                     const bundle = {
                         _meta: {
                             exportedAt: new Date().toISOString(),
-                            version: '1.0.0',
+                            version: '1.1.0',
                             game: 'ArtLife',
                         },
                         events: EventRegistry.jsonEvents || [],
                         storylines: EventRegistry.jsonStorylines || [],
                         npcs: useNPCStore.getState().contacts || [],
+                        artworks: get().snapshots.artworks || null,
+                        artists: get().snapshots.artists || null,
                     };
 
                     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(bundle, null, 2));
@@ -234,8 +234,6 @@ export const useCmsStore = create(
             importBundle: (bundleJson) => {
                 try {
                     const bundle = typeof bundleJson === 'string' ? JSON.parse(bundleJson) : bundleJson;
-                    const { EventRegistry } = require('../managers/EventRegistry.js');
-                    const { useNPCStore } = require('../stores/npcStore.js');
 
                     if (bundle.events?.length) {
                         EventRegistry.jsonEvents = bundle.events;
@@ -248,6 +246,12 @@ export const useCmsStore = create(
                     if (bundle.npcs?.length) {
                         useNPCStore.setState({ contacts: bundle.npcs });
                         set((state) => { state.snapshots.npcs = bundle.npcs; state.dirty.npcs = true; });
+                    }
+                    if (bundle.artworks?.length) {
+                        set((state) => { state.snapshots.artworks = bundle.artworks; state.dirty.artworks = true; });
+                    }
+                    if (bundle.artists?.length) {
+                        set((state) => { state.snapshots.artists = bundle.artists; state.dirty.artworks = true; });
                     }
 
                     console.log('[CmsStore] 📥 Bundle imported successfully');

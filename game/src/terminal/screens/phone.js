@@ -231,6 +231,49 @@ export function contactDetailScreen(ui, contactState, contactData) {
             npcMessages.slice(0, 3).forEach(msg => lines.push(DIM(`  Week ${msg.week}: ${msg.subject}`)));
         }
 
+        // ── COLLECTION & MARKET PROFILE ──
+        // Gated behind progressive disclosure: only show in mid/late game (week > 4)
+        const profile = TerminalAPI.npcMarket.getProfile(contactState.id);
+        if (s.week > 4 && (profile.collectionSize > 0 || profile.totalBought > 0)) {
+            lines.push(DIV());
+            lines.push(SUB('COLLECTION'));
+            lines.push(STAT('Pieces Owned', profile.collectionSize));
+            lines.push(STAT('Collection Value', `$${profile.collectionValue.toLocaleString()}`));
+            // Show top 3 works
+            profile.owned.slice(0, 3).forEach(w => {
+                let val;
+                try { val = TerminalAPI.market.calculatePrice(w, false); }
+                catch { val = w.askingPrice || 0; }
+                lines.push(DIM(`  • "${w.title}" by ${w.artist} — $${val.toLocaleString()}`));
+            });
+            if (profile.owned.length > 3) {
+                lines.push(DIM(`  ... +${profile.owned.length - 3} more`));
+            }
+
+            lines.push(BLANK());
+            lines.push(SUB('MARKET ACTIVITY'));
+            lines.push(STAT('Bought', profile.totalBought));
+            lines.push(STAT('Sold', profile.totalSold));
+            lines.push(STAT('Spent', `$${profile.totalSpent.toLocaleString()}`));
+            lines.push(STAT('Earned', `$${profile.totalEarned.toLocaleString()}`));
+            const profitColor = profile.netProfit > 0 ? 'green' : profile.netProfit < 0 ? 'red' : '';
+            lines.push(STAT('Net P&L', `$${profile.netProfit.toLocaleString()}`, profitColor));
+            lines.push(STAT('Strategy', profile.strategy.toUpperCase()));
+
+            // Financials (only visible at high favor or late game)
+            if (s.week > 12 || favor >= 30) {
+                lines.push(BLANK());
+                lines.push(SUB('FINANCIALS'));
+                lines.push(STAT('Liquid Cash', `$${profile.cash.toLocaleString()}`));
+                lines.push(STAT('Net Worth', `$${profile.netWorth.toLocaleString()}`));
+                const stressColor = profile.financialStress > 60 ? 'red' : profile.financialStress > 30 ? 'yellow' : 'green';
+                lines.push(STAT('Financial Stress', `${Math.round(profile.financialStress)}%`, stressColor));
+            }
+        } else if (s.week <= 4) {
+            lines.push(DIV());
+            lines.push(DIM('You don\'t know much about their collection yet.'));
+        }
+
         lines.push(DIV());
         const options = [];
 
@@ -256,7 +299,93 @@ export function contactDetailScreen(ui, contactState, contactData) {
             // (Full logic will be preserved in real implementation)
         }
 
+        // View collection (if they have pieces and we're past early game)
+        if (s.week > 4 && profile.collectionSize > 0) {
+            options.push({
+                label: `🖼️ View ${contactData.name.split(' ')[0]}'s Collection`,
+                action: () => ui.pushScreen(npcCollectionScreen(ui, contactState.id, contactData)),
+            });
+        }
+
         options.push({ label: '← Back', action: () => ui.popScreen() });
+        return { lines, options };
+    };
+}
+
+// ════════════════════════════════════════════
+// SCREEN: NPC Collection Detail
+// ════════════════════════════════════════════
+function npcCollectionScreen(ui, npcId, contactData) {
+    return () => {
+        const profile = TerminalAPI.npcMarket.getProfile(npcId);
+
+        const lines = [
+            H(`${contactData.emoji || '🖼️'} ${contactData.name}'s Collection`),
+            DIM(`${profile.collectionSize} pieces • $${profile.collectionValue.toLocaleString()} total value`),
+            DIV(),
+        ];
+
+        if (profile.owned.length === 0) {
+            lines.push(DIM('No artworks in collection.'));
+        } else {
+            // Genre distribution
+            const genres = {};
+            const tiers = {};
+            profile.owned.forEach(w => {
+                genres[w.genre] = (genres[w.genre] || 0) + 1;
+                tiers[w.tier] = (tiers[w.tier] || 0) + 1;
+            });
+
+            lines.push(SUB('COMPOSITION'));
+            Object.entries(tiers).sort((a, b) => b[1] - a[1]).forEach(([tier, count]) => {
+                lines.push(STAT(tier.replace('_', ' '), count));
+            });
+            lines.push(BLANK());
+            Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([genre, count]) => {
+                lines.push(DIM(`  ${genre}: ${count}`));
+            });
+
+            lines.push(DIV());
+            lines.push(SUB('ARTWORKS'));
+            profile.owned.forEach(w => {
+                let currentVal;
+                try { currentVal = TerminalAPI.market.calculatePrice(w, false); }
+                catch { currentVal = w.askingPrice || 0; }
+                const forSale = profile.forSale.includes(w.id);
+                const saleTag = forSale ? ' [FOR SALE]' : '';
+                lines.push(`  "${w.title}" by ${w.artist}${saleTag}`);
+                lines.push(DIM(`    ${w.year} • ${w.medium} • $${currentVal.toLocaleString()}`));
+            });
+        }
+
+        // Recent trades
+        if (profile.recentTrades.length > 0) {
+            lines.push(DIV());
+            lines.push(SUB('RECENT TRADES'));
+            profile.recentTrades.slice(-10).forEach(t => {
+                const isBuyer = t.buyer === npcId;
+                const other = isBuyer ? t.seller : t.buyer;
+                const otherContact = TerminalAPI.contacts.find(c => c.id === other);
+                const otherName = otherContact?.name || other;
+                const artwork = TerminalAPI.artworks.find(a => a.id === t.artwork);
+                const title = artwork?.title || t.artwork;
+                const action = isBuyer ? 'Bought' : 'Sold';
+                lines.push(DIM(`  Wk ${t.week}: ${action} "${title}" ${isBuyer ? 'from' : 'to'} ${otherName} — $${t.price.toLocaleString()}`));
+            });
+        }
+
+        // Summary stats
+        lines.push(DIV());
+        lines.push(SUB('LIFETIME STATS'));
+        lines.push(STAT('Total Bought', profile.totalBought));
+        lines.push(STAT('Total Sold', profile.totalSold));
+        lines.push(STAT('Avg Piece Value', profile.owned.length > 0
+            ? `$${Math.round(profile.collectionValue / profile.owned.length).toLocaleString()}`
+            : '$0'));
+        const profitColor = profile.netProfit > 0 ? 'green' : profile.netProfit < 0 ? 'red' : '';
+        lines.push(STAT('Net P&L', `$${profile.netProfit.toLocaleString()}`, profitColor));
+
+        const options = [{ label: '← Back', action: () => ui.popScreen() }];
         return { lines, options };
     };
 }

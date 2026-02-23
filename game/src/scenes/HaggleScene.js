@@ -3,7 +3,7 @@ import { BaseScene } from './BaseScene.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { MarketManager } from '../managers/MarketManager.js';
 import { GameState } from '../managers/GameState.js';
-import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES, TACTIC_DIALOGUE_CHOICES, DIALOGUE_EFFECTIVENESS, BATTLE_MENU_CATEGORIES } from '../data/haggle_config.js';
+import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES, TACTIC_DIALOGUE_CHOICES, DIALOGUE_EFFECTIVENESS, BATTLE_MENU_CATEGORIES, HAGGLE_ACHIEVEMENTS } from '../data/haggle_config.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
@@ -1377,20 +1377,46 @@ export class HaggleScene extends BaseScene {
     renderResult() {
         const live = HaggleManager.getState();
         if (live) Object.assign(this.state, live);
-        this.tacticsContainer.removeAll(true);
-        this.tacticsContainer.setVisible(true);
-        this.menuBg?.setVisible(false);
 
         const { width, height } = this.scale;
         const isDeal = this.state.result === 'deal';
+        const dealerKey = this.state.dealerTypeKey || 'patron';
 
-        // Hide the dialogue box area
+        // ── Phase 0: Dealer speaks closing words over the battle scene ──
+        // The battle arena is still visible — dealer delivers their parting line
+        const closingPool = isDeal ? DEALER_DIALOGUE.onDeal : DEALER_DIALOGUE.onFail;
+        const closingLines = closingPool?.[dealerKey] || closingPool?.patron || ['"Until next time."'];
+        const closingLine = closingLines[Math.floor(Math.random() * closingLines.length)].replace(/"/g, '');
+
+        this.tacticsContainer.removeAll(true);
+        this.tacticsContainer.setVisible(false);
+        this.menuBg?.setVisible(false);
+
+        // Show dealer's closing words in the dialogue box (still over battle scene)
+        this.dialogueBg.setAlpha(1);
+        this.speakerTab.setAlpha(1).setText(this.state.dealerName?.toUpperCase() || 'DEALER');
+        this.dialogueTextContent.setAlpha(1);
+
+        this.playDialogue(closingLine, () => {
+            // Brief dramatic pause, then transition to result screen
+            this.time.delayedCall(800, () => {
+                this._showResultScreen(isDeal);
+            });
+        });
+    }
+
+    /** The actual result screen — called after dealer dialogue cutscene */
+    _showResultScreen(isDeal) {
+        const { width, height } = this.scale;
+        const DEPTH = 200;
+        const elements = [];
+
+        // Hide dialogue box for the result overlay
         this.dialogueBg.setAlpha(0);
         this.speakerTab.setAlpha(0);
         this.dialogueTextContent.setAlpha(0);
-
-        const DEPTH = 200;
-        const elements = [];
+        this.tacticsContainer.removeAll(true);
+        this.tacticsContainer.setVisible(true);
 
         if (isDeal) {
             // ═════════════════════════════════════════════
@@ -1404,247 +1430,258 @@ export class HaggleScene extends BaseScene {
             const savings = askingPrice - finalPrice;
             const savingsPct = askingPrice > 0 ? Math.round((savings / askingPrice) * 100) : 0;
 
-            // Get market value for comparison
+            // Market value comparison
             let marketValue = 0;
             try { marketValue = MarketManager.calculatePrice(work, false) || work.basePrice || askingPrice; } catch (e) { marketValue = askingPrice; }
             const vsMkt = finalPrice - marketValue;
             const vsMktPct = marketValue > 0 ? Math.round((vsMkt / marketValue) * 100) : 0;
             const isGoodDeal = vsMkt < 0;
 
-            // Remaining cash
             const cashAfter = (GameState.state?.cash || 0) - finalPrice;
             const roundCount = this.state.rounds?.length || this.state.round || '?';
+            const dealerKey = this.state.dealerTypeKey || 'patron';
 
-            // ── Phase 0: Dramatic blackout + flash ──
+            // ── Phase 0: Blackout + flash ──
             const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x050510, 0.96).setDepth(DEPTH).setAlpha(0);
             elements.push(overlay);
-            this.tweens.add({ targets: overlay, alpha: 1, duration: 500 });
+            this.tweens.add({ targets: overlay, alpha: 1, duration: 400 });
 
-            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.9).setDepth(DEPTH + 1);
+            const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.85).setDepth(DEPTH + 1);
             elements.push(flash);
-            this.tweens.add({ targets: flash, alpha: 0, duration: 350, delay: 250 });
-            this.cameras.main.shake(300, 0.015);
+            this.tweens.add({ targets: flash, alpha: 0, duration: 300, delay: 200 });
+            this.cameras.main.shake(250, 0.012);
 
-            // ── Phase 1 (500ms): "ACQUIRED" header ──
-            const headerText = this.add.text(width / 2, 55, '✦  A R T   A C Q U I R E D  ✦', {
-                fontFamily: '"Press Start 2P"', fontSize: '18px', color: '#c9a84c',
+            // ── Phase 1 (400ms): "ART ACQUIRED" header ──
+            const headerText = this.add.text(width / 2, 48, '✦  A R T   A C Q U I R E D  ✦', {
+                fontFamily: '"Press Start 2P"', fontSize: '16px', color: '#c9a84c',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
             elements.push(headerText);
-            this.tweens.add({ targets: headerText, alpha: 1, y: 50, duration: 700, delay: 500, ease: 'Back.easeOut' });
+            this.tweens.add({ targets: headerText, alpha: 1, y: 44, duration: 600, delay: 400, ease: 'Back.easeOut' });
 
-            // Decorative line under header
+            // Gold decorative line
             const headerLine = this.add.graphics().setDepth(DEPTH + 2).setAlpha(0);
-            headerLine.lineStyle(1, 0xc9a84c, 0.5);
-            headerLine.lineBetween(width * 0.15, 75, width * 0.85, 75);
+            headerLine.lineStyle(1, 0xc9a84c, 0.4);
+            headerLine.lineBetween(width * 0.2, 66, width * 0.8, 66);
             elements.push(headerLine);
-            this.tweens.add({ targets: headerLine, alpha: 1, duration: 500, delay: 800 });
+            this.tweens.add({ targets: headerLine, alpha: 1, duration: 400, delay: 650 });
 
-            // ── Phase 2 (800ms): Artwork display card ──
-            // Try to show artwork sprite if available
-            const cardX = width * 0.32;
-            const cardY = height / 2 - 20;
-            const cardW = 200;
-            const cardH = 250;
+            // ── Phase 2 (700ms): Artwork card (left side) ──
+            const cardCenterX = width * 0.28;
+            const cardCenterY = height / 2 - 10;
+            const cardW = Math.min(180, width * 0.25);
+            const cardH = Math.min(220, height * 0.42);
 
-            // Card background (frame)
-            const frame = this.add.rectangle(cardX, cardY, cardW + 16, cardH + 16, 0x0a0a1a, 0.9)
-                .setStrokeStyle(3, 0xc9a84c).setDepth(DEPTH + 2).setAlpha(0);
+            // Gold frame
+            const frame = this.add.rectangle(cardCenterX, cardCenterY, cardW + 12, cardH + 12, 0x0a0a1a, 0.95)
+                .setStrokeStyle(2.5, 0xc9a84c).setDepth(DEPTH + 2).setAlpha(0);
             elements.push(frame);
 
             // Inner mat
-            const mat = this.add.rectangle(cardX, cardY, cardW, cardH, 0x1a1a2e)
-                .setStrokeStyle(1, 0x2a2a3e).setDepth(DEPTH + 2).setAlpha(0);
+            const mat = this.add.rectangle(cardCenterX, cardCenterY, cardW, cardH, 0x151520)
+                .setStrokeStyle(1, 0x222236).setDepth(DEPTH + 2).setAlpha(0);
             elements.push(mat);
 
-            // Artwork sprite or placeholder
+            // Artwork image or placeholder
             const spriteKey = work.sprite || work.spriteKey;
-            let artworkDisplay;
+            let artDisp;
             if (spriteKey && this.textures.exists(spriteKey)) {
                 const tex = this.textures.get(spriteKey).source[0];
-                const scale = Math.min((cardW - 20) / tex.width, (cardH - 60) / tex.height);
-                artworkDisplay = this.add.image(cardX, cardY - 15, spriteKey)
+                const scale = Math.min((cardW - 16) / tex.width, (cardH - 70) / tex.height);
+                artDisp = this.add.image(cardCenterX, cardCenterY - 20, spriteKey)
                     .setScale(scale).setDepth(DEPTH + 3).setAlpha(0);
             } else {
-                // Text placeholder with artwork title
-                artworkDisplay = this.add.text(cardX, cardY - 15, '🖼️', {
-                    fontSize: '64px',
+                artDisp = this.add.text(cardCenterX, cardCenterY - 20, '🖼️', {
+                    fontSize: '56px',
                 }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
             }
-            elements.push(artworkDisplay);
+            elements.push(artDisp);
 
-            // Artwork title & artist under the card
-            const artTitle = this.add.text(cardX, cardY + cardH / 2 - 20, `"${(work.title || 'Untitled').substring(0, 20)}"`, {
-                fontFamily: '"Playfair Display"', fontSize: '14px', color: '#e8e4df', fontStyle: 'italic', align: 'center',
+            // Title + artist beneath artwork
+            const titleTxt = this.add.text(cardCenterX, cardCenterY + cardH / 2 - 28,
+                `"${(work.title || 'Untitled').substring(0, 22)}"`, {
+                fontFamily: '"Playfair Display"', fontSize: '13px', color: '#e8e4df', fontStyle: 'italic',
+                align: 'center', wordWrap: { width: cardW - 10 },
             }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
-            elements.push(artTitle);
+            elements.push(titleTxt);
 
-            const artArtist = this.add.text(cardX, cardY + cardH / 2 + 0, work.artist || 'Unknown', {
-                fontFamily: '"Playfair Display"', fontSize: '11px', color: '#7a7a8a', align: 'center',
+            const artistTxt = this.add.text(cardCenterX, cardCenterY + cardH / 2 - 10,
+                work.artist || 'Unknown Artist', {
+                fontFamily: '"Playfair Display"', fontSize: '10px', color: '#7a7a8a', align: 'center',
             }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
-            elements.push(artArtist);
+            elements.push(artistTxt);
 
-            // Medium + Year badge
-            const medium = [work.medium, work.year].filter(Boolean).join(', ');
-            const mediumText = this.add.text(cardX, cardY + cardH / 2 + 18, medium, {
-                fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#555', align: 'center',
-            }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
-            elements.push(mediumText);
+            // Medium / Year tag
+            const medStr = [work.medium, work.year].filter(Boolean).join(', ');
+            if (medStr) {
+                const medTxt = this.add.text(cardCenterX, cardCenterY + cardH / 2 + 4, medStr, {
+                    fontFamily: '"Press Start 2P"', fontSize: '5px', color: '#444', align: 'center',
+                }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+                elements.push(medTxt);
+            }
 
-            // Animate card reveal
-            const cardElements = [frame, mat, artworkDisplay, artTitle, artArtist, mediumText];
-            cardElements.forEach((el, i) => {
-                this.tweens.add({ targets: el, alpha: 1, duration: 500, delay: 900 + i * 80, ease: 'Power2' });
+            // Staggered card reveal
+            [frame, mat, artDisp, titleTxt, artistTxt].forEach((el, i) => {
+                this.tweens.add({ targets: el, alpha: 1, duration: 400, delay: 700 + i * 70, ease: 'Power2' });
             });
 
-            // Subtle float animation on artwork
-            this.tweens.add({ targets: artworkDisplay, y: artworkDisplay.y - 4, yoyo: true, repeat: -1, duration: 2000, ease: 'Sine.easeInOut', delay: 1400 });
+            // Gentle float
+            this.tweens.add({ targets: artDisp, y: artDisp.y - 3, yoyo: true, repeat: -1, duration: 2500, ease: 'Sine.easeInOut', delay: 1200 });
 
-            // ── Phase 3 (1400ms): Price Comparison Panel ──
-            const panelX = width * 0.68;
-            const panelY = height / 2 - 60;
-            const panelW = 300;
+            // ── Phase 3 (1200ms): Price comparison panel (right side) ──
+            const panelX = width * 0.66;
+            const panelW = Math.min(280, width * 0.36);
+            const panelTopY = 80;
 
-            // Panel background
-            const pricePanelBg = this.add.rectangle(panelX, panelY + 60, panelW, 220, 0x0e0e1a, 0.9)
-                .setStrokeStyle(2, 0x2a2a3e).setDepth(DEPTH + 2).setAlpha(0);
-            elements.push(pricePanelBg);
-            this.tweens.add({ targets: pricePanelBg, alpha: 1, duration: 400, delay: 1400 });
+            // Panel bg
+            const panelBg = this.add.rectangle(panelX, panelTopY + 90, panelW, 190, 0x0c0c18, 0.92)
+                .setStrokeStyle(1.5, 0x222236).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(panelBg);
+            this.tweens.add({ targets: panelBg, alpha: 1, duration: 350, delay: 1200 });
 
-            // Price rows with staggered reveal
-            const priceRows = [
-                { label: 'DEAL PRICE', value: `$${finalPrice.toLocaleString()}`, color: '#4ade80', fontSize: '14px', bold: true },
-                { label: 'ASKING PRICE', value: `$${askingPrice.toLocaleString()}`, color: '#f87171', fontSize: '10px', strikethrough: true },
-                { label: 'MARKET VALUE', value: `$${marketValue.toLocaleString()}`, color: '#60a5fa', fontSize: '10px' },
+            // Price rows
+            const rows = [
+                { lbl: 'DEAL PRICE', val: `$${finalPrice.toLocaleString()}`, col: '#4ade80', fs: '13px' },
+                { lbl: 'ASKING PRICE', val: `$${askingPrice.toLocaleString()}`, col: '#f87171', fs: '9px', strike: true },
+                { lbl: 'MARKET VALUE', val: `$${marketValue.toLocaleString()}`, col: '#60a5fa', fs: '9px' },
             ];
 
-            priceRows.forEach((row, i) => {
-                const rowY = panelY + 5 + i * 32;
-                const lbl = this.add.text(panelX - panelW / 2 + 16, rowY, row.label, {
-                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#555',
+            rows.forEach((r, i) => {
+                const ry = panelTopY + 18 + i * 30;
+                const l = this.add.text(panelX - panelW / 2 + 14, ry, r.lbl, {
+                    fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#555',
                 }).setDepth(DEPTH + 3).setAlpha(0);
-
-                const val = this.add.text(panelX + panelW / 2 - 16, rowY, row.value, {
-                    fontFamily: '"Press Start 2P"', fontSize: row.fontSize, color: row.color,
+                const v = this.add.text(panelX + panelW / 2 - 14, ry, r.val, {
+                    fontFamily: '"Press Start 2P"', fontSize: r.fs, color: r.col,
                 }).setOrigin(1, 0).setDepth(DEPTH + 3).setAlpha(0);
+                elements.push(l, v);
+                this.tweens.add({ targets: [l, v], alpha: 1, duration: 250, delay: 1300 + i * 160 });
 
-                elements.push(lbl, val);
-                this.tweens.add({ targets: [lbl, val], alpha: 1, duration: 300, delay: 1500 + i * 200 });
-
-                // Strikethrough line on asking price
-                if (row.strikethrough) {
-                    const strike = this.add.graphics().setDepth(DEPTH + 4).setAlpha(0);
-                    strike.lineStyle(2, 0xf87171, 0.6);
-                    const textWidth = row.value.length * 8;
-                    strike.lineBetween(panelX + panelW / 2 - 16 - textWidth - 4, rowY + 7, panelX + panelW / 2 - 12, rowY + 7);
-                    elements.push(strike);
-                    this.tweens.add({ targets: strike, alpha: 1, duration: 200, delay: 1750 });
+                if (r.strike) {
+                    const sg = this.add.graphics().setDepth(DEPTH + 4).setAlpha(0);
+                    sg.lineStyle(1.5, 0xf87171, 0.5);
+                    const tw = r.val.length * 7;
+                    sg.lineBetween(panelX + panelW / 2 - 14 - tw - 2, ry + 6, panelX + panelW / 2 - 10, ry + 6);
+                    elements.push(sg);
+                    this.tweens.add({ targets: sg, alpha: 1, duration: 200, delay: 1600 });
                 }
             });
 
-            // ── Savings / Market comparison badges ──
-            const badgeY = panelY + 105;
-
-            // Savings badge
+            // Savings / Market comparison badges
+            const bdgY = panelTopY + 112;
             if (savings > 0) {
-                const savBg = this.add.rectangle(panelX - 65, badgeY, 130, 28, 0x1a2e1a)
-                    .setStrokeStyle(1, 0x3a8a5c).setDepth(DEPTH + 3).setAlpha(0);
-                const savTxt = this.add.text(panelX - 65, badgeY, `▼ ${savingsPct}% OFF ASK`, {
-                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#4ade80',
+                const sBg = this.add.rectangle(panelX - panelW / 4, bdgY, panelW / 2 - 8, 24, 0x0e1e0e)
+                    .setStrokeStyle(1, 0x2e6e2e).setDepth(DEPTH + 3).setAlpha(0);
+                const sTx = this.add.text(panelX - panelW / 4, bdgY, `▼ ${savingsPct}% OFF`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#4ade80',
                 }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
-                elements.push(savBg, savTxt);
-                this.tweens.add({ targets: [savBg, savTxt], alpha: 1, duration: 300, delay: 2100 });
+                elements.push(sBg, sTx);
+                this.tweens.add({ targets: [sBg, sTx], alpha: 1, duration: 250, delay: 1850 });
             }
 
-            // Market value comparison badge
             if (marketValue > 0) {
-                const mktBadgeColor = isGoodDeal ? 0x1a2e1a : 0x2e1a1a;
-                const mktBorderColor = isGoodDeal ? 0x3a8a5c : 0xc94040;
-                const mktTextColor = isGoodDeal ? '#4ade80' : '#f87171';
-                const mktLabel = isGoodDeal
-                    ? `▼ ${Math.abs(vsMktPct)}% BELOW MKT`
-                    : `▲ ${Math.abs(vsMktPct)}% ABOVE MKT`;
-
-                const mktBg = this.add.rectangle(panelX + 65, badgeY, 130, 28, mktBadgeColor)
-                    .setStrokeStyle(1, mktBorderColor).setDepth(DEPTH + 3).setAlpha(0);
-                const mktTxt = this.add.text(panelX + 65, badgeY, mktLabel, {
-                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: mktTextColor,
+                const mc = isGoodDeal ? '#4ade80' : '#f87171';
+                const ml = isGoodDeal ? `▼ ${Math.abs(vsMktPct)}% VS MKT` : `▲ ${Math.abs(vsMktPct)}% VS MKT`;
+                const mBg = this.add.rectangle(panelX + panelW / 4, bdgY, panelW / 2 - 8, 24, isGoodDeal ? 0x0e1e0e : 0x1e0e0e)
+                    .setStrokeStyle(1, isGoodDeal ? 0x2e6e2e : 0x6e2e2e).setDepth(DEPTH + 3).setAlpha(0);
+                const mTx = this.add.text(panelX + panelW / 4, bdgY, ml, {
+                    fontFamily: '"Press Start 2P"', fontSize: '6px', color: mc,
                 }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
-                elements.push(mktBg, mktTxt);
-                this.tweens.add({ targets: [mktBg, mktTxt], alpha: 1, duration: 300, delay: 2300 });
+                elements.push(mBg, mTx);
+                this.tweens.add({ targets: [mBg, mTx], alpha: 1, duration: 250, delay: 2000 });
             }
 
-            // ── Phase 4 (2600ms): Stats summary row ──
-            const statsY = panelY + 150;
-
-            const statsData = [
-                { label: 'ROUNDS', value: `${roundCount}`, icon: '⚔️' },
-                { label: 'SAVED', value: savings > 0 ? `$${savings.toLocaleString()}` : '$0', icon: '💰' },
-                { label: 'CASH LEFT', value: `$${Math.max(0, cashAfter).toLocaleString()}`, icon: '💵' },
-            ];
-
-            statsData.forEach((stat, i) => {
-                const sx = panelX - panelW / 2 + 20 + i * 100;
-                const lbl = this.add.text(sx, statsY, `${stat.icon} ${stat.label}`, {
-                    fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#555',
+            // ── Stats row ──
+            const stY = panelTopY + 148;
+            [
+                { lbl: 'ROUNDS', val: `${roundCount}`, ico: '⚔️' },
+                { lbl: 'SAVED', val: savings > 0 ? `$${savings.toLocaleString()}` : '--', ico: '💰' },
+                { lbl: 'CASH', val: `$${Math.max(0, cashAfter).toLocaleString()}`, ico: '💵' },
+            ].forEach((s, i) => {
+                const sx = panelX - panelW / 2 + 14 + i * (panelW / 3);
+                const sl = this.add.text(sx, stY, `${s.ico} ${s.lbl}`, {
+                    fontFamily: '"Press Start 2P"', fontSize: '5px', color: '#555',
                 }).setDepth(DEPTH + 3).setAlpha(0);
-                const val = this.add.text(sx, statsY + 14, stat.value, {
-                    fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#c9a84c',
+                const sv = this.add.text(sx, stY + 12, s.val, {
+                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#c9a84c',
                 }).setDepth(DEPTH + 3).setAlpha(0);
-                elements.push(lbl, val);
-                this.tweens.add({ targets: [lbl, val], alpha: 1, duration: 300, delay: 2600 + i * 150 });
+                elements.push(sl, sv);
+                this.tweens.add({ targets: [sl, sv], alpha: 1, duration: 250, delay: 2200 + i * 120 });
             });
 
-            // ── Collection confirmation banner ──
-            const bannerY = height - 90;
-            const bannerBg = this.add.rectangle(width / 2, bannerY, width - 80, 32, 0x0a1a0a, 0.9)
+            // ── Phase 4: Achievements ──
+            const earnedAchievements = this._checkDealAchievements(dealerKey, finalPrice, askingPrice, roundCount);
+            if (earnedAchievements.length > 0) {
+                const achY = height - 130;
+                const achBg = this.add.rectangle(width / 2, achY, width - 60, 36, 0x1a1a0e, 0.9)
+                    .setStrokeStyle(1, 0x8a8a3a).setDepth(DEPTH + 2).setAlpha(0);
+                elements.push(achBg);
+                this.tweens.add({ targets: achBg, alpha: 1, duration: 300, delay: 2600 });
+
+                const achSpacing = Math.min(120, (width - 100) / earnedAchievements.length);
+                earnedAchievements.forEach((ach, i) => {
+                    const ax = width / 2 - ((earnedAchievements.length - 1) * achSpacing) / 2 + i * achSpacing;
+                    const icon = this.add.text(ax, achY - 2, ach.icon, {
+                        fontSize: '16px',
+                    }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+                    const name = this.add.text(ax, achY + 12, ach.name, {
+                        fontFamily: '"Press Start 2P"', fontSize: '5px', color: '#c9a84c',
+                    }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
+                    elements.push(icon, name);
+                    this.tweens.add({ targets: [icon, name], alpha: 1, duration: 300, delay: 2700 + i * 150 });
+                    // Pop animation on icon
+                    this.tweens.add({ targets: icon, scale: 1.4, yoyo: true, duration: 200, delay: 2800 + i * 150 });
+                });
+            }
+
+            // ── Collection confirmation ──
+            const colY = height - 85;
+            const colBg = this.add.rectangle(width / 2, colY, width - 60, 26, 0x0a1a0a, 0.9)
                 .setStrokeStyle(1, 0x3a8a5c).setDepth(DEPTH + 2).setAlpha(0);
             const portfolioCount = (GameState.state?.portfolio?.length || 0) + 1;
-            const bannerTxt = this.add.text(width / 2, bannerY, `✦ Added to collection — ${portfolioCount} work${portfolioCount !== 1 ? 's' : ''} in portfolio`, {
-                fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#4ade80',
+            const colTx = this.add.text(width / 2, colY, `✦ Added to collection — ${portfolioCount} work${portfolioCount !== 1 ? 's' : ''} in portfolio`, {
+                fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#4ade80',
             }).setOrigin(0.5).setDepth(DEPTH + 3).setAlpha(0);
-            elements.push(bannerBg, bannerTxt);
-            this.tweens.add({ targets: [bannerBg, bannerTxt], alpha: 1, duration: 400, delay: 3000 });
+            elements.push(colBg, colTx);
+            const colDelay = earnedAchievements.length > 0 ? 3100 : 2700;
+            this.tweens.add({ targets: [colBg, colTx], alpha: 1, duration: 350, delay: colDelay });
 
-            // ── Phase 5 (3400ms): Continue button ──
-            const btnY = height - 50;
-            const btnBg = this.add.rectangle(width / 2, btnY, 240, 36, 0x1a2e4e, 0.9)
+            // ── Continue button ──
+            const btnY = height - 48;
+            const btnBg = this.add.rectangle(width / 2, btnY, 220, 32, 0x1a2e4e, 0.9)
                 .setStrokeStyle(2, 0x4488cc).setInteractive({ useHandCursor: true }).setDepth(DEPTH + 5).setAlpha(0);
-            const btnTxt = this.add.text(width / 2, btnY, 'ADD TO COLLECTION →', {
-                fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#88ccff',
+            const btnTx = this.add.text(width / 2, btnY, 'ADD TO COLLECTION →', {
+                fontFamily: '"Press Start 2P"', fontSize: '9px', color: '#88ccff',
             }).setOrigin(0.5).setDepth(DEPTH + 5).setAlpha(0);
-            elements.push(btnBg, btnTxt);
-            this.tweens.add({ targets: [btnBg, btnTxt], alpha: 1, duration: 400, delay: 3400 });
+            elements.push(btnBg, btnTx);
+            this.tweens.add({ targets: [btnBg, btnTx], alpha: 1, duration: 350, delay: colDelay + 400 });
 
             btnBg.on('pointerover', () => btnBg.setFillStyle(0x2a3e6e));
             btnBg.on('pointerout', () => btnBg.setFillStyle(0x1a2e4e));
             btnBg.on('pointerdown', () => {
                 btnBg.disableInteractive();
                 HaggleManager.applyResult();
-                // Brief celebration flash before exit
-                this.cameras.main.flash(400, 201, 168, 76); // gold flash
+                this.cameras.main.flash(400, 201, 168, 76);
                 this.time.delayedCall(500, () => this.endBattle());
             });
 
-            // ── Ambient sparkle particles ──
-            this.time.delayedCall(1200, () => {
-                const sparkles = ['✦', '✧', '·', '·', '✦'];
-                for (let i = 0; i < 12; i++) {
+            // ── Ambient sparkles ──
+            this.time.delayedCall(1000, () => {
+                for (let i = 0; i < 10; i++) {
                     const sp = this.add.text(
-                        Phaser.Math.Between(40, width - 40),
-                        Phaser.Math.Between(40, height - 80),
-                        sparkles[i % sparkles.length],
-                        { fontSize: `${Phaser.Math.Between(8, 16)}px`, color: '#c9a84c' }
+                        Phaser.Math.Between(30, width - 30),
+                        Phaser.Math.Between(30, height - 60),
+                        i % 3 === 0 ? '✦' : '·',
+                        { fontSize: `${Phaser.Math.Between(6, 14)}px`, color: '#c9a84c' }
                     ).setOrigin(0.5).setDepth(DEPTH + 1).setAlpha(0);
                     elements.push(sp);
                     this.tweens.add({
                         targets: sp,
-                        alpha: { from: 0, to: Phaser.Math.FloatBetween(0.2, 0.5) },
-                        y: sp.y - Phaser.Math.Between(10, 30),
-                        duration: Phaser.Math.Between(2000, 4000),
-                        delay: i * 200,
-                        yoyo: true,
-                        repeat: -1,
+                        alpha: { from: 0, to: Phaser.Math.FloatBetween(0.15, 0.4) },
+                        y: sp.y - Phaser.Math.Between(8, 25),
+                        duration: Phaser.Math.Between(2000, 3500),
+                        delay: i * 180,
+                        yoyo: true, repeat: -1,
                     });
                 }
             });
@@ -1652,19 +1689,19 @@ export class HaggleScene extends BaseScene {
             this.tacticsContainer.add(elements);
 
         } else {
-            // ═════════════════════════════════════════════
-            // ═══ DEAL FAILED — ARTWORK SLIPS AWAY ═══
-            // ═════════════════════════════════════════════
+            // ═══════════════════════════════════════════
+            // ═══ DEAL FAILED — ARTWORK SLIPS AWAY ═════
+            // ═══════════════════════════════════════════
             WebAudioService.dealFail?.();
 
             const work = this.state.work || {};
             const askingPrice = this.state.askingPrice || 0;
 
-            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x0a0505, 0.90).setDepth(DEPTH).setAlpha(0);
+            const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x0a0505, 0.88).setDepth(DEPTH).setAlpha(0);
             elements.push(overlay);
-            this.tweens.add({ targets: overlay, alpha: 1, duration: 500 });
+            this.tweens.add({ targets: overlay, alpha: 1, duration: 400 });
 
-            // Dealer walks away — dramatic slide out with rotation
+            // Dealer walks away with rotation
             if (this.dealer) {
                 this.tweens.add({
                     targets: this.dealer,
@@ -1674,64 +1711,93 @@ export class HaggleScene extends BaseScene {
             }
 
             // Red vignette pulse
-            const vignettePulse = this.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.08).setDepth(DEPTH + 1).setAlpha(0);
-            elements.push(vignettePulse);
-            this.tweens.add({ targets: vignettePulse, alpha: 0.08, duration: 400, yoyo: true, delay: 300 });
+            const vig = this.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.06).setDepth(DEPTH + 1).setAlpha(0);
+            elements.push(vig);
+            this.tweens.add({ targets: vig, alpha: 0.06, duration: 400, yoyo: true, delay: 200 });
 
             // Header
-            const failHeader = this.add.text(width / 2, height / 2 - 80, '💨  NO DEAL', {
-                fontFamily: '"Press Start 2P"', fontSize: '22px', color: '#c94040', align: 'center',
+            const failH = this.add.text(width / 2, height / 2 - 80, '💨  NO DEAL', {
+                fontFamily: '"Press Start 2P"', fontSize: '22px', color: '#c94040',
                 stroke: '#000', strokeThickness: 2,
             }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
-            elements.push(failHeader);
-            this.tweens.add({ targets: failHeader, alpha: 1, duration: 600, delay: 500 });
+            elements.push(failH);
+            this.tweens.add({ targets: failH, alpha: 1, duration: 500, delay: 400 });
 
-            // Artwork title fading away
-            const failSub = this.add.text(width / 2, height / 2 - 30, `"${work.title || 'The artwork'}"`, {
-                fontFamily: '"Playfair Display"', fontSize: '20px', color: '#e8e4df', fontStyle: 'italic', align: 'center',
+            // Title fades
+            const failTitle = this.add.text(width / 2, height / 2 - 30, `"${work.title || 'The artwork'}"`, {
+                fontFamily: '"Playfair Display"', fontSize: '20px', color: '#e8e4df', fontStyle: 'italic',
+            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
+            elements.push(failTitle);
+            this.tweens.add({ targets: failTitle, alpha: 0.6, duration: 500, delay: 600 });
+            this.tweens.add({ targets: failTitle, alpha: 0.15, duration: 2000, delay: 1600, ease: 'Power2' });
+
+            const failSub = this.add.text(width / 2, height / 2 + 10, 'slipped through your fingers.', {
+                fontFamily: '"Playfair Display"', fontSize: '14px', color: '#7a7a8a',
             }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
             elements.push(failSub);
-            this.tweens.add({ targets: failSub, alpha: 0.6, duration: 600, delay: 700 });
-            // Fade the title away slowly to emphasize loss
-            this.tweens.add({ targets: failSub, alpha: 0.2, duration: 2000, delay: 1800, ease: 'Power2' });
+            this.tweens.add({ targets: failSub, alpha: 1, duration: 500, delay: 800 });
 
-            const failReason = this.add.text(width / 2, height / 2 + 10, 'slipped through your fingers.', {
-                fontFamily: '"Playfair Display"', fontSize: '14px', color: '#7a7a8a', align: 'center',
-            }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
-            elements.push(failReason);
-            this.tweens.add({ targets: failReason, alpha: 1, duration: 600, delay: 900 });
-
-            // What you missed out on
-            const missedDetails = [
+            // Missed details
+            const missInfo = [
                 `Asking: $${askingPrice.toLocaleString()}`,
                 `Artist: ${work.artist || 'Unknown'}`,
                 `Rounds: ${this.state.rounds?.length || this.state.round || '?'}`,
             ].join('  ·  ');
-            const missedText = this.add.text(width / 2, height / 2 + 50, missedDetails, {
-                fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#444', align: 'center',
+            const missText = this.add.text(width / 2, height / 2 + 46, missInfo, {
+                fontFamily: '"Press Start 2P"', fontSize: '6px', color: '#3a3a3a',
             }).setOrigin(0.5).setDepth(DEPTH + 2).setAlpha(0);
-            elements.push(missedText);
-            this.tweens.add({ targets: missedText, alpha: 1, duration: 400, delay: 1200 });
+            elements.push(missText);
+            this.tweens.add({ targets: missText, alpha: 1, duration: 350, delay: 1100 });
 
-            // Return button
-            const btnY = height / 2 + 100;
-            const btnBg = this.add.rectangle(width / 2, btnY, 200, 36, 0x2e1a1a, 0.9)
+            // Return
+            const bY = height / 2 + 90;
+            const bBg = this.add.rectangle(width / 2, bY, 200, 34, 0x2e1a1a, 0.9)
                 .setStrokeStyle(2, 0xc94040).setInteractive({ useHandCursor: true }).setDepth(DEPTH + 5).setAlpha(0);
-            const btnTxt = this.add.text(width / 2, btnY, 'RETURN →', {
-                fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888',
+            const bTx = this.add.text(width / 2, bY, 'RETURN →', {
+                fontFamily: '"Press Start 2P"', fontSize: '11px', color: '#ff8888',
             }).setOrigin(0.5).setDepth(DEPTH + 5).setAlpha(0);
-            elements.push(btnBg, btnTxt);
-            this.tweens.add({ targets: [btnBg, btnTxt], alpha: 1, duration: 400, delay: 1500 });
+            elements.push(bBg, bTx);
+            this.tweens.add({ targets: [bBg, bTx], alpha: 1, duration: 350, delay: 1400 });
 
-            btnBg.on('pointerover', () => btnBg.setFillStyle(0x4e2a2a));
-            btnBg.on('pointerout', () => btnBg.setFillStyle(0x2e1a1a));
-            btnBg.on('pointerdown', () => {
+            bBg.on('pointerover', () => bBg.setFillStyle(0x4e2a2a));
+            bBg.on('pointerout', () => bBg.setFillStyle(0x2e1a1a));
+            bBg.on('pointerdown', () => {
                 HaggleManager.applyResult();
                 this.endBattle();
             });
 
             this.tacticsContainer.add(elements);
         }
+    }
+
+    /** Check which achievements this deal earned */
+    _checkDealAchievements(dealerKey, finalPrice, askingPrice, rounds) {
+        const earned = [];
+        const ach = HAGGLE_ACHIEVEMENTS;
+        const totalDeals = (GameState.state?.totalWorksBought || 0) + (GameState.state?.totalWorksSold || 0);
+        const savingsPct = askingPrice > 0 ? ((askingPrice - finalPrice) / askingPrice) * 100 : 0;
+
+        // First deal ever
+        if (totalDeals === 0 && ach.first_deal) earned.push(ach.first_deal);
+
+        // Beat a shark
+        if (dealerKey === 'shark' && finalPrice < askingPrice && ach.beat_shark) earned.push(ach.beat_shark);
+
+        // Beat a speculator
+        if (dealerKey === 'speculator' && ach.beat_speculator) earned.push(ach.beat_speculator);
+
+        // Nervous breakdown — round 1 win
+        if (dealerKey === 'nervous' && (rounds === 1 || rounds === '1') && ach.nervous_breakdown) earned.push(ach.nervous_breakdown);
+
+        // Provenance kill — 25%+ discount
+        if (savingsPct >= 25 && ach.provenance_kill) earned.push(ach.provenance_kill);
+
+        // Hard bargainer — won without raise (check if no raise in rounds)
+        const usedRaise = this.state.rounds?.some?.(r => r.tacticId === 'raiseOffer');
+        if (!usedRaise && ach.no_raise_win) earned.push(ach.no_raise_win);
+
+        // Cap at 3 achievements to avoid clutter
+        return earned.slice(0, 3);
     }
 
     /**

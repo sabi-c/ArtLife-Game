@@ -1,6 +1,9 @@
 import { useEventStore } from '../stores/eventStore.js';
 import { GameState } from './GameState.js';
 import { QualityGate } from './QualityGate.js';
+import { useCmsStore } from '../stores/cmsStore.js';
+import { ActivityLogger } from './ActivityLogger.js';
+import { STORYLINES } from '../data/storylines.js';
 
 /**
  * EventRegistry — Oregon Trail-style pacing + Quality Gate filtering.
@@ -9,7 +12,7 @@ import { QualityGate } from './QualityGate.js';
  */
 export class EventRegistry {
     static jsonEvents = [];
-    static jsonStorylines = [];
+    static jsonStorylines = STORYLINES || [];
 
     static getEvent(id) {
         // Priority 1: Check the decoupled JSON file
@@ -29,8 +32,14 @@ export class EventRegistry {
         allEvents.forEach(e => uniqueEventsMap.set(e.id, e));
         const uniqueEvents = Array.from(uniqueEventsMap.values());
 
+        // ── CMS timeline overrides: events can be pinned to specific weeks ──
+        const timelineOverrides = useCmsStore.getState().getTimelineOverrides?.() || {};
+
         return uniqueEvents.filter((event) => {
             if (category && event.category !== category) return false;
+
+            // Timeline override: if CMS pinned this event to a specific week, only allow it then
+            if (timelineOverrides[event.id] != null && timelineOverrides[event.id] !== state.week) return false;
 
             // Class restriction check
             if (event.classRestriction && event.classRestriction !== state.character.id) return false;
@@ -106,17 +115,53 @@ export class EventRegistry {
     /**
      * Check if a player choice in an event should activate a storyline.
      * Called by DialogueScene when a choice is made.
-     * @param {string} eventId - the event the choice was made in
-     * @param {number} choiceIndex - the index of the chosen option
+     *
+     * Supports multiple matching strategies:
+     *   1. triggerEventId + triggerNodeId match → activate if choice comes from that node
+     *   2. triggerEventId + triggerChoice label substring → activate on matching label
+     *   3. triggerEventId + choiceIndex (legacy) → activate on specific index
+     *
+     * @param {string} eventId - The dialogue tree / event ID
+     * @param {number} choiceIndex - Which choice was selected (index)
+     * @param {string} choiceLabel - Text of the selected choice
+     * @param {string} [nodeId] - Named node ID if using new dialogue tree format
      */
-    static checkStorylineTrigger(eventId, choiceIndex) {
-        if (!this.jsonStorylines?.length) return;
+    static checkStorylineTrigger(eventId, choiceIndex, choiceLabel, nodeId) {
+        const allStorylines = this.jsonStorylines || [];
+        if (allStorylines.length === 0) return;
 
-        const matching = this.jsonStorylines.filter(
-            s => s.triggerEventId === eventId && s.triggerChoiceIndex === choiceIndex
-        );
+        const matching = allStorylines.filter(s => {
+            // Must match the event/tree ID
+            if (s.triggerEventId !== eventId) return false;
+
+            // Named node matching (new system)
+            if (s.triggerNodeId && nodeId) {
+                if (s.triggerNodeId !== nodeId) return false;
+                // If triggerChoice is null, any choice from this node activates
+                if (s.triggerChoice === null) return true;
+            }
+
+            // Choice label substring matching
+            if (s.triggerChoice && choiceLabel) {
+                const normalizedLabel = choiceLabel.toLowerCase();
+                const normalizedTrigger = s.triggerChoice.toLowerCase();
+                if (normalizedLabel.includes(normalizedTrigger) || normalizedTrigger.includes(normalizedLabel)) {
+                    return true;
+                }
+            }
+
+            // Legacy: choiceIndex matching
+            if (s.triggerChoiceIndex !== undefined && s.triggerChoiceIndex === choiceIndex) {
+                return true;
+            }
+
+            return false;
+        });
 
         if (matching.length === 0) return;
+
+        // Sort by priority (higher = first)
+        matching.sort((a, b) => (b.priority || 1) - (a.priority || 1));
 
         // Lazy import to avoid circular deps
         import('../stores/storylineStore.js').then(({ useStorylineStore }) => {
@@ -125,6 +170,18 @@ export class EventRegistry {
                 useStorylineStore.getState().activateStoryline(
                     storyline.id, currentWeek, storyline
                 );
+
+                // Log to ActivityLogger
+                ActivityLogger.logStoryline('arc_activated', {
+                    storylineId: storyline.id,
+                    title: storyline.title,
+                    triggerEvent: eventId,
+                    triggerNode: nodeId,
+                    triggerChoice: choiceLabel,
+                    totalSteps: storyline.steps?.length || 0,
+                });
+
+                console.log(`[EventRegistry] Activated storyline: "${storyline.title}" from ${eventId}/${nodeId}`);
             }
         });
     }

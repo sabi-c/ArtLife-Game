@@ -4,15 +4,15 @@ import {
     TYPE_EFFECTIVENESS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE,
     TACTIC_PRESETS, NEGOTIATION_PHASES, PHASE_MODIFIERS,
     STAT_DESCRIPTIONS, STAT_THRESHOLDS, HAGGLE_ACHIEVEMENTS,
+    TACTIC_DIALOGUE_CHOICES, DIALOGUE_EFFECTIVENESS,
 } from '../../data/haggle_config.js';
 import { HaggleManager } from '../../managers/HaggleManager.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { ContentExporter } from '../../utils/ContentExporter.js';
 import { GameState } from '../../managers/GameState.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 
-// ── Attempt to load CONTACTS safely ──
-let CONTACTS = [];
-try { CONTACTS = require('../../data/contacts.js').CONTACTS || []; } catch { }
+import { CONTACTS } from '../../data/contacts.js';
 
 // ── Color & Style Constants ──────────────────────
 const TYPE_COLORS = {
@@ -49,8 +49,14 @@ const tagStyle = (color) => ({
 });
 
 // ── Persistence helpers ──
+// Priority: cmsStore snapshot > localStorage fallback
 function getPersistedConfig() {
-    try { return JSON.parse(localStorage.getItem('artlife-haggle-config') || 'null'); } catch { return null; }
+    try {
+        // Check cmsStore first (survives properly with Zustand persist)
+        const cmsSnapshot = useCmsStore.getState().getSnapshot('haggle_config');
+        if (cmsSnapshot) return cmsSnapshot;
+        return JSON.parse(localStorage.getItem('artlife-haggle-config') || 'null');
+    } catch { return null; }
 }
 function persistConfig(snapshot) {
     localStorage.setItem('artlife-haggle-config', JSON.stringify(snapshot));
@@ -89,7 +95,9 @@ function DealerEditorSection({ onNotify }) {
     const hotSwapDealer = () => {
         if (!selectedDealer) return;
         Object.assign(DEALER_TYPES[selectedDealer], editValues);
-        useCmsStore.getState().markDirty('events');
+        // Persist to cmsStore so changes survive reload
+        useCmsStore.getState().saveSnapshot('haggle_config', snapshotCurrentConfig());
+        persistConfig(snapshotCurrentConfig());
         onNotify?.('🔥 Hot-swapped dealer: ' + editValues.name);
     };
 
@@ -638,6 +646,618 @@ function TestLauncherSection({ onNotify }) {
 }
 
 // ═══════════════════════════════════════════════════
+// 6. BALANCE SIMULATOR (Monte Carlo)
+// ═══════════════════════════════════════════════════
+/**
+ * Simulate a single haggle battle.
+ * @param {string} dealerKey — key into DEALER_TYPES
+ * @param {object} statProfile — player stats
+ * @param {string} tacticStrategy — 'random' | 'aggressive' | 'calculated'
+ * @param {object} [npcOverrides] — optional NPC haggleProfile overrides
+ *   { patience, bluffChance, priceFlexibility, walkawayThreshold, emotionalTriggers }
+ */
+function _simulateBattle(dealerKey, statProfile, tacticStrategy, npcOverrides = null) {
+    const dealer = DEALER_TYPES[dealerKey];
+    if (!dealer) return null;
+
+    const stats = {
+        reputation: statProfile.reputation ?? 50,
+        taste: statProfile.taste ?? 50,
+        audacity: statProfile.audacity ?? 50,
+        access: statProfile.access ?? 30,
+        intel: statProfile.intel ?? 30,
+        cash: statProfile.cash ?? 50000,
+        suspicion: statProfile.suspicion ?? 0,
+        marketHeat: statProfile.marketHeat ?? 0,
+    };
+
+    // Apply NPC-specific overrides when available
+    const npcPatience = npcOverrides?.patience ?? dealer.patience;
+    const npcFlex = npcOverrides?.priceFlexibility ?? 0.15;
+    const npcBluff = npcOverrides?.bluffChance ?? 0.1;
+    const npcWalkaway = npcOverrides?.walkawayThreshold ?? 0.70;
+    const npcTriggers = npcOverrides?.emotionalTriggers || [];
+
+    const askingPrice = 50000;
+    const flexAdjust = 1 + ((1 - npcFlex) * 0.1);
+    let currentOffer = Math.round(askingPrice * 0.7 * dealer.greedFactor * flexAdjust);
+    let gap = askingPrice * dealer.greedFactor * flexAdjust - currentOffer;
+    let patience = npcPatience;
+    let round = 0;
+    const maxRounds = HAGGLE_CONFIG.maxRounds || 4;
+    const tactics = Object.entries(TACTICS).filter(([, t]) => !t.unlockStat || stats[t.unlockStat] >= (t.unlockMin || 0));
+    const rounds = [];
+
+    while (round < maxRounds && patience > 0) {
+        round++;
+        // Pick tactic based on strategy
+        let [tacticId, tactic] = tactics[0];
+        if (tacticStrategy === 'random') {
+            const pick = tactics[Math.floor(Math.random() * tactics.length)];
+            tacticId = pick[0]; tactic = pick[1];
+        } else if (tacticStrategy === 'aggressive') {
+            const aggro = tactics.filter(([, t]) => t.type === 'aggressive');
+            const pick = aggro.length > 0 ? aggro[Math.floor(Math.random() * aggro.length)] : tactics[0];
+            tacticId = pick[0]; tactic = pick[1];
+        } else if (tacticStrategy === 'calculated') {
+            if (round <= 2) {
+                const picks = tactics.filter(([id]) => id === 'holdFirm' || id === 'bluff');
+                const pick = picks[Math.floor(Math.random() * picks.length)] || tactics[0];
+                tacticId = pick[0]; tactic = pick[1];
+            } else {
+                const pick = tactics.find(([id]) => id === 'raise') || tactics[0];
+                tacticId = pick[0]; tactic = pick[1];
+            }
+        }
+
+        // Calculate success chance (simplified version of HaggleManager.executeTactic)
+        let successChance = tactic.baseSuccess || 0.5;
+        if (tactic.statBonus && stats[tactic.statBonus]) {
+            successChance += stats[tactic.statBonus] * (tactic.statWeight || 0);
+        }
+        // Type effectiveness
+        const eff = TYPE_EFFECTIVENESS[tactic.type];
+        if (eff) {
+            if (eff.strongAgainst === dealer.haggleStyle) successChance += 0.20;
+            else if (eff.weakAgainst === dealer.haggleStyle) successChance -= 0.15;
+        }
+        // NPC emotional triggers — if a tactic matches a trigger, boost effectiveness
+        if (npcTriggers.length > 0 && npcTriggers.includes(tacticId)) {
+            successChance += 0.15;
+        }
+        // NPC bluff chance — they may fake rejection, reducing patience drain on success
+        if (npcBluff > Math.random()) {
+            successChance -= 0.10; // bluffing NPCs are harder to read
+        }
+
+        successChance -= (stats.suspicion || 0) * (HAGGLE_CONFIG.suspicionPenalty || 0);
+        successChance = Math.max(0.05, Math.min(0.95, successChance));
+
+        const success = Math.random() < successChance;
+
+        if (success) {
+            const shift = Math.round(askingPrice * Math.abs(tactic.priceShift || 0.05));
+            gap = Math.max(0, gap - shift);
+        }
+        patience += (success ? (tactic.patienceEffect || 0) : Math.min(tactic.patienceEffect || 0, -1));
+        patience = Math.max(0, patience);
+        rounds.push({ tacticId, success, gap });
+
+        if (gap <= askingPrice * 0.05) return { result: 'deal', rounds: round, finalPrice: askingPrice * dealer.greedFactor * flexAdjust - gap + currentOffer, tacticIds: rounds.map(r => r.tacticId) };
+    }
+    // Timeout check — use NPC walkaway threshold
+    const walkawayGap = askingPrice * (1 - npcWalkaway);
+    if (gap <= walkawayGap) return { result: 'deal', rounds: round, finalPrice: askingPrice * dealer.greedFactor * flexAdjust - gap + currentOffer, tacticIds: rounds.map(r => r.tacticId) };
+    return { result: 'fail', rounds: round, finalPrice: 0, tacticIds: rounds.map(r => r.tacticId) };
+}
+
+function BalanceSimulatorSection({ onNotify }) {
+    const [numSims, setNumSims] = useState(200);
+    const [statPreset, setStatPreset] = useState('mid');
+    const [strategy, setStrategy] = useState('random');
+    const [simMode, setSimMode] = useState('dealers'); // 'dealers' | 'npcs'
+    const [results, setResults] = useState(null);
+    const [running, setRunning] = useState(false);
+    const [runHistory, setRunHistory] = useState([]); // stored past runs
+
+    const statProfiles = {
+        low: { reputation: 10, taste: 10, audacity: 20, access: 5, intel: 5, suspicion: 0, marketHeat: 0 },
+        mid: { reputation: 50, taste: 50, audacity: 50, access: 30, intel: 30, suspicion: 5, marketHeat: 5 },
+        high: { reputation: 90, taste: 90, audacity: 80, access: 70, intel: 70, suspicion: 10, marketHeat: 10 },
+        maxed: { reputation: 100, taste: 100, audacity: 100, access: 100, intel: 100, suspicion: 0, marketHeat: 0 },
+    };
+
+    const runSim = () => {
+        setRunning(true);
+        setTimeout(() => {
+            const profile = statProfiles[statPreset];
+            const data = {};
+
+            if (simMode === 'npcs') {
+                // ── NPC PROFILE MODE: simulate against each NPC's actual haggleProfile ──
+                const npcsToSim = (Array.isArray(CONTACTS) ? CONTACTS : []).filter(c => c.haggleProfile);
+                npcsToSim.forEach(npc => {
+                    const hp = npc.haggleProfile || {};
+                    const dealerKey = hp.dealerType || ROLE_TO_DEALER_TYPE[npc.role] || 'patron';
+                    const overrides = {
+                        patience: hp.patience,
+                        bluffChance: hp.bluffChance,
+                        priceFlexibility: hp.priceFlexibility,
+                        walkawayThreshold: hp.walkawayThreshold,
+                        emotionalTriggers: hp.emotionalTriggers,
+                    };
+                    const sims = [];
+                    for (let i = 0; i < numSims; i++) sims.push(_simulateBattle(dealerKey, profile, strategy, overrides));
+                    const wins = sims.filter(s => s?.result === 'deal');
+                    const winRate = wins.length / sims.length;
+                    const avgRounds = sims.reduce((a, s) => a + (s?.rounds || 0), 0) / sims.length;
+                    const prices = wins.map(w => w.finalPrice).filter(Boolean);
+                    const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+                    const tacticFreq = {};
+                    wins.forEach(w => w.tacticIds?.forEach(tid => { tacticFreq[tid] = (tacticFreq[tid] || 0) + 1; }));
+                    data[npc.id] = {
+                        npcName: npc.name, role: npc.role, dealerKey, winRate, avgRounds, avgPrice,
+                        wins: wins.length, total: sims.length, tacticFreq,
+                        // Store profile params for insight display
+                        patience: hp.patience || DEALER_TYPES[dealerKey]?.patience || 6,
+                        bluffChance: hp.bluffChance ?? 0.1,
+                        priceFlexibility: hp.priceFlexibility ?? 0.15,
+                        walkawayThreshold: hp.walkawayThreshold ?? 0.70,
+                    };
+                });
+            } else {
+                // ── DEALER TYPE MODE: original behavior ──
+                Object.keys(DEALER_TYPES).forEach(dk => {
+                    const sims = [];
+                    for (let i = 0; i < numSims; i++) sims.push(_simulateBattle(dk, profile, strategy));
+                    const wins = sims.filter(s => s?.result === 'deal');
+                    const winRate = wins.length / sims.length;
+                    const avgRounds = sims.reduce((a, s) => a + (s?.rounds || 0), 0) / sims.length;
+                    const prices = wins.map(w => w.finalPrice).filter(Boolean);
+                    const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+                    const tacticFreq = {};
+                    wins.forEach(w => w.tacticIds?.forEach(tid => { tacticFreq[tid] = (tacticFreq[tid] || 0) + 1; }));
+                    data[dk] = { winRate, avgRounds, avgPrice, wins: wins.length, total: sims.length, tacticFreq };
+                });
+            }
+
+            setResults({ mode: simMode, data, preset: statPreset, strategy, numSims, timestamp: Date.now() });
+            setRunHistory(prev => [...prev.slice(-4), { mode: simMode, preset: statPreset, strategy, numSims, timestamp: Date.now(), summary: data }]);
+            setRunning(false);
+            const count = Object.keys(data).length;
+            onNotify?.(`🎲 Simulated ${numSims} battles × ${count} ${simMode === 'npcs' ? 'NPCs' : 'dealers'}`);
+        }, 50);
+    };
+
+    const sortedEntries = results ? Object.entries(results.data).sort((a, b) => b[1].winRate - a[1].winRate) : [];
+    const bestEntry = sortedEntries[0];
+    const worstEntry = sortedEntries[sortedEntries.length - 1];
+    const avgWin = sortedEntries.length > 0 ? sortedEntries.reduce((a, [, r]) => a + r.winRate, 0) / sortedEntries.length : 0;
+    const avgRounds = sortedEntries.length > 0 ? sortedEntries.reduce((a, [, r]) => a + r.avgRounds, 0) / sortedEntries.length : 0;
+
+    // ── Balance insights for NPCs ──
+    const getInsights = () => {
+        if (!results || results.mode !== 'npcs') return [];
+        const insights = [];
+        Object.entries(results.data).forEach(([key, r]) => {
+            const pct = Math.round(r.winRate * 100);
+            if (pct > 80) insights.push({ type: 'warn', npc: r.npcName, msg: `Too easy (${pct}%). Consider: ↓patience to ${Math.max(2, r.patience - 2)}, ↑bluff to ${Math.min(80, Math.round((r.bluffChance + 0.15) * 100))}%, or ↑walkaway to ${Math.min(95, Math.round((r.walkawayThreshold + 0.10) * 100))}%` });
+            else if (pct < 20) insights.push({ type: 'warn', npc: r.npcName, msg: `Too hard (${pct}%). Consider: ↑patience to ${r.patience + 3}, ↓bluff to ${Math.max(0, Math.round((r.bluffChance - 0.10) * 100))}%, or ↑flexibility to ${Math.min(50, Math.round((r.priceFlexibility + 0.10) * 100))}%` });
+            else if (pct >= 40 && pct <= 60) insights.push({ type: 'ok', npc: r.npcName, msg: `Well balanced (${pct}%)` });
+        });
+        return insights;
+    };
+
+    return (
+        <div style={{ overflowY: 'auto' }}>
+            <div style={sectionHeader}>🎲 MONTE CARLO BALANCE SIMULATOR</div>
+
+            {/* ── Mode toggle ── */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button onClick={() => setSimMode('dealers')} style={{
+                    ...btnSecondary, flex: 1, padding: '8px',
+                    background: simMode === 'dealers' ? 'rgba(201,168,76,0.15)' : 'transparent',
+                    borderColor: simMode === 'dealers' ? '#c9a84c' : '#333',
+                    color: simMode === 'dealers' ? '#c9a84c' : '#666',
+                }}>⚙️ All Dealer Types</button>
+                <button onClick={() => setSimMode('npcs')} style={{
+                    ...btnSecondary, flex: 1, padding: '8px',
+                    background: simMode === 'npcs' ? 'rgba(232,121,249,0.15)' : 'transparent',
+                    borderColor: simMode === 'npcs' ? '#e879f9' : '#333',
+                    color: simMode === 'npcs' ? '#e879f9' : '#666',
+                }}>🧑 NPC Profiles</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
+                <div>
+                    <label style={labelStyle}>Simulations</label>
+                    <select value={numSims} onChange={e => setNumSims(parseInt(e.target.value))} style={{ ...inputStyle, width: 100, cursor: 'pointer' }}>
+                        {[50, 100, 200, 500, 1000].map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label style={labelStyle}>Player Stats</label>
+                    <select value={statPreset} onChange={e => setStatPreset(e.target.value)} style={{ ...inputStyle, width: 120, cursor: 'pointer' }}>
+                        <option value="low">🟢 Low (Beginner)</option>
+                        <option value="mid">🟡 Mid (Average)</option>
+                        <option value="high">🔴 High (Expert)</option>
+                        <option value="maxed">⭐ Max (God)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style={labelStyle}>Strategy</label>
+                    <select value={strategy} onChange={e => setStrategy(e.target.value)} style={{ ...inputStyle, width: 130, cursor: 'pointer' }}>
+                        <option value="random">🎲 Random</option>
+                        <option value="aggressive">🗡️ Aggressive</option>
+                        <option value="calculated">🧮 Calculated</option>
+                    </select>
+                </div>
+                <button onClick={runSim} disabled={running} style={{ ...btnPrimary, opacity: running ? 0.5 : 1 }}>
+                    {running ? '⏳ Running...' : `▶ RUN ${numSims} SIMS`}
+                </button>
+            </div>
+
+            {results && (
+                <>
+                    {/* Summary cards */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                        {bestEntry && (
+                            <div style={{ flex: 1, background: '#0a1a0a', border: '1px solid #2e6e2e', borderRadius: 4, padding: 10 }}>
+                                <div style={{ fontSize: 9, color: '#4ade80', fontWeight: 'bold' }}>EASIEST {results.mode === 'npcs' ? 'NPC' : 'DEALER'}</div>
+                                <div style={{ fontSize: 14, color: '#eaeaea' }}>
+                                    {results.mode === 'npcs'
+                                        ? bestEntry[1].npcName
+                                        : `${DEALER_TYPES[bestEntry[0]]?.icon} ${DEALER_TYPES[bestEntry[0]]?.name}`}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#4ade80', fontWeight: 'bold' }}>{Math.round(bestEntry[1].winRate * 100)}% win rate</div>
+                            </div>
+                        )}
+                        {worstEntry && (
+                            <div style={{ flex: 1, background: '#1a0a0a', border: '1px solid #6e2e2e', borderRadius: 4, padding: 10 }}>
+                                <div style={{ fontSize: 9, color: '#f87171', fontWeight: 'bold' }}>HARDEST {results.mode === 'npcs' ? 'NPC' : 'DEALER'}</div>
+                                <div style={{ fontSize: 14, color: '#eaeaea' }}>
+                                    {results.mode === 'npcs'
+                                        ? worstEntry[1].npcName
+                                        : `${DEALER_TYPES[worstEntry[0]]?.icon} ${DEALER_TYPES[worstEntry[0]]?.name}`}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#f87171', fontWeight: 'bold' }}>{Math.round(worstEntry[1].winRate * 100)}% win rate</div>
+                            </div>
+                        )}
+                        <div style={{ flex: 1, background: '#0a0a1a', border: '1px solid #2e2e6e', borderRadius: 4, padding: 10 }}>
+                            <div style={{ fontSize: 9, color: '#60a5fa', fontWeight: 'bold' }}>OVERALL</div>
+                            <div style={{ fontSize: 14, color: '#eaeaea' }}>{Math.round(avgWin * 100)}% avg win</div>
+                            <div style={{ fontSize: 10, color: '#888' }}>{Math.round(avgRounds * 10) / 10} avg rounds</div>
+                        </div>
+                    </div>
+
+                    {/* Results table */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginBottom: 16 }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #333' }}>
+                                <th style={{ color: '#666', padding: 8, textAlign: 'left', fontSize: 9 }}>{results.mode === 'npcs' ? 'NPC' : 'DEALER'}</th>
+                                {results.mode === 'npcs' && <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>TYPE</th>}
+                                <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>WIN%</th>
+                                <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>W/L</th>
+                                <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>AVG RND</th>
+                                <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>AVG PRICE</th>
+                                {results.mode === 'npcs' && <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>PAT/BLF/FLX</th>}
+                                <th style={{ color: '#666', padding: 8, textAlign: 'left', fontSize: 9 }}>WIN RATE BAR</th>
+                                <th style={{ color: '#666', padding: 8, textAlign: 'center', fontSize: 9 }}>BALANCE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedEntries.map(([key, r]) => {
+                                const pct = Math.round(r.winRate * 100);
+                                const balanceColor = pct > 75 ? '#f87171' : pct > 60 ? '#fbbf24' : pct > 40 ? '#4ade80' : pct > 25 ? '#fbbf24' : '#f87171';
+                                const balanceLabel = pct > 75 ? 'TOO EASY' : pct > 60 ? 'EASY' : pct > 40 ? 'BALANCED' : pct > 25 ? 'HARD' : 'TOO HARD';
+                                const d = results.mode === 'npcs' ? null : DEALER_TYPES[key];
+                                return (
+                                    <tr key={key} style={{ borderBottom: '1px solid #1a1a2e' }}>
+                                        <td style={{ padding: 8 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                {results.mode === 'npcs'
+                                                    ? <span style={{ color: '#eaeaea', fontSize: 11 }}>{r.npcName}</span>
+                                                    : <><span style={{ fontSize: 16 }}>{d?.icon}</span><span style={{ color: '#eaeaea', fontSize: 11 }}>{d?.name}</span></>
+                                                }
+                                            </div>
+                                        </td>
+                                        {results.mode === 'npcs' && (
+                                            <td style={{ padding: 8, textAlign: 'center' }}>
+                                                <span style={{ ...tagStyle('#e879f9'), fontSize: 8 }}>{r.dealerKey}</span>
+                                            </td>
+                                        )}
+                                        <td style={{ padding: 8, textAlign: 'center', color: pct > 60 ? '#4ade80' : pct > 35 ? '#fbbf24' : '#f87171', fontWeight: 'bold' }}>{pct}%</td>
+                                        <td style={{ padding: 8, textAlign: 'center', color: '#888', fontSize: 10 }}>{r.wins}/{r.total}</td>
+                                        <td style={{ padding: 8, textAlign: 'center', color: '#888', fontSize: 10 }}>{Math.round(r.avgRounds * 10) / 10}</td>
+                                        <td style={{ padding: 8, textAlign: 'center', color: '#c9a84c', fontSize: 10 }}>{r.avgPrice > 0 ? `$${Math.round(r.avgPrice).toLocaleString()}` : '—'}</td>
+                                        {results.mode === 'npcs' && (
+                                            <td style={{ padding: 8, textAlign: 'center', color: '#888', fontSize: 9, fontFamily: mono }}>
+                                                {r.patience}/{Math.round(r.bluffChance * 100)}%/{Math.round(r.priceFlexibility * 100)}%
+                                            </td>
+                                        )}
+                                        <td style={{ padding: 8 }}>
+                                            <div style={{ height: 8, background: '#1a1a2e', borderRadius: 4, overflow: 'hidden', minWidth: 100 }}>
+                                                <div style={{ height: '100%', width: `${pct}%`, background: pct > 60 ? '#4ade80' : pct > 35 ? '#fbbf24' : '#f87171', borderRadius: 4, transition: 'width 0.5s' }} />
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: 8, textAlign: 'center' }}>
+                                            <span style={tagStyle(balanceColor)}>{balanceLabel}</span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+
+                    {/* ── NPC Balance Insights ── */}
+                    {results.mode === 'npcs' && (() => {
+                        const insights = getInsights();
+                        if (insights.length === 0) return null;
+                        return (
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ fontSize: 10, color: '#c9a84c', fontWeight: 'bold', marginBottom: 8, letterSpacing: 1 }}>📊 BALANCE RECOMMENDATIONS</div>
+                                {insights.map((ins, i) => (
+                                    <div key={i} style={{
+                                        padding: '6px 10px', marginBottom: 4, fontSize: 10, borderRadius: 4,
+                                        background: ins.type === 'warn' ? '#1a1008' : '#081a08',
+                                        border: `1px solid ${ins.type === 'warn' ? '#c9a84c33' : '#4ade8033'}`,
+                                        color: ins.type === 'warn' ? '#fbbf24' : '#4ade80',
+                                    }}>
+                                        <strong>{ins.npc}:</strong> {ins.msg}
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })()}
+
+                    {/* ── Run History ── */}
+                    {runHistory.length > 1 && (
+                        <div style={{ marginBottom: 16 }}>
+                            <div style={{ fontSize: 10, color: '#666', fontWeight: 'bold', marginBottom: 6, letterSpacing: 1 }}>📋 RUN HISTORY (last 5)</div>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {runHistory.map((run, i) => {
+                                    const entries = Object.values(run.summary);
+                                    const avgWR = entries.length > 0 ? entries.reduce((a, r) => a + r.winRate, 0) / entries.length : 0;
+                                    return (
+                                        <div key={i} style={{
+                                            padding: '6px 10px', background: '#0a0a14', border: '1px solid #222', borderRadius: 4, fontSize: 9, color: '#888',
+                                            opacity: run.timestamp === results?.timestamp ? 1 : 0.6,
+                                            borderColor: run.timestamp === results?.timestamp ? '#60a5fa' : '#222',
+                                        }}>
+                                            <div style={{ color: '#eaeaea' }}>{run.mode === 'npcs' ? '🧑' : '⚙️'} {run.preset.toUpperCase()} / {run.strategy}</div>
+                                            <div>{Math.round(avgWR * 100)}% avg · {run.numSims}×{Object.keys(run.summary).length}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════
+// 7. DIALOGUE EFFECTIVENESS MATRIX
+// ═══════════════════════════════════════════════════
+function DialogueMatrixSection({ onNotify }) {
+    const [, forceUpdate] = useState(0);
+    const dealerKeys = Object.keys(DEALER_TYPES);
+    const tacticKeys = Object.keys(TACTIC_DIALOGUE_CHOICES || {});
+    const effColors = { good: '#4ade80', neutral: '#888', bad: '#f87171' };
+    const effBg = { good: 'rgba(74,222,128,0.08)', neutral: 'transparent', bad: 'rgba(248,113,113,0.08)' };
+    const cycle = { good: 'neutral', neutral: 'bad', bad: 'good' };
+
+    const clickCell = (tacticKey, choiceIdx, dealerKey) => {
+        const choices = TACTIC_DIALOGUE_CHOICES[tacticKey];
+        if (!choices || !choices[choiceIdx]) return;
+        const current = choices[choiceIdx].effectiveness[dealerKey] || 'neutral';
+        choices[choiceIdx].effectiveness[dealerKey] = cycle[current];
+        forceUpdate(n => n + 1);
+        useCmsStore.getState().markDirty('events');
+    };
+
+    if (tacticKeys.length === 0) return <div style={{ color: '#555', textAlign: 'center', padding: 40 }}>No dialogue choices found</div>;
+
+    return (
+        <div style={{ overflowY: 'auto', overflowX: 'auto' }}>
+            <div style={sectionHeader}>💬 DIALOGUE EFFECTIVENESS MATRIX</div>
+            <div style={{ fontSize: 9, color: '#666', marginBottom: 8 }}>Click any cell to cycle: <span style={{ color: '#4ade80' }}>GOOD</span> → <span style={{ color: '#888' }}>NEUTRAL</span> → <span style={{ color: '#f87171' }}>BAD</span></div>
+
+            {tacticKeys.map(tk => {
+                const choices = TACTIC_DIALOGUE_CHOICES[tk] || [];
+                const tacticDef = TACTICS[tk];
+                const tc = tacticDef ? (TYPE_COLORS[tacticDef.type] || {}) : {};
+                return (
+                    <div key={tk} style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 12, color: tc.text || '#eaeaea', fontWeight: 'bold', marginBottom: 6 }}>
+                            {tc.icon || '⚔️'} {tacticDef?.label || tk}
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #222' }}>
+                                    <th style={{ color: '#555', padding: '4px 8px', textAlign: 'left', fontSize: 8, width: 220 }}>DIALOGUE LINE</th>
+                                    <th style={{ color: '#555', padding: '4px', textAlign: 'center', fontSize: 8 }}>TONE</th>
+                                    {dealerKeys.map(dk => (
+                                        <th key={dk} style={{ color: '#888', padding: '4px', textAlign: 'center', fontSize: 8, minWidth: 50 }}>
+                                            {DEALER_TYPES[dk]?.icon}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {choices.map((ch, ci) => (
+                                    <tr key={ch.id} style={{ borderBottom: '1px solid #111' }}>
+                                        <td style={{ padding: '6px 8px', color: '#c9a84c', fontStyle: 'italic', fontSize: 9, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ch.line}>
+                                            {ch.line?.substring(0, 45)}...
+                                        </td>
+                                        <td style={{ padding: '4px', textAlign: 'center' }}>
+                                            <span style={tagStyle('#60a5fa')}>{ch.tone}</span>
+                                        </td>
+                                        {dealerKeys.map(dk => {
+                                            const eff = ch.effectiveness?.[dk] || 'neutral';
+                                            return (
+                                                <td key={dk}
+                                                    onClick={() => clickCell(tk, ci, dk)}
+                                                    style={{
+                                                        padding: '4px', textAlign: 'center', cursor: 'pointer',
+                                                        background: effBg[eff], transition: 'background 0.2s',
+                                                    }}>
+                                                    <span style={{ color: effColors[eff], fontSize: 9, fontWeight: eff !== 'neutral' ? 'bold' : 'normal' }}>
+                                                        {eff === 'good' ? '✊' : eff === 'bad' ? '😰' : '·'}
+                                                    </span>
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════
+// 8. SCENARIO PRESETS
+// ═══════════════════════════════════════════════════
+const BUILT_IN_PRESETS = [
+    { name: 'Art Fair Shark', icon: '🦈', dealer: 'shark', askingPrice: 80000, mode: 'buy', artist: 'Various', title: 'Fair Artwork' },
+    { name: 'Gallery Patron', icon: '🎨', dealer: 'patron', askingPrice: 25000, mode: 'buy', artist: 'Emerging', title: 'Gallery Piece' },
+    { name: 'Auction Lot', icon: '🔨', dealer: 'calculator', askingPrice: 150000, mode: 'buy', artist: 'Blue Chip', title: 'Auction Lot' },
+    { name: 'Studio Visit', icon: '🎪', dealer: 'nervous', askingPrice: 8000, mode: 'buy', artist: 'Local', title: 'Studio Work' },
+    { name: 'Quick Flip', icon: '💸', dealer: 'hustler', askingPrice: 12000, mode: 'sell', artist: 'Mid-Career', title: 'Resale Piece' },
+    { name: 'Collector Trade', icon: '🏛️', dealer: 'collector', askingPrice: 60000, mode: 'buy', artist: 'Established', title: 'Collection Piece' },
+];
+
+function ScenarioPresetsSection({ onNotify }) {
+    const [presets, setPresets] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('artlife-haggle-presets') || '[]'); } catch { return []; }
+    });
+    const [newName, setNewName] = useState('');
+    const [selectedDealer, setSelectedDealer] = useState('shark');
+    const [price, setPrice] = useState(50000);
+
+    const allPresets = [...BUILT_IN_PRESETS, ...presets];
+
+    const savePreset = () => {
+        if (!newName.trim()) return;
+        const p = { name: newName, icon: '📌', dealer: selectedDealer, askingPrice: parseInt(price), mode: 'buy', artist: 'Test', title: newName, custom: true };
+        const updated = [...presets, p];
+        setPresets(updated);
+        localStorage.setItem('artlife-haggle-presets', JSON.stringify(updated));
+        setNewName('');
+        onNotify?.(`📌 Saved preset: ${newName}`);
+    };
+
+    const deletePreset = (idx) => {
+        const updated = presets.filter((_, i) => i !== idx);
+        setPresets(updated);
+        localStorage.setItem('artlife-haggle-presets', JSON.stringify(updated));
+        onNotify?.('🗑️ Preset removed');
+    };
+
+    const launchPreset = (preset) => {
+        if (!GameState.state) { onNotify?.('❌ Game not running'); return; }
+        const work = { id: `preset_${Date.now()}`, title: preset.title, artist: preset.artist, year: '2024', medium: 'Mixed Media' };
+        try {
+            const result = HaggleManager.start({ mode: preset.mode, work, npc: null, askingPrice: preset.askingPrice });
+            if (DEALER_TYPES[preset.dealer] && HaggleManager.active) {
+                HaggleManager.active.dealerTypeKey = preset.dealer;
+                HaggleManager.active.dealerType = DEALER_TYPES[preset.dealer];
+                HaggleManager.active.dealerIcon = DEALER_TYPES[preset.dealer].icon;
+                HaggleManager.active.patience = DEALER_TYPES[preset.dealer].patience;
+            }
+            GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'HaggleScene', { haggleInfo: { ...result, bgKey: 'bg_gallery_main_1bit_1771587911969.png' }, returnScene: 'MainMenuScene', returnArgs: {} });
+            onNotify?.(`⚔️ Launched: ${preset.name}`);
+        } catch (err) { onNotify?.('❌ ' + err.message); }
+    };
+
+    const exportAll = () => {
+        const blob = new Blob([JSON.stringify({ presets: allPresets, config: snapshotCurrentConfig() }, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `haggle-config-${Date.now()}.json`;
+        a.click(); URL.revokeObjectURL(a.href);
+        onNotify?.('📥 Exported config + presets');
+    };
+
+    const importConfig = () => {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+        input.onchange = e => {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (data.config) { restoreFromSnapshot(data.config); persistConfig(data.config); }
+                    if (data.presets) { setPresets(data.presets.filter(p => p.custom)); localStorage.setItem('artlife-haggle-presets', JSON.stringify(data.presets.filter(p => p.custom))); }
+                    onNotify?.('📤 Imported config + presets');
+                } catch (err) { onNotify?.('❌ Invalid JSON: ' + err.message); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+
+    return (
+        <div style={{ overflowY: 'auto' }}>
+            <div style={sectionHeader}>📦 SCENARIO PRESETS & EXPORT</div>
+
+            {/* Quick launch grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+                {allPresets.map((p, i) => (
+                    <div key={i} style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = '#c9a84c'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = '#1a1a2e'}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 18 }}>{p.icon}</span>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#eaeaea', fontWeight: 'bold' }}>{p.name}</div>
+                                    <div style={{ fontSize: 9, color: '#888' }}>{DEALER_TYPES[p.dealer]?.icon} {DEALER_TYPES[p.dealer]?.name} · ${p.askingPrice?.toLocaleString()}</div>
+                                </div>
+                            </div>
+                            {p.custom && <button onClick={() => deletePreset(i - BUILT_IN_PRESETS.length)} style={{ ...btnSecondary, fontSize: 9, padding: '2px 6px', color: '#f87171' }}>✕</button>}
+                        </div>
+                        <button onClick={() => launchPreset(p)} style={{ ...btnSecondary, fontSize: 9, color: '#c9a84c', borderColor: '#c9a84c33' }}>▶ Quick Launch</button>
+                    </div>
+                ))}
+            </div>
+
+            {/* Create new preset */}
+            <div style={{ background: '#050508', border: '1px solid #222', borderRadius: 4, padding: 12, marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: '#c9a84c', fontWeight: 'bold', marginBottom: 8 }}>➕ CREATE PRESET</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={labelStyle}>Name</label>
+                        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Venice Biennale" style={inputStyle} />
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Dealer</label>
+                        <select value={selectedDealer} onChange={e => setSelectedDealer(e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                            {Object.entries(DEALER_TYPES).map(([k, d]) => <option key={k} value={k}>{d.icon} {d.name}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={labelStyle}>Price</label>
+                        <input type="number" value={price} onChange={e => setPrice(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+                    </div>
+                    <button onClick={savePreset} style={btnPrimary}>Save</button>
+                </div>
+            </div>
+
+            {/* Export / Import */}
+            <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={exportAll} style={{ ...btnSecondary, color: '#4ade80', borderColor: '#3a8a3a', flex: 1 }}>📥 Export Config + Presets</button>
+                <button onClick={importConfig} style={{ ...btnSecondary, color: '#60a5fa', borderColor: '#3a3a8a', flex: 1 }}>📤 Import Config</button>
+            </div>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════
 export default function HaggleEditor() {
@@ -664,12 +1284,25 @@ export default function HaggleEditor() {
         showNotif('🔄 Config reset — reload to restore defaults');
     };
 
+    const handleExportHaggle = async () => {
+        try { await ContentExporter.download('haggles', 'artlife_haggle_config.json'); showNotif('📥 Exported haggle config with schema'); }
+        catch (e) { showNotif('❌ Export failed: ' + e.message); }
+    };
+
+    const handleExportAll = async () => {
+        try { await ContentExporter.download('all', 'artlife_all_content.json'); showNotif('📥 Exported all content bundle'); }
+        catch (e) { showNotif('❌ Export failed: ' + e.message); }
+    };
+
     const sections = [
         { id: 'dealers', icon: '🎭', label: 'Dealers' },
-        { id: 'tactics', icon: '⚔️', label: 'Tactics & Powers' },
+        { id: 'tactics', icon: '⚔️', label: 'Tactics' },
         { id: 'dialogue', icon: '💬', label: 'Dialogue' },
-        { id: 'types', icon: '📊', label: 'Types & Config' },
-        { id: 'test', icon: '🎮', label: 'Test Battle' },
+        { id: 'types', icon: '📊', label: 'Types' },
+        { id: 'test', icon: '🎮', label: 'Test' },
+        { id: 'simulator', icon: '🎲', label: 'Simulator' },
+        { id: 'matrix', icon: '🗺️', label: 'Matrix' },
+        { id: 'presets', icon: '📦', label: 'Presets' },
     ];
 
     const totalTactics = Object.keys(TACTICS).length + BLUE_OPTIONS.length;
@@ -677,7 +1310,7 @@ export default function HaggleEditor() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#111', borderBottom: '1px solid #333' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <strong style={{ color: '#c9a84c', fontSize: 13 }}>⚔️ Haggle System Editor</strong>
                     {sections.map(s => (
                         <button key={s.id} onClick={() => setActiveSection(s.id)} style={{
@@ -692,6 +1325,8 @@ export default function HaggleEditor() {
                         {Object.keys(DEALER_TYPES).length} dealers · {totalTactics} tactics · {Object.keys(HAGGLE_ACHIEVEMENTS || {}).length} achievements
                     </span>
                     <button onClick={handleSave} style={{ ...btnSecondary, fontSize: 9, color: '#4ade80', borderColor: '#3a8a3a' }}>💾 Save</button>
+                    <button onClick={handleExportHaggle} style={{ ...btnSecondary, fontSize: 9, color: '#60a5fa', borderColor: '#2e4e8a' }}>📥 Export Haggle</button>
+                    <button onClick={handleExportAll} style={{ ...btnSecondary, fontSize: 9, color: '#e879f9', borderColor: '#6e2e8a' }}>📦 Export All</button>
                     <button onClick={handleReset} style={{ ...btnSecondary, fontSize: 9, color: '#f87171', borderColor: '#8a3a3a' }}>🔄 Reset</button>
                 </div>
             </div>
@@ -711,6 +1346,9 @@ export default function HaggleEditor() {
                 {activeSection === 'dialogue' && <DialogueEditorSection onNotify={showNotif} />}
                 {activeSection === 'types' && <TypeChartSection onNotify={showNotif} />}
                 {activeSection === 'test' && <TestLauncherSection onNotify={showNotif} />}
+                {activeSection === 'simulator' && <BalanceSimulatorSection onNotify={showNotif} />}
+                {activeSection === 'matrix' && <DialogueMatrixSection onNotify={showNotif} />}
+                {activeSection === 'presets' && <ScenarioPresetsSection onNotify={showNotif} />}
             </div>
         </div>
     );

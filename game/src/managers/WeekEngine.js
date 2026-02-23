@@ -18,6 +18,8 @@ import { useEventStore } from '../stores/eventStore.js';
 import { useMarketStore } from '../stores/marketStore.js';
 import { checkSystemicTriggers } from '../engines/SystemicTriggers.js';
 import { useStorylineStore } from '../stores/storylineStore.js';
+import { MarketSimulator } from './MarketSimulator.js';
+import { ActivityLogger } from './ActivityLogger.js';
 
 export class WeekEngine {
     /** Last week's advance report — set after each advanceWeek() call. */
@@ -41,6 +43,9 @@ export class WeekEngine {
 
         state.week++;
         state.actionsThisWeek = 0;
+
+        // ── Activity Logger: week tick ──
+        ActivityLogger.logSystem('week_advanced', { week: state.week, cash: state.cash, reputation: state.reputation });
 
         // ── Forced rest check (burnout) ──
         if (state.forcedRest) {
@@ -73,6 +78,15 @@ export class WeekEngine {
         }
         catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Market tick failed:', e); }
 
+        // ── NPC Market Simulation (autonomous NPC-to-NPC trading) ──
+        try {
+            MarketSimulator.simulate(state.week, state.marketState || 'flat');
+            // Sync simulation results to persistent npcStore so collection/cash/trade data survives reload
+            const simNpcs = MarketSimulator.getNPCState();
+            useNPCStore.getState().syncAllMarketData(simNpcs);
+        }
+        catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Market simulation failed:', e); }
+
         // ── Phone Messages ──
         try { PhoneManager.generateTurnMessages(); }
         catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Phone messages failed:', e); }
@@ -91,6 +105,7 @@ export class WeekEngine {
             for (const s of storylinesToFire) {
                 useEventStore.getState().addPriorityEvent(s.eventId);
                 GameState.addNews(`Storyline Event Pending: ${s.storylineId}`);
+                ActivityLogger.logStoryline('step_fired', { storylineId: s.storylineId, eventId: s.eventId, week: state.week });
             }
         }
         catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] Storyline tick failed:', e); }
@@ -101,6 +116,7 @@ export class WeekEngine {
             if (ev) {
                 // The EventRegistry recorded it, but we can also log a headline
                 useEventStore.getState().setPendingEvent(ev);
+                ActivityLogger.logDialogue('event_triggered', { eventId: ev.id, title: ev.title, category: ev.category });
             }
         }
         catch (e) { window.ArtLife?.recordError('WeekEngine', e); console.error('[WeekEngine] EventRegistry failed:', e); }

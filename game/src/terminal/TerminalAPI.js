@@ -26,6 +26,7 @@ import { useMarketStore } from '../stores/marketStore.js';
 import { useInventoryStore } from '../stores/inventoryStore.js';
 import { useConsequenceStore } from '../stores/consequenceStore.js';
 import { EventRegistry } from '../managers/EventRegistry.js';
+import { MarketSimulator } from '../managers/MarketSimulator.js';
 // Import WeekEngine to trigger self-registration with GameState
 import { WeekEngine } from '../managers/WeekEngine.js';
 
@@ -99,4 +100,105 @@ export const TerminalAPI = {
     addNews: (msg) => GameState.addNews(msg),
     getPortfolioValue: () => GameState.getPortfolioValue(),
     applyEffects: (effects) => GameState.applyEffects(effects),
+
+    // ═══════════════════════════════════════════════════════════
+    //  NPC MARKET API — plugin point for UI components
+    // ═══════════════════════════════════════════════════════════
+
+    npcMarket: {
+        /**
+         * Get full market profile for an NPC — combines static contacts data,
+         * persisted npcStore data, and live MarketSimulator state.
+         * Priority: live sim > persisted store > static CONTACTS.
+         */
+        getProfile: (npcId) => {
+            const contact = CONTACTS.find(c => c.id === npcId);
+            const storeContact = useNPCStore.getState().contacts.find(c => c.id === npcId);
+            const simState = MarketSimulator.getNPCState()[npcId];
+            const stats = storeContact?.marketStats || {};
+
+            // Resolve collection (live sim > store > static)
+            const ownedIds = simState?.owned ?? storeContact?.collection?.owned ?? contact?.collection?.owned ?? [];
+            const ownedWorks = ownedIds.map(id => ARTWORKS.find(a => a.id === id)).filter(Boolean);
+
+            // Calculate collection value
+            let collectionValue = 0;
+            for (const w of ownedWorks) {
+                try { collectionValue += MarketManager.calculatePrice(w, false); }
+                catch { collectionValue += w.askingPrice || 0; }
+            }
+
+            const cash = simState?.cash ?? storeContact?.wealth?.liquidCash ?? contact?.wealth?.liquidCash ?? 0;
+            const totalEarned = simState?.totalEarned ?? stats.totalEarned ?? 0;
+            const totalSpent = simState?.totalSpent ?? stats.totalSpent ?? 0;
+
+            return {
+                // Identity
+                id: npcId,
+                name: contact?.name ?? storeContact?.name ?? npcId,
+                role: contact?.role ?? storeContact?.role ?? 'unknown',
+                emoji: contact?.emoji ?? '',
+                // Financials
+                cash,
+                annualBudget: contact?.wealth?.annualBudget ?? 0,
+                spendingCeiling: contact?.wealth?.spendingCeiling ?? 0,
+                financialStress: simState?.financialStress ?? stats.financialStress ?? contact?.wealth?.financialStress ?? 0,
+                netWorth: cash + collectionValue,
+                // Collection
+                owned: ownedWorks,
+                ownedIds,
+                forSale: simState?.forSale ?? storeContact?.collection?.forSale ?? contact?.collection?.forSale ?? [],
+                collectionSize: ownedIds.length,
+                collectionValue,
+                maxCapacity: contact?.collection?.maxCapacity ?? 20,
+                // Trade stats
+                totalBought: simState?.totalBought ?? stats.totalBought ?? 0,
+                totalSold: simState?.totalSold ?? stats.totalSold ?? 0,
+                totalSpent,
+                totalEarned,
+                netProfit: totalEarned - totalSpent,
+                strategy: simState?.strategy ?? stats.strategy ?? 'holder',
+                // Trade log for this NPC
+                recentTrades: MarketSimulator.getTradeLog()
+                    .filter(t => t.buyer === npcId || t.seller === npcId)
+                    .slice(-20),
+                // Taste (for UI display)
+                preferredGenres: contact?.taste?.preferredGenres ?? [],
+                preferredTiers: contact?.taste?.preferredTiers ?? [],
+                avoidedGenres: contact?.taste?.avoidedGenres ?? [],
+                // Relationship
+                favor: storeContact?.favor ?? 0,
+                met: storeContact?.met ?? false,
+            };
+        },
+
+        /**
+         * Get all NPCs ranked by collection value (descending).
+         * @param {number} limit — max results
+         */
+        getCollectionRankings: (limit = 10) => {
+            const profiles = CONTACTS.map(c => {
+                const p = TerminalAPI.npcMarket.getProfile(c.id);
+                return p;
+            });
+            return profiles
+                .sort((a, b) => b.collectionValue - a.collectionValue)
+                .slice(0, limit);
+        },
+
+        /** Get recent art trades across all NPCs */
+        getArtFlow: (limit = 50) => MarketSimulator.getTradeLog().slice(-limit),
+
+        /** Get top collections with details */
+        getTopCollections: (limit = 5) => {
+            return TerminalAPI.npcMarket.getCollectionRankings(limit)
+                .filter(p => p.collectionSize > 0);
+        },
+
+        /** Get weekly market report from MarketSimulator */
+        getWeeklyReport: () => MarketSimulator.getWeeklyReport(),
+
+        /** Get full simulation snapshot */
+        getSimSnapshot: () => MarketSimulator.getSnapshot(),
+    },
 };

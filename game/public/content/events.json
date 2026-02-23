@@ -363,5 +363,146 @@
                 "isEnd": true
             }
         ]
+    },
+    {
+        "id": "elena_gallery_chat",
+        "category": "social",
+        "title": "Gallery Opening with Elena",
+        "requirements": {},
+        "npcInvolved": "npc_elena",
+        "steps": [
+            {
+                "type": "dialogue",
+                "speaker": "Elena Ross",
+                "text": "You've been making waves. I have a piece in the back that might interest someone with your eye."
+            },
+            {
+                "type": "dialogue",
+                "speaker": "Elena Ross",
+                "text": "A stunning abstract by Kai Renard — fresh from Basel. Chromatic Drift. The colors are extraordinary in person."
+            },
+            {
+                "type": "choice",
+                "text": "Elena gestures toward the back room.",
+                "choices": [
+                    {
+                        "label": "\"Let's talk price.\"",
+                        "triggerHaggle": true,
+                        "npcInvolved": "npc_elena",
+                        "effects": {
+                            "cash": -15000
+                        },
+                        "work": {
+                            "id": "elena_chromatic_drift",
+                            "title": "Chromatic Drift",
+                            "artist": "Kai Renard",
+                            "year": "2025",
+                            "medium": "Acrylic on canvas"
+                        }
+                    },
+                    {
+                        "label": "\"Beautiful, but I'll pass for now.\"",
+                        "outcome": "Elena nods gracefully. \"The door's always open.\"",
+                        "statChange": {
+                            "access": 1
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "margaux_studio_visit",
+        "category": "social",
+        "title": "Margaux's Studio Find",
+        "requirements": {},
+        "npcInvolved": "npc_margaux",
+        "steps": [
+            {
+                "type": "dialogue",
+                "speaker": "Margaux Villiers",
+                "text": "I was at this absolutely unhinged studio visit last week. Post-internet meets oil painting. Chaotic. Brilliant."
+            },
+            {
+                "type": "dialogue",
+                "speaker": "Margaux Villiers",
+                "text": "I managed to acquire a piece before anyone else caught on. Digital Ephemera by Suki Tanaka. It's... well, you should see it."
+            },
+            {
+                "type": "choice",
+                "text": "Margaux tilts her head, gauging your interest.",
+                "choices": [
+                    {
+                        "label": "\"I want it. Name your price.\"",
+                        "triggerHaggle": true,
+                        "npcInvolved": "npc_margaux",
+                        "effects": {
+                            "cash": -8000
+                        },
+                        "work": {
+                            "id": "margaux_digital_ephemera",
+                            "title": "Digital Ephemera",
+                            "artist": "Suki Tanaka",
+                            "year": "2025",
+                            "medium": "Mixed media / digital print"
+                        }
+                    },
+                    {
+                        "label": "\"Interesting. Tell me more about the artist.\"",
+                        "outcome": "You file away the name for later research. Suki Tanaka — one to watch.",
+                        "statChange": {
+                            "intel": 2
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "julian_flip_deal",
+        "category": "market",
+        "title": "Julian's Quick Flip",
+        "requirements": {},
+        "npcInvolved": "npc_julian",
+        "steps": [
+            {
+                "type": "dialogue",
+                "speaker": "Julian Vance",
+                "text": "Yo. I just picked up this piece at auction for way under estimate. The market's sleeping on this one."
+            },
+            {
+                "type": "dialogue",
+                "speaker": "Julian Vance",
+                "text": "Untitled JPEG #7 by dxtr.eth. The NFT hype is dead but the underlying art? Chef's kiss. Floor price is about to go parabolic."
+            },
+            {
+                "type": "choice",
+                "text": "Julian pulls up the piece on his phone.",
+                "choices": [
+                    {
+                        "label": "\"Alright, let's haggle.\"",
+                        "triggerHaggle": true,
+                        "npcInvolved": "npc_julian",
+                        "effects": {
+                            "cash": -45000
+                        },
+                        "work": {
+                            "id": "julian_untitled_jpeg",
+                            "title": "Untitled JPEG #7",
+                            "artist": "dxtr.eth",
+                            "year": "2024",
+                            "medium": "Digital / NFT"
+                        }
+                    },
+                    {
+                        "label": "\"NFTs? I don't touch crypto art.\"",
+                        "outcome": "Julian shrugs. \"Your loss. This thing will 10x.\" He drifts away, already texting someone else.",
+                        "statChange": {
+                            "audacity": 1
+                        }
+                    }
+                ]
+            }
+        ]
     }
 ]

@@ -1,7 +1,12 @@
 /**
  * artworks.js — ArtLife artwork database
  *
- * Schema: { id, title, artist, year, medium, dimensions, askingPrice, genre, provenance, sprite }
+ * Schema: { id, title, artist, artistId?, year, medium, dimensions,
+ *           askingPrice, basePrice, genre, provenance, sprite, tier }
+ *
+ * `artistId` links to the simulation ARTISTS pool (artists.js) when applicable.
+ * `basePrice` equals `askingPrice` for catalogue works — used by MarketManager
+ * for dynamic pricing via Ornstein-Uhlenbeck jitter + hedonic scoring.
  *
  * Three tiers:
  *   classic     — Basquiat, Haring, Koons, Prince, Sherman  ($50k–$500k)
@@ -85,6 +90,7 @@ export const ARTWORKS = [
         id: 'yuki_tanaka_kyoto_study',
         title: 'Kyoto Study No. 4',
         artist: 'Yuki Tanaka',
+        artistId: 'artist_05',
         year: '2024',
         medium: 'Oil on linen',
         dimensions: '80 x 100 cm',
@@ -98,6 +104,7 @@ export const ARTWORKS = [
         id: 'kwame_asante_portrait_series',
         title: 'Portrait of a Man with Red Dust (II)',
         artist: 'Kwame Asante',
+        artistId: 'artist_08',
         year: '2023',
         medium: 'Mixed media on board',
         dimensions: '120 x 90 cm',
@@ -313,6 +320,7 @@ export const ARTWORKS = [
         id: 'kwame_asante_threshold',
         title: 'Threshold',
         artist: 'Kwame Asante',
+        artistId: 'artist_08',
         year: '2025',
         medium: 'Mixed media with earth pigment on linen',
         dimensions: '180 x 140 cm',
@@ -391,6 +399,9 @@ export const ARTWORKS = [
     },
 
 ];
+
+// Ensure every artwork has basePrice (needed by MarketManager for dynamic pricing)
+ARTWORKS.forEach(w => { if (!w.basePrice) w.basePrice = w.askingPrice; });
 
 // Convenience lookup by id
 export const ARTWORK_MAP = Object.fromEntries(ARTWORKS.map(a => [a.id, a]));

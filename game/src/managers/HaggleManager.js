@@ -7,6 +7,8 @@
 
 import { DEALER_TYPES, TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG, HAGGLE_TYPES, TYPE_EFFECTIVENESS } from '../data/haggle_config.js';
 import { GameState } from './GameState.js';
+import { useNPCStore } from '../stores/npcStore.js';
+import { ARTWORK_MAP } from '../data/artworks.js';
 
 class _HaggleManager {
     constructor() {
@@ -28,14 +30,69 @@ class _HaggleManager {
     start({ mode, work, npc, askingPrice, playerOffer }) {
         const s = GameState.state;
 
-        // Determine dealer type from NPC role, or random
-        const dealerTypeKey = npc
-            ? (ROLE_TO_DEALER_TYPE[npc.role] || 'patron')
-            : this._randomDealerType();
-        const dealerType = DEALER_TYPES[dealerTypeKey];
+        // ── Resolve NPC profile: CMS edits (useNPCStore) take priority over hardcoded CONTACTS ──
+        const storeContact = npc?.id
+            ? useNPCStore.getState().contacts?.find(c => c.id === npc.id)
+            : null;
+        const resolvedNpc = storeContact ? { ...npc, ...storeContact } : npc;
 
-        // Adjusted asking price based on dealer greed
-        const adjustedAsk = Math.round(askingPrice * dealerType.greedFactor);
+        // ── Taste-based interest check ──
+        // If NPC has taste preferences, check if they'd even want this artwork
+        const taste = resolvedNpc?.taste;
+        if (taste && work) {
+            if (taste.avoidedGenres?.includes(work.genre)) {
+                return { refused: true, reason: 'taste_mismatch', message: `"Not my taste, darling."` };
+            }
+        }
+
+        // ── Wealth ceiling enforcement ──
+        // If asking price exceeds NPC's spending ceiling, they refuse outright
+        const ceiling = resolvedNpc?.wealth?.spendingCeiling;
+        if (ceiling && askingPrice > ceiling * 1.5) {
+            return { refused: true, reason: 'too_expensive', message: `"That's beyond my range."` };
+        }
+
+        // ── Determine dealer type ──
+        // Priority: npc.haggleProfile.dealerType > npc.dealerType > ROLE_TO_DEALER_TYPE[role] > random
+        const profile = resolvedNpc?.haggleProfile || {};
+        const dealerTypeKey = profile.dealerType
+            || resolvedNpc?.dealerType
+            || (resolvedNpc ? (ROLE_TO_DEALER_TYPE[resolvedNpc.role] || 'patron') : this._randomDealerType());
+        const dealerType = DEALER_TYPES[dealerTypeKey] || DEALER_TYPES.patron;
+
+        // ── Apply NPC-specific overrides from haggleProfile ──
+        // These let individual NPCs fight differently even within the same dealer type
+        let npcPatience = profile.patience ?? dealerType.patience;
+        const npcBluffChance = profile.bluffChance ?? 0.1;
+        let npcFlexibility = profile.priceFlexibility ?? 0.15;
+        const npcWalkaway = profile.walkawayThreshold ?? 0.70;
+        const npcTriggers = profile.emotionalTriggers || [];
+
+        // ── Taste bonus: preferred genre/tier gives extra patience ──
+        if (taste && work) {
+            if (taste.preferredTiers?.includes(work.tier)) npcPatience += 1;
+            if (taste.preferredGenres?.includes(work.genre)) npcPatience += 1;
+        }
+
+        // ── Wealth ceiling flex reduction: if price nears ceiling, NPC is tight ──
+        if (ceiling && askingPrice > ceiling) {
+            npcFlexibility *= 0.3; // dramatically reduce flexibility
+        }
+
+        // ── Collection awareness: diminishing returns for same artist ──
+        const owned = resolvedNpc?.collection?.owned || [];
+        if (work && owned.length > 0) {
+            const sameArtistCount = owned.filter(id => {
+                const ow = ARTWORK_MAP[id];
+                return ow && ow.artist === work.artist;
+            }).length;
+            if (sameArtistCount >= 2) npcPatience -= 1; // already has enough
+        }
+
+        // Adjusted asking price based on dealer greed + NPC flexibility
+        // Flexible NPCs ask closer to market; inflexible ones add a premium
+        const flexAdjust = 1 + ((1 - npcFlexibility) * 0.1); // 0.30 flex = 1.07x, 0.05 flex = 1.095x
+        const adjustedAsk = Math.round(askingPrice * dealerType.greedFactor * flexAdjust);
 
         // Player's opening offer
         const opening = playerOffer || Math.round(adjustedAsk * 0.7);
@@ -46,10 +103,10 @@ class _HaggleManager {
         this.active = {
             mode,                    // 'buy' or 'sell'
             work,                    // Artwork object
-            npc,                     // NPC contact or null
+            npc: resolvedNpc,        // Resolved NPC (CMS → CONTACTS fallback)
             dealerTypeKey,
             dealerType,
-            dealerName: npc ? npc.name : 'The Dealer',
+            dealerName: resolvedNpc ? resolvedNpc.name : 'The Dealer',
             dealerIcon: dealerType.icon,
 
             askingPrice: adjustedAsk,
@@ -58,7 +115,17 @@ class _HaggleManager {
 
             round: 0,
             maxRounds: HAGGLE_CONFIG.maxRounds,
-            patience: dealerType.patience,
+            patience: npcPatience,
+
+            // NPC-specific battle parameters (used by executeTactic)
+            npcProfile: {
+                bluffChance: npcBluffChance,
+                priceFlexibility: npcFlexibility,
+                walkawayThreshold: npcWalkaway,
+                emotionalTriggers: npcTriggers,
+                temperament: resolvedNpc?.behavior?.temperament || 'warm',
+                riskTolerance: resolvedNpc?.behavior?.riskTolerance ?? 50,
+            },
 
             // History for display
             rounds: [],

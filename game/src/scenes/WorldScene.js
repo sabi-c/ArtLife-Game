@@ -99,6 +99,22 @@ export default class WorldScene extends BaseScene {
                 frameHeight: 96,
             });
         }
+
+        // NPC walk spritesheets (160×160 frames, 4×4 grid: down/left/right/up × 4 frames)
+        // These are the same sprites used in LocationScene for contact-specific NPCs
+        const npcWalkKeys = [
+            'walk_legacy_gallerist_walk', 'walk_auction_house_type_walk', 'walk_elena_ross_walk',
+            'walk_old_money_gallerist_walk', 'walk_academic_curator_walk', 'walk_young_artist_walk',
+            'walk_art_flipper_walk', 'walk_tech_collector_f_walk', 'walk_power_collector_f_walk',
+            'walk_art_critic_walk', 'walk_young_power_dealer_walk', 'walk_underground_connector_walk',
+            'walk_it_girl_dealer_walk', 'walk_margaux_villiers_walk', 'walk_avant_garde_curator_walk',
+            'walk_julian_vance_walk',
+        ];
+        for (const key of npcWalkKeys) {
+            if (!this.textures.exists(key)) {
+                this.load.spritesheet(key, `sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
+            }
+        }
     }
 
     create(data) {
@@ -322,12 +338,24 @@ export default class WorldScene extends BaseScene {
             }
         }
 
-        // ── Y-depth sorting ──
-        this.gridEngine.movementStarted().subscribe(({ charId }) => {
+        // ── Y-depth sorting + NPC walk animations ──
+        this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
             this._updateCharDepth(charId);
+            // Play walk animation for NPCs with dedicated spritesheets
+            if (charId !== 'player') {
+                const npc = this.npcData.find(n => n.id === charId);
+                if (npc?.spriteKey && this.anims.exists(`${npc.spriteKey}_${direction.toLowerCase()}`)) {
+                    npc.sprite.anims.play(`${npc.spriteKey}_${direction.toLowerCase()}`, true);
+                }
+            }
         });
         this.gridEngine.movementStopped().subscribe(({ charId }) => {
             this._updateCharDepth(charId);
+            // Stop walk animation for NPCs
+            if (charId !== 'player') {
+                const npc = this.npcData.find(n => n.id === charId);
+                if (npc?.sprite?.anims) npc.sprite.anims.stop();
+            }
         });
         // Initial depth
         this._updateCharDepth('player');
@@ -462,10 +490,24 @@ export default class WorldScene extends BaseScene {
 
         const activeNPCs = NPCManager.getNPCsForMap(mapId, day, hour);
 
+        // Create walk animations for NPC spritesheets (once per key)
+        // walk_ spritesheets: 160×160, 4 dirs × 4 frames (down 0-3, left 4-7, right 8-11, up 12-15)
         for (const npc of activeNPCs) {
-            const sprite = this.add.sprite(0, 0, 'world_player');
+            const sk = npc.spriteKey;
+            if (sk && this.textures.exists(sk) && !this.anims.exists(`${sk}_down`)) {
+                this.anims.create({ key: `${sk}_down`, frames: this.anims.generateFrameNumbers(sk, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
+                this.anims.create({ key: `${sk}_left`, frames: this.anims.generateFrameNumbers(sk, { start: 4, end: 7 }), frameRate: 6, repeat: -1 });
+                this.anims.create({ key: `${sk}_right`, frames: this.anims.generateFrameNumbers(sk, { start: 8, end: 11 }), frameRate: 6, repeat: -1 });
+                this.anims.create({ key: `${sk}_up`, frames: this.anims.generateFrameNumbers(sk, { start: 12, end: 15 }), frameRate: 6, repeat: -1 });
+            }
+        }
+
+        for (const npc of activeNPCs) {
+            const hasSprite = npc.spriteKey && this.textures.exists(npc.spriteKey);
+            const sprite = this.add.sprite(0, 0, hasSprite ? npc.spriteKey : 'world_player');
             sprite.setOrigin(0.5, 0.75);
-            sprite.setTint(npc.tint);
+            // Only tint if using the generic world_player fallback
+            if (!hasSprite && npc.tint) sprite.setTint(npc.tint);
 
             this.npcSprites.push(sprite);
             this.npcData.push({
@@ -611,9 +653,10 @@ export default class WorldScene extends BaseScene {
         // Add arriving NPCs
         for (const npcDef of activeNPCs) {
             if (!currentIds.includes(npcDef.id)) {
-                const sprite = this.add.sprite(0, 0, 'world_player');
+                const hasSprite = npcDef.spriteKey && this.textures.exists(npcDef.spriteKey);
+                const sprite = this.add.sprite(0, 0, hasSprite ? npcDef.spriteKey : 'world_player');
                 sprite.setOrigin(0.5, 0.75);
-                sprite.setTint(npcDef.tint);
+                if (!hasSprite && npcDef.tint) sprite.setTint(npcDef.tint);
                 sprite.setDepth(DEPTH.WORLD2 + 1 + npcDef.startPosition.y); // Initial depth
 
                 this.npcSprites.push(sprite);
@@ -765,16 +808,31 @@ export default class WorldScene extends BaseScene {
             } catch (e) { /* turnTowards may not be available */ }
 
             WebAudioService.select();
-            this._showDialog(
-                npcAtTarget.label,
-                npcAtTarget.dialogContent || `${npcAtTarget.label}: "The art world is full of surprises."`,
-                () => {
-                    // Resume wandering after dialog if applicable
-                    if (npcAtTarget.behavior === 'wandering') {
-                        this.gridEngine.moveRandomly(npcAtTarget.id, 2000 + Math.random() * 2000);
+
+            // If NPC has a linked event, launch full DialogueScene
+            if (npcAtTarget.eventId) {
+                console.log(`[WorldScene] NPC ${npcAtTarget.label} → DialogueScene (${npcAtTarget.eventId})`);
+                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'DialogueScene', {
+                    eventId: npcAtTarget.eventId,
+                    npcId: npcAtTarget.id,
+                    npcLabel: npcAtTarget.label,
+                    dealerType: npcAtTarget.dealerType,
+                    returnScene: 'WorldScene',
+                    returnArgs: { mapKey: this.mapKey },
+                });
+            } else {
+                // Fallback: inline dialog bubble
+                this._showDialog(
+                    npcAtTarget.label,
+                    npcAtTarget.dialogContent || `${npcAtTarget.label}: "The art world is full of surprises."`,
+                    () => {
+                        // Resume wandering after dialog if applicable
+                        if (npcAtTarget.behavior === 'wandering') {
+                            this.gridEngine.moveRandomly(npcAtTarget.id, 2000 + Math.random() * 2000);
+                        }
                     }
-                }
-            );
+                );
+            }
             return;
         }
 
@@ -1008,7 +1066,11 @@ export default class WorldScene extends BaseScene {
 
         // Emitting DEBUG_LAUNCH_SCENE temporarily routes us to the DialogueScene
         // with the requested event ID, suspending this scene automatically as it runs in parallel / modal
-        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'DialogueScene', { eventId });
+        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'DialogueScene', {
+            eventId,
+            returnScene: 'WorldScene',
+            returnArgs: { mapKey: this.mapKey },
+        });
     }
 
     // ════════════════════════════════════════════════════

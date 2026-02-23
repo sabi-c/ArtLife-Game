@@ -14,6 +14,8 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { ARTWORKS } from '../../data/artworks.js';
+import { CONTACTS } from '../../data/contacts.js';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
 
@@ -724,7 +726,7 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
     const style = OBJ_STYLES[obj.name] || { color: '#888' };
 
     const fields = {
-        painting: ['title', 'artist', 'price', 'description'],
+        painting: ['artworkId', 'title', 'artist', 'price', 'description'],
         npc: ['id', 'label', 'dialogue', 'canHaggle'],
         door: ['nextMap', 'nextMapRoom', 'label'],
         dialog: ['content'],
@@ -732,6 +734,27 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
     };
 
     const currentFields = fields[obj.name] || Object.keys(props);
+
+    /** Link a painting to an ARTWORKS entry — auto-fills title, artist, price */
+    const handleLinkArtwork = (artworkId) => {
+        const artwork = ARTWORKS.find(a => a.id === artworkId);
+        if (!artwork) return;
+        onUpdateProperty(obj.id, 'artworkId', artworkId);
+        onUpdateProperty(obj.id, 'title', artwork.title);
+        onUpdateProperty(obj.id, 'artist', artwork.artist);
+        onUpdateProperty(obj.id, 'price', String(artwork.askingPrice));
+        onUpdateProperty(obj.id, 'description', artwork.provenance || '');
+    };
+
+    /** Link an NPC to a CONTACTS entry — auto-fills id, label, dialogue */
+    const handleLinkNPC = (contactId) => {
+        const contact = CONTACTS.find(c => c.id === contactId);
+        if (!contact) return;
+        onUpdateProperty(obj.id, 'id', contact.id);
+        onUpdateProperty(obj.id, 'label', contact.name);
+        onUpdateProperty(obj.id, 'dialogue', contact.greetings?.[0] || 'Hello.');
+        onUpdateProperty(obj.id, 'canHaggle', contact.role === 'dealer' ? 'true' : 'false');
+    };
 
     return (
         <div style={{ padding: 12, fontSize: 11, fontFamily: mono }}>
@@ -753,6 +776,54 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
                     }}
                 >DEL</button>
             </div>
+
+            {/* LINK ARTWORK dropdown for painting objects */}
+            {obj.name === 'painting' && (
+                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #1a1a2e' }}>
+                    <div style={{ fontSize: 9, color: '#c9a84c', marginBottom: 4 }}>LINK ARTWORK</div>
+                    <select
+                        value={props.artworkId || ''}
+                        onChange={(e) => e.target.value && handleLinkArtwork(e.target.value)}
+                        style={{ ...inputStyle, color: props.artworkId ? '#4ade80' : '#888' }}
+                    >
+                        <option value="">— Select artwork —</option>
+                        {ARTWORKS.map(a => (
+                            <option key={a.id} value={a.id}>
+                                {a.title} — {a.artist} (${a.askingPrice.toLocaleString()})
+                            </option>
+                        ))}
+                    </select>
+                    {props.artworkId && (
+                        <div style={{ fontSize: 9, color: '#3a8a5c', marginTop: 2 }}>
+                            Linked to: {props.artworkId}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* LINK NPC dropdown for npc objects */}
+            {obj.name === 'npc' && (
+                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #1a1a2e' }}>
+                    <div style={{ fontSize: 9, color: '#4ade80', marginBottom: 4 }}>LINK NPC</div>
+                    <select
+                        value={props.id || ''}
+                        onChange={(e) => e.target.value && handleLinkNPC(e.target.value)}
+                        style={{ ...inputStyle, color: CONTACTS.some(c => c.id === props.id) ? '#4ade80' : '#888' }}
+                    >
+                        <option value="">— Select contact —</option>
+                        {CONTACTS.map(c => (
+                            <option key={c.id} value={c.id}>
+                                {c.name} — {c.role} {c.emoji || ''}
+                            </option>
+                        ))}
+                    </select>
+                    {CONTACTS.some(c => c.id === props.id) && (
+                        <div style={{ fontSize: 9, color: '#3a8a5c', marginTop: 2 }}>
+                            Linked to: {props.id}
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <div>
@@ -793,6 +864,14 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
                             <option value="true">true</option>
                             <option value="false">false</option>
                         </select>
+                    ) : field === 'artworkId' ? (
+                        <input
+                            type="text"
+                            value={props[field] || ''}
+                            readOnly
+                            style={{ ...inputStyle, color: '#555' }}
+                            title="Use LINK ARTWORK dropdown above"
+                        />
                     ) : (
                         <input
                             type="text"

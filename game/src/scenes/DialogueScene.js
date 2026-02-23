@@ -4,7 +4,10 @@ import { QualityGate } from '../managers/QualityGate.js';
 import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
 import { DecisionLog } from '../managers/DecisionLog.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
+import { ActivityLogger } from '../managers/ActivityLogger.js';
+import { EventRegistry } from '../managers/EventRegistry.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
+import { CONTACTS } from '../data/contacts.js';
 import { useUIStore } from '../stores/uiStore.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
@@ -269,8 +272,9 @@ export class DialogueScene extends BaseScene {
             this.clearStepObjects();
 
             // Derive artwork and seller from choice context
-            const sellerId = choice.npcInvolved || this.eventData.npcInvolved ||
-                (this.eventData.id ? this.eventData.id.split('_').slice(0, 2).join('_') : 'seller');
+            const sellerId = choice.npcInvolved || this.eventData?.npcInvolved ||
+                this.eventData?.npcId ||
+                (this.eventData?.id ? this.eventData.id.split('_').slice(0, 2).join('_') : null);
             const basePrice = Math.abs(choice.effects?.cash || 10000);
             const work = choice.work || {
                 id: `dialogue_${Date.now()}`,
@@ -279,11 +283,16 @@ export class DialogueScene extends BaseScene {
                 year: String(new Date().getFullYear()),
             };
 
+            // ── Resolve the actual NPC contact so haggleProfile drives the battle ──
+            const npcContact = sellerId
+                ? (CONTACTS || []).find(c => c.id === sellerId) || null
+                : null;
+
             // Initialise HaggleManager state before launching HaggleScene
             const haggleStart = HaggleManager.start({
                 mode: 'buy',
                 work,
-                npc: null,
+                npc: npcContact,
                 askingPrice: basePrice,
             });
 
@@ -353,6 +362,26 @@ export class DialogueScene extends BaseScene {
             npcInvolved: choice.npcInvolved || this.eventData.npcInvolved || null,
             isBlueOption: choice.isBlueOption || false,
         });
+
+        // ── Activity Logger ──
+        ActivityLogger.logDialogue('choice_made', {
+            eventId: this.eventData.id,
+            eventTitle: this.eventData.title,
+            step: this.currentStep,
+            choiceIndex,
+            choiceLabel: choice.label,
+            tone: choice.tone || null,
+            isBlueOption: choice.isBlueOption || false,
+            effects: choice.effects || {},
+        }, choice.npcInvolved || this.eventData.npcId);
+
+        // ── Storyline trigger check ──
+        try {
+            EventRegistry.checkStorylineTrigger(
+                this.eventData.id, choiceIndex, choice.label,
+                step?.nodeId || null
+            );
+        } catch (e) { console.warn('[DialogueScene] Storyline trigger check failed:', e); }
 
         // Schedule consequences
         if (choice.schedules) {
@@ -770,6 +799,23 @@ export class DialogueScene extends BaseScene {
             npcInvolved: choice.npcInvolved || this.eventData.npcInvolved || null,
             isBlueOption: choice.isBlueOption || false,
         });
+
+        // ── Activity Logger ──
+        ActivityLogger.logDialogue('choice_made', {
+            eventId: this.eventData.id,
+            eventTitle: this.eventData.title,
+            choiceIndex,
+            choiceLabel: choice.label,
+            isBlueOption: choice.isBlueOption || false,
+            effects: choice.effects || {},
+        }, choice.npcInvolved || this.eventData.npcId);
+
+        // ── Storyline trigger check ──
+        try {
+            EventRegistry.checkStorylineTrigger(
+                this.eventData.id, choiceIndex, choice.label
+            );
+        } catch (e) { console.warn('[DialogueScene] Storyline trigger check failed:', e); }
 
         // Schedule consequences
         if (choice.schedules) {

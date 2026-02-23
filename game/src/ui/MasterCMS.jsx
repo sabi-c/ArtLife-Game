@@ -12,6 +12,8 @@ import DataIngestion from './cms/DataIngestion.jsx';
 import KanbanBoard from './cms/KanbanBoard.jsx';
 import TimelineCalendar from './cms/TimelineCalendar.jsx';
 import HaggleEditor from './cms/HaggleEditor.jsx';
+import MarketSimDashboard from './cms/MarketSimDashboard.jsx';
+import ActivityLogViewer from './cms/ActivityLogViewer.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board' },
@@ -21,13 +23,16 @@ const TABS = [
     { id: 'npcs', icon: '👤', label: 'NPCs & Roles' },
     { id: 'artworks', icon: '🖼️', label: 'Artworks / Market' },
     { id: 'haggle', icon: '⚔️', label: 'Haggle Battles' },
+    { id: 'marketsim', icon: '📊', label: 'Market Sim' },
     { id: 'venues', icon: '🏢', label: 'Venues / Map' },
+    { id: 'actlog', icon: '📋', label: 'Activity Log' },
     { id: 'ingest', icon: '🤖', label: 'AI Ingestion Port' },
 ];
 
 export default function MasterCMS({ onClose }) {
     const [activeTab, setActiveTab] = useState('board');
     const [saveFlash, setSaveFlash] = useState(null);
+    const [closeModal, setCloseModal] = useState(false);
     const fileInputRef = useRef(null);
 
     // ── FIXED: Select raw state, derive values with useMemo ──
@@ -52,16 +57,17 @@ export default function MasterCMS({ onClose }) {
     useEffect(() => {
         const onKey = (e) => {
             if (e.key === 'Escape') {
+                if (closeModal) { setCloseModal(false); return; }
                 if (hasUnsaved) {
-                    const ok = window.confirm('You have unsaved CMS changes. Save before closing?');
-                    if (ok) useCmsStore.getState().saveAll();
+                    setCloseModal(true); // Show custom modal instead of window.confirm
+                    return;
                 }
                 onClose();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [onClose, hasUnsaved]);
+    }, [onClose, hasUnsaved, closeModal]);
 
     const handleSave = () => {
         const ok = useCmsStore.getState().saveAll();
@@ -107,6 +113,8 @@ export default function MasterCMS({ onClose }) {
             case 'npcs': return <NPCEditor />;
             case 'artworks': return <ArtworkEditor />;
             case 'haggle': return <HaggleEditor />;
+            case 'marketsim': return <MarketSimDashboard />;
+            case 'actlog': return <ActivityLogViewer />;
             case 'venues': return <VenueEditor />;
             case 'ingest': return <DataIngestion />;
             default: return null;
@@ -180,8 +188,8 @@ export default function MasterCMS({ onClose }) {
                     <div style={{ width: 1, height: 20, background: '#333', margin: '0 4px' }} />
                     <button onClick={() => {
                         if (hasUnsaved) {
-                            const ok = window.confirm('Save unsaved changes before closing?');
-                            if (ok) saveAll();
+                            setCloseModal(true);
+                            return;
                         }
                         onClose();
                     }} style={{
@@ -225,6 +233,42 @@ export default function MasterCMS({ onClose }) {
                     {renderTabContent()}
                 </main>
             </div>
+            {/* Save/Discard/Cancel Modal */}
+            {closeModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999999,
+                    background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                    <div style={{
+                        background: '#111', border: '1px solid #333', borderRadius: 8,
+                        padding: 24, minWidth: 380, maxWidth: 420, textAlign: 'center',
+                    }}>
+                        <div style={{ fontSize: 16, color: '#c9a84c', marginBottom: 6 }}>⚠️ Unsaved Changes</div>
+                        <div style={{ fontSize: 11, color: '#888', marginBottom: 20 }}>
+                            You have unsaved changes in: <strong style={{ color: '#ff6b35' }}>{dirtyDomains.join(', ')}</strong>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            <button onClick={() => {
+                                useCmsStore.getState().saveAll();
+                                setCloseModal(false);
+                                setSaveFlash('✅ Saved');
+                                setTimeout(() => { setSaveFlash(null); onClose(); }, 600);
+                            }} style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50', padding: '8px 16px', fontSize: 12 }}>
+                                💾 Save & Close
+                            </button>
+                            <button onClick={() => {
+                                setCloseModal(false);
+                                onClose();
+                            }} style={{ ...btnStyle, borderColor: '#f87171', color: '#f87171', padding: '8px 16px', fontSize: 12 }}>
+                                🗑️ Discard & Close
+                            </button>
+                            <button onClick={() => setCloseModal(false)} style={{ ...btnStyle, padding: '8px 16px', fontSize: 12 }}>
+                                ← Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

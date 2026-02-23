@@ -9,8 +9,10 @@
  * Wired into ContentStudio.jsx as the "ROOMS" tab.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { VENUES, VENUE_MAP, ROOM_MAP } from '../../data/rooms.js';
+import { ARTWORKS } from '../../data/artworks.js';
+import { CONTACTS } from '../../data/contacts.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 import MapEditor from './MapEditor.jsx';
@@ -200,6 +202,106 @@ function RoomList({ selectedVenueId, onSelectVenue, mapData }) {
                     );
                 })}
             </div>
+        </div>
+    );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Tileset Canvas Preview — renders a small tilemap thumbnail
+// ════════════════════════════════════════════════════════════════
+
+function TilesetPreview({ mapJSON }) {
+    const canvasRef = useRef(null);
+    const [images, setImages] = useState({});
+
+    const tw = mapJSON.tilewidth;
+    const th = mapJSON.tileheight;
+
+    // Load tileset images once
+    useEffect(() => {
+        const imgs = {};
+        const promises = [];
+        for (const ts of (mapJSON.tilesets || [])) {
+            if (ts.image) {
+                let imgPath = ts.image;
+                // Normalize relative paths for dev server
+                if (imgPath.startsWith('../')) imgPath = imgPath.replace(/^(\.\.\/)+/, '');
+                promises.push(
+                    new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = () => { imgs[ts.name] = img; resolve(); };
+                        img.onerror = () => resolve();
+                        img.src = imgPath;
+                    })
+                );
+            }
+        }
+        Promise.all(promises).then(() => setImages(imgs));
+    }, [mapJSON]);
+
+    // Draw the map at zoom=1 once images load
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || Object.keys(images).length === 0) return;
+        const ctx = canvas.getContext('2d');
+        const mapW = mapJSON.width * tw;
+        const mapH = mapJSON.height * th;
+        canvas.width = mapW;
+        canvas.height = mapH;
+        ctx.imageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, mapW, mapH);
+
+        // Draw tile layers
+        const tileLayers = (mapJSON.layers || []).filter(l => l.type === 'tilelayer');
+        for (const layer of tileLayers) {
+            if (!layer.visible || layer.opacity === 0) continue;
+            ctx.globalAlpha = layer.opacity ?? 1;
+            for (let y = 0; y < mapJSON.height; y++) {
+                for (let x = 0; x < mapJSON.width; x++) {
+                    const gid = layer.data[y * mapJSON.width + x];
+                    if (gid === 0) continue;
+                    let tileset = null;
+                    for (let i = mapJSON.tilesets.length - 1; i >= 0; i--) {
+                        if (gid >= mapJSON.tilesets[i].firstgid) { tileset = mapJSON.tilesets[i]; break; }
+                    }
+                    if (!tileset) continue;
+                    const tsImg = images[tileset.name];
+                    if (!tsImg) continue;
+                    const localId = gid - tileset.firstgid;
+                    const tsCols = tileset.columns || Math.floor(tileset.imagewidth / tw);
+                    const srcX = (localId % tsCols) * tw;
+                    const srcY = Math.floor(localId / tsCols) * th;
+                    ctx.drawImage(tsImg, srcX, srcY, tw, th, x * tw, y * th, tw, th);
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Draw object markers
+        const objLayer = mapJSON.layers?.find(l => l.type === 'objectgroup');
+        if (objLayer) {
+            const colors = { painting: '#c9a84c', npc: '#4ade80', door: '#88bbdd', spawn: '#ff6b6b', dialog: '#aa66cc' };
+            for (const obj of objLayer.objects) {
+                ctx.fillStyle = colors[obj.name] || '#888';
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, tw * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }, [mapJSON, images, tw, th]);
+
+    return (
+        <div style={{ textAlign: 'center' }}>
+            <canvas
+                ref={canvasRef}
+                style={{
+                    maxWidth: '100%',
+                    maxHeight: 300,
+                    imageRendering: 'pixelated',
+                    border: '1px solid #2a2a3e',
+                }}
+            />
         </div>
     );
 }
@@ -419,6 +521,29 @@ function RoomInspector({ venue, mapData }) {
                         </div>
                     );
                 })()}
+
+                {/* Tileset Canvas Preview (for non-bgImage rooms) */}
+                {mapJSON && !(() => {
+                    const bp = Array.isArray(mapJSON.properties)
+                        ? mapJSON.properties.find(p => p.name === 'bgImage')?.value
+                        : mapJSON.properties?.bgImage;
+                    return !!bp;
+                })() && (
+                    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a1a2e' }}>
+                        <div style={{ fontSize: 11, color: '#c9a84c', marginBottom: 8, fontFamily: mono }}>
+                            ROOM PREVIEW
+                            <span style={{ color: '#555', fontWeight: 'normal', marginLeft: 8, fontSize: 9 }}>
+                                {mapJSON.width}&times;{mapJSON.height} tiles &bull; tileset render
+                            </span>
+                        </div>
+                        <div style={{
+                            background: '#0a0a14', border: '1px solid #1a1a2e',
+                            borderRadius: 2, padding: 4,
+                        }}>
+                            <TilesetPreview mapJSON={mapJSON} />
+                        </div>
+                    </div>
+                )}
 
                 {/* ASCII Mini-map */}
                 {ascii && (
@@ -815,6 +940,8 @@ function RoomWizard({ onClose, onCreateRoom }) {
     const [template, setTemplate] = useState('gallery');
     const [width, setWidth] = useState(12);
     const [height, setHeight] = useState(10);
+    const [selectedArtworks, setSelectedArtworks] = useState([]);
+    const [selectedNPCs, setSelectedNPCs] = useState([]);
 
     // Auto-generate mapId from name
     const handleNameChange = (val) => {
@@ -822,9 +949,95 @@ function RoomWizard({ onClose, onCreateRoom }) {
         setMapId(val.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''));
     };
 
+    const toggleArtwork = (artId) => {
+        setSelectedArtworks(prev =>
+            prev.includes(artId) ? prev.filter(id => id !== artId) : [...prev, artId]
+        );
+    };
+
+    const toggleNPC = (npcId) => {
+        setSelectedNPCs(prev =>
+            prev.includes(npcId) ? prev.filter(id => id !== npcId) : [...prev, npcId]
+        );
+    };
+
     const handleCreate = () => {
         if (!mapId) return;
         const mapJSON = generateBlankMap(width, height, template);
+
+        // Inject artworkId into painting objects if artworks were selected
+        if (selectedArtworks.length > 0) {
+            const objLayer = mapJSON.layers?.find(l => l.type === 'objectgroup');
+            if (objLayer) {
+                const paintingObjs = objLayer.objects.filter(o => o.name === 'painting');
+                selectedArtworks.forEach((artId, i) => {
+                    const artwork = ARTWORKS.find(a => a.id === artId);
+                    if (!artwork) return;
+                    if (i < paintingObjs.length) {
+                        // Update existing painting object
+                        const obj = paintingObjs[i];
+                        if (!obj.properties) obj.properties = [];
+                        setPropOnObj(obj, 'artworkId', artId);
+                        setPropOnObj(obj, 'title', artwork.title);
+                        setPropOnObj(obj, 'artist', artwork.artist);
+                        setPropOnObj(obj, 'price', String(artwork.askingPrice));
+                        setPropOnObj(obj, 'description', artwork.provenance || '');
+                    } else {
+                        // Add a new painting object
+                        const newId = mapJSON.nextobjectid || (Math.max(0, ...objLayer.objects.map(o => o.id)) + 1);
+                        mapJSON.nextobjectid = newId + 1;
+                        const spacing = Math.floor(width / (selectedArtworks.length + 1));
+                        objLayer.objects.push({
+                            id: newId, name: 'painting', point: true,
+                            x: (spacing * (i + 1)) * mapJSON.tilewidth, y: 2 * mapJSON.tileheight,
+                            width: 0, height: 0, rotation: 0, type: '', visible: true,
+                            properties: [
+                                { name: 'artworkId', type: 'string', value: artId },
+                                { name: 'title', type: 'string', value: artwork.title },
+                                { name: 'artist', type: 'string', value: artwork.artist },
+                                { name: 'price', type: 'string', value: String(artwork.askingPrice) },
+                                { name: 'description', type: 'string', value: artwork.provenance || '' },
+                            ],
+                        });
+                    }
+                });
+            }
+        }
+
+        // Inject NPC contact data if NPCs were selected
+        if (selectedNPCs.length > 0) {
+            const objLayer = mapJSON.layers?.find(l => l.type === 'objectgroup');
+            if (objLayer) {
+                const npcObjs = objLayer.objects.filter(o => o.name === 'npc');
+                selectedNPCs.forEach((npcId, i) => {
+                    const contact = CONTACTS.find(c => c.id === npcId);
+                    if (!contact) return;
+                    if (i < npcObjs.length) {
+                        const obj = npcObjs[i];
+                        setPropOnObj(obj, 'id', contact.id);
+                        setPropOnObj(obj, 'label', contact.name);
+                        setPropOnObj(obj, 'dialogue', contact.greetings?.[0] || 'Hello.');
+                        setPropOnObj(obj, 'canHaggle', contact.role === 'dealer' ? 'true' : 'false');
+                    } else {
+                        const newId = mapJSON.nextobjectid || (Math.max(0, ...objLayer.objects.map(o => o.id)) + 1);
+                        mapJSON.nextobjectid = newId + 1;
+                        objLayer.objects.push({
+                            id: newId, name: 'npc', point: true,
+                            x: Math.floor(width * 0.6 + i * 2) * mapJSON.tilewidth,
+                            y: Math.floor(height * 0.5) * mapJSON.tileheight,
+                            width: 0, height: 0, rotation: 0, type: '', visible: true,
+                            properties: [
+                                { name: 'id', type: 'string', value: contact.id },
+                                { name: 'label', type: 'string', value: contact.name },
+                                { name: 'dialogue', type: 'string', value: contact.greetings?.[0] || 'Hello.' },
+                                { name: 'canHaggle', type: 'string', value: contact.role === 'dealer' ? 'true' : 'false' },
+                            ],
+                        });
+                    }
+                });
+            }
+        }
+
         onCreateRoom(mapId, name || mapId, mapJSON);
     };
 
@@ -842,8 +1055,8 @@ function RoomWizard({ onClose, onCreateRoom }) {
         }}>
             <div style={{
                 background: '#0a0a14', border: '1px solid #c9a84c',
-                borderRadius: 4, padding: 24, width: 420,
-                fontFamily: mono,
+                borderRadius: 4, padding: 24, width: 520, maxHeight: '90vh',
+                overflowY: 'auto', fontFamily: mono,
             }}>
                 <div style={{ fontSize: 14, color: '#c9a84c', fontWeight: 'bold', marginBottom: 16, letterSpacing: 2 }}>
                     CREATE NEW ROOM
@@ -919,6 +1132,72 @@ function RoomWizard({ onClose, onCreateRoom }) {
                     </div>
                 </div>
 
+                {/* Artwork Selection */}
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, color: '#c9a84c', marginBottom: 4 }}>
+                        SELECT ARTWORKS ({selectedArtworks.length} chosen)
+                    </div>
+                    <div style={{
+                        maxHeight: 150, overflowY: 'auto',
+                        background: '#0a0a14', border: '1px solid #1a1a2e', borderRadius: 2,
+                    }}>
+                        {ARTWORKS.map(a => {
+                            const isSelected = selectedArtworks.includes(a.id);
+                            return (
+                                <div
+                                    key={a.id}
+                                    onClick={() => toggleArtwork(a.id)}
+                                    style={{
+                                        padding: '4px 8px', cursor: 'pointer',
+                                        borderBottom: '1px solid #111',
+                                        background: isSelected ? 'rgba(201,168,76,0.15)' : 'transparent',
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        fontSize: 10,
+                                    }}
+                                >
+                                    <span style={{ color: isSelected ? '#c9a84c' : '#888' }}>
+                                        {isSelected ? '\u2611' : '\u2610'} {a.title}
+                                    </span>
+                                    <span style={{ color: '#555' }}>${a.askingPrice.toLocaleString()}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* NPC Selection */}
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 9, color: '#4ade80', marginBottom: 4 }}>
+                        SELECT NPCs ({selectedNPCs.length} chosen)
+                    </div>
+                    <div style={{
+                        maxHeight: 120, overflowY: 'auto',
+                        background: '#0a0a14', border: '1px solid #1a1a2e', borderRadius: 2,
+                    }}>
+                        {CONTACTS.map(c => {
+                            const isSelected = selectedNPCs.includes(c.id);
+                            return (
+                                <div
+                                    key={c.id}
+                                    onClick={() => toggleNPC(c.id)}
+                                    style={{
+                                        padding: '4px 8px', cursor: 'pointer',
+                                        borderBottom: '1px solid #111',
+                                        background: isSelected ? 'rgba(74,222,128,0.15)' : 'transparent',
+                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                        fontSize: 10,
+                                    }}
+                                >
+                                    <span style={{ color: isSelected ? '#4ade80' : '#888' }}>
+                                        {isSelected ? '\u2611' : '\u2610'} {c.name}
+                                    </span>
+                                    <span style={{ color: '#555' }}>{c.role}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
                 {/* Buttons */}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button onClick={onClose} style={{
@@ -940,6 +1219,14 @@ function RoomWizard({ onClose, onCreateRoom }) {
             </div>
         </div>
     );
+}
+
+/** Helper: set a custom property on a Tiled object (mutates in place) */
+function setPropOnObj(obj, name, value) {
+    if (!obj.properties) obj.properties = [];
+    const existing = obj.properties.find(p => p.name === name);
+    if (existing) { existing.value = value; }
+    else { obj.properties.push({ name, type: 'string', value }); }
 }
 
 const wizInputStyle = {

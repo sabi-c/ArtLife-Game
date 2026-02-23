@@ -85,6 +85,98 @@ export const useNPCStore = create(
                 }
             }),
 
+            // ═══════════════════════════════════════════════════════════
+            //  MARKET SIMULATION SYNC
+            // ═══════════════════════════════════════════════════════════
+
+            /**
+             * Sync market simulation data for a single NPC.
+             * Called after MarketSimulator.simulate() to persist collection/cash/trade stats.
+             */
+            syncMarketData: (npcId, marketData) => set((state) => {
+                const c = state.contacts.find(c => c.id === npcId);
+                if (!c) return;
+                // Merge financial data
+                if (!c.wealth) c.wealth = {};
+                c.wealth.liquidCash = marketData.cash;
+                c.wealth.financialStress = marketData.financialStress;
+                // Merge collection data
+                if (!c.collection) c.collection = {};
+                c.collection.owned = [...(marketData.owned || [])];
+                c.collection.forSale = [...(marketData.forSale || [])];
+                // Merge trade stats
+                c.marketStats = {
+                    totalBought: marketData.totalBought || 0,
+                    totalSold: marketData.totalSold || 0,
+                    totalSpent: marketData.totalSpent || 0,
+                    totalEarned: marketData.totalEarned || 0,
+                    netProfit: (marketData.totalEarned || 0) - (marketData.totalSpent || 0),
+                    strategy: marketData.strategy || 'holder',
+                    financialStress: marketData.financialStress || 0,
+                    lastSyncWeek: marketData.lastSyncWeek || 0,
+                };
+            }),
+
+            /**
+             * Batch sync all NPC market data from MarketSimulator._npcState.
+             * More efficient than calling syncMarketData for each NPC individually.
+             * @param {Object} allNpcState — { [npcId]: { cash, owned, forSale, totalBought, ... } }
+             */
+            syncAllMarketData: (allNpcState) => set((state) => {
+                for (const [npcId, data] of Object.entries(allNpcState)) {
+                    const c = state.contacts.find(c => c.id === npcId);
+                    if (!c) continue;
+                    if (!c.wealth) c.wealth = {};
+                    c.wealth.liquidCash = data.cash;
+                    c.wealth.financialStress = data.financialStress;
+                    if (!c.collection) c.collection = {};
+                    c.collection.owned = [...(data.owned || [])];
+                    c.collection.forSale = [...(data.forSale || [])];
+                    c.marketStats = {
+                        totalBought: data.totalBought || 0,
+                        totalSold: data.totalSold || 0,
+                        totalSpent: data.totalSpent || 0,
+                        totalEarned: data.totalEarned || 0,
+                        netProfit: (data.totalEarned || 0) - (data.totalSpent || 0),
+                        strategy: data.strategy || 'holder',
+                        financialStress: data.financialStress || 0,
+                    };
+                }
+            }),
+
+            /**
+             * Get combined market profile for an NPC — merges static contact data
+             * with persisted market stats for UI consumption.
+             */
+            getMarketProfile: (npcId) => {
+                const c = get().contacts.find(c => c.id === npcId);
+                if (!c) return null;
+                const stats = c.marketStats || {};
+                return {
+                    id: c.id,
+                    name: c.name,
+                    role: c.role,
+                    cash: c.wealth?.liquidCash ?? 0,
+                    annualBudget: c.wealth?.annualBudget ?? 0,
+                    spendingCeiling: c.wealth?.spendingCeiling ?? 0,
+                    financialStress: stats.financialStress ?? c.wealth?.financialStress ?? 0,
+                    owned: c.collection?.owned || [],
+                    forSale: c.collection?.forSale || [],
+                    totalBought: stats.totalBought ?? 0,
+                    totalSold: stats.totalSold ?? 0,
+                    totalSpent: stats.totalSpent ?? 0,
+                    totalEarned: stats.totalEarned ?? 0,
+                    netProfit: stats.netProfit ?? 0,
+                    strategy: stats.strategy ?? 'holder',
+                    favor: c.favor ?? 0,
+                    met: c.met ?? false,
+                };
+            },
+
+            // ═══════════════════════════════════════════════════════════
+            //  AUTONOMOUS TICK
+            // ═══════════════════════════════════════════════════════════
+
             autonomousTick: (currentWeek) => set((state) => {
                 state.contacts.forEach(npc => {
                     if (!npc.memory) npc.memory = { witnessed: [], grudges: [], favors: [], lastContact: 0 };

@@ -1,3 +1,17 @@
+/**
+ * LocationScene.js — Top-Down Exploration Engine for interior rooms
+ *
+ * Supports two modes:
+ *   1. Tiled mode: Tiled JSON map + GridEngine (gallery_test, Soho, Chelsea, etc.)
+ *   2. Classic mode: hardcoded tile array + Arcade physics (legacy venues)
+ *
+ * Key features:
+ *   - Wall collision enforcement on the `world` tile layer
+ *   - Artwork popup with ARTWORKS database integration (via artworkId property)
+ *   - NPC dialogue tree integration (via TREES_BY_NPC lookup)
+ *   - NPC meetContact integration with npcStore
+ *   - Door transitions between rooms and back to WorldScene
+ */
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { VENUE_MAP } from '../data/rooms.js';
@@ -9,6 +23,9 @@ import { GameState } from '../managers/GameState.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { SCENE_KEYS } from '../data/scene-keys.js';
+import { ARTWORK_MAP } from '../data/artworks.js';
+import { useNPCStore } from '../stores/npcStore.js';
+import { useCmsStore } from '../stores/cmsStore.js';
 
 // ── Layer depth constants (matches WorldScene) ──
 const DEPTH = {
@@ -25,6 +42,9 @@ const LAYER_DEPTHS = {
     world: DEPTH.WORLD,
     above_player: DEPTH.ABOVE_PLAYER,
 };
+
+// ── Contact lookup for NPC sprite resolution ──
+const CONTACT_MAP = Object.fromEntries(CONTACTS.map(c => [c.id, c]));
 
 /**
  * LocationScene — Top-Down Exploration Engine
@@ -233,8 +253,26 @@ export class LocationScene extends BaseScene {
 
         const mapKey = `map_${this.roomData.tiledMap}`;
 
-        // Build tilemap from preloaded JSON
-        this.map = this.make.tilemap({ key: mapKey });
+        // ── CMS map override: if MapEditor has saved edits, inject them into the cache ──
+        const cmsMap = useCmsStore.getState().getMapSnapshot?.(this.roomData.tiledMap);
+        if (cmsMap) {
+            try {
+                this.cache.tilemap.add(mapKey, { data: cmsMap, format: Phaser.Tilemaps.Formats.TILED_JSON });
+                console.log(`[LocationScene] Using CMS-edited map for: ${this.roomData.tiledMap}`);
+            } catch (e) {
+                console.warn('[LocationScene] Failed to inject CMS map, using preloaded', e);
+            }
+        }
+
+        // Build tilemap from preloaded JSON — wrapped in try/catch for resilience
+        try {
+            this.map = this.make.tilemap({ key: mapKey });
+        } catch (err) {
+            console.error(`[LocationScene] Failed to create tilemap: ${mapKey}`, err);
+            if (window.ArtLife) window.ArtLife.recordError('tilemap_load', err.message);
+            this._createClassicScene(data);
+            return;
+        }
 
         // Check for background image mode — pre-composed room PNG used as visual backdrop
         // The bgImage property is set by bg_room_builder.py on maps using premium LimeZu artwork
@@ -378,7 +416,7 @@ export class LocationScene extends BaseScene {
         });
 
         // ── Spawn NPC sprites ──
-        // Gallery NPC sprites (LimeZu premade 48×96) with fallback chain
+        // Priority: contact-specific walk sprite > gallery NPC > LimeZu > fallback
         const GALLERY_NPCS = [
             'npc_curator', 'npc_collector', 'npc_gallerist', 'npc_artist', 'npc_patron',
             'npc_critic', 'npc_assistant', 'npc_handler', 'npc_guard', 'npc_visitor',
@@ -388,7 +426,10 @@ export class LocationScene extends BaseScene {
         this._tiledNPCs.forEach((npc, i) => {
             const npcId = `gallery_npc_${i}`;
 
-            // Pick sprite: prefer gallery NPCs (48×96), then LimeZu 16×32, then npc_dealer
+            // Resolve contact data from Tiled NPC id property
+            const contact = npc.id ? CONTACT_MAP[npc.id] : null;
+            const contactSpriteKey = contact?.spriteKey;
+
             const galleryKey = GALLERY_NPCS[i % GALLERY_NPCS.length];
             const lzName = LZ_CHARS[i % LZ_CHARS.length];
             const lzRunKey = `lz_${lzName}_run`;
@@ -396,10 +437,14 @@ export class LocationScene extends BaseScene {
             let npcSpriteScale = 1;
             let npcSpriteKey = null;
 
-            if (this.textures.exists(galleryKey)) {
+            if (contactSpriteKey && this.textures.exists(contactSpriteKey)) {
+                // Contact-specific walk spritesheet (160×160 frames, preloaded above)
+                npcSprite = this.add.sprite(0, 0, contactSpriteKey, 0).setDepth(4);
+                npcSpriteKey = contactSpriteKey;
+            } else if (this.textures.exists(galleryKey)) {
                 // LimeZu premade 48×96 character — offset up so feet sit on tile
                 npcSprite = this.add.sprite(0, 0, galleryKey, 0).setDepth(4);
-                npcSprite.setOrigin(0.5, 0.75); // anchor at feet
+                npcSprite.setOrigin(0.5, 0.75);
                 npcSpriteKey = galleryKey;
             } else if (this.textures.exists(lzRunKey)) {
                 // LimeZu 16×32 sprite — needs 3x scale for 48px tiles
@@ -413,9 +458,10 @@ export class LocationScene extends BaseScene {
                 npcSprite = this.add.sprite(0, 0, fallback).setDepth(4);
             }
 
-            // NPC label
+            // NPC label — prefer contact name over Tiled label
+            const displayName = contact?.name || npc.label || npc.id || 'NPC';
             this.add.text(npc.x * tileW + tileW / 2, npc.y * tileH - 12,
-                npc.label || npc.id || 'NPC', {
+                displayName, {
                     fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#ffaaaa',
                     stroke: '#000000', strokeThickness: 2,
                 }).setOrigin(0.5).setDepth(DEPTH.HUD);
@@ -425,6 +471,7 @@ export class LocationScene extends BaseScene {
                 sprite: npcSprite,
                 startPosition: { x: npc.x, y: npc.y },
                 data: npc,
+                contactId: contact?.id || null,
                 lzName: this.textures.exists(lzRunKey) ? lzName : null,
                 galleryKey: npcSpriteKey,
                 scale: npcSpriteScale,
@@ -495,6 +542,22 @@ export class LocationScene extends BaseScene {
                 characters,
             });
 
+            // Enforce wall collision: mark ALL non-empty tiles in the `world` layer
+            // as colliding. This is necessary because GIDs often don't carry the
+            // `collides` property from the tileset definition. The layer convention is:
+            //   below_player = floor/decorative (walkable)
+            //   world = walls/furniture (colliding)
+            //   above_player = overlay (visual only)
+            const worldLayer = this.map.getLayer('world')?.tilemapLayer;
+            if (worldLayer) {
+                worldLayer.forEachTile(tile => {
+                    if (tile.index > 0) {
+                        tile.properties = tile.properties || {};
+                        tile.properties.collides = true;
+                    }
+                });
+            }
+
             // Camera follow player with smooth lerp (matching WorldScene)
             this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
             this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -504,6 +567,27 @@ export class LocationScene extends BaseScene {
             const zoom = vw < 500 ? 2.5 : 2;
             this.cameras.main.setZoom(zoom);
             this.cameras.main.roundPixels = true;
+
+            // ── NPC random walk + walk animation hooks ──
+            npcCharacters.forEach(npc => {
+                this.gridEngine.moveRandomly(npc.id, 1500, 3);
+            });
+
+            this.gridEngine.movementStarted().subscribe(({ charId, direction }) => {
+                if (charId === 'player') return;
+                const npc = npcCharacters.find(n => n.id === charId);
+                if (!npc?.galleryKey) return;
+                // Try walk_ spritesheet animation (4 dirs × 4 frames)
+                const animKey = `${npc.galleryKey}_${direction.toLowerCase()}`;
+                if (this.anims.exists(animKey) && npc.sprite?.anims) {
+                    npc.sprite.anims.play(animKey, true);
+                }
+            });
+            this.gridEngine.movementStopped().subscribe(({ charId }) => {
+                if (charId === 'player') return;
+                const npc = npcCharacters.find(n => n.id === charId);
+                if (npc?.sprite?.anims) npc.sprite.anims.stop();
+            });
         } else {
             console.warn('[LocationScene] GridEngine not available, falling back to basic movement');
             // Simple physics fallback
@@ -910,9 +994,22 @@ export class LocationScene extends BaseScene {
         this._popupActive = true;
         this._lastViewedPainting = painting;
 
+        // Resolve artwork data — prefer ARTWORK_MAP lookup via artworkId,
+        // fall back to inline Tiled properties
+        const artworkId = painting.artworkId;
+        const artwork = artworkId ? ARTWORK_MAP[artworkId] : null;
+        const displayTitle = artwork?.title || painting.title || 'Untitled';
+        const displayArtist = artwork?.artist || painting.artist || 'Unknown Artist';
+        const displayPrice = artwork?.askingPrice || parseInt(painting.price) || 0;
+        const displayDesc = artwork?.provenance || painting.description || '';
+        const displayMedium = artwork?.medium || '';
+        const displayYear = artwork?.year || '';
+        // Build subtitle line: "Medium, Year"
+        const subtitle = [displayMedium, displayYear].filter(Boolean).join(', ');
+
         const { width, height } = this.scale;
         const pw = Math.min(440, width - 40);
-        const ph = 260;
+        const ph = 280;
 
         this._popupElements = [];
 
@@ -931,7 +1028,7 @@ export class LocationScene extends BaseScene {
         const top = height / 2 - ph / 2 + 20;
 
         // Title
-        const title = this.add.text(cx, top, painting.title || 'Untitled', {
+        const title = this.add.text(cx, top, displayTitle, {
             fontFamily: '"Playfair Display", Georgia, serif',
             fontSize: '20px', color: '#c9a84c', align: 'center',
             wordWrap: { width: pw - 40 },
@@ -939,28 +1036,37 @@ export class LocationScene extends BaseScene {
         this._popupElements.push(title);
 
         // Artist
-        const artist = this.add.text(cx, top + 32, painting.artist || 'Unknown Artist', {
+        const artistText = this.add.text(cx, top + 32, displayArtist, {
             fontFamily: '"Playfair Display"', fontSize: '14px', color: '#d4d0cc',
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
-        this._popupElements.push(artist);
+        this._popupElements.push(artistText);
 
-        // Description
-        const desc = this.add.text(cx, top + 60, painting.description || '', {
+        // Medium + Year subtitle
+        if (subtitle) {
+            const subtitleText = this.add.text(cx, top + 52, subtitle, {
+                fontFamily: '"Playfair Display"', fontSize: '11px', color: '#888888',
+                fontStyle: 'italic',
+            }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
+            this._popupElements.push(subtitleText);
+        }
+
+        // Description / provenance
+        const descY = subtitle ? top + 72 : top + 60;
+        const desc = this.add.text(cx, descY, displayDesc, {
             fontFamily: '"Playfair Display"', fontSize: '12px', color: '#999999',
             wordWrap: { width: pw - 60 }, align: 'center',
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
         this._popupElements.push(desc);
 
         // Price
-        const price = parseInt(painting.price) || 0;
-        const priceStr = price > 0 ? `$${price.toLocaleString()}` : 'Price on Application';
-        const priceText = this.add.text(cx, top + 120, priceStr, {
+        const priceStr = displayPrice > 0 ? `$${displayPrice.toLocaleString()}` : 'Price on Application';
+        const priceText = this.add.text(cx, top + 140, priceStr, {
             fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#c9a84c',
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
         this._popupElements.push(priceText);
 
         // Actions
-        const actions = this.add.text(cx, top + 160, '[SPACE] Close     [E] Make an Offer', {
+        const actions = this.add.text(cx, top + 180, '[SPACE] Close     [E] Make an Offer', {
             fontFamily: '"Press Start 2P"', fontSize: '8px', color: '#666666',
         }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT);
         this._popupElements.push(actions);
@@ -994,8 +1100,43 @@ export class LocationScene extends BaseScene {
     // ════════════════════════════════════════════════════
 
     _showNPCDialogue(npc) {
-        this._popupActive = true;
         this._currentNPC = npc;
+
+        // Mark this NPC as "met" in the npcStore if their id matches a contact
+        const npcId = npc.id;
+        if (npcId) {
+            try {
+                const contact = useNPCStore.getState().getContact(npcId);
+                if (contact && !contact.met) {
+                    useNPCStore.getState().meetContact(npcId);
+                    console.log(`[LocationScene] Met NPC: ${npcId}`);
+                }
+            } catch (e) { /* npcStore not initialized */ }
+        }
+
+        // Check for a full dialogue tree for this NPC at this venue
+        const trees = npcId ? TREES_BY_NPC[npcId] : null;
+        if (trees) {
+            let targetTree = trees.find(t => t.venue === this.venueId);
+            if (!targetTree) targetTree = trees[0];
+            if (targetTree) {
+                // Launch the rich DialogueScene with branching options
+                const event = DialogueTreeManager.convertTreeToEvent(targetTree);
+                this.scene.pause();
+                this.scene.launch('DialogueScene', {
+                    event,
+                    ui: this.ui,
+                    onExit: () => {
+                        this.scene.stop('DialogueScene');
+                        this.scene.resume('LocationScene');
+                    },
+                });
+                return;
+            }
+        }
+
+        // Fallback: inline dialogue popup (existing behavior)
+        this._popupActive = true;
 
         const { width, height } = this.scale;
         this._popupElements = [];
@@ -1101,12 +1242,14 @@ export class LocationScene extends BaseScene {
     _startHaggleForPainting(painting) {
         if (!painting) return;
 
-        const price = parseInt(painting.price) || 10000;
+        // Resolve artwork data from ARTWORKS database if artworkId is present
+        const artwork = painting.artworkId ? ARTWORK_MAP[painting.artworkId] : null;
+        const price = artwork?.askingPrice || parseInt(painting.price) || 10000;
         const work = {
-            id: `gallery_${painting.title?.replace(/\s/g, '_') || 'unknown'}`,
-            title: painting.title || 'Untitled',
-            artist: painting.artist || 'Unknown',
-            medium: painting.description || '',
+            id: artwork?.id || `gallery_${painting.title?.replace(/\s/g, '_') || 'unknown'}`,
+            title: artwork?.title || painting.title || 'Untitled',
+            artist: artwork?.artist || painting.artist || 'Unknown',
+            medium: artwork?.medium || painting.description || '',
             basePrice: price,
             price: price,
         };

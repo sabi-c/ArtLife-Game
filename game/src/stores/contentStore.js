@@ -14,14 +14,14 @@ import { create } from 'zustand';
 
 // ── Category metadata ──
 const CATEGORY_META = {
-    npc:      { icon: '🧑', label: 'NPCs',      color: '#ff9999' },
-    event:    { icon: '🎭', label: 'Events',     color: '#ffcc44' },
-    artist:   { icon: '🎨', label: 'Artists',    color: '#4a9e6a' },
-    artwork:  { icon: '🖼️', label: 'Artworks',   color: '#c9a84c' },
-    scene:    { icon: '🎬', label: 'Scenes',     color: '#8888ff' },
-    venue:    { icon: '🏛️', label: 'Venues',     color: '#aa66cc' },
-    calendar: { icon: '📅', label: 'Calendar',   color: '#44bbff' },
-    dialogue: { icon: '💬', label: 'Dialogues',  color: '#88dd88' },
+    npc: { icon: '🧑', label: 'NPCs', color: '#ff9999' },
+    event: { icon: '🎭', label: 'Events', color: '#ffcc44' },
+    artist: { icon: '🎨', label: 'Artists', color: '#4a9e6a' },
+    artwork: { icon: '🖼️', label: 'Artworks', color: '#c9a84c' },
+    scene: { icon: '🎬', label: 'Scenes', color: '#8888ff' },
+    venue: { icon: '🏛️', label: 'Venues', color: '#aa66cc' },
+    calendar: { icon: '📅', label: 'Calendar', color: '#44bbff' },
+    dialogue: { icon: '💬', label: 'Dialogues', color: '#88dd88' },
 };
 
 const useContentStore = create((set, get) => ({
@@ -153,14 +153,29 @@ const useContentStore = create((set, get) => ({
                 });
             }
 
-            // Dialogue Trees (tone definitions — not individual trees, those live in contacts)
-            const { TONES } = await import('../data/dialogue_trees.js');
+            // Dialogue Trees (tone definitions + full trees)
+            const { TONES, DIALOGUE_TREES } = await import('../data/dialogue_trees.js');
             for (const t of TONES) {
                 entities.push({
                     id: `tone_${t.id}`, category: 'dialogue', name: `Tone: ${t.label}`,
                     subcategory: t.bestFor, icon: t.icon,
                     data: t,
                 });
+            }
+            // Full dialogue trees — each NPC conversation becomes a searchable entity
+            if (Array.isArray(DIALOGUE_TREES)) {
+                const npcNames = {};
+                for (const c of CONTACTS) { npcNames[c.id] = c.name; }
+                for (const tree of DIALOGUE_TREES) {
+                    const nodeCount = Object.keys(tree.nodes || {}).length;
+                    entities.push({
+                        id: tree.id, category: 'dialogue',
+                        name: `${npcNames[tree.npcId] || tree.npcId} — ${tree.venue}`,
+                        subcategory: `${nodeCount} nodes · ${tree.trigger}`,
+                        icon: '💬',
+                        data: tree,
+                    });
+                }
             }
 
             set({ entities, loaded: true, loading: false });

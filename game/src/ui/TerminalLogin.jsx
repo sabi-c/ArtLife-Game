@@ -194,13 +194,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                 setPrimaryIndex(0);
                 e.preventDefault();
             } else if (e.key === '2') {
-                if (dossiers.length > 0) setPrimaryIndex(1);
+                setPrimaryIndex(1);
                 e.preventDefault();
             } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                if (dossiers.length > 0) {
-                    setPrimaryIndex(prev => prev === 0 ? 1 : 0);
-                    WebAudioService.hover();
-                }
+                setPrimaryIndex(prev => prev === 0 ? 1 : 0);
+                WebAudioService.hover();
                 e.preventDefault();
             } else if (e.key === 'Enter') {
                 WebAudioService.select();
@@ -208,6 +206,7 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                     setStep('AUTH');
                     setTimeout(() => onComplete({ action: 'new' }), 500);
                 } else if (primaryIndex === 1) {
+                    // Always enter dossier select — shows empty state if no saves
                     setStep('DOSSIER_SELECT');
                     setDossierIndex(0);
                 }
@@ -671,13 +670,13 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                 </div>
                                 <div
                                     onClick={() => {
-                                        if (step !== 'PRIMARY_MENU' || dossiers.length === 0) return;
+                                        if (step !== 'PRIMARY_MENU') return;
                                         WebAudioService.select();
                                         setPrimaryIndex(1);
                                         setStep('DOSSIER_SELECT');
                                         setDossierIndex(0);
                                     }}
-                                    style={optStyle(primaryIndex === 1, dossiers.length === 0)}
+                                    style={optStyle(primaryIndex === 1, false)}
                                 >
                                     <span style={{ width: 20 }}>{primaryIndex === 1 ? '>' : ' '}</span> [2] AUTHORIZE DOSSIER
                                 </div>
@@ -692,6 +691,12 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                         <div style={{ color: '#eaeaea', fontSize: 12, letterSpacing: 1, marginBottom: 15 }}>&gt; FOUND_CACHE_LOGS:</div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {dossiers.length === 0 && (
+                                <div style={{ color: '#555', fontSize: 12, padding: '12px 12px', fontStyle: 'italic' }}>
+                                    NO SAVED DOSSIERS FOUND<br />
+                                    <span style={{ fontSize: 11, color: '#3a3a4a' }}>Submit a new application to begin, or import sync data below.</span>
+                                </div>
+                            )}
                             {dossiers.map((d, index) => {
                                 const isTarget = dossierIndex === index;
                                 return (
