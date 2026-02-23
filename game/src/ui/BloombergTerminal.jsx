@@ -2014,6 +2014,12 @@ export default function BloombergTerminal({ onClose }) {
                 <div className="bb-header-left">
                     {(isGallery || isTearsheet)
                         ? <span className="bb-logo">A R T L I F E</span>
+                        : isArtnet
+                        ? <span className="bb-logo">artlife</span>
+                        : isSothebys
+                        ? <span className="bb-logo">ARTLIFE</span>
+                        : isDeitch
+                        ? <span className="bb-logo">DEITCH</span>
                         : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
                     }
                 </div>

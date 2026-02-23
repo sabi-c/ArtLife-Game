@@ -3076,7 +3076,13 @@
 }
 
 .bb-artnet .bb-cash,
-.bb-artnet .bb-ap,
+.bb-artnet .bb-ap {
+    color: #333;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 .bb-artnet .bb-cycle-label,
 .bb-artnet .bb-cycle-dot,
 .bb-artnet .bb-header-meta {
@@ -3396,7 +3402,13 @@
 }
 
 .bb-sothebys .bb-cash,
-.bb-sothebys .bb-ap,
+.bb-sothebys .bb-ap {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #888;
+    font-weight: 400;
+}
+
 .bb-sothebys .bb-cycle-label,
 .bb-sothebys .bb-cycle-dot,
 .bb-sothebys .bb-header-meta {
@@ -3800,7 +3812,13 @@
 }
 
 .bb-deitch .bb-cash,
-.bb-deitch .bb-ap,
+.bb-deitch .bb-ap {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #666;
+    font-weight: 600;
+}
+
 .bb-deitch .bb-cycle-label,
 .bb-deitch .bb-cycle-dot,
 .bb-deitch .bb-header-meta {
