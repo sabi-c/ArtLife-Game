@@ -602,10 +602,65 @@ export class MarketSimulator {
         MarketSimulator._npcState = null; // Reset
         MarketSimulator.tradeLog = [];
         const reports = [];
+        const priceHistory = []; // Per-week snapshot of all artist prices
+        const marketEvents = []; // Events that fire during simulation
+        let currentCycle = 'flat';
+        const cycleHistory = [];
+
         for (let w = startWeek; w < startWeek + count; w++) {
-            const cycle = ['bull', 'flat', 'bear'][Math.floor(Math.random() * 3)];
-            reports.push(MarketSimulator.simulate(w, cycle));
+            // Market cycle evolution (more realistic than random)
+            const cycleRoll = Math.random();
+            if (currentCycle === 'flat') {
+                if (cycleRoll < 0.08) currentCycle = 'bull';
+                else if (cycleRoll < 0.14) currentCycle = 'bear';
+            } else if (currentCycle === 'bull') {
+                if (cycleRoll < 0.12) currentCycle = 'flat';
+                else if (cycleRoll < 0.04) currentCycle = 'bear'; // crash
+            } else if (currentCycle === 'bear') {
+                if (cycleRoll < 0.10) currentCycle = 'flat';
+            }
+            cycleHistory.push(currentCycle);
+
+            // Fire market events (~15% chance per week)
+            const evt = MarketSimulator._generateMarketEvent(w, currentCycle);
+            if (evt) {
+                marketEvents.push(evt);
+                // Apply event effects
+                MarketSimulator._applyMarketEvent(evt);
+            }
+
+            const report = MarketSimulator.simulate(w, currentCycle);
+            reports.push(report);
+
+            // Snapshot artist prices + indices for price charts
+            try {
+                const artistPrices = {};
+                const allWorks = ARTWORKS || [];
+                for (const artist of (MarketManager.artists || [])) {
+                    const works = allWorks.filter(aw => aw.artistId === artist.id);
+                    const prices = works.map(aw => MarketSimulator._getPrice(aw));
+                    const avgPrice = prices.length > 0
+                        ? Math.round(prices.reduce((s, p) => s + p, 0) / prices.length)
+                        : artist.basePriceMin || 10000;
+                    artistPrices[artist.id] = {
+                        name: artist.name, tier: artist.tier,
+                        avgPrice, heat: Math.round(artist.heat * 10) / 10,
+                        index: artist.artistIndex || 500,
+                    };
+                }
+                const compositeIndex = MarketManager.getCompositeIndex
+                    ? MarketManager.getCompositeIndex() : 1000;
+
+                priceHistory.push({
+                    week: w, cycle: currentCycle,
+                    compositeIndex,
+                    artists: artistPrices,
+                    volume: report.totalVolume,
+                    trades: report.tradesExecuted,
+                });
+            } catch { /* price tracking is non-critical */ }
         }
+
         return {
             weeks: count,
             reports,
@@ -613,7 +668,91 @@ export class MarketSimulator {
             totalVolume: reports.reduce((s, r) => s + r.totalVolume, 0),
             npcState: MarketSimulator.getNPCState(),
             tradeLog: MarketSimulator.getTradeLog(),
+            priceHistory,
+            marketEvents,
+            cycleHistory,
         };
+    }
+
+    // ── Market Events System ──
+
+    static _generateMarketEvent(week, cycle) {
+        if (Math.random() > 0.18) return null; // ~18% chance per week
+
+        const artists = MarketManager.artists || [];
+        if (artists.length === 0) return null;
+        const randArtist = artists[Math.floor(Math.random() * artists.length)];
+
+        const events = [
+            {
+                type: 'auction_record', severity: 'positive',
+                title: `Auction Record: ${randArtist.name}`,
+                description: `${randArtist.name}'s work sells for record price at Christie's.`,
+                effect: { artistId: randArtist.id, heatDelta: 12 },
+            },
+            {
+                type: 'scandal', severity: 'negative',
+                title: `Authenticity Dispute: ${randArtist.name}`,
+                description: `Questions raised about provenance of recent ${randArtist.name} work.`,
+                effect: { artistId: randArtist.id, heatDelta: -8 },
+            },
+            {
+                type: 'museum_acquisition', severity: 'positive',
+                title: `Museum Show: ${randArtist.name}`,
+                description: `Major museum announces retrospective of ${randArtist.name}.`,
+                effect: { artistId: randArtist.id, heatDelta: 8 },
+            },
+            {
+                type: 'fair_boost', severity: 'positive',
+                title: 'Art Fair Season',
+                description: 'Frieze / Art Basel period drives collector activity.',
+                effect: { allHeatDelta: 3 },
+            },
+            {
+                type: 'economic_downturn', severity: 'negative',
+                title: 'Economic Headwinds',
+                description: 'Rising interest rates cool luxury spending.',
+                effect: { allHeatDelta: -4 },
+            },
+            {
+                type: 'gallery_closure', severity: 'negative',
+                title: 'Gallery Closure',
+                description: `Gallery representing ${randArtist.name} announces closure.`,
+                effect: { artistId: randArtist.id, heatDelta: -10 },
+            },
+            {
+                type: 'social_media_viral', severity: 'positive',
+                title: `Viral Moment: ${randArtist.name}`,
+                description: `${randArtist.name}'s work goes viral on social media.`,
+                effect: { artistId: randArtist.id, heatDelta: 6 },
+            },
+            {
+                type: 'collector_exit', severity: 'neutral',
+                title: 'Major Collection Liquidation',
+                description: 'Prominent collector selling entire collection at auction.',
+                effect: { allHeatDelta: -2 },
+            },
+        ];
+
+        const evt = events[Math.floor(Math.random() * events.length)];
+        return { ...evt, week, cycle };
+    }
+
+    static _applyMarketEvent(evt) {
+        if (!evt?.effect) return;
+        try {
+            if (evt.effect.artistId && evt.effect.heatDelta) {
+                const artist = (MarketManager.artists || []).find(a => a.id === evt.effect.artistId);
+                if (artist) {
+                    artist.heat = Math.max(0, Math.min(100, artist.heat + evt.effect.heatDelta));
+                }
+            }
+            if (evt.effect.allHeatDelta) {
+                for (const artist of (MarketManager.artists || [])) {
+                    artist.heat = Math.max(0, Math.min(100, artist.heat + evt.effect.allHeatDelta));
+                }
+            }
+        } catch { /* non-critical */ }
     }
 
     /** Full state snapshot for CMS dashboard */

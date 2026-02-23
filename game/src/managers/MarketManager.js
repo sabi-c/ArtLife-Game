@@ -325,4 +325,74 @@ export class MarketManager {
 
         return Math.round(base + heatContribution + velocity + bonus);
     }
+
+    /**
+     * Composite Art Market Index — Cap-weighted average of all artist indices.
+     * Analogous to S&P 500: higher-tier artists contribute more weight.
+     * Base 1000 at market equilibrium.
+     */
+    static getCompositeIndex() {
+        if (MarketManager.artists.length === 0) return 1000;
+        const weights = { 'blue-chip': 4, 'hot': 2, 'mid-career': 1.5, 'emerging': 1 };
+        let totalWeight = 0;
+        let weightedSum = 0;
+        for (const artist of MarketManager.artists) {
+            const idx = artist.artistIndex || MarketManager._computeArtistIndex(artist);
+            const w = weights[artist.tier] || 1;
+            weightedSum += idx * w;
+            totalWeight += w;
+        }
+        // Normalize around base 1000 (artist indices base at 500)
+        return totalWeight > 0 ? Math.round((weightedSum / totalWeight) * 2) : 1000;
+    }
+
+    /**
+     * Sector Indices — Group artists by tier and return per-sector index.
+     * Each sector is the simple average of its member artist indices.
+     */
+    static getSectorIndices() {
+        const sectors = {};
+        const groups = {};
+        for (const artist of MarketManager.artists) {
+            const tier = artist.tier || 'emerging';
+            if (!groups[tier]) groups[tier] = [];
+            groups[tier].push(artist.artistIndex || MarketManager._computeArtistIndex(artist));
+        }
+        for (const [tier, indices] of Object.entries(groups)) {
+            const avg = Math.round(indices.reduce((s, v) => s + v, 0) / indices.length);
+            sectors[tier] = { index: avg * 2, count: indices.length }; // *2 to normalize to 1000 base
+        }
+        return sectors;
+    }
+
+    /**
+     * Full market summary snapshot — used by CMS dashboard.
+     */
+    static getMarketSnapshot() {
+        const composite = MarketManager.getCompositeIndex();
+        const sectors = MarketManager.getSectorIndices();
+        const state = GameState.state;
+        const artists = MarketManager.artists.map(a => ({
+            id: a.id, name: a.name, tier: a.tier, medium: a.medium,
+            heat: Math.round(a.heat * 10) / 10,
+            index: a.artistIndex || MarketManager._computeArtistIndex(a),
+            buybackActive: a.buybackActive || false,
+            basePriceMin: a.basePriceMin, basePriceMax: a.basePriceMax,
+        }));
+        const works = MarketManager.works.map(w => ({
+            id: w.id, title: w.title, artist: w.artist, artistId: w.artistId,
+            medium: w.medium, price: w.price, basePrice: w.basePrice,
+            onMarket: w.onMarket, yearCreated: w.yearCreated,
+        }));
+        return {
+            compositeIndex: composite,
+            sectors,
+            marketCycle: state?.marketState || 'flat',
+            week: state?.week || 0,
+            artists,
+            works,
+            totalMarketCap: works.reduce((s, w) => s + (w.price || w.basePrice), 0),
+            worksOnMarket: works.filter(w => w.onMarket).length,
+        };
+    }
 }
