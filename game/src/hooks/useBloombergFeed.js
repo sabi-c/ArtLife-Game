@@ -66,6 +66,9 @@ export function useBloombergFeed() {
     const priceHistory = useMarketStore(s => s.priceHistory);
     const intraWeekPrices = useMarketStore(s => s.intraWeekPrices);
     const marketCycle = useMarketStore(s => s.marketCycle);
+    const compositeHistory = useMarketStore(s => s.compositeHistory);
+    const sectorHistory = useMarketStore(s => s.sectorHistory);
+    const eventLog = useMarketStore(s => s.eventLog);
 
     return useMemo(() => ({
         // Artist leaderboard sorted by index (descending)
@@ -90,5 +93,16 @@ export function useBloombergFeed() {
 
         // Weekly price history per artist (for candlestick/line charts)
         priceHistory,
-    }), [artistSnapshots, priceHistory, intraWeekPrices, marketCycle]);
+
+        // ── Multi-year historical data (from MarketHistoryEngine) ──
+
+        // Composite index history: [{ week, composite, cycle }]
+        compositeHistory: compositeHistory || [],
+
+        // Sector index history: { tier: [{ week, index }] }
+        sectorHistory: sectorHistory || {},
+
+        // Market event log: [{ week, type, description, impact }]
+        eventLog: eventLog || [],
+    }), [artistSnapshots, priceHistory, intraWeekPrices, marketCycle, compositeHistory, sectorHistory, eventLog]);
 }

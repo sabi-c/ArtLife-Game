@@ -390,6 +390,215 @@
     font-weight: 600;
 }
 
+/* ── Composite Index Sparkline ── */
+.bb-ov-composite {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-ov-comp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #5a5a6a;
+    margin-bottom: 4px;
+}
+
+.bb-ov-comp-delta {
+    font-weight: 700;
+    font-size: 10px;
+}
+
+.bb-ov-comp-delta.up {
+    color: #4caf50;
+}
+
+.bb-ov-comp-delta.down {
+    color: #c94040;
+}
+
+/* ── Sector Performance ── */
+.bb-ov-sectors {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-ov-sector-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+}
+
+.bb-ov-sector-label {
+    color: #5a5a6a;
+    width: 70px;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.bb-ov-sector-delta {
+    font-weight: 600;
+    font-size: 10px;
+    min-width: 40px;
+    text-align: right;
+}
+
+.bb-ov-sector-delta.up {
+    color: #4caf50;
+}
+
+.bb-ov-sector-delta.down {
+    color: #c94040;
+}
+
+/* ── Event Log ── */
+.bb-ov-events {
+    margin-top: 6px;
+}
+
+.bb-ov-event-row {
+    display: flex;
+    gap: 6px;
+    font-size: 10px;
+    padding: 2px 0;
+    color: #a0a0b0;
+}
+
+.bb-ov-event-week {
+    color: #5a5a6a;
+    min-width: 26px;
+    font-size: 9px;
+}
+
+.bb-ov-event-desc {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Portfolio Summary Bar ── */
+.bb-port-summary {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 6px;
+}
+
+.bb-port-sum-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.bb-port-sum-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.bb-port-sum-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e0e0e8;
+}
+
+.bb-port-sum-value.up {
+    color: #4caf50;
+}
+
+.bb-port-sum-value.down {
+    color: #c94040;
+}
+
+/* ── Portfolio Table Columns ── */
+.bb-port-table {
+    display: flex;
+    flex-direction: column;
+}
+
+.bb-port-header-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+}
+
+.bb-port-header-row span {
+    font-size: 8px !important;
+    color: #5a5a6a !important;
+    letter-spacing: 0.5px;
+    font-weight: 400 !important;
+}
+
+.bb-port-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 0.7fr 0.5fr;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 0;
+    font-size: 11px;
+}
+
+.bb-port-col-title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+}
+
+.bb-port-col-cost,
+.bb-port-col-val {
+    color: #e0e0e8;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    text-align: right;
+}
+
+.bb-port-col-pl {
+    font-weight: 600;
+    font-size: 10px;
+    text-align: right;
+}
+
+.bb-port-col-pl.up {
+    color: #4caf50;
+}
+
+.bb-port-col-pl.down {
+    color: #c94040;
+}
+
+.bb-port-col-action {
+    text-align: right;
+}
+
+/* ── Realized Returns ── */
+.bb-port-realized {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-port-realized-row {
+    opacity: 0.7;
+}
+
+.bb-port-sold-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 0.5px;
+}
+
 /* ── Price Chart ── */
 .bb-chart-price {
     display: flex;

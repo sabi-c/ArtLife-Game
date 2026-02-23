@@ -251,12 +251,21 @@ function OrderBook({ intel, onSelectOrder }) {
 // ══════════════════════════════════════════════════════════════
 // 4. Market Overview
 // ══════════════════════════════════════════════════════════════
-function MarketOverview({ compositeIndex, cycle, intel }) {
+function MarketOverview({ compositeIndex, cycle, intel, compositeHistory = [], sectorHistory = {}, eventLog = [] }) {
     const s = GameState.state;
     const report = MarketSimulator.getWeeklyReport();
     const onMarket = MarketManager.works?.filter(w => w.onMarket).length || 0;
     const tradeCount = report?.tradesExecuted || 0;
     const volume = report?.totalVolume || 0;
+
+    // Composite sparkline data (last 52 weeks for compact display)
+    const compositeData = compositeHistory.slice(-52).map(h => h.composite);
+    const compChange = compositeData.length >= 2
+        ? ((compositeData[compositeData.length - 1] - compositeData[0]) / compositeData[0] * 100).toFixed(1)
+        : 0;
+
+    // Recent events (last 5)
+    const recentEvents = (eventLog || []).slice(-5).reverse();
 
     return (
         <div className="bb-panel bb-overview">
@@ -289,6 +298,52 @@ function MarketOverview({ compositeIndex, cycle, intel }) {
                     <span className="bb-ov-value">{s?.week || 1}</span>
                 </div>
             </div>
+
+            {/* Composite Index Sparkline */}
+            {compositeData.length > 2 && (
+                <div className="bb-ov-composite">
+                    <div className="bb-ov-comp-header">
+                        <span>52-WEEK INDEX</span>
+                        <span className={`bb-ov-comp-delta ${compChange > 0 ? 'up' : compChange < 0 ? 'down' : ''}`}>
+                            {compChange > 0 ? '+' : ''}{compChange}%
+                        </span>
+                    </div>
+                    <MiniSparkline data={compositeData} width={260} height={32} color={compChange >= 0 ? '#4caf50' : '#c94040'} />
+                </div>
+            )}
+
+            {/* Sector Performance */}
+            {Object.keys(sectorHistory).length > 0 && intel >= 40 && (
+                <div className="bb-ov-sectors">
+                    {Object.entries(sectorHistory).slice(0, 4).map(([tier, history]) => {
+                        const data = history.slice(-26);
+                        if (data.length < 2) return null;
+                        const change = ((data[data.length - 1].index - data[0].index) / data[0].index * 100).toFixed(1);
+                        return (
+                            <div key={tier} className="bb-ov-sector-row">
+                                <span className="bb-ov-sector-label">{tier.toUpperCase()}</span>
+                                <MiniSparkline data={data.map(d => d.index)} width={60} height={14} color={change >= 0 ? '#4caf50' : '#c94040'} />
+                                <span className={`bb-ov-sector-delta ${change >= 0 ? 'up' : 'down'}`}>
+                                    {change > 0 ? '+' : ''}{change}%
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* Recent Events */}
+            {recentEvents.length > 0 && intel >= 30 && (
+                <div className="bb-ov-events">
+                    <div className="bb-panel-header" style={{ fontSize: 9, marginTop: 6 }}>RECENT EVENTS</div>
+                    {recentEvents.slice(0, 3).map((evt, i) => (
+                        <div key={i} className="bb-ov-event-row">
+                            <span className="bb-ov-event-week">W{evt.week}</span>
+                            <span className="bb-ov-event-desc">{evt.description}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
@@ -447,6 +502,7 @@ function PortfolioTracker({ intel, onListWork, onSelectWork }) {
     const s = GameState.state;
     const portfolio = s?.portfolio || [];
     const listings = s?.bloombergListings || [];
+    const transactions = s?.transactions || [];
 
     const items = portfolio.map(work => {
         let currentVal = 0;
@@ -454,12 +510,26 @@ function PortfolioTracker({ intel, onListWork, onSelectWork }) {
         catch { currentVal = work.price || work.basePrice || 0; }
         const purchasePrice = work.purchasePrice || work.basePrice || currentVal;
         const roi = purchasePrice > 0 ? ((currentVal - purchasePrice) / purchasePrice * 100).toFixed(1) : 0;
-        return { ...work, currentVal, roi };
+        const unrealizedPL = currentVal - purchasePrice;
+        return { ...work, currentVal, roi, purchasePrice, unrealizedPL };
     });
 
+    // Sold works (actualized returns)
+    const soldWorks = transactions
+        .filter(t => t.type === 'sell' || t.soldTo)
+        .map(t => {
+            const costBasis = t.purchasePrice || t.basePrice || 0;
+            const salePrice = t.price || t.salePrice || 0;
+            const realizedPL = salePrice - costBasis;
+            const realizedROI = costBasis > 0 ? ((salePrice - costBasis) / costBasis * 100).toFixed(1) : 0;
+            return { ...t, costBasis, salePrice, realizedPL, realizedROI };
+        })
+        .slice(-5); // Last 5 sales
+
     const totalValue = items.reduce((sum, w) => sum + w.currentVal, 0);
-    const totalCost = items.reduce((sum, w) => sum + (w.purchasePrice || w.basePrice || 0), 0);
+    const totalCost = items.reduce((sum, w) => sum + w.purchasePrice, 0);
     const totalROI = totalCost > 0 ? ((totalValue - totalCost) / totalCost * 100).toFixed(1) : 0;
+    const totalUnrealizedPL = totalValue - totalCost;
 
     return (
         <div className="bb-panel bb-portfolio">
@@ -472,23 +542,76 @@ function PortfolioTracker({ intel, onListWork, onSelectWork }) {
                     </span>
                 </span>
             </div>
-            <div className="bb-portfolio-list">
-                {items.slice(0, 6).map((work, i) => (
+
+            {/* Portfolio summary bar */}
+            <div className="bb-port-summary">
+                <div className="bb-port-sum-item">
+                    <span className="bb-port-sum-label">Cost Basis</span>
+                    <span className="bb-port-sum-value">{maskPrice(totalCost, intel)}</span>
+                </div>
+                <div className="bb-port-sum-item">
+                    <span className="bb-port-sum-label">Valuation</span>
+                    <span className="bb-port-sum-value">{maskPrice(totalValue, intel)}</span>
+                </div>
+                <div className="bb-port-sum-item">
+                    <span className="bb-port-sum-label">Unrealized P&L</span>
+                    <span className={`bb-port-sum-value ${totalUnrealizedPL >= 0 ? 'up' : 'down'}`}>
+                        {totalUnrealizedPL >= 0 ? '+' : ''}${fmtNum(Math.abs(totalUnrealizedPL))}
+                    </span>
+                </div>
+            </div>
+
+            {/* Holdings table with explicit columns */}
+            <div className="bb-port-table">
+                <div className="bb-port-row bb-port-header-row">
+                    <span className="bb-port-col-title">WORK</span>
+                    <span className="bb-port-col-cost">COST</span>
+                    <span className="bb-port-col-val">VAL</span>
+                    <span className="bb-port-col-pl">P&L</span>
+                    <span className="bb-port-col-action"></span>
+                </div>
+                {items.slice(0, 8).map((work, i) => (
                     <div key={i} className="bb-port-row">
-                        <span className="bb-port-title" onClick={() => onSelectWork(work)}
-                            style={{ cursor: 'pointer' }}>"{work.title}"</span>
-                        <span className="bb-port-artist">{work.artist}</span>
-                        <span className="bb-port-price">{maskPrice(work.currentVal, intel)}</span>
-                        <span className={`bb-port-roi ${work.roi > 0 ? 'up' : work.roi < 0 ? 'down' : ''}`}>
+                        <span className="bb-port-col-title">
+                            <span className="bb-port-title" onClick={() => onSelectWork(work)}
+                                style={{ cursor: 'pointer' }}>"{work.title}"</span>
+                            <span className="bb-port-artist">{work.artist}</span>
+                        </span>
+                        <span className="bb-port-col-cost">{maskPrice(work.purchasePrice, intel)}</span>
+                        <span className="bb-port-col-val">{maskPrice(work.currentVal, intel)}</span>
+                        <span className={`bb-port-col-pl ${work.roi > 0 ? 'up' : work.roi < 0 ? 'down' : ''}`}>
                             {work.roi > 0 ? '+' : ''}{work.roi}%
                         </span>
-                        <button className="bb-port-list-btn" onClick={() => onListWork(work)}>LIST</button>
+                        <span className="bb-port-col-action">
+                            <button className="bb-port-list-btn" onClick={() => onListWork(work)}>LIST</button>
+                        </span>
                     </div>
                 ))}
-                {items.length > 6 && (
-                    <div className="bb-port-more">+{items.length - 6} more works</div>
+                {items.length > 8 && (
+                    <div className="bb-port-more">+{items.length - 8} more works</div>
                 )}
             </div>
+
+            {/* Realized Returns (Sold Works) */}
+            {soldWorks.length > 0 && intel >= 30 && (
+                <div className="bb-port-realized">
+                    <div className="bb-panel-header" style={{ marginTop: 8, fontSize: 10 }}>REALIZED RETURNS</div>
+                    {soldWorks.map((sale, i) => (
+                        <div key={i} className="bb-port-row bb-port-realized-row">
+                            <span className="bb-port-col-title">
+                                <span className="bb-port-title">"{sale.title || sale.artwork}"</span>
+                            </span>
+                            <span className="bb-port-col-cost">{maskPrice(sale.costBasis, intel)}</span>
+                            <span className="bb-port-col-val">{maskPrice(sale.salePrice, intel)}</span>
+                            <span className={`bb-port-col-pl ${sale.realizedROI > 0 ? 'up' : sale.realizedROI < 0 ? 'down' : ''}`}>
+                                {sale.realizedROI > 0 ? '+' : ''}{sale.realizedROI}%
+                            </span>
+                            <span className="bb-port-col-action bb-port-sold-label">SOLD</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Active listings */}
             {listings.length > 0 && (
                 <div className="bb-listings-section">
@@ -1303,7 +1426,7 @@ function GalleryView({ intel, showPanel, feed, selectedArtist, onSelectArtist, o
                         liveSparklines={feed.liveSparklines}
                         intel={intel}
                     />}
-                    {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} />}
+                    {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} compositeHistory={feed.compositeHistory} sectorHistory={feed.sectorHistory} eventLog={feed.eventLog} />}
                     {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
                     {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />}
                 </div>
@@ -3639,7 +3762,7 @@ export default function BloombergTerminal({ onClose }) {
                             {showPanel('orderbook') && <OrderBook intel={intel} onSelectOrder={handleSelectOrder} />}
                         </div>
                         <div className="bb-col">
-                            {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} />}
+                            {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} compositeHistory={feed.compositeHistory} sectorHistory={feed.sectorHistory} eventLog={feed.eventLog} />}
                             {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={handleSelectTrade} />}
                         </div>
                     </div>
