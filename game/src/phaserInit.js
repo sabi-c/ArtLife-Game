@@ -17,7 +17,6 @@ import { BootScene } from './scenes/BootScene.js';
 // Scenes
 import { TitleScene } from './scenes/TitleScene.js';
 import { IntroScene } from './scenes/IntroScene.js';
-import { CharacterSelectScene } from './scenes/CharacterSelectScene.js';
 import { HaggleScene } from './scenes/HaggleScene.js';
 import { LocationScene } from './scenes/LocationScene.js';
 import { DialogueScene } from './scenes/DialogueScene.js';
@@ -62,7 +61,6 @@ const sceneList = [
     BootScene,
     TitleScene,
     IntroScene,
-    CharacterSelectScene,
     HaggleScene,
     LocationScene,
     DialogueScene,
@@ -197,10 +195,9 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
     }
 
     // Verify the scene exists in the scene manager
-    const sceneExists = window.phaserGame.scene.getScene(sceneKey);
+    const sceneExists = window.phaserGame.scene.keys[sceneKey];
     if (!sceneExists) {
-        console.error(`[DEBUG_LAUNCH_SCENE] Scene "${sceneKey}" not found. Available:`,
-            window.phaserGame.scene.scenes.map(s => s.sys.settings.key));
+        console.error(`[DEBUG_LAUNCH_SCENE] Scene "${sceneKey}" not found. Available:`, Object.keys(window.phaserGame.scene.keys));
         GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene "${sceneKey}" not found. Try reloading the page.`);
         return;
     }

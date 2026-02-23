@@ -49,6 +49,7 @@ import { GameState } from './GameState.js';
 import { ActivityLogger } from './ActivityLogger.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { ExpressionEngine } from '../engine/ExpressionEngine.js';
+import { clamp } from '../utils/math.js';
 
 // ── Trade Log (persisted per session) ──
 const MAX_LOG_SIZE = 2000;
@@ -911,12 +912,12 @@ export class MarketSimulator {
             if (evt.effect.artistId && evt.effect.heatDelta) {
                 const artist = (MarketManager.artists || []).find(a => a.id === evt.effect.artistId);
                 if (artist) {
-                    artist.heat = Math.max(0, Math.min(100, artist.heat + evt.effect.heatDelta));
+                    artist.heat = clamp(artist.heat + evt.effect.heatDelta, 0, 100);
                 }
             }
             if (evt.effect.allHeatDelta) {
                 for (const artist of (MarketManager.artists || [])) {
-                    artist.heat = Math.max(0, Math.min(100, artist.heat + evt.effect.allHeatDelta));
+                    artist.heat = clamp(artist.heat + evt.effect.allHeatDelta, 0, 100);
                 }
             }
         } catch { /* non-critical */ }
@@ -986,6 +987,11 @@ export class MarketSimulator {
                     if (added >= sellCap) break;
                     // Skip if this artwork already has a pending order
                     if (MarketSimulator.pendingSellOrders.some(o => o.artworkId === sell.artworkId)) continue;
+                    const isHighTier = sell.artwork?.tier === 'blue_chip' || sell.artwork?.tier === 'established';
+                    const isShark = npc.dealerType === 'shark';
+                    // 30% chance for sharks or high tier works to hide their price
+                    const showInquire = (isHighTier || isShark) && Math.random() < 0.3;
+
                     MarketSimulator.pendingSellOrders.push({
                         id: `so_${MarketSimulator._nextOrderId++}`,
                         ...sell,
@@ -994,6 +1000,7 @@ export class MarketSimulator {
                         npcName: npc.name,
                         weekPosted: week,
                         expiresWeek: week + 2,
+                        inquire: showInquire
                     });
                     added++;
                 }

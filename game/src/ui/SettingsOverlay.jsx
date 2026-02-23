@@ -7,6 +7,7 @@ import { WebAudioService } from '../managers/WebAudioService.js';
 export default function SettingsOverlay({ onClose }) {
     // Local copy of settings so the UI can be reactive
     const [settings, setSettings] = useState({
+        appTheme: 'artnet',
         textSpeed: 'normal',
         colorTheme: 'classic_dark',
         scanlines: true,
@@ -16,8 +17,8 @@ export default function SettingsOverlay({ onClose }) {
     });
 
     useEffect(() => {
-        // Load settings on mount
         setSettings({
+            appTheme: SettingsManager.get('appTheme') || 'artnet',
             textSpeed: SettingsManager.get('textSpeed') || 'normal',
             colorTheme: SettingsManager.get('colorTheme') || 'classic_dark',
             scanlines: SettingsManager.get('scanlines') !== false,
@@ -66,6 +67,11 @@ export default function SettingsOverlay({ onClose }) {
                 {/* ── SETTINGS LIST ── */}
                 <div>
                     <div style={{ color: '#888', marginBottom: 15, fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>Display</div>
+                    <button style={btnStyle} onClick={() => updateSetting('appTheme', settings.appTheme === 'artnet' ? 'retro' : 'artnet')}>
+                        <span>APP THEME</span>
+                        <span style={{ color: '#fff' }}>[{settings.appTheme === 'artnet' ? 'ARTNET PREMIUM' : 'RETRO TERMINAL'}]</span>
+                    </button>
+
                     <button style={btnStyle} onClick={() => updateSetting('colorTheme', settings.colorTheme === 'pantone_blue' ? 'classic_dark' : 'pantone_blue')}>
                         <span>COLOR THEME</span>
                         <span style={{ color: '#fff' }}>[{settings.colorTheme === 'pantone_blue' ? 'PANTONE BLUE' : 'CLASSIC DARK'}]</span>

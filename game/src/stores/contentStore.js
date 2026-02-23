@@ -133,7 +133,7 @@ const useContentStore = create((set, get) => ({
                 });
             }
 
-            // Calendar Events
+            // Dynamic import: lazy CMS loading — calendar data only needed when CMS opens
             const { CALENDAR_EVENTS } = await import('../data/calendar_events.js');
             for (const ce of CALENDAR_EVENTS) {
                 entities.push({

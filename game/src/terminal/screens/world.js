@@ -6,7 +6,8 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, DIM, GREEN, GOLD, RED, BLANK, STAT, NEWS } from './shared.js';
-import { dashboardScreen, hasActions, useAction, getActionsRemaining } from './dashboard.js';
+import { hasActions, useAction, getActionsRemaining } from './shared-helpers.js';
+import { dashboardScreen } from './dashboard.js';
 import { marketScreen } from './market.js';
 
 // Fallback until cityData is properly imported via API or constants

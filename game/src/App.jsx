@@ -21,6 +21,7 @@ import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import BloombergTerminal from './ui/BloombergTerminal.jsx';
 import SalesGrid from './ui/SalesGrid.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
+import CharacterCreator from './ui/CharacterCreator.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
@@ -182,8 +183,11 @@ export default function App() {
     }, []);
 
     const handleLoginComplete = ({ action }) => {
-        if (action === 'devmode') {
-            // Dev Mode: initialize minimal state and open Content Studio
+        if (action === 'new') {
+            // New user application flow
+            setActiveView(VIEW.CHARACTER_CREATOR);
+        } else if (action === 'devmode') {
+            // Dev shortcut to CMS
             try { GameState.init({ name: 'Dev Agent', playerName: 'dev', id: 'dev_agent', icon: '🔧', tagline: 'Debug mode', startingCash: 500000, startingWorks: 0, perk: 'Debug', difficulty: 'EASY' }); } catch (e) { /* may already exist */ }
             const ui = window.TerminalUIInstance;
             if (ui?.container) {
@@ -193,7 +197,7 @@ export default function App() {
                 });
             }
             setActiveView(VIEW.TERMINAL);
-            setActiveOverlay(OVERLAY.CMS);
+            setActiveOverlay(OVERLAY.MASTER_CMS);
         } else if (action === 'load') {
             // Load path: show terminal dashboard (not React PlayerDashboard)
             const ui = window.TerminalUIInstance;
@@ -205,28 +209,6 @@ export default function App() {
             }
             setActiveView(VIEW.TERMINAL);
             setActiveOverlay(OVERLAY.BLOOMBERG);
-        } else {
-            // New game: launch CharacterSelectScene directly (IntroScene already played)
-            setActiveView(VIEW.PHASER);
-            const pollStart = Date.now();
-            const pollId = setInterval(() => {
-                if (window.startPhaserGame) {
-                    clearInterval(pollId);
-                    window.startPhaserGame('charselect');
-                    // Give canvas keyboard focus for Phaser input
-                    setTimeout(() => {
-                        const canvas = game?.canvas || window.phaserGame?.canvas;
-                        if (canvas) {
-                            canvas.setAttribute('tabindex', '0');
-                            canvas.focus();
-                        }
-                    }, 200);
-                } else if (Date.now() - pollStart > 8000) {
-                    clearInterval(pollId);
-                    console.error('[App] startPhaserGame never registered after 8s');
-                    setActiveView(VIEW.BOOT); // Fallback to login
-                }
-            }, 100);
         }
     };
 
@@ -350,6 +332,10 @@ export default function App() {
             {/* ── CENTRAL UI ROUTER ── */}
             {activeView === VIEW.BOOT && (
                 <TerminalLogin onComplete={handleLoginComplete} previewStep={viewPayload?.previewStep} />
+            )}
+
+            {activeView === VIEW.CHARACTER_CREATOR && (
+                <CharacterCreator />
             )}
 
             {/* The DialogueLayer overlays the Phase Canvas, so it sits outside the router bounds */}

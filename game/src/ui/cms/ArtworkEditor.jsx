@@ -21,6 +21,7 @@ import { useMarketStore } from '../../stores/marketStore.js';
 import { CALENDAR_EVENTS } from '../../data/calendar_events.js';
 import { ARTWORKS, ARTWORK_MAP } from '../../data/artworks.js';
 import { ARTISTS } from '../../data/artists.js';
+import { CONTACTS } from '../../data/contacts.js';
 import { DEALER_TYPES, HAGGLE_CONFIG } from '../../data/haggle_config.js';
 import { MarketSimulator } from '../../managers/MarketSimulator.js';
 import TearSheetView from './TearSheetView.jsx';
@@ -609,6 +610,143 @@ function HagglePricePanel({ work }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SUB-TAB / VIEW: Data Grid (Table Mode)
+// ═══════════════════════════════════════════════════════════════
+function DataTablePanel({ filtered, selectedIds, handleSelect, handleFieldEdit, sourceColors, setViewMode, artworkSort, setArtworkSort }) {
+    const handleSortClick = (field) => {
+        if (artworkSort === field) {
+            setArtworkSort(field === 'price_desc' ? 'price_asc' : 'price_desc');
+        } else {
+            setArtworkSort(field);
+        }
+    };
+
+    const SortIcon = ({ field }) => {
+        if (artworkSort === field) return <span style={{ color: '#4ade80', marginLeft: 4 }}>↓</span>;
+        if (artworkSort === field.replace('_desc', '_asc')) return <span style={{ color: '#4ade80', marginLeft: 4 }}>↑</span>;
+        return null;
+    };
+
+    return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#050508' }}>
+            <div style={{ padding: '8px 16px', background: '#0a0a12', borderBottom: '1px solid #1a1a2e', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: 11, color: '#c9a84c', fontWeight: 'bold' }}>📋 ARTWORK DATABASE ({filtered.length} visible)</div>
+                <div style={{ fontSize: 9, color: '#666' }}>Shift+Click rows to bulk select · Click row to open detail split pane</div>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+                <table style={{ minWidth: 1000, width: '100%', borderCollapse: 'collapse', fontSize: 10, fontFamily: mono }}>
+                    <thead style={{ position: 'sticky', top: 0, background: '#111', zIndex: 10 }}>
+                        <tr style={{ borderBottom: '1px solid #333' }}>
+                            <th style={{ width: 40, padding: 8 }}></th>
+                            <th style={{ width: 40, padding: 8 }}></th>
+                            <th style={{ textAlign: 'left', padding: 8, color: '#888', cursor: 'pointer' }} onClick={() => handleSortClick('name')}>ID</th>
+                            <th style={{ textAlign: 'left', padding: 8, color: '#eaeaea', cursor: 'pointer' }} onClick={() => handleSortClick('name')}>Title <SortIcon field="name" /></th>
+                            <th style={{ textAlign: 'left', padding: 8, color: '#888', cursor: 'pointer' }} onClick={() => handleSortClick('artist')}>Artist <SortIcon field="artist" /></th>
+                            <th style={{ textAlign: 'center', padding: 8, color: '#888', cursor: 'pointer' }} onClick={() => handleSortClick('tier')}>Tier <SortIcon field="tier" /></th>
+                            <th style={{ textAlign: 'left', padding: 8, color: '#888' }}>Medium</th>
+                            <th style={{ textAlign: 'right', padding: 8, color: '#888' }}>Base Price</th>
+                            <th style={{ textAlign: 'right', padding: 8, color: '#888', cursor: 'pointer' }} onClick={() => handleSortClick('price_desc')}>Current Price <SortIcon field="price_desc" /></th>
+                            <th style={{ textAlign: 'center', padding: 8, color: '#888' }}>Owner</th>
+                            <th style={{ textAlign: 'center', padding: 8, color: '#888' }}>Source</th>
+                            <th style={{ width: 60, padding: 8 }}></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.length === 0 ? (
+                            <tr><td colSpan={12} style={{ textAlign: 'center', padding: 40, color: '#555' }}>No artworks matching criteria</td></tr>
+                        ) : filtered.map((w, idx) => {
+                            const isSelected = selectedIds.has(w.id);
+                            const currentP = w.askingPrice || w.price || 0;
+                            const baseP = w.basePrice || currentP;
+                            const delta = baseP > 0 ? ((currentP - baseP) / baseP) * 100 : 0;
+                            return (
+                                <tr key={w.id}
+                                    onClick={(e) => {
+                                        // Bulk select mode (shift key) vs normal switch-to-edit mode
+                                        if (e.shiftKey) {
+                                            handleSelect(w.id, e);
+                                        } else {
+                                            handleSelect(w.id, e);
+                                            setViewMode('split');
+                                        }
+                                    }}
+                                    style={{
+                                        borderBottom: '1px solid #1a1a2e',
+                                        background: isSelected ? 'rgba(201,168,76,0.15)' : idx % 2 === 0 ? '#0a0a14' : '#050508',
+                                        cursor: 'pointer'
+                                    }}>
+                                    <td style={{ padding: 8, textAlign: 'center' }} onClick={(e) => { e.stopPropagation(); handleSelect(w.id, { shiftKey: true }); }}>
+                                        <input type="checkbox" checked={isSelected} readOnly style={{ cursor: 'pointer', accentColor: '#c9a84c' }} />
+                                    </td>
+                                    <td style={{ padding: 4, textAlign: 'center' }}>
+                                        {w.sprite ? (
+                                            <img src={`/artworks/${w.sprite}`} style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, background: '#111' }} onError={e => e.target.style.display = 'none'} />
+                                        ) : (
+                                            <div style={{ width: 32, height: 32, background: '#222', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: '#555' }}>?</div>
+                                        )}
+                                    </td>
+                                    <td style={{ padding: 8, color: '#555', fontSize: 9 }}>{w.id}</td>
+                                    <td style={{ padding: 8, color: isSelected ? '#c9a84c' : '#eaeaea', fontWeight: 'bold' }}>
+                                        <input
+                                            value={w.title || ''}
+                                            onChange={e => handleFieldEdit(w.id, 'title', e.target.value)}
+                                            style={{ ...inputStyle, padding: '2px 4px', background: 'transparent', border: '1px solid transparent', color: 'inherit', fontWeight: 'inherit', width: 140 }}
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </td>
+                                    <td style={{ padding: 8, color: '#aaa' }}>
+                                        <input
+                                            value={w.artist || ''}
+                                            onChange={e => handleFieldEdit(w.id, 'artist', e.target.value)}
+                                            style={{ ...inputStyle, padding: '2px 4px', background: 'transparent', border: '1px solid transparent', color: 'inherit', width: 100 }}
+                                            onClick={e => e.stopPropagation()}
+                                        />
+                                    </td>
+                                    <td style={{ padding: 8, textAlign: 'center' }}>
+                                        {w.tier && <span style={{ fontSize: 8, padding: '2px 6px', borderRadius: 3, background: '#c9a84c15', color: '#c9a84c' }}>{w.tier}</span>}
+                                    </td>
+                                    <td style={{ padding: 8, color: '#888', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {w.medium}
+                                    </td>
+                                    <td style={{ padding: 8, textAlign: 'right', color: '#555' }}>
+                                        ${baseP.toLocaleString()}
+                                    </td>
+                                    <td style={{ padding: 8, textAlign: 'right', color: '#4ade80', fontWeight: 'bold' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+                                            ${currentP.toLocaleString()}
+                                            {delta !== 0 && (
+                                                <span style={{ fontSize: 8, color: delta > 0 ? '#4ade80' : '#f87171', minWidth: 30 }}>
+                                                    {delta > 0 ? '▲' : '▼'}{Math.abs(delta).toFixed(0)}%
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: 8, textAlign: 'center', color: w.ownerId === 'player' ? '#4ade80' : w.ownerId === 'market' ? '#f59e0b' : '#888' }}>
+                                        {w.ownerId ? w.ownerId.toUpperCase() : 'UNKNOWN'}
+                                    </td>
+                                    <td style={{ padding: 8, textAlign: 'center' }}>
+                                        <span style={{ fontSize: 8, padding: '2px 4px', borderRadius: 2, background: `${sourceColors[w._source] || '#888'}15`, color: sourceColors[w._source] || '#888' }}>
+                                            {w._source}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: 8, textAlign: 'center' }}>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleSelect(w.id, e); setViewMode('split'); }}
+                                            style={{ ...btnStyle, fontSize: 8, padding: '2px 6px', borderColor: '#4ade80', color: '#4ade80' }}>
+                                            Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // ArtworkMarketPanel — Per-artwork market intelligence panel
 // ═══════════════════════════════════════════════════════════════
 
@@ -763,6 +901,7 @@ export default function ArtworkEditor() {
     const [notification, setNotification] = useState(null);
     const [filter, setFilter] = useState('all');
     const [subTab, setSubTab] = useState('metadata');
+    const [viewMode, setViewMode] = useState('split'); // new: 'split' | 'table'
     const [artworkSearch, setArtworkSearch] = useState('');
     const [artworkSort, setArtworkSort] = useState('name');
 
@@ -843,15 +982,21 @@ export default function ArtworkEditor() {
         if (work) setJsonEdit(JSON.stringify(work, null, 4));
     };
 
-    const handleFieldEdit = useCallback((field, value) => {
-        if (!selected) return;
-        const updated = artworks.map(w => w.id === selected.id ? { ...w, [field]: value } : w);
+    const handleFieldEdit = useCallback((id, field, value) => {
+        const targetId = id || selectedId; // Support both inline table edits (id) and detail pane edits (selectedId)
+        if (!targetId) return;
+        const updated = artworks.map(w => w.id === targetId ? { ...w, [field]: value } : w);
         setArtworks(updated);
-        const updatedWork = updated.find(w => w.id === selected.id);
-        if (updatedWork) setJsonEdit(JSON.stringify(updatedWork, null, 4));
+
+        // Update JSON editor if the edited item is the currently selected one
+        if (targetId === selectedId) {
+            const updatedWork = updated.find(w => w.id === targetId);
+            if (updatedWork) setJsonEdit(JSON.stringify(updatedWork, null, 4));
+        }
+
         // Persist to CMS store
         useCmsStore.getState().saveSnapshot('artworks', updated.filter(w => w._source === 'data'));
-    }, [selected, artworks]);
+    }, [selectedId, artworks]);
 
     const handleHotSwap = () => {
         try {
@@ -994,7 +1139,19 @@ export default function ArtworkEditor() {
                         {artworks.length} works · ${totalValue.toLocaleString()} ·
                         C:{tierStats.classic || 0} M:{tierStats.mid_career || 0} S:{tierStats.speculative || 0}
                     </span>
-                    {notification && <span style={{ color: '#4ade80', fontSize: 10 }}>{notification}</span>}
+                    <div style={{ width: 1, height: 16, background: '#333', margin: '0 4px' }} />
+
+                    {/* View Toggle */}
+                    <div style={{ display: 'flex', background: '#0a0a14', borderRadius: 4, border: '1px solid #333', overflow: 'hidden' }}>
+                        <button onClick={() => setViewMode('split')} style={{ ...btnStyle, border: 'none', borderRadius: 0, padding: '4px 8px', background: viewMode === 'split' ? '#333' : 'transparent', color: viewMode === 'split' ? '#eaeaea' : '#666' }}>
+                            🗂️ Split
+                        </button>
+                        <button onClick={() => setViewMode('table')} style={{ ...btnStyle, border: 'none', borderRadius: 0, padding: '4px 8px', background: viewMode === 'table' ? '#333' : 'transparent', color: viewMode === 'table' ? '#eaeaea' : '#666' }}>
+                            📋 Table
+                        </button>
+                    </div>
+
+                    {notification && <span style={{ color: '#4ade80', fontSize: 10, marginLeft: 8 }}>{notification}</span>}
                     <button onClick={handleDownload} style={{ ...btnStyle, fontSize: 9 }}>📥 Export JSON</button>
                     <label style={{ ...btnStyle, fontSize: 9, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         📤 Import
@@ -1103,160 +1260,255 @@ export default function ArtworkEditor() {
                 )}
 
                 {/* Content Area */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    {/* Sub-tab bar */}
-                    <div style={{ display: 'flex', gap: 4, padding: '6px 12px', borderBottom: '1px solid #1a1a2e', flexWrap: 'wrap' }}>
-                        {subTabs.map(st => (
-                            <button key={st.id} onClick={() => setSubTab(st.id)} style={{
-                                ...btnStyle, fontSize: 9,
-                                borderColor: subTab === st.id ? '#c9a84c' : '#222',
-                                color: subTab === st.id ? '#c9a84c' : '#555',
-                            }}>{st.icon} {st.label}</button>
-                        ))}
-                    </div>
+                {viewMode === 'table' && ['metadata', 'haggle'].includes(subTab) ? (
+                    <DataTablePanel
+                        filtered={filtered}
+                        selectedIds={selectedIds}
+                        handleSelect={handleSelect}
+                        handleFieldEdit={handleFieldEdit}
+                        sourceColors={sourceColors}
+                        setViewMode={setViewMode}
+                        artworkSort={artworkSort}
+                        setArtworkSort={setArtworkSort}
+                    />
+                ) : (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        {/* Sub-tab bar */}
+                        <div style={{ display: 'flex', gap: 4, padding: '6px 12px', borderBottom: '1px solid #1a1a2e', flexWrap: 'wrap' }}>
+                            {subTabs.map(st => (
+                                <button key={st.id} onClick={() => setSubTab(st.id)} style={{
+                                    ...btnStyle, fontSize: 9,
+                                    borderColor: subTab === st.id ? '#c9a84c' : '#222',
+                                    color: subTab === st.id ? '#c9a84c' : '#555',
+                                }}>{st.icon} {st.label}</button>
+                            ))}
+                        </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
-                        {/* METADATA */}
-                        {subTab === 'metadata' && (
-                            <div style={{ display: 'flex', gap: 12, height: '100%' }}>
-                                <div style={{ flex: 2 }}>
-                                    {!selected ? (
-                                        <div style={{ color: '#666', textAlign: 'center', padding: 40 }}>Select an artwork to edit</div>
-                                    ) : (
-                                        <div>
-                                            <div style={{ fontSize: 16, fontWeight: 'bold', color: '#c9a84c', marginBottom: 16 }}>
-                                                {selected.title || 'Untitled'}
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                                                <div><label style={labelStyle}>Title</label><input value={selected.title || ''} onChange={e => handleFieldEdit('title', e.target.value)} style={inputStyle} /></div>
-                                                <div><label style={labelStyle}>Artist</label><input value={selected.artist || ''} onChange={e => handleFieldEdit('artist', e.target.value)} style={inputStyle} /></div>
-                                                <div><label style={labelStyle}>Year</label><input value={selected.year || ''} onChange={e => handleFieldEdit('year', e.target.value)} style={inputStyle} /></div>
-                                                <div><label style={labelStyle}>Medium</label><input value={selected.medium || ''} onChange={e => handleFieldEdit('medium', e.target.value)} style={inputStyle} /></div>
-                                                <div><label style={labelStyle}>Dimensions</label><input value={selected.dimensions || ''} onChange={e => handleFieldEdit('dimensions', e.target.value)} style={inputStyle} /></div>
-                                                <div><label style={labelStyle}>Asking Price ($)</label><input type="number" value={selected.askingPrice || selected.price || 0} onChange={e => handleFieldEdit('askingPrice', parseInt(e.target.value) || 0)} style={{ ...inputStyle, color: '#4ade80' }} /></div>
-                                                <div><label style={labelStyle}>Genre</label><input value={selected.genre || ''} onChange={e => handleFieldEdit('genre', e.target.value)} style={inputStyle} /></div>
-                                                <div><label style={labelStyle}>Tier</label>
-                                                    <select value={selected.tier || 'speculative'} onChange={e => handleFieldEdit('tier', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                                                        <option value="classic">Classic</option>
-                                                        <option value="mid_career">Mid-Career</option>
-                                                        <option value="speculative">Speculative</option>
-                                                    </select>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+                            {/* METADATA */}
+                            {subTab === 'metadata' && (
+                                <div style={{ display: 'flex', gap: 12, height: '100%' }}>
+                                    <div style={{ flex: 2 }}>
+                                        {!selected ? (
+                                            <div style={{ color: '#666', textAlign: 'center', padding: 40 }}>Select an artwork to edit</div>
+                                        ) : (
+                                            <div>
+                                                <div style={{ fontSize: 16, fontWeight: 'bold', color: '#c9a84c', marginBottom: 16 }}>
+                                                    {selected.title || 'Untitled'}
                                                 </div>
-                                                <div><label style={labelStyle}>Artist ID</label>
-                                                    <select value={selected.artistId || ''} onChange={e => handleFieldEdit('artistId', e.target.value || null)}
-                                                        style={{ ...inputStyle, cursor: 'pointer', color: selected.artistId ? '#60a5fa' : '#555' }}>
-                                                        <option value="">— Not linked —</option>
-                                                        {ARTISTS.map(a => <option key={a.id} value={a.id}>{a.name} ({a.id})</option>)}
-                                                    </select>
+
+                                                {/* Image Preview / Drag & Drop Uploader */}
+                                                <div
+                                                    style={{
+                                                        width: '100%', height: 180, marginBottom: 16, borderRadius: 6,
+                                                        background: '#0a0a14', border: '2px dashed #333',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        position: 'relative', overflow: 'hidden', cursor: 'pointer'
+                                                    }}
+                                                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#4ade80'; }}
+                                                    onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = '#333'; }}
+                                                    onDrop={async (e) => {
+                                                        e.preventDefault();
+                                                        e.currentTarget.style.borderColor = '#333';
+                                                        const file = e.dataTransfer.files[0];
+                                                        if (!file || !file.type.startsWith('image/')) {
+                                                            showNotif('❌ Please drop a valid image file');
+                                                            return;
+                                                        }
+                                                        try {
+                                                            const res = await fetch('/api/upload-image', {
+                                                                method: 'POST',
+                                                                headers: { 'x-filename': file.name },
+                                                                body: file
+                                                            });
+                                                            const data = await res.json();
+                                                            if (data.success) {
+                                                                handleFieldEdit(selected.id, 'sprite', data.filename);
+                                                                showNotif(`✅ Uploaded ${data.filename}`);
+                                                            } else { throw new Error(data.error); }
+                                                        } catch (err) {
+                                                            showNotif(`❌ Upload failed: ${err.message}`);
+                                                        }
+                                                    }}
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file'; input.accept = 'image/*';
+                                                        input.onchange = async (e) => {
+                                                            const file = e.target.files[0];
+                                                            if (!file) return;
+                                                            try {
+                                                                const res = await fetch('/api/upload-image', {
+                                                                    method: 'POST',
+                                                                    headers: { 'x-filename': file.name },
+                                                                    body: file
+                                                                });
+                                                                const data = await res.json();
+                                                                if (data.success) {
+                                                                    handleFieldEdit(selected.id, 'sprite', data.filename);
+                                                                    showNotif(`✅ Uploaded ${data.filename}`);
+                                                                } else { throw new Error(data.error); }
+                                                            } catch (err) {
+                                                                showNotif(`❌ Upload failed: ${err.message}`);
+                                                            }
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                >
+                                                    {selected.sprite ? (
+                                                        <>
+                                                            <img src={`/artworks/${selected.sprite}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                                                            <div style={{ display: 'none', color: '#555', fontSize: 10 }}>Image not found. Drop new file.</div>
+                                                        </>
+                                                    ) : (
+                                                        <div style={{ textAlign: 'center' }}>
+                                                            <div style={{ fontSize: 24, marginBottom: 8 }}>🖼️</div>
+                                                            <div style={{ fontSize: 10, color: '#666' }}>Drag & Drop Image Here<br />(or click to upload)</div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                            <div style={{ marginTop: 10 }}>
-                                                <label style={labelStyle}>Provenance</label>
-                                                <textarea value={selected.provenance || ''} onChange={e => handleFieldEdit('provenance', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontStyle: 'italic', color: '#888' }} />
-                                            </div>
-                                            <div style={{ marginTop: 10 }}>
-                                                <label style={labelStyle}>Notes</label>
-                                                <textarea value={selected.notes || ''} onChange={e => handleFieldEdit('notes', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Add notes..." />
-                                            </div>
-                                            <HagglePricePanel work={selected} />
-                                        </div>
-                                    )}
-                                </div>
 
-                                {/* Market Data Panel */}
-                                {selected && <ArtworkMarketPanel work={selected} />}
-
-                                {/* JSON Panel */}
-                                <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                                        <span style={{ color: '#666', fontSize: 9, textTransform: 'uppercase' }}>RAW JSON</span>
-                                        <button onClick={handleHotSwap} style={{ ...btnStyle, fontSize: 9 }}>🔥 Hot-Swap</button>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                                                    <div><label style={labelStyle}>Title</label><input value={selected.title || ''} onChange={e => handleFieldEdit(selected.id, 'title', e.target.value)} style={inputStyle} /></div>
+                                                    <div><label style={labelStyle}>Artist</label><input value={selected.artist || ''} onChange={e => handleFieldEdit(selected.id, 'artist', e.target.value)} style={inputStyle} /></div>
+                                                    <div><label style={labelStyle}>Year</label><input value={selected.year || ''} onChange={e => handleFieldEdit(selected.id, 'year', e.target.value)} style={inputStyle} /></div>
+                                                    <div><label style={labelStyle}>Medium</label><input value={selected.medium || ''} onChange={e => handleFieldEdit(selected.id, 'medium', e.target.value)} style={inputStyle} /></div>
+                                                    <div><label style={labelStyle}>Dimensions</label><input value={selected.dimensions || ''} onChange={e => handleFieldEdit(selected.id, 'dimensions', e.target.value)} style={inputStyle} /></div>
+                                                    <div><label style={labelStyle}>Asking Price ($)</label><input type="number" value={selected.askingPrice || selected.price || 0} onChange={e => handleFieldEdit(selected.id, 'askingPrice', parseInt(e.target.value) || 0)} style={{ ...inputStyle, color: '#4ade80' }} /></div>
+                                                    <div><label style={labelStyle}>Genre</label><input value={selected.genre || ''} onChange={e => handleFieldEdit(selected.id, 'genre', e.target.value)} style={inputStyle} /></div>
+                                                    <div><label style={labelStyle}>Tier</label>
+                                                        <select value={selected.tier || 'speculative'} onChange={e => handleFieldEdit(selected.id, 'tier', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                                                            <option value="classic">Classic</option>
+                                                            <option value="mid_career">Mid-Career</option>
+                                                            <option value="speculative">Speculative</option>
+                                                        </select>
+                                                    </div>
+                                                    <div><label style={labelStyle}>Artist ID</label>
+                                                        <select value={selected.artistId || ''} onChange={e => handleFieldEdit(selected.id, 'artistId', e.target.value || null)}
+                                                            style={{ ...inputStyle, cursor: 'pointer', color: selected.artistId ? '#60a5fa' : '#555' }}>
+                                                            <option value="">— Not linked —</option>
+                                                            {ARTISTS.map(a => <option key={a.id} value={a.id}>{a.name} ({a.id})</option>)}
+                                                        </select>
+                                                    </div>
+                                                    <div><label style={labelStyle}>Owner</label>
+                                                        <select value={selected.ownerId || 'unknown'} onChange={e => handleFieldEdit(selected.id, 'ownerId', e.target.value)}
+                                                            style={{ ...inputStyle, cursor: 'pointer', color: selected.ownerId !== 'unknown' ? '#f59e0b' : '#555' }}>
+                                                            <option value="player">Player</option>
+                                                            <option value="market">Open Market (For Sale)</option>
+                                                            <option value="unknown">Unknown</option>
+                                                            {CONTACTS.filter(c => c.role !== 'artist').map(c =>
+                                                                <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
+                                                            )}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div style={{ marginTop: 10 }}>
+                                                    <label style={labelStyle}>Provenance</label>
+                                                    <textarea value={selected.provenance || ''} onChange={e => handleFieldEdit(selected.id, 'provenance', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontStyle: 'italic', color: '#888' }} />
+                                                </div>
+                                                <div style={{ marginTop: 10 }}>
+                                                    <label style={labelStyle}>Notes</label>
+                                                    <textarea value={selected.notes || ''} onChange={e => handleFieldEdit(selected.id, 'notes', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Add notes..." />
+                                                </div>
+                                                <HagglePricePanel work={selected} />
+                                            </div>
+                                        )}
                                     </div>
-                                    <textarea
-                                        value={jsonEdit} onChange={e => setJsonEdit(e.target.value)} spellCheck={false}
-                                        style={{
-                                            flex: 1, background: '#050508', color: '#4ade80', border: '1px solid #222',
-                                            fontFamily: mono, fontSize: 10, padding: 8, resize: 'none', outline: 'none', borderRadius: 4,
-                                        }}
-                                        placeholder="Select artwork to view JSON..."
-                                    />
+
+                                    {/* Market Data Panel */}
+                                    {selected && <ArtworkMarketPanel work={selected} />}
+
+                                    {/* JSON Panel */}
+                                    <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                            <span style={{ color: '#666', fontSize: 9, textTransform: 'uppercase' }}>RAW JSON</span>
+                                            <button onClick={handleHotSwap} style={{ ...btnStyle, fontSize: 9 }}>🔥 Hot-Swap</button>
+                                        </div>
+                                        <textarea
+                                            value={jsonEdit} onChange={e => setJsonEdit(e.target.value)} spellCheck={false}
+                                            style={{
+                                                flex: 1, background: '#050508', color: '#4ade80', border: '1px solid #222',
+                                                fontFamily: mono, fontSize: 10, padding: 8, resize: 'none', outline: 'none', borderRadius: 4,
+                                            }}
+                                            placeholder="Select artwork to view JSON..."
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* ARTISTS */}
-                        {subTab === 'artists' && <ArtistsPanel onNotify={showNotif} />}
+                            {/* ARTISTS */}
+                            {subTab === 'artists' && <ArtistsPanel onNotify={showNotif} />}
 
-                        {/* MARKET STATS */}
-                        {subTab === 'market' && <MarketStatsPanel />}
+                            {/* MARKET STATS */}
+                            {subTab === 'market' && <MarketStatsPanel />}
 
-                        {/* MARKET CONTROLS */}
-                        {subTab === 'controls' && <MarketControlsPanel onNotify={showNotif} />}
+                            {/* MARKET CONTROLS */}
+                            {subTab === 'controls' && <MarketControlsPanel onNotify={showNotif} />}
 
-                        {/* PORTFOLIO */}
-                        {subTab === 'portfolio' && <PortfolioPanel />}
+                            {/* PORTFOLIO */}
+                            {subTab === 'portfolio' && <PortfolioPanel />}
 
-                        {/* CALENDAR */}
-                        {subTab === 'calendar' && <CalendarEventsPanel />}
+                            {/* CALENDAR */}
+                            {subTab === 'calendar' && <CalendarEventsPanel />}
 
-                        {/* HAGGLE MATRIX */}
-                        {subTab === 'haggle' && (
-                            <div>
-                                <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>
-                                    ⚔️ HAGGLE PRICE SIMULATION
+                            {/* HAGGLE MATRIX */}
+                            {subTab === 'haggle' && (
+                                <div>
+                                    <div style={{ color: '#c9a84c', fontSize: 12, fontWeight: 'bold', marginBottom: 12 }}>
+                                        ⚔️ HAGGLE PRICE SIMULATION
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#888', marginBottom: 16 }}>
+                                        Projected asking prices by dealer type. Lower greed factor = better starting price.
+                                    </div>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '1px solid #333' }}>
+                                                <th style={{ textAlign: 'left', padding: 6, color: '#666' }}>Artwork</th>
+                                                <th style={{ textAlign: 'left', padding: 6, color: '#666' }}>Base Price</th>
+                                                {Object.entries(DEALER_TYPES).map(([k, d]) => (
+                                                    <th key={k} style={{ textAlign: 'center', padding: 6, color: '#666', fontSize: 8 }}>
+                                                        {d.icon}<br />{d.name}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {artworks.slice(0, 30).map(w => {
+                                                const base = w.askingPrice || w.price || 0;
+                                                return (
+                                                    <tr key={w.id} style={{ borderBottom: '1px solid #111' }}>
+                                                        <td style={{ padding: 6, color: '#eaeaea', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                            {w.title || 'Untitled'}
+                                                        </td>
+                                                        <td style={{ padding: 6, color: '#4ade80' }}>${base.toLocaleString()}</td>
+                                                        {Object.entries(DEALER_TYPES).map(([k, d]) => {
+                                                            const ask = Math.round(base * d.greedFactor);
+                                                            const diff = d.greedFactor - 1;
+                                                            return (
+                                                                <td key={k} style={{
+                                                                    textAlign: 'center', padding: 6, fontSize: 9,
+                                                                    color: diff > 0.2 ? '#f87171' : diff > 0 ? '#f59e0b' : '#4ade80',
+                                                                }}>
+                                                                    ${ask.toLocaleString()}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div style={{ fontSize: 10, color: '#888', marginBottom: 16 }}>
-                                    Projected asking prices by dealer type. Lower greed factor = better starting price.
-                                </div>
-                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid #333' }}>
-                                            <th style={{ textAlign: 'left', padding: 6, color: '#666' }}>Artwork</th>
-                                            <th style={{ textAlign: 'left', padding: 6, color: '#666' }}>Base Price</th>
-                                            {Object.entries(DEALER_TYPES).map(([k, d]) => (
-                                                <th key={k} style={{ textAlign: 'center', padding: 6, color: '#666', fontSize: 8 }}>
-                                                    {d.icon}<br />{d.name}
-                                                </th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {artworks.slice(0, 30).map(w => {
-                                            const base = w.askingPrice || w.price || 0;
-                                            return (
-                                                <tr key={w.id} style={{ borderBottom: '1px solid #111' }}>
-                                                    <td style={{ padding: 6, color: '#eaeaea', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {w.title || 'Untitled'}
-                                                    </td>
-                                                    <td style={{ padding: 6, color: '#4ade80' }}>${base.toLocaleString()}</td>
-                                                    {Object.entries(DEALER_TYPES).map(([k, d]) => {
-                                                        const ask = Math.round(base * d.greedFactor);
-                                                        const diff = d.greedFactor - 1;
-                                                        return (
-                                                            <td key={k} style={{
-                                                                textAlign: 'center', padding: 6, fontSize: 9,
-                                                                color: diff > 0.2 ? '#f87171' : diff > 0 ? '#f59e0b' : '#4ade80',
-                                                            }}>
-                                                                ${ask.toLocaleString()}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                            )}
 
-                        {/* TEAR SHEET */}
-                        {subTab === 'tearsheet' && (
-                            <div style={{ flex: 1, margin: -16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                <TearSheetView />
-                            </div>
-                        )}
+                            {/* TEAR SHEET */}
+                            {subTab === 'tearsheet' && (
+                                <div style={{ flex: 1, margin: -16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                                    <TearSheetView />
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

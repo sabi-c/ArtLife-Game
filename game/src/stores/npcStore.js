@@ -29,7 +29,9 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
 import { initializeContacts, CONTACTS } from '../data/contacts.js';
+import { ARTWORKS } from '../data/artworks.js';
 import { PhoneManager } from '../managers/PhoneManager.js';
+import { clamp } from '../utils/math.js';
 
 // ── Default relationship state for new/migrated contacts ──
 const DEFAULT_RELATIONSHIP = {
@@ -84,8 +86,8 @@ function migrateContact(contact) {
         const oldFavor = contact.favor || 0;
         contact.relationship = {
             ...DEFAULT_RELATIONSHIP,
-            trust: Math.max(0, Math.min(1, 0.5 + oldFavor / 200)),
-            respect: Math.max(0, Math.min(1, 0.5 + oldFavor / 200)),
+            trust: clamp(0.5 + oldFavor / 200, 0, 1),
+            respect: clamp(0.5 + oldFavor / 200, 0, 1),
             holds_grudge: oldFavor < -30,
             grudge_severity: oldFavor < -30 ? Math.abs(oldFavor) / 100 : 0,
         };
@@ -103,14 +105,22 @@ export const useNPCStore = create(
             init: () => set((state) => {
                 if (!state.initialized || state.contacts.length === 0) {
                     state.contacts = initializeContacts();
-                    state.contacts.forEach(c => migrateContact(c));
+                    state.contacts.forEach(c => {
+                        migrateContact(c);
+                        // Seed collections from ARTWORKS where ownerId matches
+                        c.collection.owned = ARTWORKS.filter(w => w.ownerId === c.id).map(w => w.id);
+                    });
                     state.initialized = true;
                 }
             }),
 
             reset: () => set((state) => {
                 state.contacts = initializeContacts();
-                state.contacts.forEach(c => migrateContact(c));
+                state.contacts.forEach(c => {
+                    migrateContact(c);
+                    // Seed collections from ARTWORKS where ownerId matches
+                    c.collection.owned = ARTWORKS.filter(w => w.ownerId === c.id).map(w => w.id);
+                });
                 state.initialized = true;
             }),
 
@@ -152,10 +162,10 @@ export const useNPCStore = create(
                 const trustDelta = data.trustDelta ?? 0;
                 const respectDelta = data.respectDelta ?? 0;
                 if (trustDelta) {
-                    contact.relationship.trust = Math.max(0, Math.min(1, contact.relationship.trust + trustDelta));
+                    contact.relationship.trust = clamp(contact.relationship.trust + trustDelta, 0, 1);
                 }
                 if (respectDelta) {
-                    contact.relationship.respect = Math.max(0, Math.min(1, contact.relationship.respect + respectDelta));
+                    contact.relationship.respect = clamp(contact.relationship.respect + respectDelta, 0, 1);
                 }
 
                 // Handle grudges
@@ -202,7 +212,7 @@ export const useNPCStore = create(
                 const contact = state.contacts.find(c => c.id === npcId);
                 if (!contact) return;
                 migrateContact(contact);
-                contact.relationship.trust = Math.max(0, Math.min(1, contact.relationship.trust + amount / 200));
+                contact.relationship.trust = clamp(contact.relationship.trust + amount / 200, 0, 1);
                 contact.favor = Math.round((contact.relationship.trust - 0.5) * 200);
             }),
 

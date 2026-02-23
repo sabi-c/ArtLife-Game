@@ -16,7 +16,7 @@ const { TestReporter } = require('./reporter.cjs');
     console.log('═══════════════════════════════════════\n');
 
     const testPort = process.env.TEST_PORT || '5175';
-    await page.goto(`http://localhost:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
+    await page.goto(`http://127.0.0.1:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1500);
 
     // ── 1. Boot Verification ──
@@ -81,10 +81,11 @@ const { TestReporter } = require('./reporter.cjs');
         await page.waitForTimeout(1000);
     });
 
-    // ── 4. Haggle Scene ──
+    // ── 4. Haggle Scene ── (SKIPPED: Replaced by React EmailDialogueOverlay)
+    /*
     await reporter.runTest('Haggle Scene Initialization', async (assert) => {
         const testPort = process.env.TEST_PORT || '5175';
-    await page.goto(`http://localhost:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
+        await page.goto(`http://127.0.0.1:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
         await page.waitForTimeout(1500);
 
         const haggleResult = await page.evaluate(() => window.game.startHaggle());
@@ -103,6 +104,7 @@ const { TestReporter } = require('./reporter.cjs');
         await page.evaluate(() => window.game.exitScene());
         await page.waitForTimeout(1500);
     });
+    */
 
 
     // ── 6. Scene Cleanup ──

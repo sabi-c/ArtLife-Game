@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
+import { clamp } from '../utils/math.js';
 
 /**
  * MarketStore — Zustand store for market state that persists across saves.
@@ -236,7 +237,7 @@ export const useMarketStore = create(
             boostArtistHeat: (artistId, amount) => set((state) => {
                 const snap = state.artistSnapshots[artistId];
                 if (snap) {
-                    snap.heat = Math.min(100, Math.max(0, snap.heat + amount));
+                    snap.heat = clamp(snap.heat + amount, 0, 100);
                     snap.trend = amount > 0 ? 'up' : 'down';
                 }
             }),

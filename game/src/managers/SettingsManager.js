@@ -10,6 +10,16 @@ export class SettingsManager {
     // Core Schema Definition
     static SCHEMA = [
         {
+            id: 'appTheme',
+            label: 'App Theme',
+            type: 'cycle',
+            options: [
+                { value: 'artnet', display: 'Artnet Premium' },
+                { value: 'retro', display: 'Retro Terminal' }
+            ],
+            default: 'artnet'
+        },
+        {
             id: 'colorTheme',
             label: 'Color Theme',
             type: 'cycle',

@@ -319,7 +319,7 @@ export default function EngineOverview() {
                     {tabs.map(t => (
                         <button key={t} style={activeBtn(tab === t)} onClick={() => setTab(t)}>{t.replace('_', ' ')}</button>
                     ))}
-                    <button style={miniBtn} onClick={refresh} style={{ marginLeft: 8 }}>🔄 REFRESH</button>
+                    <button style={{ ...miniBtn, marginLeft: 8 }} onClick={refresh}>🔄 REFRESH</button>
                 </div>
             </div>
 

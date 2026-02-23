@@ -27,6 +27,7 @@ export const ARTWORKS = [
 
     {
         id: 'basquiat_untitled_1982',
+        ownerId: 'dr_eloise_park',
         title: 'Untitled (Crown Study)',
         artist: 'Jean-Michel Basquiat',
         artistBorn: 1960,
@@ -61,6 +62,7 @@ export const ARTWORKS = [
     },
     {
         id: 'haring_radiant_baby_1982',
+        ownerId: 'market',
         title: 'Radiant Baby (Subway Drawing)',
         artist: 'Keith Haring',
         artistBorn: 1958,
@@ -89,6 +91,7 @@ export const ARTWORKS = [
     },
     {
         id: 'koons_balloon_dog_edition',
+        ownerId: 'victoria_sterling',
         title: 'Balloon Dog (Blue)',
         artist: 'Jeff Koons',
         artistBorn: 1955,
@@ -120,6 +123,7 @@ export const ARTWORKS = [
     },
     {
         id: 'prince_cowboy_rephotograph',
+        ownerId: 'market',
         title: 'Cowboy (Rephotograph)',
         artist: 'Richard Prince',
         artistBorn: 1949,
@@ -149,6 +153,7 @@ export const ARTWORKS = [
     },
     {
         id: 'sherman_untitled_film_still_21',
+        ownerId: 'market',
         title: 'Untitled Film Still #21',
         artist: 'Cindy Sherman',
         artistBorn: 1954,
@@ -179,6 +184,7 @@ export const ARTWORKS = [
 
     {
         id: 'yuki_tanaka_kyoto_study',
+        ownerId: 'yuki_tanaka',
         title: 'Kyoto Study No. 4',
         artist: 'Yuki Tanaka',
         artistBorn: 1991,
@@ -201,6 +207,7 @@ export const ARTWORKS = [
     },
     {
         id: 'kwame_asante_portrait_series',
+        ownerId: 'market',
         title: 'Portrait of a Man with Red Dust (II)',
         artist: 'Kwame Asante',
         artistBorn: 1987,
@@ -228,6 +235,7 @@ export const ARTWORKS = [
     },
     {
         id: 'liu_wei_architecture_03',
+        ownerId: 'dr_eloise_park',
         title: 'Architecture of Forgetting (III)',
         artist: 'Liu Wei',
         artistBorn: 1972,
@@ -251,6 +259,7 @@ export const ARTWORKS = [
     },
     {
         id: 'amoako_boafo_skin_series',
+        ownerId: 'market',
         title: 'Blue Suit Study',
         artist: 'Amoako Boafo',
         artistBorn: 1984,
@@ -277,6 +286,7 @@ export const ARTWORKS = [
     },
     {
         id: 'jadé_fadojutimi_composition',
+        ownerId: 'market',
         title: 'Composition in Flux',
         artist: 'Jadé Fadojutimi',
         artistBorn: 1993,
@@ -305,6 +315,7 @@ export const ARTWORKS = [
 
     {
         id: 'tomas_herrera_red_squares',
+        ownerId: 'charles_vandermeer',
         title: 'Untitled (Red Squares)',
         artist: 'Tomás Herrera',
         artistBorn: 1996,
@@ -326,6 +337,7 @@ export const ARTWORKS = [
     },
     {
         id: 'elena_meridian_001',
+        ownerId: 'market',
         title: 'Untitled (Meridian)',
         artist: 'Unknown',
         year: '2025',
@@ -343,6 +355,7 @@ export const ARTWORKS = [
     },
     {
         id: 'priya_sundaram_ghost_print',
+        ownerId: 'nico_strand',
         title: 'Ghost Print I',
         artist: 'Priya Sundaram',
         artistBorn: 1998,
@@ -361,6 +374,7 @@ export const ARTWORKS = [
     },
     {
         id: 'caleb_osei_textile_01',
+        ownerId: 'market',
         title: 'Weave Study (Ancestor)',
         artist: 'Caleb Osei',
         artistBorn: 1999,
@@ -382,6 +396,7 @@ export const ARTWORKS = [
     },
     {
         id: 'mia_chen_ceramic_form',
+        ownerId: 'market',
         title: 'Vessel Form No. 7 (Night)',
         artist: 'Mia Chen',
         artistBorn: 1995,
@@ -400,6 +415,7 @@ export const ARTWORKS = [
     },
     {
         id: 'oliver_nazari_landscape',
+        ownerId: 'elena_ross',
         title: 'Floodplain (After Rain)',
         artist: 'Oliver Nazari',
         artistBorn: 1994,
@@ -420,6 +436,7 @@ export const ARTWORKS = [
     // ── ADDITIONAL CLASSIC WORKS ─────────────────────────────────────────────
     {
         id: 'richter_window_2004',
+        ownerId: 'market',
         title: 'Fenster (Window)',
         artist: 'Gerhard Richter',
         artistBorn: 1932,
@@ -448,6 +465,7 @@ export const ARTWORKS = [
     },
     {
         id: 'fontana_concetto_spaziale',
+        ownerId: 'sasha_klein',
         title: 'Concetto Spaziale, Attesa',
         artist: 'Lucio Fontana',
         artistBorn: 1899,
@@ -477,6 +495,7 @@ export const ARTWORKS = [
     },
     {
         id: 'soulages_outrenoir_1979',
+        ownerId: 'market',
         title: 'Peinture 202 x 159 cm (Outrenoir)',
         artist: 'Pierre Soulages',
         artistBorn: 1919,
@@ -507,6 +526,7 @@ export const ARTWORKS = [
     // ── ADDITIONAL MID-CAREER WORKS ────────────────────────────────────────────
     {
         id: 'ngozi_okafor_installation',
+        ownerId: 'dr_eloise_park',
         title: 'The Weight of Water (Maquette)',
         artist: 'Ngozi Okafor',
         artistBorn: 1990,
@@ -530,6 +550,7 @@ export const ARTWORKS = [
     },
     {
         id: 'dao_van_tri_silk_painting',
+        ownerId: 'market',
         title: 'Đồng Bằng (Floodplain)',
         artist: 'Dao Van Tri',
         artistBorn: 1985,
@@ -551,6 +572,7 @@ export const ARTWORKS = [
     },
     {
         id: 'elara_voss_chromatic_field',
+        ownerId: 'market',
         title: 'Chromatic Field Study (Dusk)',
         artist: 'Elara Voss',
         artistBorn: 1992,
@@ -572,6 +594,7 @@ export const ARTWORKS = [
     },
     {
         id: 'kwame_asante_threshold',
+        ownerId: 'dr_eloise_park',
         title: 'Threshold',
         artist: 'Kwame Asante',
         artistBorn: 1987,
@@ -596,6 +619,7 @@ export const ARTWORKS = [
     // ── ADDITIONAL SPECULATIVE WORKS ───────────────────────────────────────────
     {
         id: 'javier_molina_havana_light',
+        ownerId: 'market',
         title: 'Havana Light No. 3',
         artist: 'Javier Molina',
         artistBorn: 1997,
@@ -614,6 +638,7 @@ export const ARTWORKS = [
     },
     {
         id: 'javier_molina_diebenkorn_echo',
+        ownerId: 'charles_vandermeer',
         title: 'Ocean Park (After Diebenkorn)',
         artist: 'Javier Molina',
         artistBorn: 1997,
@@ -632,6 +657,7 @@ export const ARTWORKS = [
     },
     {
         id: 'tomas_herrera_viscera_study',
+        ownerId: 'market',
         title: 'Viscera Study (Mother)',
         artist: 'Tomás Herrera',
         artistBorn: 1996,
@@ -650,6 +676,7 @@ export const ARTWORKS = [
     },
     {
         id: 'wei_zhang_digital_scroll',
+        ownerId: 'market',
         title: 'Digital Scroll (Fragment 7)',
         artist: 'Wei Zhang',
         artistBorn: 2000,
@@ -669,6 +696,7 @@ export const ARTWORKS = [
     },
     {
         id: 'sofia_reyes_textile_map',
+        ownerId: 'market',
         title: 'Cartografía Doméstica (Map of Home)',
         artist: 'Sofía Reyes',
         artistBorn: 1993,
@@ -688,7 +716,20 @@ export const ARTWORKS = [
         sprite: 'art_object_red_squares.png',
         tier: 'speculative',
     },
-
+    {
+        id: "art_vince_897161",
+        title: "The Starry Night",
+        artist: "Vincent van Gogh",
+        artistId: "artist_vincent-van-gogh",
+        year: "",
+        medium: "Style: Post-Impressionism",
+        askingPrice: 50000,
+        basePrice: 50000,
+        genre: "contemporary painting",
+        tier: "mid-career",
+        sprite: "wiki_vincent-van-gogh_the-starry-night.jpg",
+        _source: "data"
+    }
 ];
 
 // Ensure every artwork has basePrice (needed by MarketManager for dynamic pricing)
@@ -705,6 +746,7 @@ export const ARTWORK_MAP = Object.fromEntries(ARTWORKS.map(a => [a.id, a]));
 export const Artworks = {
     charity_437422: {
         id: '437422',
+        ownerId: 'market',
         title: 'Charity',
         artist: 'Guido Reni',
         year: 'ca. 1630',

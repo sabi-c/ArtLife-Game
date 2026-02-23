@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { readFileSync } from 'fs';
+import { readFileSync, createWriteStream } from 'fs';
 import { execSync } from 'child_process';
+import path from 'path';
 
 // Inject version info at build time
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
@@ -40,9 +41,33 @@ export default defineConfig({
     plugins: [
         react(),
         {
-            name: 'configure-response-headers',
+            name: 'configure-dev-server',
             configureServer: (server) => {
-                server.middlewares.use((_req, res, next) => {
+                server.middlewares.use((req, res, next) => {
+                    // Image Upload Handler for CMS
+                    if (req.url === '/api/upload-image' && req.method === 'POST') {
+                        const filename = req.headers['x-filename'] || `upload_${Date.now()}.png`;
+                        const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+                        const targetPath = path.resolve(__dirname, 'public/artworks', safeName);
+
+                        const stream = createWriteStream(targetPath);
+                        req.pipe(stream);
+
+                        stream.on('finish', () => {
+                            res.statusCode = 200;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ success: true, filename: safeName }));
+                        });
+
+                        stream.on('error', (err) => {
+                            console.error('Upload Error:', err);
+                            res.statusCode = 500;
+                            res.end(JSON.stringify({ success: false, error: err.message }));
+                        });
+                        return;
+                    }
+
+                    // Existing headers
                     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
                     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
                     next();

@@ -8,6 +8,7 @@ import { CONTACTS } from '../data/contacts.js';
 import { BACKGROUND_TRAITS } from '../data/backgrounds.js';
 import { GameEventBus, GameEvents } from './GameEventBus.js';
 import { shuffle } from '../utils/shuffle.js';
+import { clamp } from '../utils/math.js';
 import { generateId } from '../utils/id.js';
 import { ProfileManager } from './ProfileManager.js';
 import { resetSystemicTriggers } from '../engines/SystemicTriggers.js';
@@ -427,6 +428,7 @@ export class GameState {
         GameState.state.actionsThisWeek += 1;
 
         if (GameState.state.actionsThisWeek >= 3) {
+            // Dynamic import: breaks GameState ↔ WeekEngine circular dependency
             import('./WeekEngine.js').then(({ WeekEngine }) => {
                 WeekEngine.advanceWeek();
 
@@ -539,7 +541,7 @@ export class GameState {
             summary.push(effects.cash > 0 ? `+$${effects.cash.toLocaleString()}` : `-$${Math.abs(effects.cash).toLocaleString()}`);
         }
         if (effects.reputation) {
-            state.reputation = Math.max(0, Math.min(100, state.reputation + effects.reputation));
+            state.reputation = clamp(state.reputation + effects.reputation, 0, 100);
             summary.push(`Reputation ${effects.reputation > 0 ? '+' : ''}${effects.reputation}`);
         }
         if (effects.intel) {
@@ -547,19 +549,19 @@ export class GameState {
             summary.push(`Intel ${effects.intel > 0 ? '+' : ''}${effects.intel}`);
         }
         if (effects.taste) {
-            state.taste = Math.max(0, Math.min(100, state.taste + effects.taste));
+            state.taste = clamp(state.taste + effects.taste, 0, 100);
             summary.push(`Taste ${effects.taste > 0 ? '+' : ''}${effects.taste}`);
         }
         if (effects.audacity) {
-            state.audacity = Math.max(0, Math.min(100, (state.audacity || 30) + effects.audacity));
+            state.audacity = clamp((state.audacity || 30) + effects.audacity, 0, 100);
             summary.push(`Audacity ${effects.audacity > 0 ? '+' : ''}${effects.audacity}`);
         }
         if (effects.access) {
-            state.access = Math.max(0, Math.min(100, state.access + effects.access));
+            state.access = clamp(state.access + effects.access, 0, 100);
             summary.push(`Access ${effects.access > 0 ? '+' : ''}${effects.access}`);
         }
         if (effects.burnout) {
-            state.burnout = Math.max(0, Math.min(10, state.burnout + effects.burnout));
+            state.burnout = clamp(state.burnout + effects.burnout, 0, 10);
             summary.push(`Burnout ${effects.burnout > 0 ? '+' : ''}${effects.burnout}`);
         }
         if (effects.gamble) {
@@ -579,7 +581,7 @@ export class GameState {
         }
         // ─── Anti-resource effects ───
         if (effects.marketHeat) {
-            state.marketHeat = Math.max(0, Math.min(100, state.marketHeat + effects.marketHeat));
+            state.marketHeat = clamp(state.marketHeat + effects.marketHeat, 0, 100);
             if (effects.marketHeat > 0) {
                 GameState.addNews(`🌡️ Market heat rising. The art world is watching you closely.`);
             } else {
@@ -587,7 +589,7 @@ export class GameState {
             }
         }
         if (effects.suspicion) {
-            state.suspicion = Math.max(0, Math.min(100, state.suspicion + effects.suspicion));
+            state.suspicion = clamp(state.suspicion + effects.suspicion, 0, 100);
             if (effects.suspicion > 0) {
                 GameState.addNews(`🔍 Suspicion is building around your recent acquisitions.`);
             } else {

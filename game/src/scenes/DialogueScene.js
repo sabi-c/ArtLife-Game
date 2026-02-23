@@ -29,11 +29,10 @@ export class DialogueScene extends BaseScene {
         super.create({ ...data, hideUI: true }); // BaseScene applies DOM hiding
 
         if (data?.eventId) {
-            import('../managers/EventRegistry.js').then(({ EventRegistry }) => {
-                this.eventData = EventRegistry.getEvent(data.eventId) || {};
-                this._initUI(data);
-            });
-            return; // _initUI will continue rendering
+            // EventRegistry is already statically imported at the top of this file
+            this.eventData = EventRegistry.getEvent(data.eventId) || {};
+            this._initUI(data);
+            return;
         } else {
             this.eventData = data?.event || {};
             this._initUI(data);

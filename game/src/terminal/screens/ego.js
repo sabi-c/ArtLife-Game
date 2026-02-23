@@ -6,7 +6,7 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, DIV, BLANK, DIM } from './shared.js';
-import { sparkline, statBarHtml, generateFlavorNews } from './dashboard.js';
+import { sparkline, statBarHtml, generateFlavorNews } from './shared-helpers.js';
 
 export function egoDashboardScreen(ui) {
     return () => {

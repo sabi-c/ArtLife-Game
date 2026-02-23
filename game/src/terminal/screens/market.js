@@ -5,7 +5,8 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, DIM, GOLD, RED, BLANK, STAT } from './shared.js';
-import { dashboardScreen, hasActions, useAction } from './dashboard.js';
+import { hasActions, useAction } from './shared-helpers.js';
+import { dashboardScreen } from './dashboard.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
 import { VIEW, OVERLAY } from '../../constants/views.js';
 // ════════════════════════════════════════════

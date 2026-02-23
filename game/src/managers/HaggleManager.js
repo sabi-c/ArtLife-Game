@@ -60,8 +60,9 @@ class _HaggleManager {
      * @param {Object} params.npc — the NPC contact (from contacts.js), or null for anonymous
      * @param {number} params.askingPrice — the starting asking price
      * @param {number} params.playerOffer — the player's opening offer (optional, defaults to 70% of ask)
+     * @param {boolean} params.inquire — whether the piece was listed as 'Price on Request'
      */
-    start({ mode, work, npc, askingPrice, playerOffer }) {
+    start({ mode, work, npc, askingPrice, playerOffer, inquire = false }) {
         const s = GameState.state;
 
         // ── Resolve NPC profile: CMS edits (useNPCStore) take priority over hardcoded CONTACTS ──
@@ -99,8 +100,14 @@ class _HaggleManager {
         let npcPatience = profile.patience ?? dealerType.patience;
         const npcBluffChance = profile.bluffChance ?? 0.1;
         let npcFlexibility = profile.priceFlexibility ?? 0.15;
-        const npcWalkaway = profile.walkawayThreshold ?? 0.70;
+        let npcWalkaway = profile.walkawayThreshold ?? 0.70;
         const npcTriggers = profile.emotionalTriggers || [];
+
+        // ── 'Price on Request' Difficulty Spike ──
+        if (inquire) {
+            npcWalkaway = Math.min(0.95, npcWalkaway + 0.15); // Much less forgiving of lowballs
+            npcFlexibility *= 0.8; // Stubborn
+        }
 
         // ── Relationship modifiers (Engine 2 → Engine 3 pipeline) ──
         let relationshipPriceModifier = 1.0;
@@ -187,6 +194,7 @@ class _HaggleManager {
             askingPrice: adjustedAsk,
             currentOffer: opening,
             gap,
+            inquire,
 
             round: 0,
             maxRounds: HAGGLE_CONFIG.maxRounds,
@@ -229,6 +237,7 @@ class _HaggleManager {
             dealerIcon: dealerType.icon,
             askingPrice: adjustedAsk,
             playerOffer: opening,
+            inquire: inquire,
             openingDialogue: this._getDialogue('opening'),
         };
     }
@@ -239,7 +248,8 @@ class _HaggleManager {
 
     getAvailableTactics() {
         if (!this.active) return [];
-        const s = this.active.playerStats;
+        // Fetch live stats so mid-battle CMS edits instantly unlock new tactics
+        const s = GameState.state || this.active.playerStats;
         const tactics = [];
 
         // Base tactics

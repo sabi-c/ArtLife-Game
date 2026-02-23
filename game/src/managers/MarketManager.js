@@ -3,6 +3,7 @@ import { GameState } from './GameState.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
 import { useMarketStore } from '../stores/marketStore.js';
+import { clamp } from '../utils/math.js';
 import { MarketHistoryEngine } from './MarketHistoryEngine.js';
 import { MarketSimulator } from './MarketSimulator.js';
 import { MarketEventBus } from './MarketEventBus.js';
@@ -105,7 +106,7 @@ export class MarketManager {
         MarketManager.artists.forEach((artist) => {
             const volatility = artist.heatVolatility;
             const change = (Math.random() - 0.45) * volatility * 2;
-            artist.heat = Math.max(0, Math.min(100, artist.heat + change));
+            artist.heat = clamp(artist.heat + change, 0, 100);
 
             if (state.marketState === 'bull') {
                 artist.heat = Math.min(100, artist.heat + 0.5);
@@ -165,7 +166,7 @@ export class MarketManager {
         const eventHeat = MarketEventBus.getHeatModifier(work.artistId);
         if (eventHeat) {
             // Temporarily boost/dip artist heat for this calculation
-            artist.heat = Math.max(0, Math.min(100, artist.heat + eventHeat * 0.01));
+            artist.heat = clamp(artist.heat + eventHeat * 0.01, 0, 100);
         }
 
         let targetPrice = work.basePrice * heatMultiplier * marketMultiplier * eraModifier * flipperPenalty * hedonicMultiplier * eventModifier;

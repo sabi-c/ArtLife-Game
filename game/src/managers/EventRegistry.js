@@ -206,7 +206,7 @@ export class EventRegistry {
         // Sort by priority (higher = first)
         matching.sort((a, b) => (b.priority || 1) - (a.priority || 1));
 
-        // Lazy import to avoid circular deps
+        // Dynamic import: conditional storyline activation — avoids pulling storylineStore into parse-time bundle
         import('../stores/storylineStore.js').then(({ useStorylineStore }) => {
             const currentWeek = GameState.state?.week || 1;
             for (const storyline of matching) {

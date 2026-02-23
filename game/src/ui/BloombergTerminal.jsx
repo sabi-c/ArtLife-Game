@@ -62,8 +62,10 @@ import { useEventStore } from '../stores/eventStore.js';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { CITY_DATA } from '../data/cities.js';
 import { WORLD_LOCATIONS } from '../data/world_locations.js';
+import { clamp } from '../utils/math.js';
 import BloombergTutorial from './BloombergTutorial.jsx';
 import EmailDialogueOverlay from './EmailDialogueOverlay.jsx';
+import HaggleEmailOverlay from './HaggleEmailOverlay.jsx';
 import './BloombergTerminal.css';
 
 // ── Intel-gated data masking ──
@@ -337,7 +339,7 @@ function ArtistLeaderboard({ leaderboard, liveSparklines, intel, selectedArtist,
             <div className="bb-panel-header">ARTIST INDEX</div>
             <div className="bb-leaderboard-list">
                 {leaderboard.slice(0, 10).map((artist, i) => {
-                    const heatPct = Math.min(100, Math.max(0, artist.heat));
+                    const heatPct = clamp(artist.heat, 0, 100);
                     const trend = artist.trend === 'up' ? '▲' : artist.trend === 'down' ? '▼' : '—';
                     const trendClass = artist.trend === 'up' ? 'up' : artist.trend === 'down' ? 'down' : '';
                     const sparkData = liveSparklines[artist.id] || [];
@@ -2296,15 +2298,8 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
                                 onClick={() => {
                                     const npc = work._ownerData;
                                     const currVal = work.currentVal || 0;
-                                    const askPrice = Math.floor(currVal * (1 + (Math.random() * 0.4))); // 0-40% markup
-                                    const haggleInfo = HaggleManager.start({
-                                        mode: 'buy',
-                                        work: work,
-                                        npc: npc,
-                                        askingPrice: askPrice,
-                                        playerOffer: currVal // default starter
-                                    });
-                                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'HaggleScene', { haggleInfo });
+                                    const askPrice = Math.floor(currVal * (1 + (Math.random() * 0.4)));
+                                    onHaggle({ mode: 'buy', work, npc, askingPrice: askPrice, playerOffer: currVal });
                                 }}>
                                 HAGGLE TO ACQUIRE <span className="an-ld-ap">[2 AP]</span>
                             </button>
@@ -4062,15 +4057,16 @@ function EventOverlay({ event, onComplete }) {
 // ══════════════════════════════════════════════════════════════
 export default function BloombergTerminal({ onClose }) {
     const feed = useBloombergFeed();
+
+    // State
     const [selectedArtist, setSelectedArtist] = useState(null);
     const [modalWork, setModalWork] = useState(null);
     const [modalOrder, setModalOrder] = useState(null);
-    const [modalMode, setModalMode] = useState(null); // 'buy' | 'list' | 'view'
+    const [modalMode, setModalMode] = useState('buy'); // 'buy', 'sell'
+    const [showTutorial, setShowTutorial] = useState(!SettingsManager.get('hasSeenBloombergIntro', false));
+    const [activeHaggle, setActiveHaggle] = useState(null);
     const [statusMsg, setStatusMsg] = useState(null);
     const [, forceRender] = useState(0);
-
-    // Tutorial overlay state
-    const [showTutorial, setShowTutorial] = useState(() => !SettingsManager.get('hasSeenBloombergIntro'));
 
     // Pending event overlay — driven by useEventStore
     const pendingEvent = useEventStore(s => s.pendingEvent);
@@ -4196,22 +4192,28 @@ export default function BloombergTerminal({ onClose }) {
     }, []);
 
     // Haggle action — closes Bloomberg, launches HaggleScene
-    const handleHaggle = useCallback((order) => {
+    // Accepts either: (a) a market order with .id, or (b) raw NPC haggle data { mode, work, npc, askingPrice }
+    const handleHaggle = useCallback((orderOrData) => {
         if (!hasAP(2)) { setStatusMsg('Not enough AP (need 2)'); return; }
         useAPAndCheckEvents('Bloomberg counter offer', 2);
 
-        const haggleData = TerminalAPI.bloomberg.prepareHaggle(order.id);
-        if (!haggleData) { setStatusMsg('Order no longer available'); return; }
+        let haggleInfo;
+        if (orderOrData?.id && TerminalAPI?.bloomberg?.prepareHaggle) {
+            // Market order path — use TerminalAPI to build haggle data
+            const haggleData = TerminalAPI.bloomberg.prepareHaggle(orderOrData.id);
+            if (!haggleData) { setStatusMsg('Order no longer available'); return; }
+            haggleInfo = HaggleManager.start(haggleData);
+        } else {
+            // NPC / direct path — data already has mode, work, npc, askingPrice
+            haggleInfo = HaggleManager.start(orderOrData);
+        }
 
-        const haggleInfo = HaggleManager.start(haggleData);
-        onClose(); // Close Bloomberg
+        // Close tearsheet modal if open
+        closeModal();
 
-        // Launch HaggleScene via Phaser
-        GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.PHASER);
-        setTimeout(() => {
-            GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'HaggleScene', { haggleInfo });
-        }, 100);
-    }, [onClose]);
+        // Launch Email Overlay instead of Phaser HaggleScene
+        setActiveHaggle(haggleInfo);
+    }, [closeModal]);
 
     // List for sale action
     const handleListConfirm = useCallback((work, tier) => {
@@ -4255,7 +4257,7 @@ export default function BloombergTerminal({ onClose }) {
             )}
 
             {/* Event Overlay — routes email events to EmailDialogueOverlay, others to EventOverlay */}
-            {pendingEvent && pendingEvent.isEmail && (
+            {pendingEvent && pendingEvent.isEmail && !activeHaggle && (
                 <EmailDialogueOverlay
                     event={pendingEvent}
                     onComplete={(choiceData) => {
@@ -4264,11 +4266,22 @@ export default function BloombergTerminal({ onClose }) {
                     }}
                 />
             )}
-            {pendingEvent && !pendingEvent.isEmail && (
+            {pendingEvent && !pendingEvent.isEmail && !activeHaggle && (
                 <EventOverlay
                     event={pendingEvent}
                     onComplete={(choiceData) => {
                         useEventStore.getState().consumePendingEvent();
+                        forceRender(n => n + 1);
+                    }}
+                />
+            )}
+
+            {/* Haggle Email Overlay */}
+            {activeHaggle && (
+                <HaggleEmailOverlay
+                    haggleInfo={activeHaggle}
+                    onClose={() => {
+                        setActiveHaggle(null);
                         forceRender(n => n + 1);
                     }}
                 />

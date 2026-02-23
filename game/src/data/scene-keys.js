@@ -6,7 +6,6 @@ export const SCENE_KEYS = Object.freeze({
     BOOT: 'BootScene',
     TITLE: 'TitleScene',
     INTRO: 'IntroScene',
-    CHARACTER_SELECT: 'CharacterSelectScene',
     OVERWORLD: 'OverworldScene',
     WORLD: 'WorldScene',
     CITY: 'CityScene',

@@ -1,9 +1,9 @@
 {
-  "timestamp": "2026-02-22T22:23:48.369Z",
-  "durationMs": 12929,
+  "timestamp": "2026-02-23T12:21:27.619Z",
+  "durationMs": 9343,
   "summary": {
-    "total": 5,
-    "passed": 5,
+    "total": 4,
+    "passed": 4,
     "failed": 0,
     "warned": 0,
     "successRate": "100.0%"
@@ -13,7 +13,7 @@
       "name": "Boot Sequence",
       "section": null,
       "status": "pass",
-      "durationMs": 7,
+      "durationMs": 6,
       "assertions": [
         {
           "status": "pass",
@@ -32,7 +32,7 @@
       "name": "Backroom Deal Dialogue",
       "section": null,
       "status": "pass",
-      "durationMs": 3832,
+      "durationMs": 3834,
       "assertions": [
         {
           "status": "pass",
@@ -55,7 +55,7 @@
       "name": "Gallery Opening Dialogue",
       "section": null,
       "status": "pass",
-      "durationMs": 2507,
+      "durationMs": 2506,
       "assertions": [
         {
           "status": "pass",
@@ -71,33 +71,10 @@
       "stateSnapshot": null
     },
     {
-      "name": "Haggle Scene Initialization",
-      "section": null,
-      "status": "pass",
-      "durationMs": 3914,
-      "assertions": [
-        {
-          "status": "pass",
-          "label": "startHaggle() returned started=true"
-        },
-        {
-          "status": "pass",
-          "label": "HaggleScene is active"
-        },
-        {
-          "status": "pass",
-          "label": "Haggle phase: opening, round: 0"
-        }
-      ],
-      "error": null,
-      "screenshotPath": null,
-      "stateSnapshot": null
-    },
-    {
       "name": "Scene Cleanup Integrity",
       "section": null,
       "status": "pass",
-      "durationMs": 2,
+      "durationMs": 1,
       "assertions": [
         {
           "status": "pass",

@@ -48,9 +48,8 @@ export const CONTACTS = [
 
         // ★ COLLECTION
         collection: {
-            owned: ['basquiat_untitled_1982', 'fontana_concetto_spaziale', 'koons_balloon_dog_edition',
-                'sherman_untitled_film_4', 'liu_wei_architecture_03'],
-            forSale: ['fontana_concetto_spaziale', 'sherman_untitled_film_4'],
+            owned: [],
+            forSale: [],
             pastSales: [
                 { workId: 'richter_abstract_42', soldPrice: 420000, soldWeek: 8, buyer: 'philippe_noir' },
                 { workId: 'prince_nurse_edition', soldPrice: 180000, soldWeek: 22, buyer: 'victoria_sterling' },
@@ -125,7 +124,7 @@ export const CONTACTS = [
             financialStress: 10,
         },
         collection: {
-            owned: ['liu_wei_architecture_03'],
+            owned: [],
             forSale: [],
             pastSales: [],
             totalValue: 62000,
@@ -198,10 +197,8 @@ export const CONTACTS = [
 
         // ★ COLLECTION
         collection: {
-            owned: ['kwame_asante_threshold', 'yuki_tanaka_kyoto_study', 'priya_sundaram_ghost_print',
-                'tomas_herrera_red_squares', 'oliver_nazari_landscape', 'elena_voss_berlin_series',
-                'ngozi_okafor_installation', 'ada_martinez_gradient_field'],
-            forSale: ['priya_sundaram_ghost_print', 'oliver_nazari_landscape'],
+            owned: [],
+            forSale: [],
             pastSales: [
                 { workId: 'early_asante_portrait', soldPrice: 12000, soldWeek: 3, buyer: 'philippe_noir' },
                 { workId: 'tanaka_digital_garden', soldPrice: 8500, soldWeek: 15, buyer: 'dr_eloise_park' },
@@ -276,7 +273,7 @@ export const CONTACTS = [
             financialStress: 0,
         },
         collection: {
-            owned: ['haring_radiant_baby', 'prince_nurse_painting'],
+            owned: [],
             forSale: [],
             pastSales: [],
             totalValue: 580000,
@@ -479,8 +476,8 @@ export const CONTACTS = [
             financialStress: 55,
         },
         collection: {
-            owned: ['yuki_tanaka_kyoto_study'],
-            forSale: ['yuki_tanaka_kyoto_study'],
+            owned: [],
+            forSale: [],
             pastSales: [],
             totalValue: 18000,
             maxCapacity: 5,
@@ -544,7 +541,7 @@ export const CONTACTS = [
             financialStress: 20,
         },
         collection: {
-            owned: ['kwame_asante_threshold'],
+            owned: [],
             forSale: [],
             pastSales: [
                 { workId: 'asante_migration_series', soldPrice: 38000, soldWeek: 6, buyer: 'elena_ross' },
@@ -615,7 +612,7 @@ export const CONTACTS = [
             financialStress: 0,
         },
         collection: {
-            owned: ['koons_balloon_dog_edition'],
+            owned: [],
             forSale: [],
             pastSales: [],
             totalValue: 480000,
@@ -680,7 +677,7 @@ export const CONTACTS = [
             financialStress: 0,
         },
         collection: {
-            owned: ['richter_abstract_901', 'basquiat_untitled_1982'],
+            owned: [],
             forSale: [],
             pastSales: [],
             totalValue: 12000000,
@@ -819,8 +816,8 @@ export const CONTACTS = [
             financialStress: 0,
         },
         collection: {
-            owned: ['ada_martinez_gradient_field'],
-            forSale: ['ada_martinez_gradient_field'],
+            owned: [],
+            forSale: [],
             pastSales: [],
             totalValue: 22000,
             maxCapacity: 200,
@@ -893,11 +890,8 @@ export const CONTACTS = [
 
         // ★ COLLECTION
         collection: {
-            owned: ['tomas_herrera_red_squares', 'jesse_kim_vessel_01',
-                'marco_vitale_first_light', 'javier_molina_diebenkorn_echo',
-                'chen_bai_scroll_strip'],
-            forSale: ['tomas_herrera_red_squares', 'marco_vitale_first_light',
-                'javier_molina_diebenkorn_echo', 'chen_bai_scroll_strip'],
+            owned: [],
+            forSale: [],
             pastSales: [
                 { workId: 'unknown_artist_batch_01', soldPrice: 850000, soldWeek: 18, buyer: 'victoria_sterling' },
                 { workId: 'unknown_artist_batch_02', soldPrice: 1200000, soldWeek: 18, buyer: 'philippe_noir' },
@@ -980,8 +974,8 @@ export const CONTACTS = [
 
         // ★ COLLECTION
         collection: {
-            owned: ['jesse_kim_vessel_01', 'priya_sundaram_ghost_print'],
-            forSale: ['jesse_kim_vessel_01', 'priya_sundaram_ghost_print'],
+            owned: [],
+            forSale: [],
             pastSales: [
                 { workId: 'estate_find_rothko_sketch', soldPrice: 35000, soldWeek: 5, buyer: 'marcus_price' },
             ],
@@ -1133,9 +1127,7 @@ export const CONTACTS = [
 
         // ★ COLLECTION
         collection: {
-            owned: ['basquiat_untitled_1982', 'haring_radiant_baby', 'richter_abstract_901',
-                'kwame_asante_threshold', 'elena_voss_berlin_series',
-                'liu_wei_architecture_03', 'ngozi_okafor_installation'],
+            owned: [],
             forSale: [],
             pastSales: [],
             totalValue: 4500000,

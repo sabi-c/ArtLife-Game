@@ -32,6 +32,7 @@ import { GameState } from '../managers/GameState.js';
 import { TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, HAGGLE_TYPES, TACTIC_DIALOGUE_CHOICES, DIALOGUE_EFFECTIVENESS, BATTLE_MENU_CATEGORIES, HAGGLE_ACHIEVEMENTS } from '../data/haggle_config.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
+import { clamp } from '../utils/math.js';
 
 export class HaggleScene extends BaseScene {
     constructor() {
@@ -379,8 +380,8 @@ export class HaggleScene extends BaseScene {
         this.gapBarBg.fillStyle(0x000000, 1).fillRect(width - 275, pPanelY + 28, 230, 10).lineStyle(1, 0x3a3a4e).strokeRect(width - 275, pPanelY + 28, 230, 10);
         this.gapBarFill = this.add.graphics();
 
-        this.gapText = this.add.text(width - 40, pPanelY + 27, '100%', {
-            fontFamily: '"Press Start 2P"', fontSize: '10px', color: '#c9a84c'
+        this.gapText = this.add.text(width - 40, pPanelY + 27, this.state.inquire ? '???' : '100%', {
+            fontFamily: '"Press Start 2P"', fontSize: '10px', color: this.state.inquire ? '#888888' : '#c9a84c'
         }).setOrigin(1, 0);
 
         // NERVE (AUD) bar
@@ -423,7 +424,7 @@ export class HaggleScene extends BaseScene {
 
         const asking = this.state.askingPrice || 1;
         const gapPercentRaw = this.state.gap / asking;
-        const gapPercent = Math.min(1, Math.max(0, gapPercentRaw));
+        const gapPercent = clamp(gapPercentRaw, 0, 1);
         const gapColor = gapPercent > 0.5 ? 0xc94040 : gapPercent > 0.1 ? 0xc9a84c : 0x3a8a5c;
 
         if (animate) {
@@ -435,7 +436,7 @@ export class HaggleScene extends BaseScene {
             // Use a dummy object to tween bar widths
             const barState = {
                 patW: this._lastPatW ?? targetPatW,
-                gapW: this._lastGapW ?? targetGapW,
+                gapW: this.state.inquire ? 0 : (this._lastGapW ?? targetGapW),
             };
 
             this.tweens.add({
@@ -450,8 +451,14 @@ export class HaggleScene extends BaseScene {
                     this.patBarFill.fillRect(120, 68, barState.patW, 10);
 
                     this.gapBarFill.clear();
-                    this.gapBarFill.fillStyle(gapColor, 1);
-                    this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, barState.gapW, 10);
+                    if (!this.state.inquire) {
+                        this.gapBarFill.fillStyle(gapColor, 1);
+                        this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, barState.gapW, 10);
+                    } else {
+                        // Draw a static "unknown" bar pattern
+                        this.gapBarFill.fillStyle(0x3a3a4e, 1);
+                        this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, 230, 10);
+                    }
                 },
                 onComplete: () => {
                     this._lastPatW = targetPatW;
@@ -466,14 +473,25 @@ export class HaggleScene extends BaseScene {
             this._lastPatW = 150 * patPercent;
 
             this.gapBarFill.clear();
-            this.gapBarFill.fillStyle(gapColor, 1);
             const pPanelY = this.scale.height - 250;
-            this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, 230 * gapPercent, 10);
-            this._lastGapW = 230 * gapPercent;
+            if (!this.state.inquire) {
+                this.gapBarFill.fillStyle(gapColor, 1);
+                this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, 230 * gapPercent, 10);
+                this._lastGapW = 230 * gapPercent;
+            } else {
+                this.gapBarFill.fillStyle(0x3a3a4e, 1);
+                this.gapBarFill.fillRect(this.scale.width - 275, pPanelY + 28, 230, 10);
+                this._lastGapW = 0;
+            }
         }
 
-        this.gapText.setText(`${Math.round(gapPercent * 100)}%`);
-        this.gapText.setColor(gapColor === 0xc94040 ? '#c94040' : gapColor === 0x3a8a5c ? '#3a8a5c' : '#c9a84c');
+        if (this.state.inquire) {
+            this.gapText.setText('???');
+            this.gapText.setColor('#888888');
+        } else {
+            this.gapText.setText(`${Math.round(gapPercent * 100)}%`);
+            this.gapText.setColor(gapColor === 0xc94040 ? '#c94040' : gapColor === 0x3a8a5c ? '#3a8a5c' : '#c9a84c');
+        }
     }
 
     drawInteractiveUI(width, height) {
@@ -1883,7 +1901,8 @@ export class HaggleScene extends BaseScene {
                     if (this.returnCallback) {
                         this.returnCallback(this.ui);
                     } else {
-                        const { dashboardScreen } = await import('../terminal/screens/dashboard.js');
+                        // Dynamic import via barrel to stay consistent with other lazy-loaders
+                        const { dashboardScreen } = await import('../terminal/screens/index.js');
                         this.ui.replaceScreen(dashboardScreen(this.ui));
                     }
                 }

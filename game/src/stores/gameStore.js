@@ -18,6 +18,7 @@
  */
 import { create } from 'zustand';
 import { subscribeWithSelector, persist } from 'zustand/middleware';
+import { clamp } from '../utils/math.js';
 import { immer } from 'zustand/middleware/immer';
 
 export const useGameStore = create(
@@ -64,13 +65,13 @@ export const useGameStore = create(
 
                 updateStat: (statName, amount) => set((state) => {
                     if (state.stats[statName] !== undefined) {
-                        state.stats[statName] = Math.max(0, Math.min(100, state.stats[statName] + amount));
+                        state.stats[statName] = clamp(state.stats[statName] + amount, 0, 100);
                     }
                 }),
 
                 updateAntiStat: (statName, amount) => set((state) => {
                     if (state.antiStats[statName] !== undefined) {
-                        state.antiStats[statName] = Math.max(0, Math.min(100, state.antiStats[statName] + amount));
+                        state.antiStats[statName] = clamp(state.antiStats[statName] + amount, 0, 100);
                     }
                 }),
 

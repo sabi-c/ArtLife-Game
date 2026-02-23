@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
 
         // Menu options
         const menuItems = [
-            { text: '[ NEW GAME ]', scene: 'CharacterSelectScene' },
+            { text: '[ NEW GAME ]', scene: null, disabled: true },
             { text: '[ CONTINUE ]', scene: null, disabled: true },
         ];
 

@@ -12,7 +12,8 @@ export const VIEW = {
     PHASER: 'PHASER',               // The raw game canvas (overworld, haggle, etc.)
     TERMINAL: 'TERMINAL',           // DOM terminal only (no React overlays, no canvas)
     DASHBOARD: 'DASHBOARD',         // The main Player Dashboard stats/ledger
-    SCENE_ENGINE: 'SCENE_ENGINE'    // The text-based event visual novel engine
+    SCENE_ENGINE: 'SCENE_ENGINE',   // The text-based event visual novel engine
+    CHARACTER_CREATOR: 'CHARACTER_CREATOR' // React-based character creation flow
 };
 
 /**

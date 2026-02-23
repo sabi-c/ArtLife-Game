@@ -19,6 +19,7 @@ import { useMarketStore } from '../stores/marketStore.js';
 import { checkSystemicTriggers } from '../engines/SystemicTriggers.js';
 import { useStorylineStore } from '../stores/storylineStore.js';
 import { MarketSimulator } from './MarketSimulator.js';
+import { ArtistProductionEngine } from './ArtistProductionEngine.js';
 import { ActivityLogger } from './ActivityLogger.js';
 
 export class WeekEngine {
@@ -71,6 +72,7 @@ export class WeekEngine {
         // ── Market Tick (artist heat, prices, new works) ──
         try {
             MarketManager.tick();
+            ArtistProductionEngine.tick(state.week);
             // Sync market state to Zustand store for persistence & UI
             const mStore = useMarketStore.getState();
             mStore.clearIntraWeekPrices(); // Reset intra-week sparkline data for new week

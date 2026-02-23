@@ -152,7 +152,9 @@ export class BootScene extends Phaser.Scene {
                 this.scene.launch('IntroScene', { ui });
             } else if (mode === 'charselect') {
                 // After login "New" selection: go straight to character builder
-                this.scene.launch('CharacterSelectScene', { ui });
+                import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
+                    GameEventBus.emit(GameEvents.UI_ROUTE, 'CHARACTER_CREATOR');
+                });
             } else {
                 // If loading a save, skip straight to Overworld/Menu.
                 this.scene.launch('OverworldScene', { ui });

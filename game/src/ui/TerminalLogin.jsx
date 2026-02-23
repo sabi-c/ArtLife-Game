@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { GameState } from '../managers/GameState.js';
 import { ProfileManager } from '../managers/ProfileManager.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
 
 // ─── Variable-speed typewriter hook ──────────────────────────────────────────
 const useTypewriter = (linesArray, active, onComplete) => {
@@ -132,6 +133,39 @@ export default function TerminalLogin({ onComplete, previewStep }) {
         GameState.seedDemoSave();
         setProfiles(ProfileManager.getProfiles());
     }, []);
+
+    const appTheme = SettingsManager.get('appTheme') || 'artnet';
+    const isArtnet = appTheme === 'artnet';
+
+    const theme = isArtnet ? {
+        bg: '#f8f9fa',
+        text: '#1a1a1a',
+        accent: '#c9a84c', // Keep the gold but on light mode
+        muted: '#6c757d',
+        border: '#dee2e6',
+        highlightBg: 'rgba(201,168,76,0.1)',
+        font: '"Inter", -apple-system, sans-serif',
+        titleFont: '"Playfair Display", serif',
+        titleShadow: 'none',
+        inputBg: '#ffffff',
+        boxBg: '#ffffff',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+        borderRadius: '4px'
+    } : {
+        bg: '#060608',
+        text: '#eaeaea',
+        accent: '#c9a84c',
+        muted: '#5a5a6a',
+        border: '#2a2a3a',
+        highlightBg: 'rgba(201,168,76,0.05)',
+        font: '"IBM Plex Mono", "Courier New", monospace',
+        titleFont: '"IBM Plex Mono", "Courier New", monospace',
+        titleShadow: '0 0 10px rgba(201,168,76,0.3)',
+        inputBg: 'transparent',
+        boxBg: 'transparent',
+        boxShadow: 'none',
+        borderRadius: '0px'
+    };
 
     // Load dossiers when active profile changes or step changes to PRIMARY_MENU
     useEffect(() => {
@@ -422,7 +456,8 @@ export default function TerminalLogin({ onComplete, previewStep }) {
             }}
             style={{
                 zIndex: 100000,
-                background: '#060608',
+                background: theme.bg,
+                color: theme.text,
                 transition: 'opacity 0.5s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 overflowY: 'auto', padding: '40px 20px',
@@ -430,15 +465,15 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                 boxSizing: 'border-box'
             }}
         >
-            <div style={{ width: '100%', maxWidth: 700, fontFamily: '"IBM Plex Mono", "Courier New", monospace' }}>
+            <div style={{ width: '100%', maxWidth: 700, fontFamily: theme.font }}>
 
                 {/* ── HEADER ── */}
                 <div style={{ marginBottom: 40, textAlign: 'center' }}>
-                    <h1 style={{ color: '#c9a84c', fontSize: '32px', letterSpacing: '4px', margin: 0, textShadow: '0 0 10px rgba(201,168,76,0.3)' }}>
+                    <h1 style={{ color: theme.accent, fontSize: '32px', letterSpacing: '4px', margin: 0, textShadow: theme.titleShadow, fontFamily: theme.titleFont }}>
                         ARTLIFE
                     </h1>
                     <div style={{
-                        color: '#5a5a6a', letterSpacing: '2px', borderBottom: '1px dashed #2a2a3a',
+                        color: theme.muted, letterSpacing: '2px', borderBottom: `1px dashed ${theme.border}`,
                         paddingBottom: '15px', marginTop: '10px', fontSize: 13
                     }}>
                         SECURE TERMINAL // V{typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.3.0'}-{typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'dev'} // SYSTEM READY
@@ -460,13 +495,17 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── PROFILE MENU (after boot) ── */}
                 {step === 'PROFILE_MENU' && (
-                    <div style={{ paddingLeft: '10%', paddingRight: '10%', animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
-                        <div style={{ color: '#eaeaea', fontSize: 12, letterSpacing: 1, marginBottom: 15 }}>&gt; AGENT REGISTRY</div>
+                    <div style={{ padding: isArtnet ? '20px' : '0 10%', background: isArtnet ? theme.boxBg : 'transparent', borderRadius: theme.borderRadius, boxShadow: theme.boxShadow, animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
+                        <div style={{ color: theme.text, fontSize: 12, letterSpacing: 1, marginBottom: 15, fontWeight: isArtnet ? 'bold' : 'normal' }}>&gt; AGENT REGISTRY</div>
 
                         {hasExistingProfiles && (
                             <div
                                 onClick={() => { WebAudioService.select(); setProfileMenuIndex(0); handleProfileMenuSelect(0, true); }}
-                                style={optStyle(profileMenuIndex === 0, false)}
+                                style={{
+                                    ...optStyle(profileMenuIndex === 0, false),
+                                    background: profileMenuIndex === 0 ? theme.highlightBg : 'transparent',
+                                    color: profileMenuIndex === 0 ? theme.accent : theme.text
+                                }}
                             >
                                 <span style={{ width: 20 }}>{profileMenuIndex === 0 ? '>' : ' '}</span> [1] EXISTING AGENT — log in
                             </div>
@@ -478,7 +517,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                 setProfileMenuIndex(idx);
                                 handleProfileMenuSelect(idx, hasExistingProfiles);
                             }}
-                            style={optStyle(profileMenuIndex === (hasExistingProfiles ? 1 : 0), false)}
+                            style={{
+                                ...optStyle(profileMenuIndex === (hasExistingProfiles ? 1 : 0), false),
+                                background: profileMenuIndex === (hasExistingProfiles ? 1 : 0) ? theme.highlightBg : 'transparent',
+                                color: profileMenuIndex === (hasExistingProfiles ? 1 : 0) ? theme.accent : theme.text
+                            }}
                         >
                             <span style={{ width: 20 }}>{profileMenuIndex === (hasExistingProfiles ? 1 : 0) ? '>' : ' '}</span> [{hasExistingProfiles ? '2' : '1'}] NEW AGENT — create profile
                         </div>
@@ -489,7 +532,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                 setProfileMenuIndex(idx);
                                 handleProfileMenuSelect(idx, hasExistingProfiles);
                             }}
-                            style={optStyle(profileMenuIndex === (hasExistingProfiles ? 2 : 1), false)}
+                            style={{
+                                ...optStyle(profileMenuIndex === (hasExistingProfiles ? 2 : 1), false),
+                                background: profileMenuIndex === (hasExistingProfiles ? 2 : 1) ? theme.highlightBg : 'transparent',
+                                color: profileMenuIndex === (hasExistingProfiles ? 2 : 1) ? theme.accent : theme.text
+                            }}
                         >
                             <span style={{ width: 20 }}>{profileMenuIndex === (hasExistingProfiles ? 2 : 1) ? '>' : ' '}</span> [{hasExistingProfiles ? '3' : '2'}] GUEST ACCESS — no password
                         </div>
@@ -500,7 +547,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                 setProfileMenuIndex(idx);
                                 handleProfileMenuSelect(idx, hasExistingProfiles);
                             }}
-                            style={optStyle(profileMenuIndex === (hasExistingProfiles ? 3 : 2), false)}
+                            style={{
+                                ...optStyle(profileMenuIndex === (hasExistingProfiles ? 3 : 2), false),
+                                background: profileMenuIndex === (hasExistingProfiles ? 3 : 2) ? theme.highlightBg : 'transparent',
+                                color: profileMenuIndex === (hasExistingProfiles ? 3 : 2) ? theme.accent : theme.text
+                            }}
                         >
                             <span style={{ width: 20 }}>{profileMenuIndex === (hasExistingProfiles ? 3 : 2) ? '>' : ' '}</span> [{hasExistingProfiles ? '4' : '3'}] DEV MODE — Content Studio
                         </div>
@@ -509,14 +560,15 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── PROFILE CREATE ── */}
                 {step === 'PROFILE_CREATE' && (
-                    <div style={{ paddingLeft: '10%', paddingRight: '10%', animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
-                        <div style={{ color: '#eaeaea', fontSize: 12, letterSpacing: 1, marginBottom: 20 }}>&gt; CREATE NEW AGENT PROFILE</div>
+                    <div style={{ padding: isArtnet ? '30px' : '0 10%', background: isArtnet ? theme.boxBg : 'transparent', borderRadius: theme.borderRadius, boxShadow: theme.boxShadow, animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
+                        <div style={{ color: theme.text, fontSize: 13, letterSpacing: 1, marginBottom: 20, fontWeight: isArtnet ? 'bold' : 'normal' }}>&gt; CREATE NEW AGENT PROFILE</div>
 
                         <div style={{ marginBottom: 16 }}>
-                            <label style={{ color: '#5a5a6a', fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>USERNAME</label>
+                            <label style={{ color: theme.muted, fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>USERNAME</label>
                             <input
                                 ref={usernameRef}
                                 className="tl-input"
+                                style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, padding: '10px', width: '100%', boxSizing: 'border-box', fontFamily: theme.font }}
                                 type="text"
                                 value={formUsername}
                                 onChange={e => setFormUsername(e.target.value)}
@@ -526,10 +578,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                             />
                         </div>
                         <div style={{ marginBottom: 16 }}>
-                            <label style={{ color: '#5a5a6a', fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>SET PASSCODE</label>
+                            <label style={{ color: theme.muted, fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>SET PASSCODE</label>
                             <input
                                 ref={passwordRef}
                                 className="tl-input"
+                                style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, padding: '10px', width: '100%', boxSizing: 'border-box', fontFamily: theme.font }}
                                 type="password"
                                 value={formPassword}
                                 onChange={e => setFormPassword(e.target.value)}
@@ -537,10 +590,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                             />
                         </div>
                         <div style={{ marginBottom: 16 }}>
-                            <label style={{ color: '#5a5a6a', fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>CONFIRM PASSCODE</label>
+                            <label style={{ color: theme.muted, fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>CONFIRM PASSCODE</label>
                             <input
                                 ref={confirmRef}
                                 className="tl-input"
+                                style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, padding: '10px', width: '100%', boxSizing: 'border-box', fontFamily: theme.font }}
                                 type="password"
                                 value={formConfirm}
                                 onChange={e => setFormConfirm(e.target.value)}
@@ -548,28 +602,28 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                             />
                         </div>
 
-                        {formError && <div className="tl-error">{formError}</div>}
+                        {formError && <div className="tl-error" style={{ color: '#d9534f', marginTop: 10 }}>{formError}</div>}
 
                         <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
                             <div
                                 onClick={handleCreateProfile}
                                 style={{
-                                    color: '#000', background: '#c9a84c',
-                                    padding: '10px 20px', border: '1px solid #c9a84c',
-                                    cursor: 'pointer', touchAction: 'manipulation',
-                                    WebkitTapHighlightColor: 'transparent', minHeight: 44,
-                                    display: 'flex', alignItems: 'center', fontSize: 13, fontFamily: 'inherit',
+                                    color: isArtnet ? '#fff' : '#000', background: isArtnet ? '#111' : theme.accent,
+                                    padding: '10px 20px', border: `1px solid ${isArtnet ? '#111' : theme.accent}`,
+                                    cursor: 'pointer', touchAction: 'manipulation', flex: 1, textAlign: 'center',
+                                    WebkitTapHighlightColor: 'transparent', minHeight: 44, borderRadius: theme.borderRadius,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontFamily: 'inherit',
                                 }}>
                                 [CREATE]
                             </div>
                             <div
                                 onClick={() => { setStep('PROFILE_MENU'); setFormError(''); }}
                                 style={{
-                                    color: '#888', background: 'transparent',
-                                    padding: '10px 20px', border: '1px solid #555',
+                                    color: theme.muted, background: 'transparent', flex: 1, textAlign: 'center',
+                                    padding: '10px 20px', border: `1px solid ${theme.border}`, borderRadius: theme.borderRadius,
                                     cursor: 'pointer', touchAction: 'manipulation',
                                     WebkitTapHighlightColor: 'transparent', minHeight: 44,
-                                    display: 'flex', alignItems: 'center', fontSize: 13, fontFamily: 'inherit',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontFamily: 'inherit',
                                 }}>
                                 [BACK]
                             </div>
@@ -579,21 +633,21 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── PROFILE LOGIN ── */}
                 {step === 'PROFILE_LOGIN' && (
-                    <div style={{ paddingLeft: '10%', paddingRight: '10%', animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
-                        <div style={{ color: '#eaeaea', fontSize: 12, letterSpacing: 1, marginBottom: 20 }}>&gt; AUTHENTICATE AGENT</div>
+                    <div style={{ padding: isArtnet ? '30px' : '0 10%', background: isArtnet ? theme.boxBg : 'transparent', borderRadius: theme.borderRadius, boxShadow: theme.boxShadow, animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
+                        <div style={{ color: theme.text, fontSize: 13, letterSpacing: 1, marginBottom: 20, fontWeight: isArtnet ? 'bold' : 'normal' }}>&gt; AUTHENTICATE AGENT</div>
 
                         <div style={{ marginBottom: 16 }}>
-                            <label style={{ color: '#5a5a6a', fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 8 }}>SELECT AGENT</label>
+                            <label style={{ color: theme.muted, fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 8 }}>SELECT AGENT</label>
                             {nonGuestProfiles.map((p, i) => (
                                 <div
                                     key={p.id}
                                     onClick={() => { setProfileLoginIndex(i); WebAudioService.hover(); }}
                                     style={{
-                                        color: profileLoginIndex === i ? '#c9a84c' : '#888',
-                                        background: profileLoginIndex === i ? 'rgba(201,168,76,0.05)' : 'transparent',
-                                        padding: '10px 12px', fontSize: 13, cursor: 'pointer',
-                                        touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
-                                        minHeight: 44, display: 'flex', alignItems: 'center',
+                                        color: profileLoginIndex === i ? theme.accent : theme.muted,
+                                        background: profileLoginIndex === i ? theme.highlightBg : 'transparent',
+                                        padding: '10px 12px', fontSize: 13, cursor: 'pointer', borderRadius: theme.borderRadius,
+                                        touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', border: isArtnet ? `1px solid ${profileLoginIndex === i ? theme.accent : theme.border}` : 'none',
+                                        minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 8
                                     }}
                                 >
                                     <span style={{ width: 20 }}>{profileLoginIndex === i ? '>' : ' '}</span>
@@ -603,10 +657,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                         </div>
 
                         <div style={{ marginBottom: 16 }}>
-                            <label style={{ color: '#5a5a6a', fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>PASSCODE</label>
+                            <label style={{ color: theme.muted, fontSize: 11, letterSpacing: 1, display: 'block', marginBottom: 4 }}>PASSCODE</label>
                             <input
                                 ref={loginPasswordRef}
                                 className="tl-input"
+                                style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, padding: '10px', width: '100%', boxSizing: 'border-box', fontFamily: theme.font }}
                                 type="password"
                                 value={loginPassword}
                                 onChange={e => setLoginPassword(e.target.value)}
@@ -614,28 +669,28 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                             />
                         </div>
 
-                        {loginError && <div className="tl-error">{loginError}</div>}
+                        {loginError && <div className="tl-error" style={{ color: '#d9534f', marginTop: 10 }}>{loginError}</div>}
 
                         <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
                             <div
                                 onClick={handleLogin}
                                 style={{
-                                    color: '#000', background: '#c9a84c',
-                                    padding: '10px 20px', border: '1px solid #c9a84c',
+                                    color: isArtnet ? '#fff' : '#000', background: isArtnet ? '#111' : theme.accent, flex: 1, textAlign: 'center',
+                                    padding: '10px 20px', border: `1px solid ${isArtnet ? '#111' : theme.accent}`, borderRadius: theme.borderRadius,
                                     cursor: 'pointer', touchAction: 'manipulation',
                                     WebkitTapHighlightColor: 'transparent', minHeight: 44,
-                                    display: 'flex', alignItems: 'center', fontSize: 13, fontFamily: 'inherit',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontFamily: 'inherit',
                                 }}>
                                 [AUTHORIZE]
                             </div>
                             <div
                                 onClick={() => { setStep('PROFILE_MENU'); setLoginError(''); }}
                                 style={{
-                                    color: '#888', background: 'transparent',
-                                    padding: '10px 20px', border: '1px solid #555',
+                                    color: theme.muted, background: 'transparent', flex: 1, textAlign: 'center',
+                                    padding: '10px 20px', border: `1px solid ${theme.border}`, borderRadius: theme.borderRadius,
                                     cursor: 'pointer', touchAction: 'manipulation',
                                     WebkitTapHighlightColor: 'transparent', minHeight: 44,
-                                    display: 'flex', alignItems: 'center', fontSize: 13, fontFamily: 'inherit',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontFamily: 'inherit',
                                 }}>
                                 [BACK]
                             </div>
@@ -645,12 +700,12 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── PRIMARY MENU ── */}
                 {(step === 'PRIMARY_MENU' || step === 'DOSSIER_SELECT' || step === 'CONFIRM' || (step === 'AUTH')) && step !== 'PROFILE_MENU' && step !== 'PROFILE_CREATE' && step !== 'PROFILE_LOGIN' && step !== 'BOOT' && (
-                    <div style={{ paddingLeft: '10%', paddingRight: '10%', animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
+                    <div style={{ padding: isArtnet ? '20px' : '0 10%', background: isArtnet ? theme.boxBg : 'transparent', borderRadius: theme.borderRadius, boxShadow: theme.boxShadow, animation: 'fadeIn 0.3s ease forwards', marginBottom: 30 }}>
                         {/* Show active profile */}
                         {(() => {
                             const ap = ProfileManager.getActiveProfile();
                             return ap ? (
-                                <div style={{ color: '#5a5a6a', fontSize: 11, letterSpacing: 1, marginBottom: 12 }}>
+                                <div style={{ color: theme.muted, fontSize: 11, letterSpacing: 1, marginBottom: 12 }}>
                                     AGENT: {ap.username.toUpperCase()}{ap.isGuest ? ' (GUEST)' : ''}
                                 </div>
                             ) : null;
@@ -666,7 +721,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                         setStep('AUTH');
                                         setTimeout(() => onComplete({ action: 'new' }), 500);
                                     }}
-                                    style={optStyle(primaryIndex === 0, false)}
+                                    style={{
+                                        ...optStyle(primaryIndex === 0, false),
+                                        background: primaryIndex === 0 ? theme.highlightBg : 'transparent',
+                                        color: primaryIndex === 0 ? theme.accent : theme.text
+                                    }}
                                 >
                                     <span style={{ width: 20 }}>{primaryIndex === 0 ? '>' : ' '}</span> [1] SUBMIT NEW APPLICATION
                                 </div>
@@ -678,7 +737,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                         setStep('DOSSIER_SELECT');
                                         setDossierIndex(0);
                                     }}
-                                    style={optStyle(primaryIndex === 1, false)}
+                                    style={{
+                                        ...optStyle(primaryIndex === 1, false),
+                                        background: primaryIndex === 1 ? theme.highlightBg : 'transparent',
+                                        color: primaryIndex === 1 ? theme.accent : theme.text
+                                    }}
                                 >
                                     <span style={{ width: 20 }}>{primaryIndex === 1 ? '>' : ' '}</span> [2] AUTHORIZE DOSSIER
                                 </div>
@@ -689,14 +752,14 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── DOSSIER SELECT ── */}
                 {(step === 'DOSSIER_SELECT' || step === 'CONFIRM' || (step === 'AUTH' && selectedDossier)) && (
-                    <div style={{ paddingRight: '10%', animation: 'fadeIn 0.3s ease forwards', borderLeft: '2px dashed #2a2a3a', marginLeft: '10%', paddingLeft: '15px', marginBottom: 30 }}>
-                        <div style={{ color: '#eaeaea', fontSize: 12, letterSpacing: 1, marginBottom: 15 }}>&gt; FOUND_CACHE_LOGS:</div>
+                    <div style={{ padding: isArtnet ? '20px' : '0 10%', background: isArtnet ? theme.boxBg : 'transparent', borderRadius: theme.borderRadius, boxShadow: theme.boxShadow, animation: 'fadeIn 0.3s ease forwards', borderLeft: isArtnet ? 'none' : `2px dashed ${theme.border}`, marginLeft: isArtnet ? 0 : '10%', paddingLeft: isArtnet ? '20px' : '15px', marginBottom: 30 }}>
+                        <div style={{ color: theme.text, fontSize: 13, letterSpacing: 1, marginBottom: 15, fontWeight: isArtnet ? 'bold' : 'normal' }}>&gt; FOUND_CACHE_LOGS:</div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                             {dossiers.length === 0 && (
-                                <div style={{ color: '#555', fontSize: 12, padding: '12px 12px', fontStyle: 'italic' }}>
+                                <div style={{ color: theme.muted, fontSize: 12, padding: '12px 12px', fontStyle: 'italic' }}>
                                     NO SAVED DOSSIERS FOUND<br />
-                                    <span style={{ fontSize: 11, color: '#3a3a4a' }}>Submit a new application to begin, or import sync data below.</span>
+                                    <span style={{ fontSize: 11, color: theme.muted }}>Submit a new application to begin, or import sync data below.</span>
                                 </div>
                             )}
                             {dossiers.map((d, index) => {
@@ -713,34 +776,34 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                             setStep('CONFIRM');
                                         }}
                                         style={{
-                                            color: isTarget ? '#c9a84c' : '#888',
-                                            background: isTarget ? 'rgba(201,168,76,0.05)' : 'transparent',
+                                            color: isTarget ? theme.accent : theme.muted,
+                                            background: isTarget ? theme.highlightBg : 'transparent',
                                             padding: '12px 12px',
                                             fontSize: 13,
                                             display: 'flex', alignItems: 'center',
-                                            cursor: 'pointer',
-                                            touchAction: 'manipulation',
+                                            cursor: 'pointer', borderRadius: theme.borderRadius,
+                                            touchAction: 'manipulation', border: isArtnet ? `1px solid ${isTarget ? theme.accent : 'transparent'}` : 'none',
                                             WebkitTapHighlightColor: 'transparent',
                                             minHeight: 44
                                         }}
                                     >
                                         <span style={{ width: 20 }}>{isTarget ? '>' : ' '}</span>
                                         <span style={{ flex: 1 }}>[{index + 1}] {d.playerName?.toUpperCase() || 'UNKNOWN'}</span>
-                                        <span style={{ fontSize: 11, color: isTarget ? '#88bbdd' : '#555' }}>{d.city?.toUpperCase()} · {fmt$(d.cash)}</span>
+                                        <span style={{ fontSize: 11, color: isTarget ? (isArtnet ? theme.accent : '#88bbdd') : theme.muted }}>{d.city?.toUpperCase()} · {fmt$(d.cash)}</span>
                                     </div>
                                 )
                             })}
 
                             <div
                                 onClick={() => { if (step === 'DOSSIER_SELECT') fileInputRef.current?.click(); }}
-                                style={{ color: dossierIndex === dossiers.length ? '#eaeaea' : '#555', padding: '12px 12px', fontSize: 13, display: 'flex', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', minHeight: 44, alignItems: 'center' }}
+                                style={{ color: dossierIndex === dossiers.length ? theme.text : theme.muted, padding: '12px 12px', fontSize: 13, display: 'flex', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', minHeight: 44, alignItems: 'center' }}
                             >
                                 <span style={{ width: 20 }}>{dossierIndex === dossiers.length ? '>' : ' '}</span>
                                 <span style={{ textDecoration: 'underline' }}>[+] IMPORT SYNC DATA</span>
                             </div>
                             <div
                                 onClick={() => { if (step === 'DOSSIER_SELECT') { WebAudioService.select(); setStep('PRIMARY_MENU'); } }}
-                                style={{ color: dossierIndex === dossiers.length + 1 ? '#eaeaea' : '#555', padding: '12px 12px', fontSize: 13, display: 'flex', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', minHeight: 44, alignItems: 'center' }}
+                                style={{ color: dossierIndex === dossiers.length + 1 ? theme.text : theme.muted, padding: '12px 12px', fontSize: 13, display: 'flex', cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent', minHeight: 44, alignItems: 'center' }}
                             >
                                 <span style={{ width: 20 }}>{dossierIndex === dossiers.length + 1 ? '>' : ' '}</span>
                                 [ESC] BACK
@@ -751,11 +814,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── CONFIRM PHASE ── */}
                 {(step === 'CONFIRM' || (step === 'AUTH' && selectedDossier)) && selectedDossier && (
-                    <div style={{ paddingLeft: '10%', paddingRight: '10%', animation: 'fadeIn 0.2s ease forwards', marginBottom: 40 }}>
-                        <div style={{ color: '#eaeaea', fontSize: 12, letterSpacing: 1, marginBottom: 15 }}>
+                    <div style={{ padding: isArtnet ? '30px' : '0 10%', background: isArtnet ? theme.boxBg : 'transparent', borderRadius: theme.borderRadius, boxShadow: theme.boxShadow, animation: 'fadeIn 0.2s ease forwards', marginBottom: 40 }}>
+                        <div style={{ color: theme.text, fontSize: 13, letterSpacing: 1, marginBottom: 15, fontWeight: isArtnet ? 'bold' : 'normal' }}>
                             &gt; VERIFY PARAMETERS FOR [{selectedDossier.playerName?.toUpperCase()}]
                         </div>
-                        <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
+                        <div style={{ display: 'flex', gap: 20, fontSize: 13, marginTop: 20 }}>
                             <div
                                 onClick={() => {
                                     if (step !== 'CONFIRM') return;
@@ -767,12 +830,12 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                     }
                                 }}
                                 style={{
-                                    color: confirmIndex === 0 ? '#000' : '#c9a84c',
-                                    background: confirmIndex === 0 ? '#c9a84c' : 'transparent',
-                                    padding: '10px 20px', border: '1px solid #c9a84c',
-                                    cursor: 'pointer', touchAction: 'manipulation',
+                                    color: confirmIndex === 0 ? (isArtnet ? '#fff' : '#000') : theme.accent,
+                                    background: confirmIndex === 0 ? (isArtnet ? '#111' : theme.accent) : 'transparent',
+                                    padding: '10px 20px', border: `1px solid ${confirmIndex === 0 ? (isArtnet ? '#111' : theme.accent) : theme.accent}`, borderRadius: theme.borderRadius,
+                                    cursor: 'pointer', touchAction: 'manipulation', flex: 1, textAlign: 'center',
                                     WebkitTapHighlightColor: 'transparent', minHeight: 44,
-                                    display: 'flex', alignItems: 'center'
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
                                 [AUTHORIZE]
                             </div>
@@ -784,12 +847,12 @@ export default function TerminalLogin({ onComplete, previewStep }) {
                                     setSelectedDossier(null);
                                 }}
                                 style={{
-                                    color: confirmIndex === 1 ? '#eaeaea' : '#555',
-                                    background: confirmIndex === 1 ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                    padding: '10px 20px', border: '1px solid #555',
-                                    cursor: 'pointer', touchAction: 'manipulation',
+                                    color: confirmIndex === 1 ? theme.text : theme.muted,
+                                    background: confirmIndex === 1 ? (isArtnet ? '#f0f0f0' : 'rgba(255,255,255,0.1)') : 'transparent',
+                                    padding: '10px 20px', border: `1px solid ${theme.border}`, borderRadius: theme.borderRadius,
+                                    cursor: 'pointer', touchAction: 'manipulation', flex: 1, textAlign: 'center',
                                     WebkitTapHighlightColor: 'transparent', minHeight: 44,
-                                    display: 'flex', alignItems: 'center'
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}>
                                 [ABORT]
                             </div>
@@ -799,11 +862,11 @@ export default function TerminalLogin({ onComplete, previewStep }) {
 
                 {/* ── AUTH ANIMATION PHASE ── */}
                 {step === 'AUTH' && (
-                    <div style={{ animation: 'fadeIn 0.2s ease forwards', borderTop: '1px dashed #2a2a3a', paddingLeft: '10%', paddingRight: '10%', paddingTop: 30 }}>
+                    <div style={{ animation: 'fadeIn 0.2s ease forwards', borderTop: `1px dashed ${theme.border}`, paddingLeft: '10%', paddingRight: '10%', paddingTop: 30 }}>
                         {authTypewriter.displayedText.map((line, idx) => (
-                            <div key={idx} style={{ fontSize: 13, marginBottom: 8, color: line.includes('[ OK ]') ? '#3a8a5c' : '#c8c8d8' }}>
+                            <div key={idx} style={{ fontSize: 13, marginBottom: 8, color: line.includes('[ OK ]') ? (isArtnet ? '#1a6b3c' : '#3a8a5c') : theme.muted }}>
                                 {line.replace('[ OK ]', '')}
-                                <span style={{ color: '#3a8a5c' }}>{line.includes('[ OK ]') ? '[ OK ]' : ''}</span>
+                                <span style={{ color: isArtnet ? '#1a6b3c' : '#3a8a5c' }}>{line.includes('[ OK ]') ? '[ OK ]' : ''}</span>
                                 {idx === authTypewriter.displayedText.length - 1 && !authTypewriter.isDone && (
                                     <span className="blinking-cursor" style={{ marginLeft: 4 }}>_</span>
                                 )}

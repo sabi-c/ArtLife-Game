@@ -15,6 +15,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GameState } from '../managers/GameState.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
 
 /**
  * Render email body text with {{playerName}} interpolation and **bold** markdown.
@@ -73,6 +74,9 @@ export default function EmailDialogueOverlay({ event, onComplete }) {
     const [selectedChoice, setSelectedChoice] = useState(null);
     const [outcomeText, setOutcomeText] = useState(null);
     const threadRef = useRef(null);
+
+    const appTheme = SettingsManager.get('appTheme') || 'artnet';
+    const themeClass = appTheme === 'retro' ? ' theme-retro' : '';
 
     const steps = event?.steps || [];
     const step = steps[stepIndex];
@@ -217,7 +221,7 @@ export default function EmailDialogueOverlay({ event, onComplete }) {
     };
 
     return (
-        <div className="an-email-overlay">
+        <div className={`an-email-overlay${themeClass}`}>
             <div className="an-email-modal">
                 {/* Header bar */}
                 <div className="an-email-header">
