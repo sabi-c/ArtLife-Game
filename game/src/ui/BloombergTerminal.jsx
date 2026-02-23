@@ -2173,6 +2173,7 @@ export default function BloombergTerminal({ onClose }) {
                     <button className="bb-style-toggle" onClick={toggleMarketStyle}
                         title={`${SettingsManager.getDisplayString('marketStyle')} — click to cycle`}>
                         {isTearsheet ? '◉' : isGallery ? '◐' : isArtnet ? '◆' : isSothebys ? '◈' : isDeitch ? '◎' : '◑'}
+                        <span className="bb-style-label">{SettingsManager.getDisplayString('marketStyle')}</span>
                     </button>
                     <PanelConfigDropdown
                         visiblePanels={visiblePanels}
