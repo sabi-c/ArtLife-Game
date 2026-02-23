@@ -773,6 +773,11 @@ export default function AdminDashboard({ onClose }) {
                                         [ Gmail Design Guide ]
                                         <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Full Gmail email client mockup — inbox, threads, compose</div>
                                     </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#34c759', color: '#34c759' }} onClick={() => triggerOverlay(OVERLAY.IMESSAGE_UI)}>
+                                        [ iMessage UI ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Apple iMessage chat — contacts, bubbles, typing indicator</div>
+                                    </button>
                                 </div>
                             </div>
                         )}

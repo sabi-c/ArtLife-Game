@@ -1135,6 +1135,67 @@
     border-top: 1px solid #edeff1;
 }
 
+/* ── AI Reply Badge ── */
+.gmail-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.gmail-ai-badge--thinking {
+    background: linear-gradient(90deg, #e8f0fe 0%, #d2e3fc 50%, #e8f0fe 100%);
+    background-size: 200% 100%;
+    color: #1967d2;
+    animation: gmail-ai-shimmer 1.5s infinite ease-in-out;
+}
+
+.gmail-ai-badge--typing {
+    background: #e8f0fe;
+    color: #1a73e8;
+    animation: gmail-ai-pulse 0.6s infinite alternate;
+}
+
+.gmail-ai-badge--done {
+    background: #e6f4ea;
+    color: #137333;
+}
+
+@keyframes gmail-ai-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes gmail-ai-pulse {
+    from {
+        opacity: 0.7;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Smart reply sparkle hover */
+.gmail-smart-reply {
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.gmail-smart-reply:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.2);
+}
+
 .gmail-send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
