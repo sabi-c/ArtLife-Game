@@ -58,6 +58,8 @@ import { TerminalAPI } from '../terminal/TerminalAPI.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 import { useCmsStore } from '../stores/cmsStore.js';
 import { useNPCStore } from '../stores/npcStore.js';
+import { CITY_DATA } from '../data/cities.js';
+import { WORLD_LOCATIONS } from '../data/world_locations.js';
 import './BloombergTerminal.css';
 
 // ── Intel-gated data masking ──
@@ -1772,6 +1774,245 @@ function ArtistDetailCard({ artist, intel, items, feed, onClose }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// 15C. ArtnetLotDetail — Artnet-styled inline artwork detail
+//
+// Opens below clicked row in the Artnet view. Matches artnet.com
+// lot result page: clean white bg, red accents, Helvetica Neue,
+// data-dense metadata, provenance, market data, price history,
+// and action buttons. Intel-gated progressive disclosure.
+// ══════════════════════════════════════════════════════════════
+function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }) {
+    if (!work) return null;
+
+    const s = GameState.state;
+    const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+    const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || work.artistId));
+    const artistName = artwork.artist || artist?.name || 'Unknown Artist';
+    const title = artwork.title || work.title || 'Untitled';
+    const medium = artwork.medium || work.medium || 'Mixed Media';
+    const year = artwork.yearCreated || artwork.year || work.yearCreated || '';
+    const dimensions = artwork.dimensions || '';
+    const description = artwork.description || '';
+    const imageUrl = artwork.imageUrl || artwork.image || null;
+    const price = work.currentVal || work.price || work.askingPrice || 0;
+    const purchasePrice = work.purchasePrice || work.basePrice || 0;
+    const genre = artwork.genre || '';
+    const tier = artist?.tier || artwork.tier || 'mid_career';
+    const heat = artist?.heat || 0;
+    const trend = heat > 60 ? 'RISING' : heat < 30 ? 'FALLING' : 'STABLE';
+    const trendColor = { RISING: '#2a6e2a', FALLING: '#cc0000', STABLE: '#666' };
+    const tierLabels = { 'blue-chip': 'BLUE CHIP', hot: 'HOT', 'mid-career': 'MID-CAREER', emerging: 'EMERGING', speculative: 'SPECULATIVE' };
+
+    // Provenance
+    const provChain = artwork.provenanceChain || [];
+    const provString = typeof artwork.provenance === 'string' ? artwork.provenance : '';
+    const runtimeProv = Array.isArray(work.provenance) ? work.provenance : [];
+
+    // Trade history for this artwork
+    const tradeLog = MarketSimulator.getTradesByArtwork?.(work.id) || [];
+
+    // Sparkline data
+    const sparkData = feed?.liveSparklines?.[artist?.id] || [];
+
+    // ROI calc
+    const roi = purchasePrice > 0 ? ((price - purchasePrice) / purchasePrice * 100).toFixed(1) : null;
+
+    // Lifespan
+    const born = artwork.artistBorn || artist?.born;
+    const died = artwork.artistDied || artist?.died;
+    const lifespan = born ? (died ? `${born}–${died}` : `b. ${born}`) : '';
+
+    // Watchlist
+    const isWatched = TerminalAPI.watchlist.isWatched(work.id);
+    const toggleWatch = () => {
+        if (isWatched) TerminalAPI.watchlist.remove(work.id);
+        else TerminalAPI.watchlist.add('artwork', work.id, price);
+    };
+
+    // Market value for listing
+    let marketValue = 0;
+    try { marketValue = MarketManager.calculatePrice(work, false); }
+    catch { marketValue = price; }
+
+    return (
+        <div className="an-lot-detail">
+            {/* Red accent bar */}
+            <div className="an-ld-accent" />
+
+            <div className="an-ld-content">
+                {/* Left: Image + quick actions */}
+                <div className="an-ld-left">
+                    {imageUrl ? (
+                        <img className="an-ld-image" src={imageUrl} alt={title} />
+                    ) : (
+                        <div className="an-ld-image-placeholder">
+                            <span className="an-ld-image-text">{title}</span>
+                        </div>
+                    )}
+                    <div className="an-ld-quick-actions">
+                        <button className="an-ld-watch" onClick={toggleWatch}>
+                            {isWatched ? '★ Watching' : '☆ Watch'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Center: Metadata */}
+                <div className="an-ld-center">
+                    <div className="an-ld-artist-line">
+                        <span className="an-ld-artist">{artistName}</span>
+                        {lifespan && <span className="an-ld-lifespan">{lifespan}</span>}
+                    </div>
+                    <div className="an-ld-title">
+                        <em>{title}</em>{year ? `, ${year}` : ''}
+                    </div>
+                    <div className="an-ld-medium">{medium}</div>
+                    {dimensions && <div className="an-ld-dimensions">{dimensions}</div>}
+                    {genre && <div className="an-ld-genre">{genre}</div>}
+                    {description && intel >= 40 && (
+                        <div className="an-ld-description">{description}</div>
+                    )}
+
+                    {/* Market tags */}
+                    <div className="an-ld-tags">
+                        <span className="an-ld-tag an-ld-tag-tier">{tierLabels[tier] || tier.toUpperCase()}</span>
+                        <span className="an-ld-tag" style={{ color: trendColor[trend] }}>{trend}</span>
+                        {work._owned && <span className="an-ld-tag an-ld-tag-owned">IN COLLECTION</span>}
+                        {work._isMarket && <span className="an-ld-tag an-ld-tag-market">FOR SALE</span>}
+                    </div>
+
+                    {/* Provenance */}
+                    {intel >= 30 && (provChain.length > 0 || provString) && (
+                        <div className="an-ld-section">
+                            <div className="an-ld-section-label">PROVENANCE</div>
+                            {provChain.length > 0
+                                ? provChain.map((entry, i) => (
+                                    <div key={i} className="an-ld-prov-item">{entry}</div>
+                                ))
+                                : <div className="an-ld-prov-item">{provString}</div>
+                            }
+                        </div>
+                    )}
+
+                    {/* Runtime provenance — game trades */}
+                    {intel >= 60 && runtimeProv.length > 0 && (
+                        <div className="an-ld-section">
+                            <div className="an-ld-section-label">TRANSACTION HISTORY</div>
+                            {runtimeProv.map((p, i) => (
+                                <div key={i} className="an-ld-prov-item">
+                                    {p.type || 'Transfer'} — Week {p.week}
+                                    {p.city ? `, ${p.city}` : ''}
+                                    {p.price ? ` — $${fmtNum(p.price)}` : ''}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Recent trades for this work */}
+                    {intel >= 40 && tradeLog.length > 0 && (
+                        <div className="an-ld-section">
+                            <div className="an-ld-section-label">AUCTION RESULTS ({tradeLog.length})</div>
+                            <table className="an-ld-trades-table">
+                                <thead>
+                                    <tr>
+                                        <th>Week</th><th>Price</th><th>Buyer</th><th>Seller</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tradeLog.slice(-5).reverse().map((t, i) => (
+                                        <tr key={i}>
+                                            <td>{t.week || '—'}</td>
+                                            <td>${fmtNum(t.price || 0)}</td>
+                                            <td>{mask(t.buyer, intel, 60, '???')}</td>
+                                            <td>{mask(t.seller, intel, 60, '???')}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right: Price + Market data + Actions */}
+                <div className="an-ld-right">
+                    {/* Price block */}
+                    <div className="an-ld-price-block">
+                        <div className="an-ld-price-label">PRICE REALIZED</div>
+                        <div className="an-ld-price">${fmtNum(price)}</div>
+                        {purchasePrice > 0 && (
+                            <div className="an-ld-price-detail">
+                                Cost basis: ${fmtNum(purchasePrice)}
+                                {roi !== null && (
+                                    <span className={Number(roi) >= 0 ? 'an-gain' : 'an-loss'}>
+                                        {' '}({Number(roi) >= 0 ? '+' : ''}{roi}%)
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {work.estLow && work.estHigh && (
+                            <div className="an-ld-estimate">
+                                Estimate: ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Market data */}
+                    {intel >= 40 && artist && (
+                        <div className="an-ld-market">
+                            <div className="an-ld-market-row">
+                                <span className="an-ld-market-label">HEAT INDEX</span>
+                                <span className="an-ld-market-val">{Math.round(heat)}</span>
+                                <div className="an-ld-heat-bar">
+                                    <div className="an-ld-heat-fill" style={{ width: `${Math.min(heat, 100)}%` }} />
+                                </div>
+                            </div>
+                            <div className="an-ld-market-row">
+                                <span className="an-ld-market-label">TREND</span>
+                                <span className="an-ld-market-val" style={{ color: trendColor[trend] }}>{trend}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Price trend sparkline */}
+                    {sparkData.length >= 2 && (
+                        <div className="an-ld-sparkline">
+                            <span className="an-ld-spark-label">PRICE TREND</span>
+                            <MiniSparkline data={sparkData} width={120} height={28} color="#cc0000" />
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="an-ld-actions">
+                        {work._isMarket && work._order && (
+                            <>
+                                <button className="an-ld-btn an-ld-btn-primary"
+                                    disabled={!hasAP(1) || (s?.cash || 0) < (work._order.askPrice || 0)}
+                                    onClick={() => onBuy(work._order)}>
+                                    BUY NOW <span className="an-ld-ap">[1 AP]</span>
+                                </button>
+                                <button className="an-ld-btn an-ld-btn-secondary"
+                                    disabled={!hasAP(2)}
+                                    onClick={() => onHaggle(work._order)}>
+                                    COUNTER OFFER <span className="an-ld-ap">[2 AP]</span>
+                                </button>
+                            </>
+                        )}
+                        {work._owned && (
+                            <button className="an-ld-btn an-ld-btn-secondary"
+                                disabled={!hasAP(2)}
+                                onClick={() => onList(work)}>
+                                LIST FOR SALE <span className="an-ld-ap">[2 AP]</span>
+                            </button>
+                        )}
+                    </div>
+
+                    <button className="an-ld-close" onClick={onClose}>✕ CLOSE</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // 16. Artnet Auction Results View
 //
 // Clean, data-dense tabular layout inspired by artnet.com's
@@ -1788,6 +2029,7 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
     const [sortDir, setSortDir] = useState('asc');
     const [searchTerm, setSearchTerm] = useState('');
     const [detailArtist, setDetailArtist] = useState(null);
+    const [detailWork, setDetailWork] = useState(null);
 
     const toggleSort = (key) => {
         if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -2048,80 +2290,98 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                         {allItems.map((work, i) => {
                             const roi = work.purchasePrice > 0
                                 ? ((work.currentVal - work.purchasePrice) / work.purchasePrice * 100).toFixed(1) : null;
+                            const isExpanded = detailWork?.id === work.id || (detailWork?._lot === work._lot && !work.id);
                             return (
-                                <tr key={work.id || i} className="an-row"
-                                    onClick={() => onSelectWork && onSelectWork(work)}
-                                    style={{ cursor: 'pointer' }}>
-                                    <td className="an-td an-lot">{work._lot}</td>
-                                    <td className="an-td an-thumb">
-                                        {work.imageUrl || work.image ? (
-                                            <img className="an-thumb-img" src={work.imageUrl || work.image} alt="" />
-                                        ) : (
-                                            <div className="an-thumb-placeholder" />
-                                        )}
-                                    </td>
-                                    <td className="an-td an-artist-cell">
-                                        <div className="an-artist-name an-artist-link"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setDetailArtist(detailArtist?.id === work._artist?.id ? null : work._artist);
-                                            }}>{work.artist || 'Unknown'}</div>
-                                        {work._artist && (
-                                            <div className="an-artist-meta">
-                                                {work.artistBorn || work._artist?.born
-                                                    ? `(${work.artistBorn || work._artist?.born}${work.artistDied || work._artist?.died ? '–' + (work.artistDied || work._artist?.died) : ''})`
-                                                    : ''}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="an-td an-title-cell">
-                                        <em>{work.title || 'Untitled'}</em>
-                                        {work.yearCreated ? `, ${work.yearCreated}` : ''}
-                                    </td>
-                                    <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
-                                    <td className="an-td" style={{ padding: '4px 6px' }}>
-                                        {work._artist && (() => {
-                                            const h = work._artist.heat || 0;
-                                            const tier = work._artist.tier || 'emerging';
-                                            const tClr = { 'blue-chip': '#8b7332', hot: '#cc0000', 'mid-career': '#1d4ed8', emerging: '#15803d' };
-                                            return (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <div style={{
-                                                        width: 32, height: 4, background: '#eee', borderRadius: 2, overflow: 'hidden',
-                                                    }}>
-                                                        <div style={{
-                                                            width: `${Math.min(h, 100)}%`, height: '100%',
-                                                            background: tClr[tier] || '#999', borderRadius: 2,
-                                                        }} />
-                                                    </div>
-                                                    <span style={{ fontSize: 8, color: '#999' }}>{Math.round(h)}</span>
+                                <React.Fragment key={work.id || i}>
+                                    <tr className={`an-row ${isExpanded ? 'an-row-active' : ''}`}
+                                        onClick={() => setDetailWork(isExpanded ? null : work)}
+                                        style={{ cursor: 'pointer' }}>
+                                        <td className="an-td an-lot">{work._lot}</td>
+                                        <td className="an-td an-thumb">
+                                            {work.imageUrl || work.image ? (
+                                                <img className="an-thumb-img" src={work.imageUrl || work.image} alt="" />
+                                            ) : (
+                                                <div className="an-thumb-placeholder" />
+                                            )}
+                                        </td>
+                                        <td className="an-td an-artist-cell">
+                                            <div className="an-artist-name an-artist-link"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDetailArtist(detailArtist?.id === work._artist?.id ? null : work._artist);
+                                                }}>{work.artist || 'Unknown'}</div>
+                                            {work._artist && (
+                                                <div className="an-artist-meta">
+                                                    {work.artistBorn || work._artist?.born
+                                                        ? `(${work.artistBorn || work._artist?.born}${work.artistDied || work._artist?.died ? '–' + (work.artistDied || work._artist?.died) : ''})`
+                                                        : ''}
                                                 </div>
-                                            );
-                                        })()}
-                                    </td>
-                                    <td className="an-td an-estimate">
-                                        ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
-                                    </td>
-                                    <td className="an-td an-price">
-                                        <div className="an-price-main">${fmtNum(work.currentVal)}</div>
-                                        {work._owned && work.purchasePrice > 0 && (
-                                            <div className="an-price-sub">
-                                                Paid ${fmtNum(work.purchasePrice)}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="an-td an-status">
-                                        {work._isMarket ? (
-                                            <span className="an-badge an-badge-available">FOR SALE</span>
-                                        ) : roi !== null ? (
-                                            <span className={`an-badge ${Number(roi) >= 0 ? 'an-badge-sold' : 'an-badge-loss'}`}>
-                                                {Number(roi) >= 0 ? '+' : ''}{roi}%
-                                            </span>
-                                        ) : (
-                                            <span className="an-badge an-badge-held">HELD</span>
-                                        )}
-                                    </td>
-                                </tr>
+                                            )}
+                                        </td>
+                                        <td className="an-td an-title-cell">
+                                            <em>{work.title || 'Untitled'}</em>
+                                            {work.yearCreated ? `, ${work.yearCreated}` : ''}
+                                        </td>
+                                        <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
+                                        <td className="an-td" style={{ padding: '4px 6px' }}>
+                                            {work._artist && (() => {
+                                                const h = work._artist.heat || 0;
+                                                const tier = work._artist.tier || 'emerging';
+                                                const tClr = { 'blue-chip': '#8b7332', hot: '#cc0000', 'mid-career': '#1d4ed8', emerging: '#15803d' };
+                                                return (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <div style={{
+                                                            width: 32, height: 4, background: '#eee', borderRadius: 2, overflow: 'hidden',
+                                                        }}>
+                                                            <div style={{
+                                                                width: `${Math.min(h, 100)}%`, height: '100%',
+                                                                background: tClr[tier] || '#999', borderRadius: 2,
+                                                            }} />
+                                                        </div>
+                                                        <span style={{ fontSize: 8, color: '#999' }}>{Math.round(h)}</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td className="an-td an-estimate">
+                                            ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
+                                        </td>
+                                        <td className="an-td an-price">
+                                            <div className="an-price-main">${fmtNum(work.currentVal)}</div>
+                                            {work._owned && work.purchasePrice > 0 && (
+                                                <div className="an-price-sub">
+                                                    Paid ${fmtNum(work.purchasePrice)}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="an-td an-status">
+                                            {work._isMarket ? (
+                                                <span className="an-badge an-badge-available">FOR SALE</span>
+                                            ) : roi !== null ? (
+                                                <span className={`an-badge ${Number(roi) >= 0 ? 'an-badge-sold' : 'an-badge-loss'}`}>
+                                                    {Number(roi) >= 0 ? '+' : ''}{roi}%
+                                                </span>
+                                            ) : (
+                                                <span className="an-badge an-badge-held">HELD</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                    {isExpanded && (
+                                        <tr className="an-detail-row">
+                                            <td colSpan="9" style={{ padding: 0 }}>
+                                                <ArtnetLotDetail
+                                                    work={work}
+                                                    intel={intel}
+                                                    feed={feed}
+                                                    onClose={() => setDetailWork(null)}
+                                                    onBuy={(order) => { if (onSelectOrder) onSelectOrder(order); }}
+                                                    onHaggle={(order) => { if (onSelectOrder) onSelectOrder(order); }}
+                                                    onList={(w) => { if (onListWork) onListWork(w); }}
+                                                />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             );
                         })}
                     </tbody>
@@ -2585,6 +2845,437 @@ function DeitchView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
 }
 
 // ══════════════════════════════════════════════════════════════
+// 20. ByformView — Swiss/modernist portfolio table (bf-* prefix)
+// Reference: design.byform.co — clean serif header, black circle, monospace table
+// ══════════════════════════════════════════════════════════════
+
+/** NPC-to-city mapping derived from backstories */
+const NPC_CITY_MAP = {
+    sasha_klein: 'new-york', marcus_price: 'new-york', elena_ross: 'new-york',
+    james_whitfield: 'london', diana_chen: 'new-york', robert_hall: 'new-york',
+    yuki_tanaka: 'hong-kong', kwame_asante: 'new-york', victoria_sterling: 'los-angeles',
+    philippe_noir: 'switzerland', nina_ward: 'london', lorenzo_gallo: 'new-york',
+    charles_vandermeer: 'london', nico_strand: 'new-york', margaux_fontaine: 'paris',
+    dr_eloise_park: 'london',
+};
+
+function ByformView({ intel, onSelectWork, showPanel, feed, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const week = s?.week || 1;
+    const cash = s?.cash || 0;
+    const portfolio = s?.portfolio || [];
+    const archetype = s?.archetype || 'Collector';
+    const playerName = s?.playerName || 'Anonymous';
+    const [filter, setFilter] = useState('all'); // 'all' | 'mine' | 'npc'
+
+    // Merge player transactions + simulator trade log, de-duped by a composite key
+    const allTrades = useMemo(() => {
+        const playerTx = (s?.transactions || []).map(t => ({ ...t, _source: 'player' }));
+        const simTrades = (MarketSimulator.getTradeLog?.() || []).map(t => ({ ...t, _source: 'sim' }));
+        const merged = [...playerTx, ...simTrades];
+
+        // De-dup by week+artwork+buyer+price
+        const seen = new Set();
+        const unique = merged.filter(t => {
+            const key = `${t.week}-${t.artwork || t.artworkId}-${t.buyer || ''}-${t.price || t.amount || 0}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        // Sort by week descending
+        unique.sort((a, b) => (b.week || 0) - (a.week || 0));
+        return unique;
+    }, [week, s?.transactions]);
+
+    // Apply filter
+    const filtered = useMemo(() => {
+        if (filter === 'mine') return allTrades.filter(t => t.buyer === 'player' || t.seller === 'player');
+        if (filter === 'npc') return allTrades.filter(t => t.buyer !== 'player' && t.seller !== 'player');
+        return allTrades;
+    }, [allTrades, filter]);
+
+    // Portfolio value
+    const portfolioValue = useMemo(() => {
+        return portfolio.reduce((sum, w) => {
+            try { return sum + MarketManager.calculatePrice(w, false); }
+            catch { return sum + (w.price || w.basePrice || 0); }
+        }, 0);
+    }, [portfolio, week]);
+
+    const tradeCount = allTrades.filter(t => t.buyer === 'player' || t.seller === 'player').length;
+
+    return (
+        <div className="bf-view">
+            {/* Bio header */}
+            <div className="bf-header">
+                <div className="bf-header-left">
+                    <div className="bf-name">{playerName}</div>
+                    <div className="bf-meta">{archetype} · Week {week}</div>
+                    <div className="bf-meta">Portfolio: ${fmtNum(Math.round(portfolioValue))} · Cash: ${fmtNum(cash)}</div>
+                </div>
+                <div className="bf-header-right">
+                    <div className="bf-circle">
+                        <span className="bf-circle-num">{tradeCount}</span>
+                        <span className="bf-circle-label">TRADES</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter pills */}
+            <div className="bf-filters">
+                {['all', 'mine', 'npc'].map(f => (
+                    <button key={f} className={`bf-pill${filter === f ? ' bf-pill-active' : ''}`}
+                        onClick={() => setFilter(f)}>
+                        {f.toUpperCase()}
+                    </button>
+                ))}
+            </div>
+
+            {/* Transaction table */}
+            <div className="bf-table-wrap">
+                <table className="bf-table">
+                    <thead>
+                        <tr>
+                            <th>WEEK</th>
+                            <th>ARTWORK</th>
+                            <th>TYPE</th>
+                            <th>PARTY</th>
+                            <th className="bf-th-right">PRICE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.length === 0 && (
+                            <tr><td colSpan={5} className="bf-empty">No transactions yet.</td></tr>
+                        )}
+                        {filtered.map((t, i) => {
+                            const artwork = ARTWORKS.find(a => a.id === (t.artwork || t.artworkId));
+                            const title = artwork?.title || t.title || t.artwork || '—';
+                            const isPlayer = t.buyer === 'player' || t.seller === 'player';
+                            const isBuy = t.buyer === 'player' || t.type === 'buy' || t.type === 'BUY';
+                            const isSell = t.seller === 'player' || t.type === 'sell' || t.type === 'SELL';
+                            const typeLabel = isBuy ? 'BUY' : isSell ? 'SELL' : 'TRADE';
+                            const typeClass = isBuy ? 'bf-type-buy' : isSell ? 'bf-type-sell' : 'bf-type-trade';
+                            const party = t.buyer === 'player'
+                                ? (CONTACTS.find(c => c.id === t.seller)?.name || '—')
+                                : t.seller === 'player'
+                                    ? (CONTACTS.find(c => c.id === t.buyer)?.name || '—')
+                                    : intel >= 60
+                                        ? (CONTACTS.find(c => c.id === (t.buyer || t.seller))?.name || '—')
+                                        : '—';
+                            const price = t.price || t.amount || 0;
+
+                            return (
+                                <tr key={i} className={isPlayer ? 'bf-row-player' : ''}
+                                    onClick={() => artwork && onSelectWork?.(artwork)}>
+                                    <td>{t.week || '—'}</td>
+                                    <td className="bf-td-title">{title}</td>
+                                    <td><span className={`bf-type ${typeClass}`}>{typeLabel}</span></td>
+                                    <td>{party}</td>
+                                    <td className="bf-th-right">{maskPrice(price, intel)}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Footer panels — reuse existing Bloomberg panels */}
+            <div className="bf-panels">
+                {showPanel('playerstats') && <PlayerStatsPanel />}
+                {showPanel('networth') && <NetWorthPanel intel={intel} />}
+                {showPanel('collection') && <CollectionPanel intel={intel} onSelectWork={onSelectWork} />}
+                {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 21. WaterworksView — Deep blue SVG world map (ww-* prefix)
+// Reference: waterworksproject.nl — blue bg, circle markers, sidebar filters
+// ══════════════════════════════════════════════════════════════
+
+/** Fixed city positions for the abstract SVG map (viewBox 0 0 900 500) */
+const CITY_POSITIONS = {
+    'new-york': { x: 250, y: 180 },
+    'los-angeles': { x: 100, y: 220 },
+    'miami': { x: 230, y: 300 },
+    'london': { x: 450, y: 140 },
+    'paris': { x: 480, y: 180 },
+    'berlin': { x: 520, y: 150 },
+    'switzerland': { x: 490, y: 210 },
+    'hong-kong': { x: 780, y: 260 },
+};
+
+/** NYC sub-locations positioned radially around the NY circle */
+function getNYSubLocations() {
+    const nyLocs = WORLD_LOCATIONS.filter(l => l.city === 'new-york' && l.type !== 'taxi');
+    const cx = CITY_POSITIONS['new-york'].x;
+    const cy = CITY_POSITIONS['new-york'].y;
+    const radius = 60;
+    return nyLocs.map((loc, i) => {
+        const angle = (i / nyLocs.length) * Math.PI * 2 - Math.PI / 2;
+        return { ...loc, _x: cx + Math.cos(angle) * radius, _y: cy + Math.sin(angle) * radius };
+    });
+}
+
+function WaterworksView({ intel, showPanel, feed }) {
+    const s = GameState.state;
+    const visitedCities = s?.visitedCities || [];
+    const currentCity = s?.currentCity || 'new-york';
+    const week = s?.week || 1;
+    const [selectedCity, setSelectedCity] = useState(null);
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [showNYSubs, setShowNYSubs] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+
+    const cityKeys = Object.keys(CITY_DATA);
+    const nySubs = useMemo(() => getNYSubLocations(), []);
+    const totalLocations = WORLD_LOCATIONS.length;
+
+    // Unique location types for filter pills
+    const locTypes = useMemo(() => {
+        const types = new Set(WORLD_LOCATIONS.map(l => l.type));
+        return ['all', ...Array.from(types)];
+    }, []);
+
+    // NPCs in selected city
+    const cityNPCs = useMemo(() => {
+        if (!selectedCity) return [];
+        return CONTACTS.filter(c => NPC_CITY_MAP[c.id] === selectedCity);
+    }, [selectedCity]);
+
+    // City activity — count of trades/transactions involving that city
+    const cityActivity = useMemo(() => {
+        const activity = {};
+        cityKeys.forEach(k => { activity[k] = 0; });
+        (MarketSimulator.getTradeLog?.() || []).forEach(t => {
+            const buyerCity = NPC_CITY_MAP[t.buyer];
+            const sellerCity = NPC_CITY_MAP[t.seller];
+            if (buyerCity) activity[buyerCity] = (activity[buyerCity] || 0) + 1;
+            if (sellerCity) activity[sellerCity] = (activity[sellerCity] || 0) + 1;
+        });
+        return activity;
+    }, [week]);
+
+    // Travel route lines — connect visited cities in order
+    const routeLines = useMemo(() => {
+        if (visitedCities.length < 2) return [];
+        const lines = [];
+        for (let i = 0; i < visitedCities.length - 1; i++) {
+            const from = CITY_POSITIONS[visitedCities[i]];
+            const to = CITY_POSITIONS[visitedCities[i + 1]];
+            if (from && to) lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+        }
+        return lines;
+    }, [visitedCities]);
+
+    const handleCityClick = (cityId) => {
+        setSelectedCity(prev => prev === cityId ? null : cityId);
+        if (cityId === 'new-york') setShowNYSubs(prev => !prev);
+        else setShowNYSubs(false);
+        setSidebarOpen(true);
+    };
+
+    const detail = selectedCity ? CITY_DATA[selectedCity] : null;
+    const cityLocations = selectedCity
+        ? WORLD_LOCATIONS.filter(l => l.city === selectedCity && (typeFilter === 'all' || l.type === typeFilter))
+        : [];
+
+    return (
+        <div className="ww-view">
+            {/* Top-left header — Waterworks style */}
+            <div className="ww-header">
+                <span className="ww-header-title">WATERWORKS</span>
+                <button className="ww-glass-btn" onClick={() => setSidebarOpen(o => !o)}>
+                    <span className="ww-bracket" aria-hidden="true">(</span>
+                    {sidebarOpen ? 'Hide' : 'Show'}
+                    <span className="ww-bracket" aria-hidden="true">)</span>
+                </button>
+            </div>
+
+            {/* Map area — full viewport background */}
+            <div className="ww-map-area">
+                <svg viewBox="0 0 900 500" className="ww-svg" preserveAspectRatio="xMidYMid meet">
+                    {/* Travel route lines */}
+                    {routeLines.map((line, i) => (
+                        <line key={`route-${i}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+                            stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="6 4" />
+                    ))}
+
+                    {/* City markers — hollow circles with center dots (Waterworks style) */}
+                    {cityKeys.map(cityId => {
+                        const pos = CITY_POSITIONS[cityId];
+                        if (!pos) return null;
+                        const isVisited = visitedCities.includes(cityId);
+                        const isCurrent = currentCity === cityId;
+                        const isSelected = selectedCity === cityId;
+                        const activity = cityActivity[cityId] || 0;
+                        // Waterworks uses fixed-size circles; larger for "historical" type
+                        const isLarge = activity > 3;
+                        const r = isLarge ? 19 : 10;
+
+                        return (
+                            <g key={cityId} className={`ww-marker${isSelected ? ' ww-marker-active' : ''}`}
+                                onClick={() => handleCityClick(cityId)} style={{ cursor: 'pointer' }}>
+                                {/* Pulsing ring for current city */}
+                                {isCurrent && (
+                                    <circle cx={pos.x} cy={pos.y} r={r + 6}
+                                        fill="none" stroke="white" strokeWidth="1" opacity="0.4">
+                                        <animate attributeName="r" values={`${r + 3};${r + 12};${r + 3}`}
+                                            dur="3s" repeatCount="indefinite" />
+                                        <animate attributeName="opacity" values="0.4;0.05;0.4"
+                                            dur="3s" repeatCount="indefinite" />
+                                    </circle>
+                                )}
+                                {/* Hollow circle — inset stroke (like box-shadow: inset 0 0 0 1px) */}
+                                <circle cx={pos.x} cy={pos.y} r={r}
+                                    fill="none"
+                                    stroke="white"
+                                    strokeWidth={isSelected ? 2 : 1}
+                                    opacity={isVisited ? 1 : 0.35} />
+                                {/* Center dot */}
+                                <circle cx={pos.x} cy={pos.y} r={isLarge ? 2 : 1}
+                                    fill="white"
+                                    opacity={isVisited ? 1 : 0.35} />
+                                {/* Leader line (angled, like Waterworks ::before) */}
+                                <line x1={pos.x + r * 0.7} y1={pos.y - r * 0.7}
+                                    x2={pos.x + r + 24} y2={pos.y - r - 18}
+                                    stroke="white" strokeWidth="0.5"
+                                    opacity={isVisited ? 0.8 : 0.25}
+                                    className="ww-leader" />
+                                {/* Label (positioned at end of leader line, like ::after) */}
+                                <text x={pos.x + r + 26} y={pos.y - r - 16}
+                                    fill="white" fontSize="10"
+                                    fontFamily="'IBM Plex Mono', monospace" fontWeight="500"
+                                    opacity={isVisited ? 1 : 0.3}
+                                    className="ww-label">
+                                    {CITY_DATA[cityId]?.name || cityId}
+                                </text>
+                            </g>
+                        );
+                    })}
+
+                    {/* NYC sub-locations — smaller hollow circles when NY is selected */}
+                    {showNYSubs && nySubs.map(loc => (
+                        <g key={loc.id} className="ww-sub-marker">
+                            <line x1={CITY_POSITIONS['new-york'].x} y1={CITY_POSITIONS['new-york'].y}
+                                x2={loc._x} y2={loc._y}
+                                stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                            <circle cx={loc._x} cy={loc._y} r={6}
+                                fill="none" stroke="white" strokeWidth="0.5" opacity="0.7" />
+                            <circle cx={loc._x} cy={loc._y} r={0.75}
+                                fill="white" opacity="0.7" />
+                            <text x={loc._x + 10} y={loc._y + 3}
+                                fill="white" fontSize="7"
+                                fontFamily="'IBM Plex Mono', monospace" fontWeight="500"
+                                opacity="0.5">
+                                {loc.name}
+                            </text>
+                        </g>
+                    ))}
+                </svg>
+            </div>
+
+            {/* Sidebar — slides in from right (Waterworks pattern) */}
+            <aside className={`ww-sidebar${sidebarOpen ? ' ww-sidebar-open' : ''}`}>
+                {/* Location count + see all */}
+                <div className="ww-sidebar-header">
+                    <span>{totalLocations} Locations</span>
+                    <button className="ww-glass-btn ww-glass-btn-sm" onClick={() => setSelectedCity(null)}>
+                        <span className="ww-bracket" aria-hidden="true">(</span>
+                        See all
+                        <span className="ww-bracket" aria-hidden="true">)</span>
+                    </button>
+                </div>
+
+                {/* Filter nav — glassmorphism pills */}
+                <nav className="ww-filters">
+                    {locTypes.map(t => (
+                        <button key={t}
+                            className={`ww-glass-btn ww-glass-btn-sm${typeFilter === t ? ' ww-pill-active' : ''}`}
+                            onClick={() => setTypeFilter(t)}>
+                            {t.toUpperCase()}
+                        </button>
+                    ))}
+                </nav>
+
+                {/* Scrollable city list */}
+                <ul className="ww-city-list">
+                    {cityKeys.map(cityId => {
+                        const city = CITY_DATA[cityId];
+                        const isSelected = selectedCity === cityId;
+                        const isVisited = visitedCities.includes(cityId);
+                        return (
+                            <li key={cityId}>
+                                <button
+                                    className={`ww-city-btn${isSelected ? ' ww-city-selected' : ''}${isVisited ? '' : ' ww-city-dim'}`}
+                                    onClick={() => handleCityClick(cityId)}>
+                                    <span>{city.name}</span>
+                                    {currentCity === cityId && <span className="ww-current-badge">HERE</span>}
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+
+                {/* Detail panel — slides in when city selected */}
+                {detail && (
+                    <div className="ww-detail">
+                        <div className="ww-detail-name">{detail.name}</div>
+                        <div className="ww-detail-vibe">{detail.vibe}</div>
+                        <div className="ww-detail-row">
+                            <span className="ww-detail-label">Specialty</span>
+                            <span>{detail.specialty}</span>
+                        </div>
+                        <div className="ww-detail-row">
+                            <span className="ww-detail-label">Market Bonus</span>
+                            <span>{detail.marketBonus > 1 ? '+' : ''}{Math.round((detail.marketBonus - 1) * 100)}%</span>
+                        </div>
+
+                        {detail.venues?.length > 0 && (
+                            <div className="ww-detail-section">
+                                <div className="ww-detail-label">Venues</div>
+                                {detail.venues.map((v, i) => (
+                                    <div key={i} className="ww-detail-venue">{v}</div>
+                                ))}
+                            </div>
+                        )}
+
+                        {cityNPCs.length > 0 && (
+                            <div className="ww-detail-section">
+                                <div className="ww-detail-label">Known Contacts</div>
+                                {cityNPCs.map(npc => (
+                                    <div key={npc.id} className="ww-detail-npc">
+                                        <span className="ww-npc-emoji">{npc.emoji || '●'}</span>
+                                        <span>{npc.name}</span>
+                                        <span className="ww-npc-role">{npc.role}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {cityLocations.length > 0 && (
+                            <div className="ww-detail-section">
+                                <div className="ww-detail-label">Locations</div>
+                                {cityLocations.map(loc => (
+                                    <div key={loc.id} className="ww-detail-loc">
+                                        <span>{loc.icon}</span>
+                                        <span>{loc.name}</span>
+                                        <span className="ww-loc-type">{loc.type}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </aside>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // 19. Panel Config Dropdown (gear icon → checkbox list + presets)
 // ══════════════════════════════════════════════════════════════
 function PanelConfigDropdown({ visiblePanels, setVisiblePanels, isGallery }) {
@@ -2658,8 +3349,10 @@ export default function BloombergTerminal({ onClose }) {
     const isArtnet = marketStyle === 'artnet';
     const isSothebys = marketStyle === 'sothebys';
     const isDeitch = marketStyle === 'deitch';
+    const isByform = marketStyle === 'byform';
+    const isWaterworks = marketStyle === 'waterworks';
     // Any "full-page" style that replaces the 3-column grid
-    const isFullPageStyle = isTearsheet || isArtnet || isSothebys || isDeitch;
+    const isFullPageStyle = isTearsheet || isArtnet || isSothebys || isDeitch || isByform || isWaterworks;
 
     // Panel visibility — driven by SettingsManager checklist
     const [visiblePanels, setVisiblePanels] = useState(() => SettingsManager.get('bloombergPanels'));
@@ -2818,7 +3511,7 @@ export default function BloombergTerminal({ onClose }) {
                 : null;
 
     return (
-        <div className={`bb-overlay${isGallery ? ' bb-gallery' : ''}${isTearsheet ? ' bb-tearsheet-mode' : ''}${isArtnet ? ' bb-artnet' : ''}${isSothebys ? ' bb-sothebys' : ''}${isDeitch ? ' bb-deitch' : ''}`}>
+        <div className={`bb-overlay${isGallery ? ' bb-gallery' : ''}${isTearsheet ? ' bb-tearsheet-mode' : ''}${isArtnet ? ' bb-artnet' : ''}${isSothebys ? ' bb-sothebys' : ''}${isDeitch ? ' bb-deitch' : ''}${isByform ? ' bb-byform' : ''}${isWaterworks ? ' bb-waterworks' : ''}`}>
             {/* Header */}
             <div className="bb-header">
                 <div className="bb-header-left">
@@ -2830,7 +3523,11 @@ export default function BloombergTerminal({ onClose }) {
                                 ? <span className="bb-logo">ARTLIFE</span>
                                 : isDeitch
                                     ? <span className="bb-logo">DEITCH</span>
-                                    : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
+                                    : isByform
+                                        ? <span className="bb-logo">byform</span>
+                                        : isWaterworks
+                                            ? <span className="bb-logo">WATERWORKS</span>
+                                            : <><span className="bb-logo">████</span><span className="bb-title">ARTLIFE MARKET TERMINAL</span></>
                     }
                 </div>
                 <div className="bb-header-right">
@@ -2841,7 +3538,7 @@ export default function BloombergTerminal({ onClose }) {
                     <span className="bb-header-meta">W{week} · {month} {year}</span>
                     <button className="bb-style-toggle" onClick={toggleMarketStyle}
                         title={`${SettingsManager.getDisplayString('marketStyle')} — click to cycle`}>
-                        {isTearsheet ? '◉' : isGallery ? '◐' : isArtnet ? '◆' : isSothebys ? '◈' : isDeitch ? '◎' : '◑'}
+                        {isTearsheet ? '◉' : isGallery ? '◐' : isArtnet ? '◆' : isSothebys ? '◈' : isDeitch ? '◎' : isByform ? '◻' : isWaterworks ? '◉' : '◑'}
                         <span className="bb-style-label">{SettingsManager.getDisplayString('marketStyle')}</span>
                     </button>
                     <PanelConfigDropdown
@@ -2891,6 +3588,17 @@ export default function BloombergTerminal({ onClose }) {
                 <DeitchView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
                     feed={feed} selectedArtist={selectedArtist} onSelectArtist={setSelectedArtist}
                     onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
+            )}
+
+            {/* Byform mode — Swiss modernist portfolio table */}
+            {isByform && (
+                <ByformView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
+                    feed={feed} onSelectTrade={handleSelectTrade} onListWork={handleListWork} />
+            )}
+
+            {/* Waterworks mode — deep blue SVG world map */}
+            {isWaterworks && (
+                <WaterworksView intel={intel} showPanel={showPanel} feed={feed} />
             )}
 
             {/* Gallery mode: Seventh House-inspired staggered grid */}
