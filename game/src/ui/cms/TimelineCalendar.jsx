@@ -61,6 +61,9 @@ function TimelineCard({ item, index, onClick }) {
                     }}>
                         <span>{CATEGORY_ICONS[item.type] || '📄'}</span>
                         <span>{item.type}</span>
+                        {item.storylineId && (
+                            <span style={{ fontSize: 8, color: '#a78bfa', marginLeft: 'auto' }}>⛓️</span>
+                        )}
                     </div>
                     <div style={{
                         fontSize: 11, color: '#eaeaea', fontWeight: 'bold',
@@ -76,6 +79,21 @@ function TimelineCard({ item, index, onClick }) {
                             maxWidth: 130,
                         }}>
                             {item.subtitle}
+                        </div>
+                    )}
+                    {/* NPC / Entity badges */}
+                    {(item.raw?.npcId || item.raw?.npc || item.raw?.venue) && (
+                        <div style={{ display: 'flex', gap: 3, marginTop: 3, flexWrap: 'wrap' }}>
+                            {(item.raw?.npcId || item.raw?.npc) && (
+                                <span style={{ fontSize: 8, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', padding: '1px 4px', borderRadius: 2 }}>
+                                    👤 {item.raw?.npcId || item.raw?.npc}
+                                </span>
+                            )}
+                            {item.raw?.venue && (
+                                <span style={{ fontSize: 8, background: 'rgba(167,139,250,0.15)', color: '#a78bfa', padding: '1px 4px', borderRadius: 2 }}>
+                                    🏢 {item.raw?.venue}
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -266,6 +284,8 @@ function DetailPanel({ item, onClose }) {
 export default function TimelineCalendar() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [filter, setFilter] = useState('all');
+    const [showAddPicker, setShowAddPicker] = useState(false);
+    const [addTargetWeek, setAddTargetWeek] = useState(1);
     const markDirty = useCmsStore(s => s.markDirty);
     const saveTimelineOverride = useCmsStore(s => s.saveTimelineOverride);
     const rawTimelineOverrides = useCmsStore(s => s.snapshots?.timelineOverrides);
@@ -427,8 +447,80 @@ export default function TimelineCalendar() {
                             {f.label}
                         </button>
                     ))}
+                    <div style={{ width: 1, height: 16, background: '#333', margin: '0 4px' }} />
+                    <button
+                        onClick={() => setShowAddPicker(!showAddPicker)}
+                        style={{
+                            background: showAddPicker ? 'rgba(201,168,76,0.1)' : 'transparent',
+                            border: `1px solid ${showAddPicker ? '#c9a84c' : '#333'}`,
+                            color: showAddPicker ? '#c9a84c' : '#888',
+                            padding: '3px 10px', borderRadius: 4,
+                            cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
+                        }}
+                    >
+                        ➕ Add to Timeline
+                    </button>
                 </div>
             </div>
+
+            {/* Add to Timeline picker */}
+            {showAddPicker && (
+                <div style={{
+                    padding: '8px 16px', background: '#0a0a12', borderBottom: '1px solid #222',
+                    display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
+                }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span style={{ fontSize: 10, color: '#888' }}>Place in:</span>
+                        <select
+                            value={addTargetWeek}
+                            onChange={(e) => setAddTargetWeek(parseInt(e.target.value))}
+                            style={{
+                                background: '#111', color: '#eaeaea', border: '1px solid #333',
+                                fontFamily: 'inherit', fontSize: 11, padding: '3px 6px', cursor: 'pointer',
+                            }}
+                        >
+                            {Array.from({ length: 26 }, (_, i) => (
+                                <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase' }}>Events:</div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 600 }}>
+                        {(EventRegistry.jsonEvents || []).slice(0, 12).map(evt => (
+                            <button key={evt.id} onClick={() => {
+                                saveTimelineOverride(`evt_${evt.id}`, addTargetWeek);
+                                markDirty('timeline');
+                                setShowAddPicker(false);
+                            }} style={{
+                                background: 'rgba(74,222,128,0.08)', border: '1px solid #3a8a3a33',
+                                color: '#4ade80', padding: '2px 8px', borderRadius: 3,
+                                cursor: 'pointer', fontFamily: 'inherit', fontSize: 9,
+                            }}>
+                                {evt.title || evt.id}
+                            </button>
+                        ))}
+                    </div>
+                    <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', marginLeft: 8 }}>Storylines:</div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {(EventRegistry.getStorylines?.() || []).map(sl => (
+                            <button key={sl.id} onClick={() => {
+                                // Place storyline start at target week
+                                if (sl.steps?.length > 0) {
+                                    saveTimelineOverride(`sl_${sl.id}_step_0`, addTargetWeek);
+                                    markDirty('timeline');
+                                }
+                                setShowAddPicker(false);
+                            }} style={{
+                                background: 'rgba(201,168,76,0.08)', border: '1px solid #c9a84c33',
+                                color: '#c9a84c', padding: '2px 8px', borderRadius: 3,
+                                cursor: 'pointer', fontFamily: 'inherit', fontSize: 9,
+                            }}>
+                                ⛓️ {sl.title || sl.id}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Timeline Grid + Detail Panel */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

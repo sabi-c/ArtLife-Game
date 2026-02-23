@@ -4,6 +4,9 @@ import { useCmsStore } from '../../stores/cmsStore.js';
 import { EventRegistry } from '../../managers/EventRegistry.js';
 import { ContentExporter, ContentImporter } from '../../utils/ContentExporter.js';
 import { CONTACTS } from '../../data/contacts.js';
+import { ARTWORKS } from '../../data/artworks.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
+import { MarketManager } from '../../managers/MarketManager.js';
 
 // ═════════════════════════════════════════════════════════════
 // NPC Management System — Full CMS Editor
@@ -16,6 +19,7 @@ const TABS = [
     { key: 'dialogue', label: '💬 Dialogue', color: '#a78bfa' },
     { key: 'relationships', label: '🔗 Relationships', color: '#f87171' },
     { key: 'overworld', label: '🗺️ Overworld', color: '#fb923c' },
+    { key: 'market', label: '📊 Market Activity', color: '#22d3ee' },
 ];
 
 const ROLES = [
@@ -960,6 +964,190 @@ function OverworldTab({ npc, onEdit }) {
 }
 
 
+// ═══════════════════════════════════════
+// Tab 7: Market Activity
+// ═══════════════════════════════════════
+function MarketActivityTab({ npc }) {
+    const [simWeeks, setSimWeeks] = useState(10);
+
+    // Get live sim data
+    const simState = MarketSimulator.getNPCState()[npc.id];
+    const storeContact = useNPCStore.getState().contacts.find(c => c.id === npc.id);
+    const stats = storeContact?.marketStats || {};
+
+    // Resolve collection
+    const ownedIds = simState?.owned ?? storeContact?.collection?.owned ?? [];
+    const ownedWorks = ownedIds.map(id => ARTWORKS.find(a => a.id === id)).filter(Boolean);
+    const forSaleIds = simState?.forSale ?? storeContact?.collection?.forSale ?? [];
+
+    // Calculate values
+    let collectionValue = 0;
+    const workValues = ownedWorks.map(w => {
+        let val;
+        try { val = MarketManager.calculatePrice(w, false); } catch { val = w.askingPrice || 0; }
+        collectionValue += val;
+        return { ...w, currentValue: val };
+    });
+
+    const cash = simState?.cash ?? storeContact?.wealth?.liquidCash ?? 0;
+    const totalBought = simState?.totalBought ?? stats.totalBought ?? 0;
+    const totalSold = simState?.totalSold ?? stats.totalSold ?? 0;
+    const totalSpent = simState?.totalSpent ?? stats.totalSpent ?? 0;
+    const totalEarned = simState?.totalEarned ?? stats.totalEarned ?? 0;
+    const netProfit = totalEarned - totalSpent;
+    const strategy = simState?.strategy ?? stats.strategy ?? 'holder';
+    const stress = simState?.financialStress ?? stats.financialStress ?? 0;
+
+    // Trade log for this NPC
+    const trades = MarketSimulator.getTradeLog()
+        .filter(t => t.buyer === npc.id || t.seller === npc.id)
+        .slice(-30);
+
+    // Genre/tier breakdown
+    const genres = {};
+    const tiers = {};
+    ownedWorks.forEach(w => {
+        genres[w.genre] = (genres[w.genre] || 0) + 1;
+        tiers[w.tier] = (tiers[w.tier] || 0) + 1;
+    });
+
+    const fmt$ = (n) => `$${Math.round(n).toLocaleString()}`;
+    const statCard = (label, value, color = '#eaeaea') => (
+        <div style={{
+            background: '#111', border: '1px solid #222', borderRadius: 4, padding: '10px 14px',
+            flex: '1 1 120px', minWidth: 120,
+        }}>
+            <div style={{ fontSize: 9, color: '#666', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 16, fontWeight: 'bold', color }}>{value}</div>
+        </div>
+    );
+
+    return (
+        <div style={{ maxWidth: 800 }}>
+            {sectionTitle('Financial Summary', '#22d3ee')}
+
+            {/* Stat cards row */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {statCard('Liquid Cash', fmt$(cash), '#c9a84c')}
+                {statCard('Collection Value', fmt$(collectionValue), '#60a5fa')}
+                {statCard('Net Worth', fmt$(cash + collectionValue), '#4ade80')}
+                {statCard('Net P&L', fmt$(netProfit), netProfit >= 0 ? '#4ade80' : '#f87171')}
+                {statCard('Stress', `${Math.round(stress)}%`, stress > 60 ? '#f87171' : stress > 30 ? '#fb923c' : '#4ade80')}
+                {statCard('Strategy', strategy.toUpperCase(), '#a78bfa')}
+            </div>
+
+            {/* Trade stats */}
+            <div style={{ display: 'flex', gap: 20, marginBottom: 16, fontSize: 11, color: '#888' }}>
+                <span>Bought: <strong style={{ color: '#eaeaea' }}>{totalBought}</strong></span>
+                <span>Sold: <strong style={{ color: '#eaeaea' }}>{totalSold}</strong></span>
+                <span>Spent: <strong style={{ color: '#eaeaea' }}>{fmt$(totalSpent)}</strong></span>
+                <span>Earned: <strong style={{ color: '#eaeaea' }}>{fmt$(totalEarned)}</strong></span>
+            </div>
+
+            {/* Collection */}
+            {sectionTitle(`Collection (${ownedWorks.length} pieces)`, '#60a5fa')}
+            {ownedWorks.length === 0 ? (
+                <div style={{ color: '#555', fontSize: 11, padding: '8px 0' }}>No artworks owned. Run market simulation to populate.</div>
+            ) : (
+                <div style={{ maxHeight: 250, overflow: 'auto', marginBottom: 16 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #333', color: '#666', textAlign: 'left' }}>
+                                <th style={{ padding: '6px 8px' }}>Artwork</th>
+                                <th style={{ padding: '6px 8px' }}>Artist</th>
+                                <th style={{ padding: '6px 8px' }}>Tier</th>
+                                <th style={{ padding: '6px 8px', textAlign: 'right' }}>Value</th>
+                                <th style={{ padding: '6px 8px' }}>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {workValues.map(w => (
+                                <tr key={w.id} style={{ borderBottom: '1px solid #1a1a2e' }}>
+                                    <td style={{ padding: '6px 8px', color: '#eaeaea' }}>{w.title}</td>
+                                    <td style={{ padding: '6px 8px', color: '#888' }}>{w.artist}</td>
+                                    <td style={{ padding: '6px 8px' }}>
+                                        <span style={{
+                                            fontSize: 9, padding: '2px 6px', borderRadius: 3,
+                                            background: w.tier === 'classic' ? 'rgba(201,168,76,0.15)' : w.tier === 'mid_career' ? 'rgba(96,165,250,0.15)' : 'rgba(74,222,128,0.15)',
+                                            color: w.tier === 'classic' ? '#c9a84c' : w.tier === 'mid_career' ? '#60a5fa' : '#4ade80',
+                                        }}>{w.tier?.replace('_', ' ')}</span>
+                                    </td>
+                                    <td style={{ padding: '6px 8px', textAlign: 'right', color: '#c9a84c' }}>{fmt$(w.currentValue)}</td>
+                                    <td style={{ padding: '6px 8px' }}>
+                                        {forSaleIds.includes(w.id) && <span style={{ color: '#fb923c', fontSize: 9 }}>FOR SALE</span>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {/* Composition */}
+            {ownedWorks.length > 0 && (
+                <div style={{ display: 'flex', gap: 30, marginBottom: 16 }}>
+                    <div>
+                        <div style={{ fontSize: 10, color: '#666', marginBottom: 6, textTransform: 'uppercase' }}>By Tier</div>
+                        {Object.entries(tiers).sort((a, b) => b[1] - a[1]).map(([tier, count]) => (
+                            <div key={tier} style={{ fontSize: 11, color: '#aaa', marginBottom: 3 }}>
+                                {tier.replace('_', ' ')}: <strong>{count}</strong>
+                            </div>
+                        ))}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: 10, color: '#666', marginBottom: 6, textTransform: 'uppercase' }}>By Genre</div>
+                        {Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([genre, count]) => (
+                            <div key={genre} style={{ fontSize: 11, color: '#aaa', marginBottom: 3 }}>
+                                {genre}: <strong>{count}</strong>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Trade History */}
+            {sectionTitle(`Trade History (${trades.length})`, '#a78bfa')}
+            {trades.length === 0 ? (
+                <div style={{ color: '#555', fontSize: 11, padding: '8px 0' }}>No trades yet.</div>
+            ) : (
+                <div style={{ maxHeight: 250, overflow: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid #333', color: '#666', textAlign: 'left' }}>
+                                <th style={{ padding: '6px 8px' }}>Week</th>
+                                <th style={{ padding: '6px 8px' }}>Action</th>
+                                <th style={{ padding: '6px 8px' }}>Artwork</th>
+                                <th style={{ padding: '6px 8px' }}>Counterparty</th>
+                                <th style={{ padding: '6px 8px', textAlign: 'right' }}>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...trades].reverse().map((t, i) => {
+                                const isBuyer = t.buyer === npc.id;
+                                const other = isBuyer ? t.seller : t.buyer;
+                                const otherContact = CONTACTS.find(c => c.id === other);
+                                const artwork = ARTWORKS.find(a => a.id === t.artwork);
+                                return (
+                                    <tr key={i} style={{ borderBottom: '1px solid #1a1a2e' }}>
+                                        <td style={{ padding: '6px 8px', color: '#666' }}>W{t.week}</td>
+                                        <td style={{ padding: '6px 8px', color: isBuyer ? '#4ade80' : '#fb923c' }}>
+                                            {isBuyer ? 'BUY' : 'SELL'}
+                                        </td>
+                                        <td style={{ padding: '6px 8px', color: '#eaeaea' }}>{artwork?.title || t.artwork}</td>
+                                        <td style={{ padding: '6px 8px', color: '#888' }}>{otherContact?.name || other}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'right', color: '#c9a84c' }}>{fmt$(t.price)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
 // ═══════════════════════════════════════════════════════════
 // Main NPCEditor Component
 // ═══════════════════════════════════════════════════════════
@@ -1203,6 +1391,7 @@ export default function NPCEditor() {
                                 {activeTab === 'dialogue' && <DialogueTab npc={selected} onEdit={handleFieldEdit} />}
                                 {activeTab === 'relationships' && <RelationshipsTab npc={selected} allNpcs={allNpcs} onEdit={handleFieldEdit} />}
                                 {activeTab === 'overworld' && <OverworldTab npc={selected} onEdit={handleFieldEdit} />}
+                                {activeTab === 'market' && <MarketActivityTab npc={selected} />}
                             </div>
                         </>
                     )}

@@ -1412,6 +1412,96 @@ const ${constName} = {
     return { roomDefs, bootLines };
 }
 
+// ═══════════════════════════════════════════════════════════════
+// AI-Friendly Room Generation API
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Generate a Tiled JSON room from a description object.
+ * Designed for programmatic use by Claude or the CMS Room Wizard.
+ *
+ * @param {Object} config
+ * @param {string} config.name - Room display name (e.g., "Downtown Gallery")
+ * @param {number} [config.width=12] - Width in tiles
+ * @param {number} [config.height=10] - Height in tiles
+ * @param {string[]} [config.paintings] - Array of artwork IDs from ARTWORKS database
+ * @param {string[]} [config.npcs] - Array of contact IDs from CONTACTS database
+ * @param {string} [config.style='gallery'] - Template: gallery | museum | studio | office | bar | warehouse
+ * @returns {Object} Valid Tiled JSON map with linked artworkId/NPC id properties
+ *
+ * @example
+ * generateRoomFromPrompt({
+ *     name: "Kenji's Gallery",
+ *     width: 14, height: 12,
+ *     paintings: ["basquiat_untitled_1982", "haring_radiant_baby_1982"],
+ *     npcs: ["elena_ross"],
+ *     style: "gallery",
+ * })
+ */
+export function generateRoomFromPrompt(config) {
+    const {
+        name = 'New Room',
+        width = 12,
+        height = 10,
+        paintings = [],
+        npcs = [],
+        style = 'gallery',
+    } = config;
+
+    const templateName = TEMPLATES[style] ? style : 'gallery';
+    const template = TEMPLATES[templateName];
+    const w = Math.max(5, Math.min(30, width));
+    const h = Math.max(5, Math.min(30, height));
+
+    // Build opts with artwork/NPC data for the template generator
+    const opts = {
+        paintings: paintings.length || null,
+        title: name,
+        npcs: npcs.map(npcId => ({ id: npcId, label: npcId })),
+        artworks: paintings.map((artId, i) => ({
+            title: `Artwork ${i + 1}`,
+            artist: 'Unknown',
+            price: 10000,
+            desc: '',
+            artworkId: artId,
+        })),
+    };
+
+    const result = template.generate(w, h, opts);
+    const json = assembleTiledJSON(result, w, h);
+
+    // Post-process: inject artworkId properties into painting objects
+    const objLayer = json.layers.find(l => l.type === 'objectgroup');
+    if (objLayer && paintings.length > 0) {
+        const paintingObjs = objLayer.objects.filter(o => o.name === 'painting');
+        paintingObjs.forEach((obj, i) => {
+            if (i < paintings.length) {
+                const artId = paintings[i];
+                if (!obj.properties) obj.properties = [];
+                // Add artworkId property
+                obj.properties.push({ name: 'artworkId', type: 'string', value: artId });
+            }
+        });
+    }
+
+    // Post-process: replace NPC placeholder data with real contact IDs
+    if (objLayer && npcs.length > 0) {
+        const npcObjs = objLayer.objects.filter(o => o.name === 'npc');
+        npcObjs.forEach((obj, i) => {
+            if (i < npcs.length) {
+                const npcId = npcs[i];
+                if (!obj.properties) obj.properties = [];
+                // Update id property to match CONTACTS
+                const idProp = obj.properties.find(p => p.name === 'id');
+                if (idProp) idProp.value = npcId;
+                else obj.properties.push({ name: 'id', type: 'string', value: npcId });
+            }
+        });
+    }
+
+    return json;
+}
+
 // ── CLI ──
 function main() {
     const args = process.argv.slice(2);

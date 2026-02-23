@@ -128,6 +128,8 @@ export default function TerminalLogin({ onComplete, previewStep }) {
         requestAnimationFrame(() => setVisible(true));
         // Ensure Guest profile exists for backward compat
         ProfileManager.ensureGuestProfile();
+        // Seed a demo save if no saves exist, so Authorize Dossier has something to load
+        GameState.seedDemoSave();
         setProfiles(ProfileManager.getProfiles());
     }, []);
 

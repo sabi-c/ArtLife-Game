@@ -1,0 +1,555 @@
+{
+    "_meta": {
+        "game": "ArtLife",
+        "version": "1.0.0",
+        "description": "Complete schema documentation for all ArtLife game content types. Use these schemas as templates when creating new NPCs, dialogue trees, events, haggle configs, or venues. Each schema defines field types, requirements, and example values.",
+        "generatedAt": "2026-02-23",
+        "usage": "Import ContentExporter from 'src/utils/ContentExporter.js' to export schema-annotated JSON. Use ContentImporter to validate imports."
+    },
+    "schemas": {
+        "npc": {
+            "_description": "ArtLife NPC / Contact — a character in the art world with stats, inventory, and haggle behavior",
+            "template": {
+                "id": "npc_new_character",
+                "name": "New Character",
+                "emoji": "👤",
+                "role": "dealer",
+                "tier": "B",
+                "tint": "0xcccccc",
+                "spriteKey": "walk_npc_default_walk",
+                "portraitKey": "portrait_npc_default",
+                "backstory": "A mysterious figure in the art world.",
+                "motivations": [
+                    "profit",
+                    "connections"
+                ],
+                "traits": [
+                    "calculating",
+                    "patient"
+                ],
+                "wealth": {
+                    "liquidCash": 50000,
+                    "annualBudget": 200000,
+                    "spendingCeiling": 100000,
+                    "incomeSource": "gallery_sales",
+                    "financialStress": 30
+                },
+                "collection": {
+                    "owned": [],
+                    "forSale": [],
+                    "pastSales": [],
+                    "totalValue": 500000
+                },
+                "taste": {
+                    "preferredStyles": [
+                        "contemporary",
+                        "post-internet"
+                    ],
+                    "avoidedStyles": [
+                        "classical",
+                        "realism"
+                    ],
+                    "priceRange": {
+                        "min": 5000,
+                        "max": 100000
+                    },
+                    "riskProfile": "moderate"
+                },
+                "haggleProfile": {
+                    "dealerType": "patron",
+                    "patience": 6,
+                    "bluffChance": 0.15,
+                    "priceFlexibility": 0.20,
+                    "walkawayThreshold": 0.75,
+                    "emotionalTriggers": [
+                        "flattery",
+                        "holdFirm"
+                    ],
+                    "openingLine": "Let's see what you've brought me."
+                },
+                "network": {
+                    "allies": [
+                        "elena_ross"
+                    ],
+                    "rivals": [
+                        "julian_vance"
+                    ],
+                    "faction": "independent"
+                },
+                "behavior": {
+                    "riskTolerance": 50,
+                    "temperament": "calm",
+                    "scheduleAffinity": "evening"
+                },
+                "dialogue": {
+                    "greetings": [
+                        "Hello there.",
+                        "Good to see you."
+                    ],
+                    "tonePreference": "friendly",
+                    "topics": [
+                        "art_market",
+                        "new_artists"
+                    ]
+                }
+            },
+            "fields": {
+                "id": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Unique identifier (snake_case)"
+                },
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Display name"
+                },
+                "role": {
+                    "type": "string",
+                    "required": true,
+                    "enum": [
+                        "dealer",
+                        "gallerist",
+                        "auction",
+                        "artist",
+                        "collector",
+                        "advisor",
+                        "speculator",
+                        "young_hustler",
+                        "institutional",
+                        "mega_dealer",
+                        "curator",
+                        "critic",
+                        "fixer"
+                    ]
+                },
+                "tier": {
+                    "type": "string",
+                    "required": true,
+                    "enum": [
+                        "S",
+                        "A",
+                        "B",
+                        "C"
+                    ]
+                },
+                "haggleProfile.dealerType": {
+                    "type": "string",
+                    "enum": [
+                        "patron",
+                        "shark",
+                        "hustler",
+                        "collector",
+                        "calculator",
+                        "novice",
+                        "speculator",
+                        "curator",
+                        "nervous"
+                    ]
+                },
+                "haggleProfile.patience": {
+                    "type": "number",
+                    "min": 1,
+                    "max": 15,
+                    "description": "Rounds before NPC walks away"
+                },
+                "haggleProfile.bluffChance": {
+                    "type": "number",
+                    "min": 0,
+                    "max": 1,
+                    "description": "Probability of faking rejection"
+                },
+                "haggleProfile.priceFlexibility": {
+                    "type": "number",
+                    "min": 0,
+                    "max": 0.5,
+                    "description": "How much they bend on price (0=firm, 0.5=very flexible)"
+                },
+                "haggleProfile.walkawayThreshold": {
+                    "type": "number",
+                    "min": 0.5,
+                    "max": 1,
+                    "description": "Gap tolerance before leaving (lower=more tolerant)"
+                },
+                "haggleProfile.emotionalTriggers": {
+                    "type": "string[]",
+                    "description": "Tactic IDs that have extra impact on this NPC"
+                }
+            }
+        },
+        "dialogue_tree": {
+            "_description": "Branching NPC conversation with tone system, stat gates, haggle triggers, and scheduled consequences",
+            "template": {
+                "id": "npc_id_venue_name",
+                "npcId": "npc_id",
+                "venue": "venue_id",
+                "trigger": "room_talk",
+                "entryConditions": null,
+                "nodes": {
+                    "start": {
+                        "speaker": "npc_id",
+                        "text": null,
+                        "variants": [
+                            {
+                                "check": {
+                                    "npcFavor.npc_id": {
+                                        "min": 10
+                                    }
+                                },
+                                "text": "Warm greeting for high favor."
+                            },
+                            {
+                                "check": null,
+                                "text": "Default greeting for new encounters."
+                            }
+                        ],
+                        "topics": [
+                            {
+                                "label": "Ask about the exhibition",
+                                "tone": null,
+                                "requires": null,
+                                "next": "exhibition_topic"
+                            },
+                            {
+                                "label": "Let's talk business",
+                                "tone": "direct",
+                                "requires": {
+                                    "reputation": {
+                                        "min": 30
+                                    }
+                                },
+                                "next": "business_talk"
+                            },
+                            {
+                                "label": "Make an offer",
+                                "tone": "direct",
+                                "requires": {
+                                    "cash": {
+                                        "min": 50000
+                                    }
+                                },
+                                "triggerHaggle": true,
+                                "work": {
+                                    "id": "art_001",
+                                    "title": "Untitled",
+                                    "artist": "Artist Name",
+                                    "year": "2025"
+                                },
+                                "effects": {
+                                    "cash": -50000
+                                },
+                                "npcInvolved": "npc_id",
+                                "next": null
+                            },
+                            {
+                                "label": "Just looking. [Leave]",
+                                "tone": null,
+                                "next": null
+                            }
+                        ]
+                    },
+                    "exhibition_topic": {
+                        "speaker": "npc_id",
+                        "text": "The NPC discusses the exhibition...",
+                        "effects": {
+                            "intel": 2
+                        },
+                        "npcEffects": {
+                            "npc_id": {
+                                "favor": 2
+                            }
+                        },
+                        "topics": [
+                            {
+                                "label": "Tell me more",
+                                "tone": "friendly",
+                                "next": "deeper_topic"
+                            },
+                            {
+                                "label": "End conversation",
+                                "tone": null,
+                                "next": "closing"
+                            }
+                        ]
+                    },
+                    "closing": {
+                        "speaker": "npc_id",
+                        "text": "Farewell text.",
+                        "topics": []
+                    }
+                },
+                "onComplete": {
+                    "effects": {},
+                    "schedules": []
+                }
+            },
+            "tone_system": {
+                "tones": [
+                    "friendly",
+                    "schmoozing",
+                    "direct",
+                    "generous",
+                    "ruthless"
+                ],
+                "description": "Each choice can have a tone. Dominant tone over time triggers specialization at Week 20.",
+                "specializations": {
+                    "friendly": "The Patron — artists approach you first",
+                    "schmoozing": "The Insider — +1 intel from every conversation",
+                    "direct": "The Shark — 15% discount on primary market",
+                    "generous": "The Benefactor — museum board invitation",
+                    "ruthless": "The Predator — force intel reveals"
+                }
+            },
+            "haggle_trigger_fields": {
+                "triggerHaggle": {
+                    "type": "boolean",
+                    "description": "Set true to launch haggle battle after this choice"
+                },
+                "work": {
+                    "type": "object",
+                    "description": "Artwork data: { id, title, artist, year, medium, dimensions }"
+                },
+                "npcInvolved": {
+                    "type": "string",
+                    "description": "NPC ID whose haggleProfile drives the battle"
+                }
+            }
+        },
+        "haggle_config": {
+            "_description": "Haggle battle system configuration — dealer archetypes and player tactics",
+            "dealer_types": {
+                "template": {
+                    "name": "Dealer Name",
+                    "icon": "🎭",
+                    "patience": 6,
+                    "greedFactor": 1.2,
+                    "haggleStyle": "aggressive",
+                    "acceptStyle": "grudging",
+                    "openingLine": "\"Let's see what you've got.\"",
+                    "traits": [
+                        "stubborn",
+                        "analytical"
+                    ],
+                    "weaknesses": [
+                        "flattery"
+                    ],
+                    "description": "Short description of this dealer archetype."
+                },
+                "existing_types": [
+                    "patron",
+                    "shark",
+                    "hustler",
+                    "collector",
+                    "calculator",
+                    "novice",
+                    "speculator",
+                    "curator",
+                    "nervous"
+                ],
+                "haggle_styles": [
+                    "aggressive",
+                    "passive",
+                    "calculated",
+                    "emotional"
+                ]
+            },
+            "tactics": {
+                "template": {
+                    "name": "Tactic Name",
+                    "type": "aggressive",
+                    "baseSuccess": 0.5,
+                    "priceShift": 0.05,
+                    "patienceEffect": -1,
+                    "statBonus": "audacity",
+                    "statWeight": 0.005,
+                    "description": "What this tactic does.",
+                    "unlockStat": null,
+                    "unlockMin": 0
+                },
+                "tactic_types": [
+                    "aggressive",
+                    "passive",
+                    "calculated",
+                    "emotional"
+                ],
+                "type_effectiveness": {
+                    "aggressive": {
+                        "strongAgainst": "passive",
+                        "weakAgainst": "calculated"
+                    },
+                    "passive": {
+                        "strongAgainst": "calculated",
+                        "weakAgainst": "aggressive"
+                    },
+                    "calculated": {
+                        "strongAgainst": "aggressive",
+                        "weakAgainst": "emotional"
+                    },
+                    "emotional": {
+                        "strongAgainst": "calculated",
+                        "weakAgainst": "passive"
+                    }
+                }
+            }
+        },
+        "event": {
+            "_description": "Game event with multi-step narrative, choices, and stat changes",
+            "template": {
+                "id": "event_npc_situation_number",
+                "category": "social",
+                "title": "Event Title",
+                "npcId": "npc_id",
+                "requirements": {
+                    "reputation": 20
+                },
+                "weight": 1,
+                "steps": [
+                    {
+                        "type": "narrative",
+                        "text": "Descriptive text setting the scene...",
+                        "characterId": "narrator"
+                    },
+                    {
+                        "type": "choice",
+                        "text": "The NPC presents you with options.",
+                        "characterId": "npc_id",
+                        "choices": [
+                            {
+                                "label": "Accept the offer",
+                                "nextStep": 2,
+                                "statChange": {
+                                    "reputation": 5,
+                                    "cash": -10000
+                                }
+                            },
+                            {
+                                "label": "Decline politely",
+                                "nextStep": 3,
+                                "statChange": {
+                                    "reputation": -2
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "type": "stat_change",
+                        "text": "The deal is done.",
+                        "isEnd": true
+                    }
+                ]
+            },
+            "categories": [
+                "social",
+                "market",
+                "drama",
+                "personal",
+                "travel",
+                "opportunity",
+                "scandal",
+                "chain",
+                "storyline"
+            ],
+            "step_types": [
+                "narrative",
+                "choice",
+                "stat_change",
+                "reveal"
+            ]
+        },
+        "venue": {
+            "_description": "Game location with interconnected rooms, interactive items, NPCs, and eavesdrops",
+            "template": {
+                "id": "venue_id",
+                "name": "Venue Name",
+                "desc": "Description of the venue.",
+                "startRoom": "main_hall",
+                "timeLimit": 8,
+                "requires": null,
+                "rooms": [
+                    {
+                        "id": "main_hall",
+                        "name": "Main Hall",
+                        "desc": "The spacious main hall...",
+                        "ambience": "Soft jazz, murmured conversations.",
+                        "items": [
+                            {
+                                "name": "Painting on wall",
+                                "desc": "A striking abstract...",
+                                "isTakeable": false,
+                                "onLook": {
+                                    "effect": {
+                                        "intel": 1
+                                    }
+                                }
+                            }
+                        ],
+                        "characters": [
+                            {
+                                "id": "elena_ross",
+                                "eventId": "elena_ross_gallery_opening",
+                                "greeting": "Elena smiles as you approach."
+                            }
+                        ],
+                        "exits": [
+                            {
+                                "dir": "north",
+                                "id": "vip_lounge",
+                                "label": "VIP Lounge",
+                                "block": null,
+                                "requires": {
+                                    "reputation": {
+                                        "min": 40
+                                    }
+                                }
+                            }
+                        ],
+                        "eavesdrops": [
+                            {
+                                "text": "Two collectors whisper about a Richter...",
+                                "effect": {
+                                    "intel": 2
+                                }
+                            }
+                        ],
+                        "timeCost": 1,
+                        "tags": [
+                            "social",
+                            "gallery"
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "content_flow": {
+        "description": "How content types connect in the game loop",
+        "flow": "NPC (contacts.js) → Schedule (NPCManager.js) → Overworld Sprite → Player Interaction → Dialogue Tree (dialogue_trees.js) → triggerHaggle → Haggle Battle (HaggleManager.js + HaggleScene.js) → Artwork Transaction",
+        "data_references": {
+            "dialogue → NPC": "dialogue_tree.npcId → contacts.id",
+            "dialogue → haggle": "topic.triggerHaggle + topic.npcInvolved → HaggleManager.start({ npc })",
+            "dialogue → artwork": "topic.work → { id, title, artist, year }",
+            "NPC → dealer": "contacts.haggleProfile.dealerType → DEALER_TYPES key",
+            "NPC → schedule": "NPCManager.npcs[].contactId → contacts.id",
+            "event → NPC": "event.npcId → contacts.id",
+            "venue → NPC": "room.characters[].id → contacts.id"
+        }
+    },
+    "export_import": {
+        "how_to_export": "In the CMS, click 📥 Export buttons in HaggleEditor or NPCEditor. Programmatically: ContentExporter.download('npcs')",
+        "how_to_import": "In NPCEditor, click 📂 Import and select a .json file. Programmatically: ContentImporter.importFile(file)",
+        "supported_types": [
+            "npcs",
+            "events",
+            "dialogues",
+            "haggles",
+            "rooms",
+            "storylines",
+            "all"
+        ],
+        "file_format": {
+            "_schema": "Machine-readable field definitions",
+            "_meta": "{ exportedAt, version, contentType, game }",
+            "data": "Array or object of content items"
+        }
+    }
+}

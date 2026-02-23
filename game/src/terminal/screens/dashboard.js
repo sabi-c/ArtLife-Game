@@ -1005,6 +1005,34 @@ function weekReportScreen(ui) {
             });
         }
 
+        // ── NPC Market Activity ──
+        const simReport = TerminalAPI.npcMarket.getWeeklyReport();
+        if (simReport && simReport.tradesExecuted > 0) {
+            let simHtml = `<div class="db-panel"><div class="db-panel-header">NPC MARKET ACTIVITY</div>`;
+            simHtml += `<div class="db-news-item"><span class="db-news-marker">📊</span> `
+                + `${simReport.tradesExecuted} trade${simReport.tradesExecuted !== 1 ? 's' : ''} executed`
+                + ` · $${simReport.totalVolume.toLocaleString()} total volume</div>`;
+
+            // Show individual trade headlines
+            const trades = simReport.trades || [];
+            trades.slice(0, 4).forEach(t => {
+                const buyer = TerminalAPI.contacts.find(c => c.id === t.buyer);
+                const seller = TerminalAPI.contacts.find(c => c.id === t.seller);
+                const artwork = TerminalAPI.artworks.find(a => a.id === t.artwork);
+                const buyerName = buyer?.name || t.buyer;
+                const sellerName = seller?.name || t.seller;
+                const title = artwork?.title || t.artwork;
+                simHtml += `<div class="db-news-item"><span class="db-news-marker">▸</span> `
+                    + `${buyerName} acquired "${title}" from ${sellerName} · $${t.price.toLocaleString()}</div>`;
+            });
+            if (trades.length > 4) {
+                simHtml += `<div class="db-news-item" style="color:#555">  ... +${trades.length - 4} more trades</div>`;
+            }
+
+            simHtml += `</div>`;
+            lines.push({ type: 'raw', text: simHtml });
+        }
+
         // ── Anti-Resource Warnings ──
         const warnings = [];
         if (report.heat > 20) warnings.push(`🔥 Market Heat at ${report.heat} — galleries are watching`);
@@ -1271,6 +1299,50 @@ export function dashboardScreen(ui) {
         });
         newsHtml += `</div>`;
         lines.push({ type: 'raw', text: newsHtml });
+
+        // ── Art Market Flow Panel (mid/late game) ──
+        if (s.week > 4) {
+            const weeklyReport = TerminalAPI.npcMarket.getWeeklyReport();
+            const recentTrades = TerminalAPI.npcMarket.getArtFlow(10);
+            const topCollections = TerminalAPI.npcMarket.getTopCollections(3);
+
+            if (weeklyReport || recentTrades.length > 0) {
+                let flowHtml = `<div class="db-panel"><div class="db-panel-header">ART MARKET FLOW</div>`;
+
+                // Weekly summary
+                if (weeklyReport) {
+                    flowHtml += `<div class="db-news-item"><span class="db-news-marker">📊</span> `
+                        + `Week ${weeklyReport.week}: ${weeklyReport.tradesExecuted} trade${weeklyReport.tradesExecuted !== 1 ? 's' : ''}`
+                        + (weeklyReport.totalVolume > 0 ? ` · $${weeklyReport.totalVolume.toLocaleString()} volume` : '')
+                        + `</div>`;
+                }
+
+                // Recent trades (show last 5)
+                recentTrades.slice(-5).reverse().forEach(t => {
+                    const buyer = TerminalAPI.contacts.find(c => c.id === t.buyer);
+                    const seller = TerminalAPI.contacts.find(c => c.id === t.seller);
+                    const artwork = TerminalAPI.artworks.find(a => a.id === t.artwork);
+                    const buyerName = buyer?.name?.split(' ')[0] || t.buyer;
+                    const sellerName = seller?.name?.split(' ')[0] || t.seller;
+                    const title = artwork?.title || t.artwork;
+                    flowHtml += `<div class="db-news-item"><span class="db-news-marker">▸</span> `
+                        + `${buyerName} ← "${title}" ← ${sellerName} · $${t.price.toLocaleString()}</div>`;
+                });
+
+                // Top collectors
+                if (topCollections.length > 0) {
+                    flowHtml += `<div style="margin-top:6px;color:#5a5a6a;font-size:10px;letter-spacing:1px">TOP COLLECTORS</div>`;
+                    topCollections.forEach((p, i) => {
+                        const medal = ['🥇', '🥈', '🥉'][i] || '  ';
+                        flowHtml += `<div class="db-news-item"><span class="db-news-marker">${medal}</span> `
+                            + `${p.name} · ${p.collectionSize} pcs · $${p.collectionValue.toLocaleString()}</div>`;
+                    });
+                }
+
+                flowHtml += `</div>`;
+                lines.push({ type: 'raw', text: flowHtml });
+            }
+        }
 
         // ── Pipeline Panel ──
         if (s.activeDeals.length > 0) {
