@@ -14,6 +14,21 @@
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **Phase 3:** Complete. Phase 4 active.
 
+### Gallery Polish + 2-Column Layouts (2026-02-22 Session 15)
+
+**Style Rename** — Display names updated for clarity:
+- Gallery Dashboard → **Seventh House** (inspired by seventhhouse.la)
+- Bloomberg Dark → **Bloomberg Terminal**
+- Artnet Auction → **Artnet Price Database**
+- Other names kept: Gagosian Tearsheet, Sotheby's Catalogue, Deitch Projects
+
+**2-Column Responsive Layouts** — All 5 full-page views now have 2-column panel grids on desktop (≥768px), collapsing to single column on mobile:
+- Gallery (Seventh House): hero section (stats+networth centered) + 2-col grid below
+- Artnet/Sotheby's/Deitch: panels below main content in 2-col grid
+- Tearsheet: added all missing panels (leaderboard, price chart, trade feed, tx history, watchlist, portfolio) with Gagosian serif styling
+
+**Tearsheet Panels** — TearsheetView now receives all feed/selectedArtist props and renders full panel set with Gagosian-style CSS (Georgia serif, gold accents, cream borders).
+
 ### 6 Art-World Gallery Styles (2026-02-22 Session 14)
 
 **Sprint 1: 3 New Gallery Styles (Artnet + Sotheby's + Deitch)**
