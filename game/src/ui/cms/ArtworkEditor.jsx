@@ -22,6 +22,7 @@ import { CALENDAR_EVENTS } from '../../data/calendar_events.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { ARTISTS } from '../../data/artists.js';
 import { DEALER_TYPES, HAGGLE_CONFIG } from '../../data/haggle_config.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
 import TearSheetView from './TearSheetView.jsx';
 
 // ── Style Constants ──
@@ -608,6 +609,133 @@ function HagglePricePanel({ work }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ArtworkMarketPanel — Per-artwork market intelligence panel
+// ═══════════════════════════════════════════════════════════════
+
+function MiniSparkline({ data, width = 140, height = 32, color = '#c9a84c' }) {
+    if (!data || data.length < 2) return <span style={{ color: '#333', fontSize: 9 }}>no data</span>;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const points = data.map((v, i) => {
+        const x = (i / (data.length - 1)) * width;
+        const y = height - ((v - min) / range) * (height - 4) - 2;
+        return `${x},${y}`;
+    }).join(' ');
+    return (
+        <svg width={width} height={height} style={{ display: 'block' }}>
+            <polygon points={`0,${height} ${points} ${width},${height}`} fill={`${color}12`} />
+            <polyline points={points} fill="none" stroke={color} strokeWidth={1.5} />
+        </svg>
+    );
+}
+
+function ArtworkMarketPanel({ work }) {
+    if (!work) return null;
+
+    // Get artist data
+    const artist = MarketManager.getArtist?.(work.artistId) || ARTISTS.find(a => a.id === work.artistId);
+    const currentPrice = work.price || work.basePrice || 0;
+    const basePrice = work.basePrice || currentPrice;
+    const priceDelta = basePrice > 0 ? ((currentPrice - basePrice) / basePrice) * 100 : 0;
+
+    // Get price history from marketStore
+    const marketStore = useMarketStore.getState();
+    const priceHistory = marketStore?.priceHistory?.[work.artistId] || [];
+    const priceData = priceHistory.map(h => h.avgPrice);
+
+    // Get intra-week sparkline data
+    const intraWeek = marketStore?.intraWeekPrices?.[work.artistId] || [];
+
+    // Trade history for this artwork
+    const artworkTrades = MarketSimulator.getTradesByArtwork?.(work.id) || [];
+
+    // Hedonic score
+    const hedonicScore = MarketManager._hedonicScore?.(work) || 1.0;
+
+    // Artist index
+    const artistIndex = artist?.artistIndex || (MarketManager._computeArtistIndex?.(artist) || 500);
+
+    // Market cycle
+    const cycle = marketStore?.marketCycle || 'flat';
+    const cycleColor = { bull: '#4ade80', bear: '#f87171', flat: '#94a3b8' };
+
+    const statRow = (label, value, color = '#ddd') => (
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid #111' }}>
+            <span style={{ fontSize: 9, color: '#555' }}>{label}</span>
+            <span style={{ fontSize: 10, color, fontWeight: 'bold', fontFamily: mono }}>{value}</span>
+        </div>
+    );
+
+    return (
+        <div style={{ flex: '0 0 260px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Header */}
+            <div style={{ fontSize: 9, color: '#c9a84c', fontWeight: 'bold', letterSpacing: 1, textTransform: 'uppercase' }}>
+                📊 MARKET DATA
+            </div>
+
+            {/* Price Chart */}
+            <div style={{ background: '#050508', border: '1px solid #1a1a2e', borderRadius: 4, padding: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 8, color: '#555' }}>PRICE HISTORY</span>
+                    <span style={{ fontSize: 8, color: priceDelta > 0 ? '#4ade80' : priceDelta < 0 ? '#f87171' : '#555' }}>
+                        {priceDelta > 0 ? '▲' : priceDelta < 0 ? '▼' : '—'}{Math.abs(priceDelta).toFixed(1)}%
+                    </span>
+                </div>
+                <MiniSparkline
+                    data={priceData.length > 1 ? priceData : intraWeek.length > 1 ? intraWeek : [basePrice, currentPrice]}
+                    width={240} height={40}
+                    color={priceDelta >= 0 ? '#4ade80' : '#f87171'}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: '#333', marginTop: 2 }}>
+                    <span>Base</span>
+                    <span>Current</span>
+                </div>
+            </div>
+
+            {/* Key Metrics */}
+            <div style={{ background: '#050508', border: '1px solid #1a1a2e', borderRadius: 4, padding: 8 }}>
+                {statRow('Current Price', `$${currentPrice.toLocaleString()}`, '#4ade80')}
+                {statRow('Base Price', `$${basePrice.toLocaleString()}`)}
+                {statRow('P&L', `${priceDelta > 0 ? '+' : ''}${priceDelta.toFixed(1)}%`, priceDelta > 0 ? '#4ade80' : priceDelta < 0 ? '#f87171' : '#94a3b8')}
+                {statRow('Market Cycle', cycle.toUpperCase(), cycleColor[cycle])}
+                {artist && statRow('Artist Heat', `${Math.round(artist.heat || 0)}`, artist.heat > 60 ? '#f87171' : artist.heat > 30 ? '#fbbf24' : '#4ade80')}
+                {artist && statRow('Artist Index', artistIndex.toLocaleString(), '#60a5fa')}
+                {statRow('Hedonic Score', `×${hedonicScore.toFixed(2)}`, hedonicScore > 1 ? '#c9a84c' : '#888')}
+                {artist?.buybackActive && statRow('⚠️ Buyback', 'ACTIVE', '#fbbf24')}
+            </div>
+
+            {/* Trade History */}
+            <div style={{ background: '#050508', border: '1px solid #1a1a2e', borderRadius: 4, padding: 8 }}>
+                <div style={{ fontSize: 8, color: '#555', letterSpacing: 1, marginBottom: 4 }}>TRADE HISTORY</div>
+                {artworkTrades.length === 0 ? (
+                    <div style={{ fontSize: 9, color: '#333', textAlign: 'center', padding: 8 }}>No trades recorded</div>
+                ) : (
+                    artworkTrades.slice(-5).reverse().map((t, i) => (
+                        <div key={i} style={{ fontSize: 9, padding: '3px 0', borderBottom: '1px solid #0a0a12', display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#888' }}>W{t.week}</span>
+                            <span style={{ color: '#4ade80', fontWeight: 'bold' }}>${t.price?.toLocaleString()}</span>
+                            <span style={{ color: '#555' }}>{t.buyer?.slice(0, 10)}</span>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Integration Status */}
+            <div style={{ background: '#050508', border: '1px solid #1a1a2e', borderRadius: 4, padding: 8 }}>
+                <div style={{ fontSize: 8, color: '#555', letterSpacing: 1, marginBottom: 4 }}>DATA SOURCE</div>
+                <div style={{ fontSize: 9, color: work._source === 'market' ? '#4ade80' : work._source === 'inventory' ? '#60a5fa' : '#c9a84c' }}>
+                    {work._source === 'market' ? '🟢 Live Market' : work._source === 'inventory' ? '🔵 Player Portfolio' : '🟡 Static Data'}
+                </div>
+                <div style={{ fontSize: 8, color: '#333', marginTop: 4 }}>
+                    Ready for API · {work.id}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN EXPORT: Enhanced ArtworkEditor with 7 sub-tabs
 // ═══════════════════════════════════════════════════════════════
 export default function ArtworkEditor() {
@@ -953,8 +1081,12 @@ export default function ArtworkEditor() {
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Market Data Panel */}
+                                {selected && <ArtworkMarketPanel work={selected} />}
+
                                 {/* JSON Panel */}
-                                <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                                         <span style={{ color: '#666', fontSize: 9, textTransform: 'uppercase' }}>RAW JSON</span>
                                         <button onClick={handleHotSwap} style={{ ...btnStyle, fontSize: 9 }}>🔥 Hot-Swap</button>
