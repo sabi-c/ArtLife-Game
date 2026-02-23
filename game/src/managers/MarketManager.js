@@ -420,4 +420,44 @@ export class MarketManager {
             worksOnMarket: works.filter(w => w.onMarket).length,
         };
     }
+
+    /**
+     * Lightweight tick snapshot for the live terminal.
+     * Returns flat array of artist data optimized for real-time display.
+     * Called every 1-5 seconds by ArtTerminal.jsx.
+     *
+     * @returns {{ artists: Array, composite: number, cycle: string, week: number, timestamp: number }}
+     */
+    static getTickSnapshot() {
+        return {
+            artists: MarketManager.artists.map(a => {
+                const works = MarketManager.works.filter(w => w.artistId === a.id);
+                const avgPrice = works.length > 0
+                    ? Math.round(works.reduce((s, w) => s + (w.price || w.basePrice || 0), 0) / works.length)
+                    : 0;
+                const avgBase = works.length > 0
+                    ? Math.round(works.reduce((s, w) => s + (w.basePrice || 0), 0) / works.length)
+                    : 0;
+                const delta = avgBase > 0 ? ((avgPrice - avgBase) / avgBase) * 100 : 0;
+                return {
+                    id: a.id,
+                    name: a.name,
+                    tier: a.tier,
+                    heat: Math.round((a.heat || 0) * 10) / 10,
+                    avgPrice,
+                    avgBase,
+                    delta: Math.round(delta * 10) / 10,
+                    index: a.artistIndex || MarketManager._computeArtistIndex(a),
+                    worksCount: works.length,
+                    onMarket: works.filter(w => w.onMarket).length,
+                    buybackActive: a.buybackActive || false,
+                };
+            }),
+            composite: MarketManager.getCompositeIndex(),
+            sectors: MarketManager.getSectorIndices(),
+            cycle: GameState.state?.marketState || 'flat',
+            week: GameState.state?.week || 0,
+            timestamp: Date.now(),
+        };
+    }
 }

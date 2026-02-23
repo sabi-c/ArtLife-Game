@@ -16,6 +16,7 @@ import KanbanBoard from './cms/KanbanBoard.jsx';
 import TimelineCalendar from './cms/TimelineCalendar.jsx';
 import HaggleEditor from './cms/HaggleEditor.jsx';
 import MarketSimDashboard from './cms/MarketSimDashboard.jsx';
+import ArtTerminal from './cms/ArtTerminal.jsx';
 import ActivityLogViewer from './cms/ActivityLogViewer.jsx';
 
 const TABS = [
@@ -27,6 +28,7 @@ const TABS = [
     { id: 'artworks', icon: '🎨', label: 'Artworks / Market', dirtyDomain: 'artworks' },
     { id: 'haggle', icon: '⚔️', label: 'Haggle Battles', dirtyDomain: 'haggle' },
     { id: 'marketsim', icon: '📊', label: 'Market Sim', dirtyDomain: 'market' },
+    { id: 'terminal', icon: '📡', label: 'Live Terminal' },
     { id: 'venues', icon: '🏢', label: 'Venues / Map', dirtyDomain: 'maps' },
     { id: 'actlog', icon: '📋', label: 'Activity Log' },
     { id: 'ingest', icon: '🤖', label: 'AI Ingestion Port' },
@@ -165,6 +167,7 @@ export default function MasterCMS({ onClose }) {
             case 'artworks': return <ArtworkEditor />;
             case 'haggle': return <HaggleEditor />;
             case 'marketsim': return <MarketSimDashboard />;
+            case 'terminal': return <ArtTerminal />;
             case 'actlog': return <ActivityLogViewer />;
             case 'venues': return <VenueEditor />;
             case 'ingest': return <DataIngestion />;
