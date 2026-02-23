@@ -3,16 +3,18 @@
  *
  * Multi-panel, auto-ticking terminal that shows real-time price movement,
  * trade feeds, and market alerts. Hooks into MarketManager.microTick()
- * for live O-U price jitter.
+ * for live O-U price jitter and MarketSimulator.simulate() for full
+ * weekly NPC trade cycles.
  *
  * ARCHITECTURE CONTEXT (for other agents):
  * ┌──────────────────────────────────────────────────────┐
  * │  ArtTerminal (THIS FILE)                             │
- * │  └─ Consumes: MarketManager.getTickSnapshot(),       │
- * │     MarketManager.microTick(), MarketSimulator.tradeLog│
- * │  └─ Lives in: MasterCMS sidebar → "Live Terminal"     │
- * │  └─ Frontend-ready: all data structures match the     │
- * │     getTickSnapshot() API for plug-in replacement     │
+ * │  └─ LIVE MODE: MarketManager.microTick() on interval  │
+ * │  └─ SIM MODE: MarketSimulator.simulate() per week     │
+ * │  └─ Consumes: getTickSnapshot(), getOpenSellOrders(), │
+ * │     tradeLog, marketEvents                            │
+ * │  └─ Lives in: MasterCMS sidebar → "📡 Live Terminal"    │
+ * │  └─ Sibling: MarketSimDashboard (batch sim + 8 tabs)  │
  * └──────────────────────────────────────────────────────┘
  *
  * Layout: Header → [Watchlist | Chart] → [Feed | OrderBook | Alerts]
@@ -153,6 +155,8 @@ export default function ArtTerminal() {
     const [alerts, setAlerts] = useState([]);
     const [snapshot, setSnapshot] = useState(null);
     const [watchlistSort, setWatchlistSort] = useState('delta');
+    const [simWeek, setSimWeek] = useState(1);
+    const [lastSimTrades, setLastSimTrades] = useState(0);
     const feedRef = useRef(null);
     const maxHistory = 60; // Keep last 60 ticks of price data
 
@@ -221,6 +225,38 @@ export default function ArtTerminal() {
         return () => clearInterval(interval);
     }, [tickSpeed, selectedArtist]);
 
+    // ── Sim Week handler ──
+    const runSimWeek = useCallback(() => {
+        const cycle = snapshot?.cycle || 'flat';
+        const week = simWeek;
+        try {
+            const result = MarketSimulator.simulate(week, cycle);
+            setSimWeek(w => w + 1);
+
+            // Count new trades
+            const newTradeCount = (MarketSimulator.tradeLog || []).length;
+            const tradesThisWeek = newTradeCount - lastSimTrades;
+            setLastSimTrades(newTradeCount);
+
+            // Generate alert for sim week
+            setAlerts(prev => [{
+                time: new Date().toLocaleTimeString(),
+                msg: `📅 Week ${week} simulated — ${tradesThisWeek} trades`,
+                color: '#60a5fa',
+            }, ...prev].slice(0, 50));
+
+            // Force a snapshot refresh
+            const snap = MarketManager.getTickSnapshot();
+            if (snap?.artists?.length > 0) setSnapshot(snap);
+        } catch (e) {
+            setAlerts(prev => [{
+                time: new Date().toLocaleTimeString(),
+                msg: `❌ Sim error: ${e.message}`,
+                color: '#f87171',
+            }, ...prev].slice(0, 50));
+        }
+    }, [simWeek, snapshot, lastSimTrades]);
+
     // ── Derived data ──
     const sortedArtists = useMemo(() => {
         if (!snapshot) return [];
@@ -237,9 +273,14 @@ export default function ArtTerminal() {
     const selectedData = snapshot?.artists?.find(a => a.id === selectedArtist);
     const selectedPrices = priceHistory[selectedArtist] || [];
     const trades = MarketSimulator.tradeLog || [];
-    const recentTrades = trades.slice(-20).reverse();
+    const recentTrades = trades.slice(-30).reverse();
     const cycleColor = { bull: '#4ade80', bear: '#f87171', flat: '#94a3b8' };
     const tierColor = { 'blue-chip': '#c9a84c', hot: '#f87171', 'mid-career': '#60a5fa', emerging: '#4ade80' };
+
+    // Real order book from MarketSimulator
+    const openOrders = useMemo(() => {
+        try { return MarketSimulator.getOpenSellOrders() || []; } catch { return []; }
+    }, [tickCount, simWeek]);
 
     // ── Not initialized state ──
     if (!snapshot || snapshot.artists.length === 0) {
@@ -313,9 +354,14 @@ export default function ArtTerminal() {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 8, color: dimText }}>W:{snapshot.week}</span>
+                    <span style={{ fontSize: 8, color: dimText }}>W:{simWeek}</span>
                     <span style={{ fontSize: 8, color: dimText }}>T:{tickCount}</span>
+                    <span style={{ fontSize: 8, color: '#333' }}>{trades.length} trades</span>
                     <div style={{ width: 1, height: 14, background: '#222' }} />
+                    <button onClick={runSimWeek} style={{
+                        ...speedBtn(false),
+                        borderColor: '#60a5fa', color: '#60a5fa', fontWeight: 'bold',
+                    }}>⏩ SIM</button>
                     {[1000, 2000, 5000].map(s => (
                         <button key={s} onClick={() => setTickSpeed(s)} style={speedBtn(tickSpeed === s)}>
                             {s / 1000}s
@@ -449,32 +495,37 @@ export default function ArtTerminal() {
                             </div>
                         </div>
 
-                        {/* Order Book */}
+                        {/* Order Book — REAL data from MarketSimulator */}
                         <div style={{ flex: 1, ...panel, borderRadius: 0, border: 'none', borderRight: `1px solid ${borderClr}` }}>
                             <div style={{ ...panelHeader, color: '#60a5fa' }}>
                                 <span>ORDER BOOK</span>
+                                <span style={{ color: dimText, fontWeight: 'normal' }}>{openOrders.length}</span>
                             </div>
-                            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                                {/* Bids */}
-                                <div style={{ flex: 1, overflowY: 'auto', borderRight: `1px solid ${borderClr}` }}>
-                                    <div style={{ fontSize: 7, color: '#333', textAlign: 'center', padding: '2px 0', borderBottom: '1px solid #111' }}>BIDS</div>
-                                    {sortedArtists.filter(a => a.onMarket > 0).slice(0, 8).map(a => (
-                                        <div key={a.id} style={{ fontSize: 8, padding: '2px 6px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #0a0a14' }}>
-                                            <span style={{ color: '#4ade80' }}>${Math.round(a.avgPrice * 0.92).toLocaleString()}</span>
-                                            <span style={{ color: '#333' }}>{a.name.slice(0, 8)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                {/* Asks */}
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
-                                    <div style={{ fontSize: 7, color: '#333', textAlign: 'center', padding: '2px 0', borderBottom: '1px solid #111' }}>ASKS</div>
-                                    {sortedArtists.filter(a => a.onMarket > 0).slice(0, 8).map(a => (
-                                        <div key={a.id} style={{ fontSize: 8, padding: '2px 6px', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #0a0a14' }}>
-                                            <span style={{ color: '#333' }}>{a.name.slice(0, 8)}</span>
-                                            <span style={{ color: '#f87171' }}>${Math.round(a.avgPrice * 1.08).toLocaleString()}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '0 4px' }}>
+                                {openOrders.length === 0 ? (
+                                    <div style={{ fontSize: 9, color: '#222', textAlign: 'center', padding: 16 }}>No open orders — run a sim week</div>
+                                ) : (
+                                    openOrders.slice(0, 12).map((o, i) => {
+                                        const work = (MarketManager.works || []).find(w => w.id === o.artworkId);
+                                        return (
+                                            <div key={i} style={{
+                                                fontSize: 8, padding: '3px 6px', borderBottom: '1px solid #0a0a14',
+                                                display: 'flex', gap: 4, alignItems: 'baseline',
+                                            }}>
+                                                <span style={{ color: o.type === 'sell' ? '#f87171' : '#4ade80', fontWeight: 'bold', width: 28 }}>
+                                                    {(o.type || 'sell').toUpperCase()}
+                                                </span>
+                                                <span style={{ color: '#c9a84c', width: 52 }}>${(o.askPrice || o.price || 0).toLocaleString()}</span>
+                                                <span style={{ color: '#555', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {work?.title || o.artworkId}
+                                                </span>
+                                                <span style={{ color: '#333', fontSize: 7 }}>
+                                                    {o.sellerName || o.seller || ''}
+                                                </span>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 
