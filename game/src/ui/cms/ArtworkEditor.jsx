@@ -19,7 +19,7 @@ import { MarketManager } from '../../managers/MarketManager.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 import { useMarketStore } from '../../stores/marketStore.js';
 import { CALENDAR_EVENTS } from '../../data/calendar_events.js';
-import { ARTWORKS } from '../../data/artworks.js';
+import { ARTWORKS, ARTWORK_MAP } from '../../data/artworks.js';
 import { ARTISTS } from '../../data/artists.js';
 import { DEALER_TYPES, HAGGLE_CONFIG } from '../../data/haggle_config.js';
 import { MarketSimulator } from '../../managers/MarketSimulator.js';
@@ -647,8 +647,21 @@ function ArtworkMarketPanel({ work }) {
     // Get intra-week sparkline data
     const intraWeek = marketStore?.intraWeekPrices?.[work.artistId] || [];
 
-    // Trade history for this artwork
-    const artworkTrades = MarketSimulator.getTradesByArtwork?.(work.id) || [];
+    // Trade history — merge sim log with persistent ARTWORK_MAP.tradeHistory
+    const simTrades = MarketSimulator.getTradesByArtwork?.(work.id) || [];
+    const persistentTrades = ARTWORK_MAP[work.id]?.tradeHistory || work.tradeHistory || [];
+    // Combine and deduplicate by week+buyer
+    const seen = new Set();
+    const allTrades = [...persistentTrades, ...simTrades].filter(t => {
+        const key = `${t.week}-${t.buyer}-${t.price}`;
+        if (seen.has(key)) return false;
+        seen.add(key); return true;
+    }).sort((a, b) => (b.week || 0) - (a.week || 0));
+
+    // Owner and listing status from ARTWORK_MAP
+    const artRef = ARTWORK_MAP[work.id];
+    const currentOwner = artRef?.owner || work.owner || 'unknown';
+    const isListed = artRef?.listedForSale || false;
 
     // Hedonic score
     const hedonicScore = MarketManager._hedonicScore?.(work) || 1.0;
@@ -705,19 +718,21 @@ function ArtworkMarketPanel({ work }) {
                 {artist && statRow('Artist Index', artistIndex.toLocaleString(), '#60a5fa')}
                 {statRow('Hedonic Score', `×${hedonicScore.toFixed(2)}`, hedonicScore > 1 ? '#c9a84c' : '#888')}
                 {artist?.buybackActive && statRow('⚠️ Buyback', 'ACTIVE', '#fbbf24')}
+                {statRow('Owner', currentOwner.toUpperCase(), currentOwner === 'player' ? '#4ade80' : currentOwner === 'gallery' ? '#c9a84c' : '#888')}
+                {isListed && statRow('🏷️ Listed', 'FOR SALE', '#fbbf24')}
             </div>
 
             {/* Trade History */}
             <div style={{ background: '#050508', border: '1px solid #1a1a2e', borderRadius: 4, padding: 8 }}>
                 <div style={{ fontSize: 8, color: '#555', letterSpacing: 1, marginBottom: 4 }}>TRADE HISTORY</div>
-                {artworkTrades.length === 0 ? (
+                {allTrades.length === 0 ? (
                     <div style={{ fontSize: 9, color: '#333', textAlign: 'center', padding: 8 }}>No trades recorded</div>
                 ) : (
-                    artworkTrades.slice(-5).reverse().map((t, i) => (
+                    allTrades.slice(0, 8).map((t, i) => (
                         <div key={i} style={{ fontSize: 9, padding: '3px 0', borderBottom: '1px solid #0a0a12', display: 'flex', justifyContent: 'space-between' }}>
                             <span style={{ color: '#888' }}>W{t.week}</span>
                             <span style={{ color: '#4ade80', fontWeight: 'bold' }}>${t.price?.toLocaleString()}</span>
-                            <span style={{ color: '#555' }}>{t.buyer?.slice(0, 10)}</span>
+                            <span style={{ color: t.type === 'market_buy' ? '#60a5fa' : '#555', fontSize: 8 }}>{t.type || t.buyer?.slice(0, 10)}</span>
                         </div>
                     ))
                 )}

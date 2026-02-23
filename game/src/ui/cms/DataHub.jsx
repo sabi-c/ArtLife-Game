@@ -3,6 +3,7 @@ import { useCmsStore } from '../../stores/cmsStore.js';
 import { EventRegistry } from '../../managers/EventRegistry.js';
 import { useNPCStore } from '../../stores/npcStore.js';
 import { MarketManager } from '../../managers/MarketManager.js';
+import { DOMAIN_SCHEMAS, SAMPLE_TEMPLATES, validateDomainData, detectDomain } from '../../data/DataTemplates.js';
 
 // ══════════════════════════════════════
 // Styles
@@ -33,14 +34,19 @@ const S = {
     btnDanger: {
         background: '#1a0a0a', border: '1px solid #f44336', color: '#f44336',
         padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit',
-        fontSize: 11, textTransform: 'uppercase', fontWeight: 700,
-        borderRadius: 4,
+        fontSize: 11, textTransform: 'uppercase', fontWeight: 700, borderRadius: 4,
     },
     btnSmall: {
         background: '#111', border: '1px solid #333', color: '#aaa',
         padding: '6px 14px', cursor: 'pointer', fontFamily: 'inherit',
         fontSize: 11, borderRadius: 4,
     },
+    btnDomain: (color) => ({
+        background: `${color}11`, border: `1px solid ${color}55`, color,
+        padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit',
+        fontSize: 11, borderRadius: 4, fontWeight: 600,
+        transition: 'all 0.2s',
+    }),
     badge: (color = '#c9a84c') => ({
         display: 'inline-block', background: `${color}22`, color,
         border: `1px solid ${color}44`, borderRadius: 12, padding: '3px 10px',
@@ -52,22 +58,17 @@ const S = {
         background: active ? 'rgba(201, 168, 76, 0.05)' : 'transparent',
         transition: 'all 0.2s', cursor: 'pointer',
     }),
-    table: {
-        width: '100%', borderCollapse: 'collapse', fontSize: 13,
-    },
+    table: { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
     th: {
         textAlign: 'left', padding: '8px 12px', color: '#c9a84c',
-        borderBottom: '1px solid #222', fontSize: 11, textTransform: 'uppercase',
-        letterSpacing: 1,
+        borderBottom: '1px solid #222', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1,
     },
-    td: {
-        padding: '8px 12px', color: '#ccc', borderBottom: '1px solid #111',
-    },
+    td: { padding: '8px 12px', color: '#ccc', borderBottom: '1px solid #111' },
     status: (type) => ({
-        padding: '10px 16px', borderRadius: 4, marginTop: 12,
-        background: type === 'success' ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)',
-        border: `1px solid ${type === 'success' ? '#4caf50' : '#f44336'}`,
-        color: type === 'success' ? '#4caf50' : '#ffaaaa',
+        padding: '10px 16px', borderRadius: 4, marginTop: 0,
+        background: type === 'success' ? 'rgba(76,175,80,0.1)' : type === 'warning' ? 'rgba(255,152,0,0.1)' : 'rgba(244,67,54,0.1)',
+        border: `1px solid ${type === 'success' ? '#4caf50' : type === 'warning' ? '#ff9800' : '#f44336'}`,
+        color: type === 'success' ? '#4caf50' : type === 'warning' ? '#ff9800' : '#ffaaaa',
         fontSize: 12,
     }),
     presetCard: (active) => ({
@@ -76,7 +77,22 @@ const S = {
         border: `1px solid ${active ? '#c9a84c55' : '#1a1a2e'}`, borderRadius: 6,
         transition: 'all 0.2s',
     }),
+    validationBox: {
+        background: '#080812', border: '1px solid #222', borderRadius: 6,
+        padding: 16, marginTop: 12, maxHeight: 200, overflow: 'auto',
+    },
 };
+
+// ══════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════
+function downloadJSON(data, filename) {
+    const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+    const a = document.createElement('a');
+    a.href = str;
+    a.download = filename;
+    a.click();
+}
 
 // ══════════════════════════════════════
 // Component
@@ -90,14 +106,14 @@ export default function DataHub() {
     const [importPreview, setImportPreview] = useState(null);
     const [jsonPaste, setJsonPaste] = useState('');
     const [pasteTarget, setPasteTarget] = useState('auto');
+    const [selectedDomain, setSelectedDomain] = useState(null);
     const fileRef = useRef(null);
 
     const flash = useCallback((type, message) => {
         setStatus({ type, message });
-        setTimeout(() => setStatus(null), 5000);
+        setTimeout(() => setStatus(null), 6000);
     }, []);
 
-    // ── Data Summary ──
     const summary = store.getDataSummary();
     const presets = store.listPresets();
     const activePreset = store.activePreset;
@@ -109,7 +125,7 @@ export default function DataHub() {
         store.saveAsPreset(name);
         setNewPresetName('');
         setShowPresetInput(false);
-        flash('success', `Preset "${name}" saved`);
+        flash('success', `Preset "${name}" saved with ${Object.values(summary).reduce((a, b) => a + b, 0)} total items`);
     };
 
     const handleLoadPreset = (name) => {
@@ -124,24 +140,103 @@ export default function DataHub() {
         }
     };
 
+    // ── Template Downloads ──
+    const handleDownloadTemplate = (domain) => {
+        const sample = SAMPLE_TEMPLATES[domain]();
+        const schema = DOMAIN_SCHEMAS[domain];
+        const template = {
+            _meta: {
+                domain,
+                schema: {
+                    required: schema.requiredFields,
+                    optional: schema.optionalFields,
+                    types: schema.fieldTypes,
+                },
+                instructions: `Fill in the ${schema.label} data below. Required fields: ${schema.requiredFields.join(', ')}. Each item must have a unique "${schema.idField}".`,
+            },
+            [domain]: [sample, sample], // Two sample items
+        };
+        downloadJSON(template, `artlife_template_${domain}.json`);
+        flash('success', `Downloaded ${schema.label} template`);
+    };
+
+    const handleDownloadSample = (domain) => {
+        const items = [];
+        for (let i = 0; i < 3; i++) items.push(SAMPLE_TEMPLATES[domain]());
+        downloadJSON(items, `artlife_sample_${domain}.json`);
+        flash('success', `Downloaded ${DOMAIN_SCHEMAS[domain].label} sample data`);
+    };
+
     // ── File Import ──
     const processFile = (file) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
             try {
                 const parsed = JSON.parse(ev.target.result);
-                const preview = {
-                    filename: file.name,
-                    events: (parsed.events || []).length,
-                    storylines: (parsed.storylines || []).length,
-                    npcs: (parsed.npcs || []).length,
-                    artworks: (parsed.artworks || []).length,
-                    artists: (parsed.artists || []).length,
-                    hasMaps: !!parsed.maps,
-                    hasHaggle: !!parsed.haggle_config,
-                    raw: parsed,
-                };
-                setImportPreview(preview);
+
+                // Handle bundle format (has _meta or multiple domain keys)
+                if (parsed._meta && parsed._meta.game === 'ArtLife') {
+                    // Full bundle
+                    const preview = {
+                        filename: file.name, type: 'bundle',
+                        events: (parsed.events || []).length,
+                        storylines: (parsed.storylines || []).length,
+                        npcs: (parsed.npcs || []).length,
+                        artworks: (parsed.artworks || []).length,
+                        artists: (parsed.artists || []).length,
+                        hasMaps: !!parsed.maps, hasHaggle: !!parsed.haggle_config,
+                        raw: parsed, validation: null,
+                    };
+                    setImportPreview(preview);
+                    return;
+                }
+
+                // Handle template format (has _meta.domain)
+                let items = parsed;
+                let detectedDomain = null;
+
+                if (parsed._meta?.domain && parsed[parsed._meta.domain]) {
+                    items = parsed[parsed._meta.domain];
+                    detectedDomain = parsed._meta.domain;
+                }
+
+                // Handle array format
+                if (Array.isArray(items)) {
+                    detectedDomain = detectedDomain || detectDomain(items);
+                    if (!detectedDomain) {
+                        flash('error', 'Cannot detect data domain. Use a template or specify the domain.');
+                        return;
+                    }
+                    const validation = validateDomainData(detectedDomain, items);
+                    setImportPreview({
+                        filename: file.name, type: 'domain',
+                        domain: detectedDomain,
+                        items,
+                        count: items.length,
+                        validation,
+                        raw: null,
+                    });
+                    return;
+                }
+
+                // Try to detect domain keys in object
+                for (const domain of Object.keys(DOMAIN_SCHEMAS)) {
+                    if (parsed[domain] && Array.isArray(parsed[domain])) {
+                        detectedDomain = domain;
+                        items = parsed[domain];
+                        break;
+                    }
+                }
+                if (detectedDomain) {
+                    const validation = validateDomainData(detectedDomain, items);
+                    setImportPreview({
+                        filename: file.name, type: 'domain',
+                        domain: detectedDomain, items, count: items.length,
+                        validation, raw: null,
+                    });
+                } else {
+                    flash('error', 'Unrecognized file format');
+                }
             } catch (err) {
                 flash('error', `Parse error: ${err.message}`);
             }
@@ -149,78 +244,100 @@ export default function DataHub() {
         reader.readAsText(file);
     };
 
-    const handleDrop = (e) => {
-        e.preventDefault();
-        setDragActive(false);
-        const file = e.dataTransfer?.files?.[0];
-        if (file) processFile(file);
-    };
-
-    const handleFileSelect = (e) => {
-        const file = e.target.files?.[0];
-        if (file) processFile(file);
-    };
+    const handleDrop = (e) => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer?.files?.[0]; if (f) processFile(f); };
+    const handleFileSelect = (e) => { const f = e.target.files?.[0]; if (f) processFile(f); };
 
     const handleConfirmImport = () => {
-        if (!importPreview?.raw) return;
-        const ok = store.importBundle(importPreview.raw);
-        if (ok) {
-            flash('success', `Imported: ${importPreview.filename}`);
-            setImportPreview(null);
-        } else {
-            flash('error', 'Import failed');
+        if (!importPreview) return;
+
+        if (importPreview.type === 'bundle') {
+            const ok = store.importBundle(importPreview.raw);
+            if (ok) { flash('success', `Bundle imported: ${importPreview.filename}`); setImportPreview(null); }
+            else flash('error', 'Bundle import failed');
+            return;
         }
-    };
 
-    // ── JSON Paste Ingest ──
-    const handlePasteIngest = () => {
+        // Domain-specific import
+        const { domain, items } = importPreview;
+        let inserted = 0, updated = 0;
+
         try {
-            const parsed = JSON.parse(jsonPaste);
-            const incoming = Array.isArray(parsed) ? parsed : [parsed];
-            if (incoming.length === 0) throw new Error('Payload is empty.');
-
-            let domain = pasteTarget;
-            if (domain === 'auto') {
-                const s = incoming[0];
-                if (s.npcId && Array.isArray(s.steps)) domain = 'storylines';
-                else if (s.id && s.type === 'start') domain = 'events';
-                else if (s.tier && s.role) domain = 'npcs';
-                else if (s.id && s.works) domain = 'market';
-                else throw new Error('Cannot auto-detect domain. Select target manually.');
-            }
-
-            let inserted = 0, updated = 0;
             if (domain === 'storylines') {
                 const arr = [...EventRegistry.jsonStorylines];
-                incoming.forEach(sl => { const i = arr.findIndex(x => x.id === sl.id); if (i >= 0) { arr[i] = sl; updated++; } else { arr.push(sl); inserted++; } });
+                items.forEach(sl => { const i = arr.findIndex(x => x.id === sl.id); if (i >= 0) { arr[i] = sl; updated++; } else { arr.push(sl); inserted++; } });
                 EventRegistry.jsonStorylines = arr;
             } else if (domain === 'events') {
                 const arr = [...EventRegistry.jsonEvents];
-                incoming.forEach(ev => { const i = arr.findIndex(x => x.id === ev.id); if (i >= 0) { arr[i] = ev; updated++; } else { arr.push(ev); inserted++; } });
+                items.forEach(ev => { const i = arr.findIndex(x => x.id === ev.id); if (i >= 0) { arr[i] = ev; updated++; } else { arr.push(ev); inserted++; } });
                 EventRegistry.jsonEvents = arr;
             } else if (domain === 'npcs') {
                 useNPCStore.setState(state => {
                     const contacts = [...(state.contacts || [])];
-                    incoming.forEach(npc => { const i = contacts.findIndex(x => x.id === npc.id); if (i >= 0) { contacts[i] = { ...contacts[i], ...npc }; updated++; } else { contacts.push(npc); inserted++; } });
+                    items.forEach(npc => { const i = contacts.findIndex(x => x.id === npc.id); if (i >= 0) { contacts[i] = { ...contacts[i], ...npc }; updated++; } else { contacts.push(npc); inserted++; } });
                     return { contacts };
                 });
-            } else if (domain === 'market') {
-                if (!MarketManager.artists) throw new Error('MarketManager not ready.');
+            } else if (domain === 'artists') {
+                if (!MarketManager.artists) MarketManager.artists = [];
                 const arr = [...MarketManager.artists];
-                incoming.forEach(a => { const i = arr.findIndex(x => x.id === a.id); if (i >= 0) { arr[i] = a; updated++; } else { arr.push(a); inserted++; } });
+                items.forEach(a => { const i = arr.findIndex(x => x.id === a.id); if (i >= 0) { arr[i] = a; updated++; } else { arr.push(a); inserted++; } });
                 MarketManager.artists = arr;
+            } else if (domain === 'artworks') {
+                store.saveSnapshot('artworks', items);
+                inserted = items.length;
             }
-            setJsonPaste('');
-            flash('success', `[${domain.toUpperCase()}] ${inserted} new, ${updated} updated`);
+
+            flash('success', `[${DOMAIN_SCHEMAS[domain].label}] ${inserted} new, ${updated} updated`);
+            setImportPreview(null);
+        } catch (err) {
+            flash('error', `Import failed: ${err.message}`);
+        }
+    };
+
+    // ── JSON Paste ──
+    const handlePasteIngest = () => {
+        try {
+            const parsed = JSON.parse(jsonPaste);
+            const incoming = Array.isArray(parsed) ? parsed : [parsed];
+            if (incoming.length === 0) throw new Error('Empty payload');
+
+            let domain = pasteTarget;
+            if (domain === 'auto') {
+                domain = detectDomain(incoming);
+                if (!domain) throw new Error('Cannot auto-detect. Select target manually.');
+            }
+
+            const validation = validateDomainData(domain, incoming);
+            if (!validation.valid) {
+                flash('warning', `Validation: ${validation.errors.length} errors. ${validation.validItems}/${validation.totalItems} items valid.`);
+            }
+
+            // Use the same import logic
+            setImportPreview({ filename: 'paste', type: 'domain', domain, items: incoming, count: incoming.length, validation, raw: null });
         } catch (err) {
             flash('error', err.message);
         }
     };
 
     // ── Export ──
-    const handleExport = () => {
-        if (store.exportBundle()) flash('success', 'Bundle exported → downloads');
+    const handleExportBundle = () => {
+        if (store.exportBundle()) flash('success', 'Full bundle exported → downloads');
         else flash('error', 'Export failed');
+    };
+
+    const handleExportDomain = (domain) => {
+        const schema = DOMAIN_SCHEMAS[domain];
+        let data = [];
+        try {
+            if (domain === 'events') data = EventRegistry.jsonEvents || [];
+            else if (domain === 'storylines') data = EventRegistry.jsonStorylines || [];
+            else if (domain === 'npcs') data = useNPCStore.getState().contacts || [];
+            else if (domain === 'artists') data = MarketManager.artists || [];
+            else if (domain === 'artworks') data = store.snapshots?.artworks || [];
+        } catch { /* empty */ }
+
+        if (data.length === 0) { flash('warning', `No ${schema.label} data to export`); return; }
+        downloadJSON(data, `artlife_${domain}_${new Date().toISOString().slice(0, 10)}.json`);
+        flash('success', `Exported ${data.length} ${schema.label}`);
     };
 
     // ══════════════════════════════════════
@@ -228,42 +345,27 @@ export default function DataHub() {
     // ══════════════════════════════════════
     return (
         <div style={S.root}>
-            {/* ── Status Flash ── */}
             {status && <div style={S.status(status.type)}>{status.message}</div>}
 
-            {/* ═══ Section 1: Active Preset ═══ */}
+            {/* ═══ Section 1: Presets ═══ */}
             <div style={S.section}>
                 <h3 style={S.sectionTitle}>📦 Data Presets</h3>
-
-                {/* Active preset banner */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
                     <span style={{ ...S.text, fontWeight: 600 }}>Active:</span>
                     <span style={S.badge()}>{activePreset || 'Unsaved State'}</span>
                     <div style={{ flex: 1 }} />
                     {!showPresetInput ? (
-                        <button style={S.btn} onClick={() => setShowPresetInput(true)}>
-                            + Save Current as Preset
-                        </button>
+                        <button style={S.btn} onClick={() => setShowPresetInput(true)}>+ Save Current as Preset</button>
                     ) : (
                         <div style={{ display: 'flex', gap: 8 }}>
-                            <input
-                                value={newPresetName}
-                                onChange={e => setNewPresetName(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSavePreset()}
-                                placeholder="Preset name..."
-                                autoFocus
-                                style={{
-                                    background: '#111', border: '1px solid #c9a84c', color: '#eee',
-                                    padding: '8px 12px', fontFamily: 'inherit', fontSize: 12, borderRadius: 4, width: 180,
-                                }}
-                            />
+                            <input value={newPresetName} onChange={e => setNewPresetName(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleSavePreset()} placeholder="Preset name..." autoFocus
+                                style={{ background: '#111', border: '1px solid #c9a84c', color: '#eee', padding: '8px 12px', fontFamily: 'inherit', fontSize: 12, borderRadius: 4, width: 180 }} />
                             <button style={S.btn} onClick={handleSavePreset}>Save</button>
                             <button style={S.btnSmall} onClick={() => setShowPresetInput(false)}>Cancel</button>
                         </div>
                     )}
                 </div>
-
-                {/* Preset list */}
                 {presets.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {presets.map(p => (
@@ -278,107 +380,154 @@ export default function DataHub() {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
-                                    {p.name !== activePreset && (
-                                        <button style={S.btn} onClick={() => handleLoadPreset(p.name)}>Load</button>
-                                    )}
+                                    {p.name !== activePreset && <button style={S.btn} onClick={() => handleLoadPreset(p.name)}>Load</button>}
                                     <button style={S.btnDanger} onClick={() => handleDeletePreset(p.name)}>✕</button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : (
-                    <div style={S.dim}>No presets saved yet. Save your current data as a preset to get started.</div>
+                    <div style={S.dim}>No presets saved yet. Save your current data as "Test Mode" to snapshot it.</div>
                 )}
             </div>
 
-            {/* ═══ Section 2: Import / Export ═══ */}
+            {/* ═══ Section 2: Domain Templates ═══ */}
             <div style={S.section}>
-                <h3 style={S.sectionTitle}>🔄 Bulk Import / Export</h3>
+                <h3 style={S.sectionTitle}>📝 Domain Templates</h3>
+                <p style={{ ...S.dim, marginBottom: 16 }}>Download JSON templates with the correct schema for each data domain. Fill them in and re-import.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                    {Object.entries(DOMAIN_SCHEMAS).map(([key, schema]) => (
+                        <div key={key} style={{ background: '#0a0a14', border: `1px solid ${schema.color}33`, borderRadius: 6, padding: 14 }}>
+                            <div style={{ fontSize: 18, marginBottom: 4 }}>{schema.icon}</div>
+                            <div style={{ color: schema.color, fontWeight: 700, fontSize: 12, marginBottom: 2 }}>{schema.label}</div>
+                            <div style={{ ...S.dim, marginBottom: 8 }}>
+                                {schema.requiredFields.length} required, {schema.optionalFields.length} optional fields
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                <button style={S.btnDomain(schema.color)} onClick={() => handleDownloadTemplate(key)}>Template</button>
+                                <button style={S.btnDomain(schema.color)} onClick={() => handleDownloadSample(key)}>Sample</button>
+                                <button style={S.btnDomain(schema.color)} onClick={() => handleExportDomain(key)}>Export</button>
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 10, color: '#444' }}>
+                                Live: <strong style={{ color: schema.color }}>{summary[key === 'npcs' ? 'npcs' : key] || 0}</strong>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
-                <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
-                    {/* File drop zone */}
-                    <div
-                        style={{ ...S.dropzone(dragActive), flex: 1 }}
+            {/* ═══ Section 3: Import ═══ */}
+            <div style={S.section}>
+                <h3 style={S.sectionTitle}>🔄 Import Data</h3>
+                <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+                    <div style={{ ...S.dropzone(dragActive), flex: 1 }}
                         onDragOver={e => { e.preventDefault(); setDragActive(true); }}
                         onDragLeave={() => setDragActive(false)}
                         onDrop={handleDrop}
-                        onClick={() => fileRef.current?.click()}
-                    >
+                        onClick={() => fileRef.current?.click()}>
                         <div style={{ fontSize: 32, marginBottom: 8 }}>📁</div>
                         <div style={{ ...S.text, fontWeight: 600 }}>Drop JSON file here</div>
-                        <div style={S.dim}>or click to browse</div>
+                        <div style={S.dim}>Accepts: full bundles, domain templates, or raw arrays</div>
+                        <div style={{ ...S.dim, marginTop: 4 }}>Auto-detects domain • validates before import</div>
                         <input ref={fileRef} type="file" accept=".json" onChange={handleFileSelect} style={{ display: 'none' }} />
                     </div>
-
-                    {/* Export panel */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 200 }}>
-                        <button style={S.btn} onClick={handleExport}>⬇ Export Full Bundle</button>
-                        <div style={S.dim}>Downloads all game data as a single JSON file that can be re-imported or shared.</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 200 }}>
+                        <button style={S.btn} onClick={handleExportBundle}>⬇ Export Full Bundle</button>
+                        <div style={S.dim}>Downloads all domains as one JSON</div>
                     </div>
                 </div>
 
-                {/* Import preview */}
+                {/* Import Preview */}
                 {importPreview && (
                     <div style={{ background: '#0a0a20', border: '1px solid #c9a84c44', borderRadius: 6, padding: 16 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                            <span style={{ ...S.text, fontWeight: 600 }}>Preview: {importPreview.filename}</span>
+                            <div>
+                                <span style={{ ...S.text, fontWeight: 600 }}>Preview: {importPreview.filename}</span>
+                                {importPreview.domain && (
+                                    <span style={{ ...S.badge(DOMAIN_SCHEMAS[importPreview.domain]?.color || '#888'), marginLeft: 8 }}>
+                                        {DOMAIN_SCHEMAS[importPreview.domain]?.label}
+                                    </span>
+                                )}
+                                {importPreview.type === 'bundle' && <span style={{ ...S.badge('#c9a84c'), marginLeft: 8 }}>Full Bundle</span>}
+                            </div>
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <button style={S.btn} onClick={handleConfirmImport}>✓ Confirm Import</button>
                                 <button style={S.btnSmall} onClick={() => setImportPreview(null)}>Cancel</button>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                            {importPreview.events > 0 && <span style={S.badge('#4caf50')}>{importPreview.events} events</span>}
-                            {importPreview.storylines > 0 && <span style={S.badge('#2196f3')}>{importPreview.storylines} storylines</span>}
-                            {importPreview.npcs > 0 && <span style={S.badge('#ff9800')}>{importPreview.npcs} NPCs</span>}
-                            {importPreview.artworks > 0 && <span style={S.badge('#e91e63')}>{importPreview.artworks} artworks</span>}
-                            {importPreview.artists > 0 && <span style={S.badge('#9c27b0')}>{importPreview.artists} artists</span>}
-                            {importPreview.hasMaps && <span style={S.badge('#00bcd4')}>maps</span>}
-                            {importPreview.hasHaggle && <span style={S.badge('#cddc39')}>haggle config</span>}
+
+                        {/* Item counts */}
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                            {importPreview.type === 'bundle' ? (
+                                <>
+                                    {importPreview.events > 0 && <span style={S.badge('#4caf50')}>{importPreview.events} events</span>}
+                                    {importPreview.storylines > 0 && <span style={S.badge('#2196f3')}>{importPreview.storylines} storylines</span>}
+                                    {importPreview.npcs > 0 && <span style={S.badge('#ff9800')}>{importPreview.npcs} NPCs</span>}
+                                    {importPreview.artworks > 0 && <span style={S.badge('#e91e63')}>{importPreview.artworks} artworks</span>}
+                                    {importPreview.artists > 0 && <span style={S.badge('#9c27b0')}>{importPreview.artists} artists</span>}
+                                </>
+                            ) : (
+                                <span style={S.badge(DOMAIN_SCHEMAS[importPreview.domain]?.color)}>{importPreview.count} items</span>
+                            )}
                         </div>
+
+                        {/* Validation results */}
+                        {importPreview.validation && (
+                            <div style={S.validationBox}>
+                                <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+                                    <span style={S.badge(importPreview.validation.valid ? '#4caf50' : '#f44336')}>
+                                        {importPreview.validation.valid ? '✓ Valid' : '✗ Issues Found'}
+                                    </span>
+                                    <span style={S.dim}>{importPreview.validation.validItems}/{importPreview.validation.totalItems} items pass</span>
+                                </div>
+                                {importPreview.validation.errors.length > 0 && (
+                                    <div style={{ marginBottom: 8 }}>
+                                        <div style={{ color: '#f44336', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>ERRORS</div>
+                                        {importPreview.validation.errors.slice(0, 10).map((e, i) => (
+                                            <div key={i} style={{ color: '#ffaaaa', fontSize: 11, padding: '2px 0' }}>• {e}</div>
+                                        ))}
+                                        {importPreview.validation.errors.length > 10 && (
+                                            <div style={S.dim}>...and {importPreview.validation.errors.length - 10} more</div>
+                                        )}
+                                    </div>
+                                )}
+                                {importPreview.validation.warnings.length > 0 && (
+                                    <div>
+                                        <div style={{ color: '#ff9800', fontSize: 10, fontWeight: 700, marginBottom: 4 }}>WARNINGS</div>
+                                        {importPreview.validation.warnings.slice(0, 5).map((w, i) => (
+                                            <div key={i} style={{ color: '#ffcc80', fontSize: 11, padding: '2px 0' }}>• {w}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* JSON paste fallback */}
                 <details style={{ marginTop: 16 }}>
-                    <summary style={{ ...S.text, cursor: 'pointer', color: '#888' }}>
-                        ▸ Advanced: Paste Raw JSON
-                    </summary>
+                    <summary style={{ ...S.text, cursor: 'pointer', color: '#888' }}>▸ Advanced: Paste Raw JSON</summary>
                     <div style={{ marginTop: 12 }}>
                         <div style={{ display: 'flex', gap: 12, marginBottom: 8, alignItems: 'center' }}>
                             <span style={{ ...S.dim, textTransform: 'uppercase', letterSpacing: 1 }}>Target:</span>
-                            <select
-                                value={pasteTarget}
-                                onChange={e => setPasteTarget(e.target.value)}
-                                style={{ background: '#111', color: '#eee', border: '1px solid #333', padding: '6px 10px', fontFamily: 'inherit', fontSize: 12, borderRadius: 4 }}
-                            >
+                            <select value={pasteTarget} onChange={e => setPasteTarget(e.target.value)}
+                                style={{ background: '#111', color: '#eee', border: '1px solid #333', padding: '6px 10px', fontFamily: 'inherit', fontSize: 12, borderRadius: 4 }}>
                                 <option value="auto">Auto-Detect</option>
-                                <option value="storylines">Storylines</option>
-                                <option value="events">Events</option>
-                                <option value="npcs">NPCs</option>
-                                <option value="market">Market (Artists)</option>
+                                {Object.entries(DOMAIN_SCHEMAS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
                             </select>
                         </div>
-                        <textarea
-                            value={jsonPaste}
-                            onChange={e => setJsonPaste(e.target.value)}
-                            spellCheck={false}
+                        <textarea value={jsonPaste} onChange={e => setJsonPaste(e.target.value)} spellCheck={false}
                             placeholder='Paste JSON array here...'
                             style={{
-                                width: '100%', minHeight: 160, background: '#080812',
-                                border: '1px solid #222', color: '#4caf50', padding: 12,
-                                fontFamily: 'monospace', fontSize: 12, borderRadius: 4,
-                                resize: 'vertical', outline: 'none', boxSizing: 'border-box',
-                            }}
-                        />
-                        <button style={{ ...S.btn, marginTop: 8 }} onClick={handlePasteIngest}>
-                            Execute Injection
-                        </button>
+                                width: '100%', minHeight: 160, background: '#080812', border: '1px solid #222', color: '#4caf50',
+                                padding: 12, fontFamily: 'monospace', fontSize: 12, borderRadius: 4, resize: 'vertical', outline: 'none', boxSizing: 'border-box'
+                            }} />
+                        <button style={{ ...S.btn, marginTop: 8 }} onClick={handlePasteIngest}>Validate & Preview</button>
                     </div>
                 </details>
             </div>
 
-            {/* ═══ Section 3: Data Summary ═══ */}
+            {/* ═══ Section 4: Live Data Summary ═══ */}
             <div style={S.section}>
                 <h3 style={S.sectionTitle}>📊 Live Data Summary</h3>
                 <table style={S.table}>
@@ -387,33 +536,29 @@ export default function DataHub() {
                             <th style={S.th}>Domain</th>
                             <th style={S.th}>Count</th>
                             <th style={S.th}>Status</th>
+                            <th style={S.th}>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {[
-                            { domain: 'Events', count: summary.events, icon: '🎭' },
-                            { domain: 'Storylines', count: summary.storylines, icon: '⛓️' },
-                            { domain: 'NPCs', count: summary.npcs, icon: '👤' },
-                            { domain: 'Artists', count: summary.artists, icon: '🎨' },
-                            { domain: 'Artworks', count: summary.artworks, icon: '🖼️' },
-                        ].map(row => (
-                            <tr key={row.domain}>
-                                <td style={S.td}>{row.icon} {row.domain}</td>
-                                <td style={S.td}>
-                                    <span style={{ ...S.gold, fontWeight: 700, fontSize: 16 }}>{row.count}</span>
-                                </td>
-                                <td style={S.td}>
-                                    <span style={S.badge(row.count > 0 ? '#4caf50' : '#f44336')}>
-                                        {row.count > 0 ? 'Loaded' : 'Empty'}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
+                        {Object.entries(DOMAIN_SCHEMAS).map(([key, schema]) => {
+                            const count = summary[key] || 0;
+                            return (
+                                <tr key={key}>
+                                    <td style={S.td}>{schema.icon} {schema.label}</td>
+                                    <td style={S.td}><span style={{ ...S.gold, fontWeight: 700, fontSize: 16 }}>{count}</span></td>
+                                    <td style={S.td}><span style={S.badge(count > 0 ? '#4caf50' : '#f44336')}>{count > 0 ? 'Loaded' : 'Empty'}</span></td>
+                                    <td style={S.td}>
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            <button style={S.btnSmall} onClick={() => handleExportDomain(key)} disabled={count === 0}>Export</button>
+                                            <button style={S.btnSmall} onClick={() => handleDownloadTemplate(key)}>Template</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
-                <div style={{ ...S.dim, marginTop: 12 }}>
-                    Counts reflect live in-memory data. Save as a preset to preserve across sessions.
-                </div>
+                <div style={{ ...S.dim, marginTop: 12 }}>Counts reflect live in-memory data. Save as a preset to preserve across sessions.</div>
             </div>
         </div>
     );
