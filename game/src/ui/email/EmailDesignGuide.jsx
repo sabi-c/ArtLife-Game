@@ -10,9 +10,9 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import ChatBubble from './ChatBubble.jsx';
-import HaggleStatusBar from './HaggleStatusBar.jsx';
-import './EmailOverlay.css';
+import ChatBubble from './haggle/ChatBubble.jsx';
+import HaggleStatusBar from './haggle/HaggleStatusBar.jsx';
+import './haggle/haggle.css';
 import './EmailDesignGuide.css';
 
 // ════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 /**
- * EmailOverlay.jsx — Single-column conversational email overlay
+ * HaggleOverlay.jsx — Single-column conversational email overlay
  *
  * Renders a centered modal with a scrollable chat conversation.
  * Messages appear as left/right-aligned bubbles. An AI agent guides
@@ -14,11 +14,11 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { useEmailState } from './useEmailState.js';
+import { useEmailState } from './useHaggleState.js';
 import ChatBubble from './ChatBubble.jsx';
 import AgentGuide from './AgentGuide.jsx';
 import HaggleStatusBar from './HaggleStatusBar.jsx';
-import './EmailOverlay.css';
+import './haggle.css';
 
 /**
  * @param {Object} props
@@ -27,7 +27,7 @@ import './EmailOverlay.css';
  * @param {Object} [props.haggleInfo] - HaggleManager.start() result
  * @param {Function} props.onComplete - Called when overlay closes
  */
-export default function EmailOverlay({ mode, event, haggleInfo, onComplete }) {
+export default function HaggleOverlay({ mode, event, haggleInfo, onComplete }) {
     const state = useEmailState({ mode, event, haggleInfo, onComplete });
     const conversationRef = useRef(null);
 

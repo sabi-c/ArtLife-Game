@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { HAGGLE_TYPES, BATTLE_MENU_CATEGORIES } from '../../data/haggle_config.js';
+import { HAGGLE_TYPES, BATTLE_MENU_CATEGORIES } from '../../../data/haggle_config.js';
 
 /** Map haggle types to CSS color classes */
 const TYPE_COLORS = {

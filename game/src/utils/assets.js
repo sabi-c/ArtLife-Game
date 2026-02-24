@@ -41,17 +41,3 @@ export function resolveArtworkUrl(work) {
     // Bare filename — add artworks/ prefix
     return `${BASE}artworks/${clean}`;
 }
-
-/**
- * Resolve any public asset path relative to the Vite base.
- * Use for non-artwork assets that live in public/.
- *
- * @param {string} publicPath — e.g. "sprites/player.png" or "/content/maps/map.json"
- * @returns {string} base-relative URL
- */
-export function resolvePublicUrl(publicPath) {
-    if (!publicPath) return '';
-    if (publicPath.startsWith('http')) return publicPath;
-    const clean = publicPath.replace(/^\/+/, '');
-    return `${BASE}${clean}`;
-}

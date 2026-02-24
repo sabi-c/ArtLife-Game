@@ -21,12 +21,11 @@ import ArtworkDashboard from './ui/ArtworkDashboard.jsx';
 import BloombergTerminal from './ui/BloombergTerminal.jsx';
 import SalesGrid from './ui/SalesGrid.jsx';
 import EmailDesignGuide from './ui/email/EmailDesignGuide.jsx';
-import GmailDesignGuide from './ui/email/GmailDesignGuide.jsx';
-import IMessageUI from './ui/email/iMessageUI.jsx';
+import InboxShell from './ui/email/inbox/InboxShell.jsx';
 import ArtnetLogin from './ui/ArtnetLogin.jsx';
 import ArtnetMarketplace from './ui/ArtnetMarketplace.jsx';
 import ArtnetUI from './ui/ArtnetUI.jsx';
-import EmailOverlay from './ui/email/EmailOverlay.jsx';
+import HaggleOverlay from './ui/email/haggle/HaggleOverlay.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import CharacterCreator from './ui/CharacterCreator.jsx';
 import { VIEW, OVERLAY } from './constants/views.js';
@@ -49,7 +48,7 @@ export default function App() {
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.BLOOMBERG);
     const [isGridSceneActive, setIsGridSceneActive] = useState(false);
-    const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null); // EmailOverlay haggle from any context
+    const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null); // HaggleOverlay haggle from any context
     const [gmailComposeData, setGmailComposeData] = useState(null); // Pre-populated compose for Gmail
     const autoResumedRef = useRef(false);
 
@@ -438,14 +437,10 @@ export default function App() {
             )}
 
             {activeOverlay === OVERLAY.GMAIL_GUIDE && (
-                <GmailDesignGuide
+                <InboxShell
                     onClose={() => { setActiveOverlay(OVERLAY.NONE); setGmailComposeData(null); }}
                     initialCompose={gmailComposeData}
                 />
-            )}
-
-            {activeOverlay === OVERLAY.IMESSAGE_UI && (
-                <IMessageUI onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {activeOverlay === OVERLAY.ARTNET_LOGIN && (
@@ -462,7 +457,7 @@ export default function App() {
 
             {/* Global Email Haggle — rendered above all overlays when triggered from any context */}
             {globalHaggleEmail && (
-                <EmailOverlay
+                <HaggleOverlay
                     mode="haggle"
                     haggleInfo={globalHaggleEmail}
                     onComplete={() => setGlobalHaggleEmail(null)}

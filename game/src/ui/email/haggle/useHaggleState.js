@@ -17,10 +17,10 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GameState } from '../../managers/GameState.js';
-import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
-import { HaggleManager } from '../../managers/HaggleManager.js';
-import { TACTICS, BLUE_OPTIONS, TACTIC_DIALOGUE_CHOICES, BATTLE_MENU_CATEGORIES } from '../../data/haggle_config.js';
+import { GameState } from '../../../managers/GameState.js';
+import { GameEventBus, GameEvents } from '../../../managers/GameEventBus.js';
+import { HaggleManager } from '../../../managers/HaggleManager.js';
+import { TACTICS, BLUE_OPTIONS, TACTIC_DIALOGUE_CHOICES, BATTLE_MENU_CATEGORIES } from '../../../data/haggle_config.js';
 
 /** Strip emoji from labels for clean professional display */
 const stripEmoji = (str) =>

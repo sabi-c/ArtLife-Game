@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import './iMessageUI.css';
+import './chat.css';
 
 // ════════════════════════════════════════════════════════════
 // Mock Data — Art world characters

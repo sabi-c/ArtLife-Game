@@ -6,7 +6,7 @@ import { HaggleManager } from '../managers/HaggleManager.js';
 import { VIEW, OVERLAY } from '../constants/views.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
-import EmailOverlay from './email/EmailOverlay.jsx';
+import HaggleOverlay from './email/haggle/HaggleOverlay.jsx';
 
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
@@ -772,11 +772,6 @@ export default function AdminDashboard({ onClose }) {
                                     <button style={{ ...btnStyle, borderColor: '#1a73e8', color: '#1a73e8' }} onClick={() => triggerOverlay(OVERLAY.GMAIL_GUIDE)}>
                                         [ Gmail Design Guide ]
                                         <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Full Gmail email client mockup — inbox, threads, compose</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#34c759', color: '#34c759' }} onClick={() => triggerOverlay(OVERLAY.IMESSAGE_UI)}>
-                                        [ iMessage UI ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Apple iMessage chat — contacts, bubbles, typing indicator</div>
                                     </button>
 
                                     <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00' }} onClick={() => triggerOverlay(OVERLAY.ARTNET_UI)}>

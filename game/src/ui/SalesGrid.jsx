@@ -24,6 +24,7 @@ import { MarketSimulator } from '../managers/MarketSimulator.js';
 import { GameState } from '../managers/GameState.js';
 import { ARTWORK_MAP } from '../data/artworks.js';
 import { CONTACTS } from '../data/contacts.js';
+import { formatMoneyShort } from '../utils/format.js';
 import './SalesGrid.css';
 
 /**
@@ -49,12 +50,8 @@ function deptLabel(role) {
     return labels[role] || role;
 }
 
-/** Format price in compact form */
-function fmtPrice(p) {
-    if (p >= 1000000) return `$${(p / 1000000).toFixed(1)}M`;
-    if (p >= 1000) return `$${(p / 1000).toFixed(0)}k`;
-    return `$${p}`;
-}
+/** Format price in compact form — delegates to shared formatter */
+const fmtPrice = (p) => formatMoneyShort(p);
 
 /**
  * Number of "standard" filler cells per row at each breakpoint tier.

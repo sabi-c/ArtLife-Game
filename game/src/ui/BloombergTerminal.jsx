@@ -64,7 +64,7 @@ import { CITY_DATA } from '../data/cities.js';
 import { WORLD_LOCATIONS } from '../data/world_locations.js';
 import { clamp } from '../utils/math.js';
 import BloombergTutorial from './BloombergTutorial.jsx';
-import EmailOverlay from './email/EmailOverlay.jsx';
+import HaggleOverlay from './email/haggle/HaggleOverlay.jsx';
 import './BloombergTerminal.css';
 
 // ── Robust image URL resolution (base-path-aware for GitHub Pages) ──

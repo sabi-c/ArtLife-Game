@@ -1,0 +1,131 @@
+/*
+ * shared.css — Common CSS variables and animations for all email systems
+ *
+ * Imported by inbox/inbox.css, haggle/haggle.css, chat/chat.css
+ */
+
+/* ═══ Design Tokens ═══ */
+:root {
+    /* Avatar palette (maps to JS AVATAR_COLORS) */
+    --email-avatar-1: #c44;
+    --email-avatar-2: #1a73e8;
+    --email-avatar-3: #f4b400;
+    --email-avatar-4: #44aa66;
+    --email-avatar-5: #7b1fa2;
+    --email-avatar-6: #e67c00;
+    --email-avatar-7: #00838f;
+    --email-avatar-8: #c62828;
+
+    /* Common surfaces */
+    --email-bg-primary: #fff;
+    --email-bg-hover: #f8f9fa;
+    --email-bg-selected: #e8f0fe;
+    --email-border: #dadce0;
+    --email-border-light: #f1f3f4;
+
+    /* Text */
+    --email-text-primary: #202124;
+    --email-text-secondary: #5f6368;
+    --email-text-tertiary: #80868b;
+
+    /* Accent */
+    --email-accent: #1a73e8;
+    --email-accent-hover: #1967d2;
+    --email-accent-bg: #e8f0fe;
+    --email-accent-border: #d2e3fc;
+
+    /* Status colors */
+    --email-success: #0d652d;
+    --email-danger: #ea4335;
+    --email-warning: #f4b400;
+
+    /* Timing */
+    --email-transition-fast: 0.15s;
+    --email-transition-normal: 0.2s;
+
+    /* Radius */
+    --email-radius-sm: 4px;
+    --email-radius-md: 8px;
+    --email-radius-lg: 12px;
+    --email-radius-full: 50%;
+}
+
+/* ═══ Shared Animations ═══ */
+@keyframes email-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes email-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes email-cursor-blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+@keyframes email-pulse {
+
+    0%,
+    100% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+/* ═══ Shared Utility Classes ═══ */
+.email-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--email-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.email-avatar--lg {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}
+
+.email-cursor {
+    display: inline-block;
+    animation: email-cursor-blink 0.7s step-end infinite;
+    font-weight: 700;
+    margin-left: 1px;
+}
+
+.email-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

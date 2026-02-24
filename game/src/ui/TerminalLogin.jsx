@@ -3,6 +3,7 @@ import { GameState } from '../managers/GameState.js';
 import { ProfileManager } from '../managers/ProfileManager.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
+import { formatMoneyShort } from '../utils/format.js';
 
 // ─── Variable-speed typewriter hook ──────────────────────────────────────────
 const useTypewriter = (linesArray, active, onComplete) => {
@@ -69,12 +70,8 @@ const useTypewriter = (linesArray, active, onComplete) => {
 };
 
 // ─── Save Slot helpers ───────────────────────────────────────────────────────
-function fmt$(n) {
-    if (!n) return '$0';
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`;
-    return `$${n.toLocaleString()}`;
-}
+/** Format money in compact form — delegates to shared formatter */
+const fmt$ = (n) => n ? formatMoneyShort(n) : '$0';
 
 // ─── Shared option style helper ──────────────────────────────────────────────
 const optStyle = (isActive, isDisabled) => ({
