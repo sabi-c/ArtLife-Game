@@ -58,12 +58,13 @@ export default class NewWorldScene extends Phaser.Scene {
         console.log('[NewWorldScene] preload()');
         this._assetErrors = [];
 
-        // Set base URL so assets resolve correctly regardless of SPA route
-        // On localhost: BASE_URL = '/' → assets load from /assets/luminus/...
-        // On GitHub Pages: BASE_URL = '/ArtLife-Game/' → assets load from /ArtLife-Game/assets/luminus/...
-        const baseURL = import.meta.env.BASE_URL || './';
-        this.load.setBaseURL(baseURL);
-        console.log('[NewWorldScene] Loader baseURL:', baseURL);
+        // Set base URL so Phaser loads assets relative to the HTML file, not the SPA route.
+        // Without this, navigating to /admin changes the browser URL and Phaser resolves
+        // 'assets/luminus/...' relative to /admin/ instead of the app root.
+        // document.baseURI gives the actual HTML location regardless of pushState routing.
+        const docBase = new URL('./', document.baseURI).href;
+        this.load.setBaseURL(docBase);
+        console.log('[NewWorldScene] Loader baseURL:', docBase);
 
         this.load.on('loaderror', (file) => {
             const msg = `Asset FAILED: ${file.key} (${file.url})`;
