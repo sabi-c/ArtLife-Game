@@ -58,6 +58,13 @@ export default class NewWorldScene extends Phaser.Scene {
         console.log('[NewWorldScene] preload()');
         this._assetErrors = [];
 
+        // Set base URL so assets resolve correctly regardless of SPA route
+        // On localhost: BASE_URL = '/' → assets load from /assets/luminus/...
+        // On GitHub Pages: BASE_URL = '/ArtLife-Game/' → assets load from /ArtLife-Game/assets/luminus/...
+        const baseURL = import.meta.env.BASE_URL || './';
+        this.load.setBaseURL(baseURL);
+        console.log('[NewWorldScene] Loader baseURL:', baseURL);
+
         this.load.on('loaderror', (file) => {
             const msg = `Asset FAILED: ${file.key} (${file.url})`;
             console.error(`[NewWorldScene] ${msg}`);
