@@ -38,6 +38,7 @@ export const useCmsStore = create(
                 maps: false,
                 haggle: false,
                 market: false,
+                flowGraph: false,
             },
 
             // ── Modification Snapshots ──
@@ -50,6 +51,7 @@ export const useCmsStore = create(
                 graphPositions: null, // Content graph node positions
                 timelineOverrides: null, // Week overrides for timeline drag
                 maps: null,         // { [mapId]: mapJSON } — edited Tiled map snapshots
+                flowGraph: null,    // { nodes, edges, actions } — Flow Editor graph
             },
 
             // ── Change Log ──
@@ -485,6 +487,26 @@ export const useCmsStore = create(
             getGraphPositions: () => get().snapshots.graphPositions,
 
             // ═══════════════════════════════════════════════════════════
+            //  FLOW GRAPH PERSISTENCE
+            // ═══════════════════════════════════════════════════════════
+
+            /** Save the Flow Editor graph (nodes, edges, page actions) */
+            saveFlowGraph: (flowData) => set((state) => {
+                state.snapshots.flowGraph = JSON.parse(JSON.stringify(flowData));
+                state.dirty.flowGraph = true;
+                state.changeLog.push({
+                    timestamp: Date.now(),
+                    domain: 'flowGraph',
+                    action: 'saveFlowGraph',
+                    details: `Saved flow graph: ${flowData.nodes?.length || 0} nodes, ${flowData.edges?.length || 0} edges`,
+                });
+                if (state.changeLog.length > 100) state.changeLog = state.changeLog.slice(-50);
+            }),
+
+            /** Get the saved flow graph (or null) */
+            getFlowGraph: () => get().snapshots.flowGraph,
+
+            // ═══════════════════════════════════════════════════════════
             //  TIMELINE OVERRIDES  
             // ═══════════════════════════════════════════════════════════
 
@@ -540,8 +562,8 @@ export const useCmsStore = create(
             // ═══════════════════════════════════════════════════════════
 
             reset: () => set((state) => {
-                state.dirty = { events: false, storylines: false, npcs: false, artworks: false, venues: false, kanban: false, timeline: false, maps: false, haggle: false, market: false };
-                state.snapshots = { events: null, storylines: null, npcs: null, kanbanColumns: null, graphPositions: null, timelineOverrides: null, maps: null, haggle_config: null, artists: null, artworks: null };
+                state.dirty = { events: false, storylines: false, npcs: false, artworks: false, venues: false, kanban: false, timeline: false, maps: false, haggle: false, market: false, flowGraph: false };
+                state.snapshots = { events: null, storylines: null, npcs: null, kanbanColumns: null, graphPositions: null, timelineOverrides: null, maps: null, haggle_config: null, artists: null, artworks: null, flowGraph: null };
                 state.changeLog = [];
                 state.lastSaveTime = null;
             }),

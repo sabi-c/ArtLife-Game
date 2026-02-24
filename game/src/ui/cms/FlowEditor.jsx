@@ -10,6 +10,8 @@
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { VIEW, OVERLAY } from '../../constants/views.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
+import { navigate } from '../../hooks/usePageRouter.js';
 
 // ══════════════════════════════════════════════════════════════
 // Constants
@@ -86,10 +88,12 @@ function generateDefaultNodes() {
 export default function FlowEditor({ flowGraph, onUpdate }) {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
+    const saveFlowGraph = useCmsStore(s => s.saveFlowGraph);
 
-    // Graph data
-    const [nodes, setNodes] = useState(() => flowGraph?.nodes?.length > 0 ? flowGraph.nodes : generateDefaultNodes());
-    const [edges, setEdges] = useState(() => flowGraph?.edges?.length > 0 ? flowGraph.edges : DEFAULT_EDGES);
+    // Graph data — load from cmsStore first, then props, then defaults
+    const savedGraph = useCmsStore(s => s.snapshots.flowGraph);
+    const [nodes, setNodes] = useState(() => savedGraph?.nodes?.length > 0 ? savedGraph.nodes : (flowGraph?.nodes?.length > 0 ? flowGraph.nodes : generateDefaultNodes()));
+    const [edges, setEdges] = useState(() => savedGraph?.edges?.length > 0 ? savedGraph.edges : (flowGraph?.edges?.length > 0 ? flowGraph.edges : DEFAULT_EDGES));
 
     // Interaction state
     const [dragNode, setDragNode] = useState(null);
@@ -102,11 +106,52 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
     const [connectFrom, setConnectFrom] = useState(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const [hoveredNode, setHoveredNode] = useState(null);
+    const [showAddNode, setShowAddNode] = useState(false);
+    const [editingLabel, setEditingLabel] = useState(null);
 
-    // Persist changes
+    // Auto-save to cmsStore on every change
     useEffect(() => {
-        if (onUpdate) onUpdate({ nodes, edges });
-    }, [nodes, edges]);
+        const timer = setTimeout(() => {
+            saveFlowGraph({ nodes, edges });
+            if (onUpdate) onUpdate({ nodes, edges });
+        }, 300); // debounce 300ms
+        return () => clearTimeout(timer);
+    }, [nodes, edges, saveFlowGraph, onUpdate]);
+
+    // Add new node
+    const addNewNode = (type, label) => {
+        const id = `${type.toUpperCase()}:${label.replace(/\s+/g, '_')}`;
+        if (nodes.some(n => n.id === id)) return; // already exists
+        const maxX = Math.max(...nodes.map(n => n.x), 100);
+        setNodes(prev => [...prev, { id, type, label, x: maxX + 220, y: 100 + Math.random() * 300 }]);
+        setShowAddNode(false);
+    };
+
+    // Rename a node
+    const renameNode = (nodeId, newLabel) => {
+        setNodes(prev => prev.map(n => n.id === nodeId ? { ...n, label: newLabel } : n));
+        setEditingLabel(null);
+    };
+
+    // Navigate to the page/overlay this node represents
+    const navigateToNode = (node) => {
+        if (node.type === 'overlay') {
+            const overlayKey = node.id.replace('OVERLAY:', '');
+            const pathMap = {
+                'BLOOMBERG': '/market', 'ADMIN': '/admin', 'SETTINGS': '/settings',
+                'INVENTORY': '/inventory', 'MASTER_CMS': '/cms', 'MARKET_DASHBOARD': '/market/data',
+                'ARTWORK_DASHBOARD': '/artwork', 'SALES_GRID': '/sales', 'DEBUG_LOG': '/debug',
+                'DESIGN_GUIDE': '/design', 'GMAIL_GUIDE': '/inbox',
+                'ARTNET_LOGIN': '/artnet/login', 'ARTNET_MARKETPLACE': '/artnet',
+                'ARTNET_UI': '/artnet/ui',
+            };
+            if (pathMap[overlayKey]) navigate(pathMap[overlayKey]);
+        } else if (node.type === 'view') {
+            const viewKey = node.id.replace('VIEW:', '');
+            const pathMap = { 'BOOT': '/boot', 'TERMINAL': '/terminal', 'DASHBOARD': '/dashboard', 'CHARACTER_CREATOR': '/character', 'SCENE_ENGINE': '/scene' };
+            if (pathMap[viewKey]) navigate(pathMap[viewKey]);
+        }
+    };
 
     // ── Coordinate transforms ──
     const screenToWorld = useCallback((sx, sy) => ({
@@ -498,15 +543,39 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
     return (
         <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 500, background: '#0a0a0f' }}>
             {/* Toolbar */}
-            <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                 <button style={btnStyle} onClick={fitToView}>FIT</button>
                 <button style={btnStyle} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>100%</button>
+                <button style={{ ...btnStyle, color: '#50c878', borderColor: '#50c87866' }}
+                    onClick={() => setShowAddNode(!showAddNode)}>+ NODE</button>
                 <button style={{ ...btnStyle, borderColor: '#c94040', color: '#c94040' }} onClick={resetLayout}>RESET</button>
                 {selectedNode && edges.some(e => e.from === selectedNode || e.to === selectedNode) && (
                     <button style={{ ...btnStyle, borderColor: '#c94040', color: '#f87171' }}
                         onClick={deleteSelectedEdge}>DEL EDGES ({selectedNode.split(':')[1]})</button>
                 )}
+                <span style={{ fontSize: 9, color: '#333', fontFamily: "'SF Mono', monospace", marginLeft: 8 }}>
+                    {nodes.length} nodes · {edges.length} edges
+                </span>
             </div>
+
+            {/* Add Node Popup */}
+            {showAddNode && (
+                <div style={{ position: 'absolute', top: 36, left: 8, zIndex: 20, background: '#111', border: '1px solid #333', padding: 12, borderRadius: 4, width: 220 }}>
+                    <div style={{ fontSize: 10, color: '#888', marginBottom: 8, fontFamily: "'SF Mono', monospace" }}>ADD NEW NODE</div>
+                    {['view', 'overlay', 'scene'].map(type => (
+                        <div key={type} style={{ marginBottom: 8 }}>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                                <input id={`add-${type}-input`} placeholder={`New ${type} name...`}
+                                    style={{ flex: 1, background: '#0a0a0f', color: TYPE_COLORS[type].text, border: `1px solid ${TYPE_COLORS[type].border}44`, fontSize: 10, padding: '4px 6px', fontFamily: "'SF Mono', monospace" }}
+                                    onKeyDown={e => { if (e.key === 'Enter' && e.target.value) { addNewNode(type, e.target.value); e.target.value = ''; } }} />
+                                <button onClick={() => { const el = document.getElementById(`add-${type}-input`); if (el?.value) { addNewNode(type, el.value); el.value = ''; } }}
+                                    style={{ ...btnStyle, padding: '3px 8px', color: TYPE_COLORS[type].text, borderColor: TYPE_COLORS[type].border + '44' }}>+</button>
+                            </div>
+                        </div>
+                    ))}
+                    <button onClick={() => setShowAddNode(false)} style={{ ...btnStyle, width: '100%', marginTop: 4, fontSize: 9, color: '#555' }}>CLOSE</button>
+                </div>
+            )}
             {/* Legend */}
             <div style={{ position: 'absolute', top: 8, right: selectedNodeData ? 290 : 8, zIndex: 5, display: 'flex', gap: 12, fontSize: 10, fontFamily: "'SF Mono', monospace", transition: 'right 0.2s' }}>
                 <span style={{ color: TYPE_COLORS.view.text }}>● VIEW</span>
@@ -521,13 +590,31 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
             {/* ── Node Inspector Panel ── */}
             {selectedNodeData && (
                 <div style={panelStyle}>
-                    {/* Header */}
+                    {/* Header with editable label */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontWeight: 'bold', color: TYPE_COLORS[selectedNodeData.type]?.text || '#ccc', fontSize: 13 }}>
-                            {selectedNodeData.label}
-                        </div>
+                        {editingLabel === selectedNodeData.id ? (
+                            <input autoFocus
+                                defaultValue={selectedNodeData.label}
+                                onBlur={e => renameNode(selectedNodeData.id, e.target.value || selectedNodeData.label)}
+                                onKeyDown={e => { if (e.key === 'Enter') renameNode(selectedNodeData.id, e.target.value || selectedNodeData.label); if (e.key === 'Escape') setEditingLabel(null); }}
+                                style={{ flex: 1, background: '#111', color: TYPE_COLORS[selectedNodeData.type]?.text || '#ccc', border: '1px solid #333', fontSize: 13, fontWeight: 'bold', padding: '2px 6px', fontFamily: "'SF Mono', monospace", marginRight: 6 }} />
+                        ) : (
+                            <div onClick={() => setEditingLabel(selectedNodeData.id)}
+                                style={{ fontWeight: 'bold', color: TYPE_COLORS[selectedNodeData.type]?.text || '#ccc', fontSize: 13, cursor: 'text', flex: 1 }}
+                                title="Click to rename">
+                                {selectedNodeData.label} ✏️
+                            </div>
+                        )}
                         <button onClick={() => setSelectedNode(null)} style={{ ...btnStyle, padding: '2px 6px', fontSize: 9 }}>✕</button>
                     </div>
+
+                    {/* Navigate to page button */}
+                    {(selectedNodeData.type === 'overlay' || selectedNodeData.type === 'view') && (
+                        <button onClick={() => navigateToNode(selectedNodeData)}
+                            style={{ ...btnStyle, width: '100%', marginBottom: 10, padding: '6px', color: '#50c878', borderColor: '#50c87844', fontSize: 10, textAlign: 'center', justifyContent: 'center' }}>
+                            → OPEN THIS PAGE
+                        </button>
+                    )}
 
                     {/* Type badge */}
                     <div style={sectionStyle}>
