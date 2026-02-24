@@ -20,6 +20,7 @@ import ArtTerminal from './cms/ArtTerminal.jsx';
 import ActivityLogViewer from './cms/ActivityLogViewer.jsx';
 import DataHub from './cms/DataHub.jsx';
 import EngineOverview from './cms/EngineOverview.jsx';
+import FlowEditor from './cms/FlowEditor.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board', dirtyDomain: 'kanban' },
@@ -35,6 +36,7 @@ const TABS = [
     { id: 'actlog', icon: '📋', label: 'Activity Log' },
     { id: 'ingest', icon: '📦', label: 'Data Hub' },
     { id: 'engines', icon: '⚙️', label: 'Engines' },
+    { id: 'flow', icon: '🔀', label: 'Flow Map', dirtyDomain: 'flow' },
 ];
 
 export default function MasterCMS({ onClose }) {
@@ -175,6 +177,10 @@ export default function MasterCMS({ onClose }) {
             case 'venues': return <VenueEditor />;
             case 'ingest': return <DataHub />;
             case 'engines': return <EngineOverview />;
+            case 'flow': return <FlowEditor
+                flowGraph={JSON.parse(localStorage.getItem('artlife_flow_graph') || 'null')}
+                onUpdate={(graph) => localStorage.setItem('artlife_flow_graph', JSON.stringify(graph))}
+            />;
             default: return null;
         }
     };
