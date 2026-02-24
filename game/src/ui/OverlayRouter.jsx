@@ -9,7 +9,7 @@
  */
 
 import React, { Suspense, lazy } from 'react';
-import { ErrorBoundary } from './ErrorBoundary.jsx';
+import { OverlayErrorBoundary } from './OverlayErrorBoundary.jsx';
 import { OVERLAY } from '../constants/views.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
@@ -79,103 +79,123 @@ export default function OverlayRouter({
         <Suspense fallback={<OverlayLoadingFallback />}>
             {/* ── Admin: FAB or Full Panel ── */}
             {activeOverlay === OVERLAY.ADMIN ? (
-                <ErrorBoundary>
+                <OverlayErrorBoundary name="Admin Dashboard" onClose={closeOverlay}>
                     <AdminDashboardModule onClose={closeOverlay} />
-                </ErrorBoundary>
+                </OverlayErrorBoundary>
             ) : (
                 <LazyAdminFAB onClick={() => { setActiveOverlay(OVERLAY.ADMIN); WebAudioService.select(); }} />
             )}
 
             {/* ── Settings ── */}
             {activeOverlay === OVERLAY.SETTINGS && (
-                <SettingsOverlay onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Settings" onClose={closeOverlay}>
+                    <SettingsOverlay onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Inventory ── */}
             {activeOverlay === OVERLAY.INVENTORY && (
-                <InventoryDashboard onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Inventory" onClose={closeOverlay}>
+                    <InventoryDashboard onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── CMS (ContentStudio) ── */}
             {activeOverlay === OVERLAY.CMS && (
-                <ErrorBoundary>
+                <OverlayErrorBoundary name="Content Studio" onClose={closeOverlay}>
                     <ContentStudio onClose={closeOverlay} />
-                </ErrorBoundary>
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Master CMS ── */}
             {activeOverlay === OVERLAY.MASTER_CMS && (
-                <ErrorBoundary>
+                <OverlayErrorBoundary name="Master CMS" onClose={closeOverlay}>
                     <MasterCMS onClose={closeOverlay} />
-                </ErrorBoundary>
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Market Data Dashboard ── */}
             {activeOverlay === OVERLAY.MARKET_DASHBOARD && (
-                <MarketDashboard onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Market Dashboard" onClose={closeOverlay}>
+                    <MarketDashboard onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Artwork Detail Dashboard ── */}
             {activeOverlay === OVERLAY.ARTWORK_DASHBOARD && (
-                <ErrorBoundary>
+                <OverlayErrorBoundary name="Artwork Dashboard" onClose={closeOverlay}>
                     <ArtworkDashboard onClose={closeOverlay} payload={viewPayload} />
-                </ErrorBoundary>
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Bloomberg Market Terminal ── */}
             {activeOverlay === OVERLAY.BLOOMBERG && (
-                <ErrorBoundary>
+                <OverlayErrorBoundary name="Bloomberg Terminal" onClose={closeOverlay}>
                     <BloombergTerminal onClose={closeOverlay} />
-                </ErrorBoundary>
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Gallery Sales Grid ── */}
             {activeOverlay === OVERLAY.SALES_GRID && (
-                <ErrorBoundary>
+                <OverlayErrorBoundary name="Sales Grid" onClose={closeOverlay}>
                     <SalesGrid onClose={closeOverlay} />
-                </ErrorBoundary>
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Debug/Diagnostics Log ── */}
             {activeOverlay === OVERLAY.DEBUG_LOG && (
-                <DiagnosticsOverlay onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Debug Log" onClose={closeOverlay}>
+                    <DiagnosticsOverlay onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Email Design Guide ── */}
             {activeOverlay === OVERLAY.DESIGN_GUIDE && (
-                <EmailDesignGuide onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Email Design Guide" onClose={closeOverlay}>
+                    <EmailDesignGuide onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Gmail Inbox ── */}
             {activeOverlay === OVERLAY.GMAIL_GUIDE && (
-                <InboxShell
-                    onClose={() => { closeOverlay(); setGmailComposeData(null); }}
-                    initialCompose={gmailComposeData}
-                />
+                <OverlayErrorBoundary name="Gmail Inbox" onClose={() => { closeOverlay(); setGmailComposeData(null); }}>
+                    <InboxShell
+                        onClose={() => { closeOverlay(); setGmailComposeData(null); }}
+                        initialCompose={gmailComposeData}
+                    />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Artnet Login ── */}
             {activeOverlay === OVERLAY.ARTNET_LOGIN && (
-                <ArtnetLogin onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Artnet Login" onClose={closeOverlay}>
+                    <ArtnetLogin onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Artnet Marketplace ── */}
             {activeOverlay === OVERLAY.ARTNET_MARKETPLACE && (
-                <ArtnetMarketplace onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Artnet Marketplace" onClose={closeOverlay}>
+                    <ArtnetMarketplace onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Artnet UI ── */}
             {activeOverlay === OVERLAY.ARTNET_UI && (
-                <ArtnetUI onClose={closeOverlay} />
+                <OverlayErrorBoundary name="Artnet UI" onClose={closeOverlay}>
+                    <ArtnetUI onClose={closeOverlay} />
+                </OverlayErrorBoundary>
             )}
 
             {/* ── Global Haggle (any context) ── */}
             {globalHaggleEmail && (
-                <HaggleOverlay
-                    mode="haggle"
-                    haggleInfo={globalHaggleEmail}
-                    onComplete={() => setGlobalHaggleEmail(null)}
-                />
+                <OverlayErrorBoundary name="Haggle" onClose={() => setGlobalHaggleEmail(null)}>
+                    <HaggleOverlay
+                        mode="haggle"
+                        haggleInfo={globalHaggleEmail}
+                        onComplete={() => setGlobalHaggleEmail(null)}
+                    />
+                </OverlayErrorBoundary>
             )}
         </Suspense>
     );
