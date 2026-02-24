@@ -1,22 +1,27 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { navigate } from '../hooks/usePageRouter.js';
 
 /**
- * MobileJoypad v3 — Game Boy-style control panel for WorldScene.
+ * Art Boy — Frosted-glass game controller for overworld scenes.
  *
- * Layout (bottom ~45% of viewport):
+ * Layout (bottom ~46vh of viewport, semi-transparent):
  *   ┌──────────────────────────────────────────┐
- *   │           Game Boy-style shell            │
- *   │  ┌───┐                          (A)       │
- *   │  │ ▲ │                       (B)          │
- *   │ ◄│ ● │►          SELECT START             │
- *   │  │ ▼ │                                    │
- *   │  └───┘                                    │
+ *   │              ✦ Art Boy ✦                │
+ *   │  ┌───┐                          (A)     │
+ *   │  │ ▲ │                       (B)        │
+ *   │ ◀│ ● │▶          SELECT START           │
+ *   │  │ ▼ │                                  │
+ *   │  └───┘                                  │
  *   └──────────────────────────────────────────┘
  *
- * Communication:
- *   - window.joypadState = 'UP'|'DOWN'|'LEFT'|'RIGHT'|null
- *   - window.joypadSprint = true|false  (B button held)
- *   - A button dispatches SPACE KeyboardEvent (interact/advance dialog)
+ * Buttons:
+ *   D-Pad  → window.joypadState ('UP'|'DOWN'|'LEFT'|'RIGHT'|null)
+ *   A      → window.joypadAction (interact/confirm)
+ *   B      → window.joypadSprint (hold to run)
+ *   START  → Open admin dashboard
+ *   SELECT → Open inventory
+ *   EXIT   → Exit scene → dashboard
  */
 export function MobileJoypad() {
     const [activeDir, setActiveDir] = useState(null);
@@ -83,8 +88,9 @@ export function MobileJoypad() {
     const exitScene = useCallback(() => {
         window.joypadState = null;
         window.joypadSprint = false;
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(30);
         if (window.phaserGame) {
-            // Check both NewWorldScene and legacy WorldScene
             for (const key of ['NewWorldScene', 'WorldScene']) {
                 const scene = window.phaserGame.scene.getScene(key);
                 if (scene?.exitScene) { scene.exitScene(); return; }
@@ -92,6 +98,20 @@ export function MobileJoypad() {
         }
         if (window.game?.exitScene) window.game.exitScene();
     }, []);
+
+    const openStart = useCallback(() => {
+        if (navigator.vibrate) navigator.vibrate(20);
+        // Exit scene first, then navigate to admin
+        exitScene();
+        setTimeout(() => navigate('/admin'), 100);
+    }, [exitScene]);
+
+    const openSelect = useCallback(() => {
+        if (navigator.vibrate) navigator.vibrate(20);
+        // Exit scene first, then navigate to inventory
+        exitScene();
+        setTimeout(() => navigate('/inventory'), 100);
+    }, [exitScene]);
 
     // Common touch props for D-pad buttons
     const dpadTouch = (dir) => ({
@@ -103,12 +123,11 @@ export function MobileJoypad() {
 
     return (
         <>
-            {/* Game Boy shell — covers bottom portion of screen */}
+            {/* Art Boy shell — frosted glass controller */}
             <div className="gb-shell">
                 {/* Screen label */}
                 <div className="gb-screen-label">
-                    <span className="gb-logo">ArtLife</span>
-                    <span className="gb-subtitle">GAME BOY</span>
+                    <span className="gb-logo">✦ Art Boy</span>
                 </div>
 
                 {/* Controls area */}
@@ -177,15 +196,15 @@ export function MobileJoypad() {
                     </div>
                 </div>
 
-                {/* START / SELECT / EXIT — center pills */}
+                {/* EXIT / SELECT / START — center pills */}
                 <div className="gb-meta-row">
-                    <button className="gb-meta-btn" onPointerDown={exitScene} aria-label="Exit">
-                        EXIT
+                    <button className="gb-meta-btn gb-meta-exit" onPointerDown={exitScene} aria-label="Exit">
+                        ✕ EXIT
                     </button>
-                    <button className="gb-meta-btn" onPointerDown={exitScene} aria-label="Select">
+                    <button className="gb-meta-btn" onPointerDown={openSelect} aria-label="Select">
                         SELECT
                     </button>
-                    <button className="gb-meta-btn" onPointerDown={exitScene} aria-label="Start">
+                    <button className="gb-meta-btn" onPointerDown={openStart} aria-label="Start">
                         START
                     </button>
                 </div>
@@ -225,19 +244,14 @@ export function MobileJoypad() {
                 }
                 .gb-logo {
                     font-family: "Press Start 2P", monospace;
-                    font-size: 10px;
-                    color: #2d3436;
-                    letter-spacing: 2px;
+                    font-size: 11px;
+                    color: #c9a84c;
+                    letter-spacing: 3px;
                     text-transform: uppercase;
                     font-weight: bold;
+                    text-shadow: 0 0 8px rgba(201, 168, 76, 0.3);
                 }
-                .gb-subtitle {
-                    font-family: "Press Start 2P", monospace;
-                    font-size: 7px;
-                    color: #636e72;
-                    letter-spacing: 3px;
-                    font-style: italic;
-                }
+
 
                 /* ── Controls Row ── */
                 .gb-controls {
@@ -264,9 +278,9 @@ export function MobileJoypad() {
                     height: clamp(120px, 30vw, 150px);
                 }
                 .gb-dpad-btn {
-                    background: #2d3436;
-                    border: none;
-                    color: #636e72;
+                    background: rgba(45, 52, 54, 0.8);
+                    border: 1px solid rgba(100, 110, 114, 0.3);
+                    color: rgba(200, 200, 200, 0.8);
                     display: flex;
                     align-items: center;
                     justify-content: center;
@@ -298,7 +312,7 @@ export function MobileJoypad() {
                 }
                 .gb-dpad-center {
                     grid-column: 2; grid-row: 2;
-                    background: #2d3436;
+                    background: rgba(45, 52, 54, 0.8);
                 }
                 .gb-dpad-right {
                     grid-column: 3; grid-row: 2;
@@ -372,7 +386,7 @@ export function MobileJoypad() {
                 .gb-btn-label {
                     font-family: "Press Start 2P", monospace;
                     font-size: 6px;
-                    color: #636e72;
+                    color: rgba(200, 200, 200, 0.6);
                     letter-spacing: 1px;
                     transform: rotate(20deg);
                     white-space: nowrap;
@@ -388,9 +402,9 @@ export function MobileJoypad() {
                     padding-bottom: 4px;
                 }
                 .gb-meta-btn {
-                    background: #636e72;
-                    border: none;
-                    color: #a8aeb4;
+                    background: rgba(60, 70, 80, 0.7);
+                    border: 1px solid rgba(200, 200, 200, 0.15);
+                    color: rgba(200, 200, 200, 0.8);
                     font-family: "Press Start 2P", monospace;
                     font-size: 7px;
                     letter-spacing: 1px;
@@ -403,8 +417,12 @@ export function MobileJoypad() {
                     transform: rotate(-8deg);
                 }
                 .gb-meta-btn:active {
-                    background: #4a5568;
+                    background: rgba(40, 50, 60, 0.9);
                     box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+                }
+                .gb-meta-exit {
+                    color: rgba(255, 100, 100, 0.8);
+                    border-color: rgba(255, 100, 100, 0.2);
                 }
 
                 /* ── Hide on desktop (keyboard controls suffice) ── */
