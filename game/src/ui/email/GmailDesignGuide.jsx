@@ -14,6 +14,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import './GmailDesignGuide.css';
+import { CONTACTS } from '../../data/contacts.js';
 
 // ════════════════════════════════════════════════════════════
 // Mock Data — each email has its own thread
@@ -235,11 +236,36 @@ const initialEmails = () => [
 const NAV_ITEMS = [
     { icon: '📥', label: 'Inbox', id: 'inbox' },
     { icon: '⭐', label: 'Starred', id: 'starred' },
+    { icon: '⏰', label: 'Snoozed', id: 'snoozed' },
     { icon: '📨', label: 'Sent', id: 'sent' },
     { icon: '📝', label: 'Drafts', id: 'drafts' },
+    { icon: '🏷️', label: 'Important', id: 'important' },
     { icon: '📦', label: 'All Mail', id: 'all' },
     { icon: '🗑️', label: 'Trash', id: 'trash' },
 ];
+
+// Contact suggestions for compose autocomplete
+const CONTACT_SUGGESTIONS = (() => {
+    try {
+        return CONTACTS.map(c => ({
+            name: c.name,
+            email: `${c.id.replace(/_/g, '.')}@artworld.com`,
+            role: c.title || c.role,
+            avatar: c.emoji || c.name.charAt(0),
+        }));
+    } catch { return []; }
+})();
+
+// Snooze time options
+const SNOOZE_OPTIONS = [
+    { label: 'Later today', hours: 4, icon: '☀️' },
+    { label: 'Tomorrow', hours: 24, icon: '📅' },
+    { label: 'This weekend', hours: 72, icon: '🌴' },
+    { label: 'Next week', hours: 168, icon: '📆' },
+];
+
+// Default email signature
+const DEFAULT_SIGNATURE = '\n\n—\nSent from ArtLife\nArt Collector & Dealer';
 
 const LABEL_ITEMS = [
     { icon: '●', label: 'Gallery Business', color: '#c44' },
@@ -281,17 +307,61 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
     const aiIntervalRef = useRef(null);
     const [showAiAssistant, setShowAiAssistant] = useState(false);
 
+    // ── New State: Snooze, Drafts, Undo, Settings ──
+    const [snoozedEmails, setSnoozedEmails] = useState([]);     // { emailId, returnTime }
+    const [snoozePickerId, setSnoozePickerId] = useState(null); // email id showing snooze picker
+    const [drafts, setDrafts] = useState([]);                    // saved draft emails
+    const [undoToast, setUndoToast] = useState(null);           // { type, data, timer }
+    const [showSettings, setShowSettings] = useState(false);
+    const [settings, setSettings] = useState({ density: 'default', theme: 'default' });
+    const [contactQuery, setContactQuery] = useState('');
+    const [showContactDropdown, setShowContactDropdown] = useState(false);
+    const [hoveredRowId, setHoveredRowId] = useState(null);
+    const undoTimerRef = useRef(null);
+
     // ── Derived ──
     const selectedEmail = useMemo(() => emails.find(e => e.id === selectedEmailId), [emails, selectedEmailId]);
 
+    // Check for snoozed emails that should return
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = Date.now();
+            setSnoozedEmails(prev => {
+                const returning = prev.filter(s => s.returnTime <= now);
+                if (returning.length > 0) {
+                    const returnIds = new Set(returning.map(s => s.emailId));
+                    setEmails(prevEmails => prevEmails.map(e =>
+                        returnIds.has(e.id) ? { ...e, snoozed: false, unread: true } : e
+                    ));
+                    return prev.filter(s => s.returnTime > now);
+                }
+                return prev;
+            });
+        }, 10000); // Check every 10s
+        return () => clearInterval(interval);
+    }, []);
+
+    // Contact autocomplete filter
+    const filteredContacts = useMemo(() => {
+        if (!contactQuery.trim()) return [];
+        const q = contactQuery.toLowerCase();
+        return CONTACT_SUGGESTIONS.filter(c =>
+            c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)
+        ).slice(0, 5);
+    }, [contactQuery]);
+
     const visibleEmails = useMemo(() => {
-        let filtered = emails.filter(e => !e.archived && !e.deleted);
+        let filtered = emails.filter(e => !e.archived && !e.deleted && !e.snoozed);
 
         // Nav filter
         if (activeNav === 'starred') filtered = filtered.filter(e => e.starred);
+        else if (activeNav === 'snoozed') filtered = emails.filter(e => e.snoozed && !e.deleted);
+        else if (activeNav === 'important') filtered = filtered.filter(e => e.important);
         else if (activeNav === 'trash') filtered = emails.filter(e => e.deleted);
         else if (activeNav === 'sent') return sentEmails;
+        else if (activeNav === 'drafts') return drafts;
         else if (activeNav === 'all') filtered = emails.filter(e => !e.deleted);
+
 
         // Category filter (only for inbox)
         if (activeNav === 'inbox') {
@@ -336,12 +406,75 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
     const archiveEmail = useCallback((id) => {
         setEmails(prev => prev.map(em => em.id === id ? { ...em, archived: true } : em));
         if (selectedEmailId === id) { setView('inbox'); setSelectedEmailId(null); }
+        // Undo toast
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        setUndoToast({ type: 'archived', emailId: id });
+        undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
     }, [selectedEmailId]);
 
     const deleteEmail = useCallback((id) => {
         setEmails(prev => prev.map(em => em.id === id ? { ...em, deleted: true } : em));
         if (selectedEmailId === id) { setView('inbox'); setSelectedEmailId(null); }
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        setUndoToast({ type: 'deleted', emailId: id });
+        undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
     }, [selectedEmailId]);
+
+    const undoAction = useCallback(() => {
+        if (!undoToast) return;
+        const { type, emailId } = undoToast;
+        if (type === 'archived') {
+            setEmails(prev => prev.map(em => em.id === emailId ? { ...em, archived: false } : em));
+        } else if (type === 'deleted') {
+            setEmails(prev => prev.map(em => em.id === emailId ? { ...em, deleted: false } : em));
+        } else if (type === 'sent') {
+            // Can't un-send, but remove from sent list
+            setSentEmails(prev => prev.filter(e => e.id !== emailId));
+        }
+        setUndoToast(null);
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    }, [undoToast]);
+
+    // Snooze an email
+    const snoozeEmail = useCallback((id, hours) => {
+        setEmails(prev => prev.map(em => em.id === id ? { ...em, snoozed: true } : em));
+        setSnoozedEmails(prev => [...prev, { emailId: id, returnTime: Date.now() + hours * 3600000 }]);
+        setSnoozePickerId(null);
+        if (selectedEmailId === id) { setView('inbox'); setSelectedEmailId(null); }
+    }, [selectedEmailId]);
+
+    // Toggle important
+    const toggleImportant = useCallback((id, e) => {
+        e?.stopPropagation();
+        setEmails(prev => prev.map(em => em.id === id ? { ...em, important: !em.important } : em));
+    }, []);
+
+    // Save draft
+    const saveDraft = useCallback((data) => {
+        if (!data.to && !data.subject && !data.body) return;
+        setDrafts(prev => [{
+            id: Date.now(),
+            sender: 'Draft',
+            email: 'collector@artlife.game',
+            subject: data.subject || '(no subject)',
+            preview: data.body?.substring(0, 80) || '',
+            time: 'Draft',
+            date: new Date().toLocaleString(),
+            unread: false,
+            starred: false,
+            hasAttachment: false,
+            category: 'primary',
+            draftData: data,
+        }, ...prev]);
+    }, []);
+
+    // Select contact from autocomplete
+    const selectContact = useCallback((contact) => {
+        setComposeData(p => ({ ...p, to: contact.email }));
+        setContactQuery('');
+        setShowContactDropdown(false);
+    }, []);
+
 
     const openThread = useCallback((email) => {
         setSelectedEmailId(email.id);
@@ -408,9 +541,10 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
 
         const now = new Date();
         const timeStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+        const sentId = Date.now();
 
         const newMessage = {
-            id: `reply-${Date.now()}`,
+            id: `reply-${sentId}`,
             sender: 'You',
             email: 'collector@artlife.game',
             time: timeStr,
@@ -426,7 +560,7 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
 
         // Also add to sent
         setSentEmails(prev => [{
-            id: Date.now(),
+            id: sentId,
             sender: 'Me',
             email: 'collector@artlife.game',
             subject: `Re: ${selectedEmail?.subject}`,
@@ -441,14 +575,21 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
 
         setReplyMode(null);
         setReplyText('');
+        setAiState('idle');
         setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+
+        // Undo send toast
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        setUndoToast({ type: 'sent', emailId: sentId });
+        undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
     }, [replyText, selectedEmailId, selectedEmail]);
 
     const sendCompose = useCallback(() => {
         if (!composeData.to.trim() || !composeData.body.trim()) return;
+        const sentId = Date.now();
 
         setSentEmails(prev => [{
-            id: Date.now(),
+            id: sentId,
             sender: 'Me',
             email: 'collector@artlife.game',
             subject: composeData.subject || '(no subject)',
@@ -463,7 +604,13 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
 
         setShowCompose(false);
         setComposeData({ to: '', subject: '', body: '' });
+
+        // Undo send toast
+        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+        setUndoToast({ type: 'sent', emailId: sentId });
+        undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
     }, [composeData]);
+
 
     const bulkAction = useCallback((action) => {
         if (selectedIds.size === 0) return;
@@ -533,7 +680,41 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                 </div>
                 <div className="gmail-topbar-actions">
                     <button className="gmail-topbar-icon" title="Help">❓</button>
-                    <button className="gmail-topbar-icon" title="Settings">⚙️</button>
+                    <div style={{ position: 'relative' }}>
+                        <button className="gmail-topbar-icon" title="Settings" onClick={() => setShowSettings(!showSettings)}>⚙️</button>
+                        {showSettings && (
+                            <div className="gmail-settings-panel">
+                                <div className="gmail-settings-header">
+                                    <span>Quick settings</span>
+                                    <button className="gmail-settings-close" onClick={() => setShowSettings(false)}>✕</button>
+                                </div>
+                                <div className="gmail-settings-body">
+                                    <div className="gmail-settings-section">
+                                        <div className="gmail-settings-label">Display density</div>
+                                        {['default', 'comfortable', 'compact'].map(d => (
+                                            <label key={d} className={`gmail-settings-option${settings.density === d ? ' gmail-settings-option--active' : ''}`}>
+                                                <input type="radio" name="density" checked={settings.density === d} onChange={() => setSettings(s => ({ ...s, density: d }))} />
+                                                {d.charAt(0).toUpperCase() + d.slice(1)}
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="gmail-settings-section">
+                                        <div className="gmail-settings-label">Inbox type</div>
+                                        {['Default', 'Important first', 'Unread first', 'Starred first'].map(t => (
+                                            <label key={t} className="gmail-settings-option">
+                                                <input type="radio" name="inboxType" defaultChecked={t === 'Default'} />
+                                                {t}
+                                            </label>
+                                        ))}
+                                    </div>
+                                    <div className="gmail-settings-section">
+                                        <div className="gmail-settings-label">Reading pane</div>
+                                        <div style={{ fontSize: 12, color: '#5f6368', padding: '4px 0' }}>No split • Right of inbox • Below inbox</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="gmail-topbar-avatar" title="Account">S</div>
                 </div>
                 <button className="gmail-topbar-close" onClick={onClose}>✕ Close</button>
@@ -558,7 +739,10 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                             {item.id === 'inbox' && categoryBadges.primary > 0 && (
                                 <span className="gmail-nav-count">{Object.values(categoryBadges).reduce((a, b) => a + b, 0)}</span>
                             )}
-                            {item.id === 'drafts' && <span className="gmail-nav-count">0</span>}
+                            {item.id === 'snoozed' && snoozedEmails.length > 0 && (
+                                <span className="gmail-nav-count">{snoozedEmails.length}</span>
+                            )}
+                            {item.id === 'drafts' && <span className="gmail-nav-count">{drafts.length}</span>}
                             {item.id === 'sent' && sentEmails.length > 0 && (
                                 <span className="gmail-nav-count">{sentEmails.length}</span>
                             )}
@@ -631,7 +815,10 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                                     <div
                                         key={email.id}
                                         className={`gmail-email-row${email.unread ? ' gmail-email-row--unread' : ''}${selectedIds.has(email.id) ? ' gmail-email-row--selected' : ''}`}
-                                        onClick={() => email.thread ? openThread(email) : null}
+                                        onClick={() => email.thread ? openThread(email) : email.draftData ? (() => { setComposeData(email.draftData); setShowCompose(true); setDrafts(prev => prev.filter(d => d.id !== email.id)); })() : null}
+                                        onMouseEnter={() => setHoveredRowId(email.id)}
+                                        onMouseLeave={() => { setHoveredRowId(null); setSnoozePickerId(null); }}
+                                        style={{ position: 'relative' }}
                                     >
                                         <button className="gmail-email-checkbox" onClick={(e) => toggleSelect(email.id, e)}>
                                             {selectedIds.has(email.id) ? '☑' : '☐'}
@@ -642,6 +829,7 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                                         >
                                             {(email.starred || (emails.find(em => em.id === email.id)?.starred)) ? '★' : '☆'}
                                         </button>
+                                        {email.important && <span className="gmail-important-marker" title="Important">▸</span>}
                                         <div className="gmail-email-sender">{email.sender}</div>
                                         <div className="gmail-email-content">
                                             <span className="gmail-email-subject">{email.subject}</span>
@@ -649,7 +837,38 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                                             <span className="gmail-email-preview">{email.preview}</span>
                                         </div>
                                         {email.hasAttachment && <span className="gmail-email-attachment">📎</span>}
-                                        <span className="gmail-email-time">{email.time}</span>
+
+                                        {/* Time — hidden on hover (replaced by actions) */}
+                                        {hoveredRowId !== email.id && (
+                                            <span className="gmail-email-time">{email.time}</span>
+                                        )}
+
+                                        {/* ── Hover Actions (Gmail-style) ── */}
+                                        {hoveredRowId === email.id && (
+                                            <div className="gmail-email-hover-actions" style={{ display: 'flex' }}>
+                                                <button className="gmail-hover-icon" title="Archive" onClick={(e) => { e.stopPropagation(); archiveEmail(email.id); }}>📥</button>
+                                                <button className="gmail-hover-icon" title="Delete" onClick={(e) => { e.stopPropagation(); deleteEmail(email.id); }}>🗑️</button>
+                                                <button className="gmail-hover-icon" title={email.unread ? 'Mark as read' : 'Mark as unread'} onClick={(e) => { e.stopPropagation(); toggleRead(email.id); }}>
+                                                    {email.unread ? '✉️' : '📩'}
+                                                </button>
+                                                <button className="gmail-hover-icon" title="Snooze" onClick={(e) => { e.stopPropagation(); setSnoozePickerId(snoozePickerId === email.id ? null : email.id); }}>⏰</button>
+                                                <button className="gmail-hover-icon" title={email.important ? 'Not important' : 'Mark as important'} onClick={(e) => toggleImportant(email.id, e)}>
+                                                    {email.important ? '🏷️' : '🏷️'}
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* ── Snooze Picker Dropdown ── */}
+                                        {snoozePickerId === email.id && (
+                                            <div className="gmail-snooze-picker" onClick={(e) => e.stopPropagation()}>
+                                                <div className="gmail-snooze-header">Snooze until...</div>
+                                                {SNOOZE_OPTIONS.map(opt => (
+                                                    <button key={opt.label} className="gmail-snooze-option" onClick={() => snoozeEmail(email.id, opt.hours)}>
+                                                        <span>{opt.icon}</span> {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -813,19 +1032,41 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                         <span className="gmail-compose-header-title">New Message</span>
                         <button className="gmail-compose-header-btn" title="Minimize">—</button>
                         <button className="gmail-compose-header-btn" title="Pop out">⬜</button>
-                        <button className="gmail-compose-header-btn" title="Close" onClick={() => setShowCompose(false)}>✕</button>
+                        <button className="gmail-compose-header-btn" title="Close" onClick={() => { saveDraft(composeData); setShowCompose(false); setComposeData({ to: '', subject: '', body: '' }); }}>✕</button>
                     </div>
                     <div className="gmail-compose-body">
-                        <div className="gmail-compose-field">
+                        <div className="gmail-compose-field" style={{ position: 'relative' }}>
                             <span className="gmail-compose-field-label">To</span>
                             <input
                                 className="gmail-compose-field-input"
                                 placeholder="Recipients"
                                 value={composeData.to}
-                                onChange={(e) => setComposeData(p => ({ ...p, to: e.target.value }))}
+                                onChange={(e) => {
+                                    setComposeData(p => ({ ...p, to: e.target.value }));
+                                    setContactQuery(e.target.value);
+                                    setShowContactDropdown(true);
+                                }}
+                                onFocus={() => { if (composeData.to) { setContactQuery(composeData.to); setShowContactDropdown(true); } }}
+                                onBlur={() => setTimeout(() => setShowContactDropdown(false), 200)}
                             />
                             <span style={{ fontSize: 14, color: 'rgba(0,0,0,0.54)', cursor: 'pointer' }}>Cc</span>
                             <span style={{ fontSize: 14, color: 'rgba(0,0,0,0.54)', cursor: 'pointer', marginLeft: 8 }}>Bcc</span>
+
+                            {/* Contact Autocomplete Dropdown */}
+                            {showContactDropdown && filteredContacts.length > 0 && (
+                                <div className="gmail-contact-dropdown">
+                                    {filteredContacts.map(c => (
+                                        <button key={c.email} className="gmail-contact-item" onMouseDown={() => selectContact(c)}>
+                                            <span className="gmail-contact-avatar">{c.avatar}</span>
+                                            <div className="gmail-contact-info">
+                                                <div className="gmail-contact-name">{c.name}</div>
+                                                <div className="gmail-contact-email">{c.email}</div>
+                                            </div>
+                                            <div className="gmail-contact-role">{c.role}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <div className="gmail-compose-subject">
                             <input
@@ -1067,6 +1308,18 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                             />
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* ═══ Undo Toast (Gmail-style bottom-left) ═══ */}
+            {undoToast && (
+                <div className="gmail-undo-toast">
+                    <span>
+                        {undoToast.type === 'sent' ? 'Message sent.' :
+                            undoToast.type === 'archived' ? 'Conversation archived.' :
+                                'Conversation moved to Trash.'}
+                    </span>
+                    <button className="gmail-undo-btn" onClick={undoAction}>Undo</button>
                 </div>
             )}
         </div>
