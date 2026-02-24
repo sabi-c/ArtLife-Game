@@ -11,9 +11,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ArtnetLogin from './ArtnetLogin.jsx';
 import ArtnetMarketplace from './ArtnetMarketplace.jsx';
-import GameState from '../managers/GameState.js';
-import MarketManager from '../managers/MarketManager.js';
-import MarketSimulator from '../managers/MarketSimulator.js';
+import { GameState } from '../managers/GameState.js';
+import { MarketManager } from '../managers/MarketManager.js';
+import { MarketSimulator } from '../managers/MarketSimulator.js';
 import { ARTWORKS } from '../data/artworks.js';
 
 const FONT = '"ArtnetGrotesk", "Helvetica Neue", Helvetica, Arial, sans-serif';

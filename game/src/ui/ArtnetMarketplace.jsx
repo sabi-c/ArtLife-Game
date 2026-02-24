@@ -12,9 +12,9 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { ARTWORKS } from '../data/artworks.js';
 import { resolveArtworkUrl } from '../utils/assets.js';
 import { useCmsStore } from '../stores/cmsStore.js';
-import GameState from '../managers/GameState.js';
-import MarketManager from '../managers/MarketManager.js';
-import MarketSimulator from '../managers/MarketSimulator.js';
+import { GameState } from '../managers/GameState.js';
+import { MarketManager } from '../managers/MarketManager.js';
+import { MarketSimulator } from '../managers/MarketSimulator.js';
 
 const font = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
