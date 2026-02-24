@@ -704,31 +704,31 @@ export default function ArtnetMarketplace({ onClose }) {
                             </button>
 
                             {/* Provenance */}
-                            {selectedWork.provenance?.length > 0 && (
+                            {Array.isArray(selectedWork.provenance) && selectedWork.provenance.length > 0 && (
                                 <>
                                     <div style={S.detailSection}>Provenance</div>
                                     <ul style={S.detailList}>
-                                        {selectedWork.provenance.map((p, i) => <li key={i}>{p}</li>)}
+                                        {selectedWork.provenance.map((p, i) => <li key={i}>{typeof p === 'string' ? p : p.source || JSON.stringify(p)}</li>)}
                                     </ul>
                                 </>
                             )}
 
                             {/* Exhibitions */}
-                            {selectedWork.exhibitions?.length > 0 && (
+                            {Array.isArray(selectedWork.exhibitions) && selectedWork.exhibitions.length > 0 && (
                                 <>
                                     <div style={S.detailSection}>Exhibitions</div>
                                     <ul style={S.detailList}>
-                                        {selectedWork.exhibitions.map((e, i) => <li key={i}>{e}</li>)}
+                                        {selectedWork.exhibitions.map((e, i) => <li key={i}>{typeof e === 'string' ? e : JSON.stringify(e)}</li>)}
                                     </ul>
                                 </>
                             )}
 
                             {/* Literature */}
-                            {selectedWork.literature?.length > 0 && (
+                            {Array.isArray(selectedWork.literature) && selectedWork.literature.length > 0 && (
                                 <>
                                     <div style={S.detailSection}>Literature</div>
                                     <ul style={S.detailList}>
-                                        {selectedWork.literature.map((l, i) => <li key={i}>{l}</li>)}
+                                        {selectedWork.literature.map((l, i) => <li key={i}>{typeof l === 'string' ? l : JSON.stringify(l)}</li>)}
                                     </ul>
                                 </>
                             )}
