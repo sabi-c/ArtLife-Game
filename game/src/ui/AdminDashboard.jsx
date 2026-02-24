@@ -339,15 +339,36 @@ export default function AdminDashboard({ onClose }) {
                             </button>
                         </div>
                         <div>
-                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>BATTLE & DIALOGUE</div>
-                            <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => launchEmailHaggle()}>
-                                [ Email Haggle (New) ]
-                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Gmail-style email negotiation</div>
-                            </button>
-                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={launchHaggleBattle}>
-                                [ Haggle Battle (Legacy) ]
-                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Pokemon-style negotiation (Phaser)</div>
-                            </button>
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NEGOTIATION MODES</div>
+                            <div style={{ background: '#0a0a0f', border: '1px solid #333', padding: 12, marginBottom: 16 }}>
+                                <div style={{ fontSize: 11, color: '#666', marginBottom: 10, lineHeight: 1.5 }}>
+                                    3 negotiation UIs — all powered by <strong style={{ color: '#aaa' }}>HaggleManager</strong>
+                                </div>
+
+                                {/* MODE 1: Email Haggle */}
+                                <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => launchEmailHaggle()}>
+                                    ① Email Negotiation
+                                    <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Gmail-style chat bubbles · AI agent guide · tactic selection</div>
+                                </button>
+
+                                {/* MODE 2: Bloomberg Counter-Offer */}
+                                <button style={{ ...btnStyle, borderColor: '#00e5ff', color: '#00e5ff' }} onClick={() => {
+                                    if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                    // Launch Bloomberg with pre-selected counter-offer state
+                                    triggerOverlay(OVERLAY.BLOOMBERG);
+                                }}>
+                                    ② Bloomberg Counter-Offer
+                                    <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Opens market terminal · use ORDER BOOK &gt; COUNTER to haggle in-terminal</div>
+                                </button>
+
+                                {/* MODE 3: Pokemon Battle */}
+                                <button style={{ ...btnStyle, borderColor: '#c9a84c', color: '#c9a84c', opacity: 0.7 }} onClick={launchHaggleBattle}>
+                                    ③ Battle Haggle (Phaser)
+                                    <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Pokemon-style turn-based · Phaser canvas · type effectiveness</div>
+                                </button>
+                            </div>
+
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>DIALOGUE & CUTSCENES</div>
                             <button style={btnStyle} onClick={() => triggerScene('MacDialogueScene', {
                                 bgKey: 'bg_gallery_main_1bit_1771587911969.png',
                                 dialogueSequence: [
