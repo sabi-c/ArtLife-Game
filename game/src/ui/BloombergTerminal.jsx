@@ -841,7 +841,7 @@ function NotificationBar({ notifications, onClickNotif }) {
 //   price → market inset → provenance chain → exhibitions → literature →
 //   action buttons → gallery footer with locations
 // ══════════════════════════════════════════════════════════════
-function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, onListConfirm, onImageClick }) {
+function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, onListConfirm, onImageClick, onInquireEmail }) {
     const [confirmBuy, setConfirmBuy] = useState(false);
     const [listTier, setListTier] = useState(null);
     const s = GameState.state;
@@ -1043,7 +1043,7 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                         ) : (
                             <button className="bb-ts-btn bb-ts-btn-primary"
                                 disabled={!hasAP(2)}
-                                onClick={() => onHaggle(order)}>
+                                onClick={() => onInquireEmail ? onInquireEmail(work, work._ownerData) : onHaggle(order)}>
                                 INQUIRE <span className="bb-ts-ap">[2 AP]</span>
                             </button>
                         )}
@@ -4594,6 +4594,7 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
                     onHaggle={handleHaggle}
                     onListConfirm={handleListConfirm}
                     onImageClick={(url) => setLightboxUrl(url)}
+                    onInquireEmail={handleInquireEmail}
                 />
             )}
 
