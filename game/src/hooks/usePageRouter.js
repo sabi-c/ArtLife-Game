@@ -138,13 +138,25 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
             suppressUrlSync.current = true;
             setActiveView(route.view);
             setActiveOverlay(route.overlay || OVERLAY.NONE);
-            // Reset suppress after state updates propagate
             requestAnimationFrame(() => { suppressUrlSync.current = false; });
         };
 
         const handlePopState = (e) => {
             const path = window.location.pathname;
-            const route = PAGE_ROUTES[path] || PAGE_ROUTES['/'];
+            let route = PAGE_ROUTES[path];
+
+            // If no route matches, or we'd land on bare PHASER with no overlay,
+            // default to Bloomberg (the main landing page)
+            if (!route) {
+                route = PAGE_ROUTES['/'];
+            }
+
+            // Safety: if going back to VIEW.PHASER without an overlay,
+            // always show Bloomberg so user doesn't see empty canvas
+            if (route.view === VIEW.PHASER && (!route.overlay || route.overlay === OVERLAY.NONE)) {
+                route = { ...route, overlay: OVERLAY.BLOOMBERG };
+            }
+
             suppressUrlSync.current = true;
             setActiveView(route.view);
             setActiveOverlay(route.overlay || OVERLAY.NONE);
@@ -174,7 +186,9 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
 
         // Only update if different from current URL
         if (window.location.pathname !== path) {
-            window.history.replaceState({ path }, '', path);
+            // Use pushState for overlay changes (so Back button works between overlays)
+            // Use replaceState for same-view updates
+            window.history.pushState({ path }, '', path);
         }
     }, []);
 

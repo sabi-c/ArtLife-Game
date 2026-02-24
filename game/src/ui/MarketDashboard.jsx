@@ -96,7 +96,6 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function MarketDashboard({ onClose }) {
     const { priceHistory, artistSnapshots } = useMarketStore();
     const marketState = useMarketStore(s => s.marketCycle) || GameState.state?.marketState || 'neutral';
-    const [selectedId, setSelectedId] = useState(null);
 
     // Get list of active artists sorted by heat
     const artists = useMemo(() => {
@@ -105,19 +104,45 @@ export default function MarketDashboard({ onClose }) {
             .sort((a, b) => b.artistIndex - a.artistIndex);
     }, [artistSnapshots]);
 
-    // Select first artist by default if none selected
-    if (!selectedId && artists?.length > 0) {
-        setSelectedId(artists[0].id);
-    }
+    // Default to first artist (using useMemo to avoid setState during render)
+    const defaultId = useMemo(() => artists?.[0]?.id || null, [artists]);
+    const [selectedId, setSelectedId] = useState(null);
+    const effectiveId = selectedId || defaultId;
 
-    const selectedData = selectedId ? artistSnapshots[selectedId] : null;
+    const selectedData = effectiveId ? artistSnapshots[effectiveId] : null;
     const chartData = useMemo(() => {
-        if (!selectedId || !priceHistory?.[selectedId]) return [];
-        return priceHistory[selectedId].map(doc => ({
+        if (!effectiveId || !priceHistory?.[effectiveId]) return [];
+        return priceHistory[effectiveId].map(doc => ({
             ...doc,
             displayRange: [doc.lowPrice || 0, doc.highPrice || 0]
         }));
-    }, [selectedId, priceHistory]);
+    }, [effectiveId, priceHistory]);
+
+    // Empty state when no market data
+    if (artists.length === 0) {
+        return (
+            <div style={overlayStyle}>
+                <div style={headerStyle}>
+                    <div>
+                        <h1 style={titleStyle}>Artnet Intelligence</h1>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                            GLOBAL MARKET STATE: <span style={{ color: '#888' }}>{marketState.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    <button style={btnStyle} onClick={onClose}>[X] CLOSE</button>
+                </div>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ fontSize: 48 }}>📊</div>
+                    <div style={{ color: '#888', fontSize: 14, maxWidth: 400, textAlign: 'center', lineHeight: 1.6 }}>
+                        No market data available yet. Market intelligence populates as you trade artworks and progress through the game.
+                    </div>
+                    <button onClick={onClose} style={{ ...btnStyle, marginTop: 12, padding: '10px 24px' }}>
+                        ← BACK TO TERMINAL
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={overlayStyle}>

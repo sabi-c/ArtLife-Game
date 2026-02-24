@@ -170,7 +170,28 @@ function MarketTape({ work }) {
 export default function ArtworkDashboard({ onClose, payload }) {
     const { artistSnapshots, priceHistory } = useMarketStore();
 
-    if (!payload?.work) return null;
+    if (!payload?.work) {
+        return (
+            <div style={overlayStyle}>
+                <div style={headerStyle}>
+                    <div>
+                        <h1 style={titleStyle}>ArtNet Analytics</h1>
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>ASSET ANALYTICS ENGINE</div>
+                    </div>
+                    <button style={btnStyle} onClick={onClose}>[X] CLOSE</button>
+                </div>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ fontSize: 48 }}>🖼️</div>
+                    <div style={{ color: '#888', fontSize: 14, maxWidth: 400, textAlign: 'center', lineHeight: 1.6 }}>
+                        No artwork selected. Open an artwork from Bloomberg Terminal, Sales Grid, or Inventory to view its market analytics.
+                    </div>
+                    <button onClick={onClose} style={{ ...btnStyle, marginTop: 12, padding: '10px 24px' }}>
+                        ← BACK TO TERMINAL
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     const work = payload.work;
     const artistData = artistSnapshots?.[work.artistId];

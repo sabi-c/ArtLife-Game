@@ -441,6 +441,35 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
     }, [nodes]);
 
     // ══════════════════════════════════════════════════════════
+    // Node Inspector
+    // ══════════════════════════════════════════════════════════
+
+    const selectedNodeData = selectedNode ? nodes.find(n => n.id === selectedNode) : null;
+    const incomingEdges = selectedNode ? edges.filter(e => e.to === selectedNode) : [];
+    const outgoingEdges = selectedNode ? edges.filter(e => e.from === selectedNode) : [];
+    const allNodeIds = nodes.map(n => n.id);
+
+    const addEdge = (targetId) => {
+        if (!selectedNode || !targetId || selectedNode === targetId) return;
+        const exists = edges.some(e => e.from === selectedNode && e.to === targetId);
+        if (!exists) setEdges(prev => [...prev, { from: selectedNode, to: targetId, label: 'navigate' }]);
+    };
+
+    const removeEdge = (from, to) => {
+        setEdges(prev => prev.filter(e => !(e.from === from && e.to === to)));
+    };
+
+    const updateEdgeLabel = (from, to, label) => {
+        setEdges(prev => prev.map(e => e.from === from && e.to === to ? { ...e, label } : e));
+    };
+
+    const deleteNode = (nodeId) => {
+        setNodes(prev => prev.filter(n => n.id !== nodeId));
+        setEdges(prev => prev.filter(e => e.from !== nodeId && e.to !== nodeId));
+        setSelectedNode(null);
+    };
+
+    // ══════════════════════════════════════════════════════════
     // Toolbar
     // ══════════════════════════════════════════════════════════
 
@@ -449,6 +478,22 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
         fontFamily: "'SF Mono', monospace", fontSize: 10, padding: '5px 10px',
         cursor: 'pointer', letterSpacing: '0.1em',
     };
+
+    const panelStyle = {
+        position: 'absolute', top: 0, right: 0, width: 280, height: '100%',
+        background: 'rgba(12, 12, 18, 0.97)', borderLeft: '1px solid #222',
+        zIndex: 10, overflowY: 'auto', padding: '12px', boxSizing: 'border-box',
+        fontFamily: "'SF Mono', monospace", fontSize: 11, color: '#ccc',
+    };
+
+    const sectionStyle = { marginBottom: 14, padding: '8px 0', borderBottom: '1px solid #1a1a25' };
+    const labelStyle = { color: '#666', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 };
+    const badgeStyle = (color) => ({
+        display: 'inline-block', padding: '2px 8px', borderRadius: 3, fontSize: 10,
+        background: color + '22', color, border: `1px solid ${color}44`, marginRight: 4, marginBottom: 4,
+    });
+
+    const edgeLabelOptions = ['navigate', 'open_overlay', 'close_overlay', 'start_scene', 'trigger_event', 'back'];
 
     return (
         <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 500, background: '#0a0a0f' }}>
@@ -463,19 +508,128 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
                 )}
             </div>
             {/* Legend */}
-            <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 5, display: 'flex', gap: 12, fontSize: 10, fontFamily: "'SF Mono', monospace" }}>
+            <div style={{ position: 'absolute', top: 8, right: selectedNodeData ? 290 : 8, zIndex: 5, display: 'flex', gap: 12, fontSize: 10, fontFamily: "'SF Mono', monospace", transition: 'right 0.2s' }}>
                 <span style={{ color: TYPE_COLORS.view.text }}>● VIEW</span>
                 <span style={{ color: TYPE_COLORS.scene.text }}>● SCENE</span>
                 <span style={{ color: TYPE_COLORS.overlay.text }}>● OVERLAY</span>
             </div>
             {/* Help */}
-            <div style={{ position: 'absolute', bottom: 8, right: 8, zIndex: 5, fontSize: 9, color: '#444', fontFamily: "'SF Mono', monospace", textAlign: 'right', lineHeight: 1.8 }}>
-                Drag node to move · Drag output port → input port to connect · Scroll to zoom · Click empty space to pan
+            <div style={{ position: 'absolute', bottom: 8, right: selectedNodeData ? 290 : 8, zIndex: 5, fontSize: 9, color: '#444', fontFamily: "'SF Mono', monospace", textAlign: 'right', lineHeight: 1.8, transition: 'right 0.2s' }}>
+                Drag node to move · Drag output → input to connect · Scroll to zoom · Click node to inspect
             </div>
+
+            {/* ── Node Inspector Panel ── */}
+            {selectedNodeData && (
+                <div style={panelStyle}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <div style={{ fontWeight: 'bold', color: TYPE_COLORS[selectedNodeData.type]?.text || '#ccc', fontSize: 13 }}>
+                            {selectedNodeData.label}
+                        </div>
+                        <button onClick={() => setSelectedNode(null)} style={{ ...btnStyle, padding: '2px 6px', fontSize: 9 }}>✕</button>
+                    </div>
+
+                    {/* Type badge */}
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Type</div>
+                        <span style={badgeStyle(TYPE_COLORS[selectedNodeData.type]?.text || '#888')}>
+                            {selectedNodeData.type.toUpperCase()}
+                        </span>
+                        <span style={{ color: '#555', fontSize: 9 }}> {selectedNodeData.id}</span>
+                    </div>
+
+                    {/* Incoming connections */}
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Incoming ({incomingEdges.length})</div>
+                        {incomingEdges.length === 0 && <div style={{ color: '#444', fontStyle: 'italic' }}>No incoming edges</div>}
+                        {incomingEdges.map((e, i) => {
+                            const fromNode = nodes.find(n => n.id === e.from);
+                            return (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
+                                    <span style={{ color: TYPE_COLORS[fromNode?.type]?.text || '#888' }}>
+                                        ← {fromNode?.label || e.from}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                        <select value={e.label || 'navigate'}
+                                            onChange={(ev) => updateEdgeLabel(e.from, e.to, ev.target.value)}
+                                            style={{ background: '#111', color: '#888', border: '1px solid #333', fontSize: 9, padding: '2px 4px' }}>
+                                            {edgeLabelOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                        <button onClick={() => removeEdge(e.from, e.to)}
+                                            style={{ ...btnStyle, padding: '1px 5px', color: '#c94040', borderColor: '#c9404044' }}>✕</button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Outgoing connections */}
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Outgoing ({outgoingEdges.length})</div>
+                        {outgoingEdges.length === 0 && <div style={{ color: '#444', fontStyle: 'italic' }}>No outgoing edges</div>}
+                        {outgoingEdges.map((e, i) => {
+                            const toNode = nodes.find(n => n.id === e.to);
+                            return (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
+                                    <span style={{ color: TYPE_COLORS[toNode?.type]?.text || '#888' }}>
+                                        → {toNode?.label || e.to}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                        <select value={e.label || 'navigate'}
+                                            onChange={(ev) => updateEdgeLabel(e.from, e.to, ev.target.value)}
+                                            style={{ background: '#111', color: '#888', border: '1px solid #333', fontSize: 9, padding: '2px 4px' }}>
+                                            {edgeLabelOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                        </select>
+                                        <button onClick={() => removeEdge(e.from, e.to)}
+                                            style={{ ...btnStyle, padding: '1px 5px', color: '#c94040', borderColor: '#c9404044' }}>✕</button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Add new edge */}
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Add Connection</div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            <select id="flow-add-target"
+                                style={{ flex: 1, background: '#111', color: '#888', border: '1px solid #333', fontSize: 10, padding: '4px' }}>
+                                <option value="">Select target...</option>
+                                {allNodeIds
+                                    .filter(id => id !== selectedNode && !outgoingEdges.some(e => e.to === id))
+                                    .sort()
+                                    .map(id => {
+                                        const n = nodes.find(nn => nn.id === id);
+                                        return <option key={id} value={id}>{n?.label || id}</option>;
+                                    })}
+                            </select>
+                            <button onClick={() => {
+                                const sel = document.getElementById('flow-add-target');
+                                if (sel?.value) { addEdge(sel.value); sel.value = ''; }
+                            }} style={{ ...btnStyle, color: '#50c878', borderColor: '#50c87844' }}>+</button>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Actions</div>
+                        <button onClick={() => deleteNode(selectedNodeData.id)}
+                            style={{ ...btnStyle, width: '100%', color: '#c94040', borderColor: '#c9404044', fontSize: 10, padding: '6px' }}>
+                            Delete Node
+                        </button>
+                    </div>
+
+                    {/* Node position */}
+                    <div style={{ color: '#333', fontSize: 9, marginTop: 8 }}>
+                        pos: ({Math.round(selectedNodeData.x)}, {Math.round(selectedNodeData.y)})
+                    </div>
+                </div>
+            )}
+
             {/* Canvas */}
             <canvas
                 ref={canvasRef}
-                style={{ display: 'block', width: '100%', height: '100%', cursor: isPanning ? 'grabbing' : dragNode ? 'move' : connectFrom ? 'crosshair' : 'default' }}
+                style={{ display: 'block', width: selectedNodeData ? 'calc(100% - 280px)' : '100%', height: '100%', cursor: isPanning ? 'grabbing' : dragNode ? 'move' : connectFrom ? 'crosshair' : 'default', transition: 'width 0.2s' }}
                 onMouseDown={onMouseDown}
                 onMouseMove={onMouseMove}
                 onMouseUp={onMouseUp}
