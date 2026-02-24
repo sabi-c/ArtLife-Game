@@ -29,18 +29,16 @@ import BloombergTutorial from './BloombergTutorial.jsx';
 import HaggleOverlay from './email/haggle/HaggleOverlay.jsx';
 import './BloombergTerminal.css';
 
-// Dashboard sub-modules
-import { fmtNum, maskPrice, getAP, hasAP, useAPAndCheckEvents } from './dashboard/dashboardUtils.jsx';
+// Dashboard sub-modules (barrel import)
 import {
+    fmtNum, maskPrice, getAP, hasAP, useAPAndCheckEvents,
     TickerBar, ArtistLeaderboard, OrderBook, MarketOverview,
     PriceChart, TradeFeed, Watchlist, PortfolioTracker,
     NotificationBar, ArtworkTearsheet,
-} from './dashboard/panels.jsx';
-import {
     GalleryView, TearsheetView, ArtnetView, SothebysView,
     DeitchView, ByformView, WaterworksView, PanelConfigDropdown,
-} from './dashboard/views.jsx';
-import { StyleGuideView, EventOverlay } from './dashboard/modals.jsx';
+    StyleGuideView, EventOverlay,
+} from './dashboard';
 
 // ══════════════════════════════════════════════════════════════
 // Main Bloomberg Terminal
