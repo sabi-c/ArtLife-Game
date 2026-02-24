@@ -24,6 +24,7 @@ import EmailDesignGuide from './ui/email/EmailDesignGuide.jsx';
 import GmailDesignGuide from './ui/email/GmailDesignGuide.jsx';
 import IMessageUI from './ui/email/iMessageUI.jsx';
 import ArtnetLogin from './ui/ArtnetLogin.jsx';
+import ArtnetMarketplace from './ui/ArtnetMarketplace.jsx';
 import EmailOverlay from './ui/email/EmailOverlay.jsx';
 import DiagnosticsOverlay from './ui/DiagnosticsOverlay.jsx';
 import CharacterCreator from './ui/CharacterCreator.jsx';
@@ -448,6 +449,10 @@ export default function App() {
 
             {activeOverlay === OVERLAY.ARTNET_LOGIN && (
                 <ArtnetLogin onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+            )}
+
+            {activeOverlay === OVERLAY.ARTNET_MARKETPLACE && (
+                <ArtnetMarketplace onClose={() => setActiveOverlay(OVERLAY.NONE)} />
             )}
 
             {/* Global Email Haggle — rendered above all overlays when triggered from any context */}
