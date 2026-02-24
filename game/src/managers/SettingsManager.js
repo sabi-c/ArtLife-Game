@@ -141,6 +141,36 @@ export class SettingsManager {
             default: false,
             hidden: true, // Not shown in settings UI — set programmatically
         },
+        {
+            id: 'defaultLanding',
+            label: 'Default Landing Page',
+            type: 'cycle',
+            section: 'navigation',
+            options: [
+                { value: 'artnet', display: 'Artnet Marketplace' },
+                { value: 'bloomberg', display: 'Bloomberg Terminal' },
+                { value: 'terminal', display: 'Classic Terminal' },
+            ],
+            default: 'artnet'
+        },
+        {
+            id: 'masterVolume',
+            label: 'Master Volume',
+            type: 'range',
+            min: 0,
+            max: 100,
+            step: 10,
+            default: 80,
+        },
+        {
+            id: 'sfxVolume',
+            label: 'SFX Volume',
+            type: 'range',
+            min: 0,
+            max: 100,
+            step: 10,
+            default: 80,
+        },
     ];
 
     static _cache = null;
@@ -220,6 +250,10 @@ export class SettingsManager {
         } else if (def.type === 'boolean') {
             // Boolean type — strict validation, fall back to default if not boolean
             if (typeof val !== 'boolean') val = def.default;
+        } else if (def.type === 'range') {
+            // Range type — clamp between min/max, fall back to default if not a number
+            if (typeof val !== 'number') val = def.default;
+            else val = Math.max(def.min ?? 0, Math.min(def.max ?? 100, val));
         } else if (val === undefined) {
             val = def.default;
         }

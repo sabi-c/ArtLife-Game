@@ -29,6 +29,17 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { VIEW, OVERLAY } from '../constants/views.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
+
+// Resolve the user's preferred default landing overlay
+function getDefaultLandingOverlay() {
+    try {
+        const pref = SettingsManager.get('defaultLanding') || 'artnet';
+        if (pref === 'artnet') return OVERLAY.ARTNET_MARKETPLACE;
+        if (pref === 'terminal') return OVERLAY.NONE;
+        return OVERLAY.BLOOMBERG;
+    } catch { return OVERLAY.BLOOMBERG; }
+}
 
 // ════════════════════════════════════════════════════════════
 // Route Configuration
@@ -36,7 +47,7 @@ import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 export const PAGE_ROUTES = {
     // path       → { view, overlay, title, icon }
-    '/': { view: VIEW.PHASER, overlay: OVERLAY.BLOOMBERG, title: 'Market Terminal', icon: '📊' },
+    '/': { view: VIEW.PHASER, overlay: null, title: 'Market Terminal', icon: '📊', dynamic: true }, // resolved at runtime by getDefaultLandingOverlay
     '/boot': { view: VIEW.BOOT, overlay: OVERLAY.NONE, title: 'Login', icon: '🔐' },
     '/terminal': { view: VIEW.TERMINAL, overlay: OVERLAY.NONE, title: 'Terminal', icon: '💻' },
     '/dashboard': { view: VIEW.TERMINAL, overlay: OVERLAY.NONE, title: 'Player Dashboard', icon: '📈' },
@@ -92,11 +103,14 @@ Object.entries(PAGE_ROUTES).forEach(([path, config]) => {
  * @param {Object} [options] - { replace: boolean } use replaceState instead of pushState
  */
 export function navigate(path, options = {}) {
-    const route = PAGE_ROUTES[path];
+    let route = PAGE_ROUTES[path];
     if (!route) {
         console.warn(`[Router] Unknown route: ${path}`);
         return;
     }
+
+    // Resolve dynamic routes
+    if (route.dynamic) route = { ...route, overlay: getDefaultLandingOverlay() };
 
     // Update URL
     const method = options.replace ? 'replaceState' : 'pushState';
@@ -113,7 +127,9 @@ export function navigate(path, options = {}) {
  */
 export function getCurrentRoute() {
     const path = window.location.pathname;
-    return PAGE_ROUTES[path] || PAGE_ROUTES['/'];
+    let route = PAGE_ROUTES[path] || PAGE_ROUTES['/'];
+    if (route.dynamic) route = { ...route, overlay: getDefaultLandingOverlay() };
+    return route;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -145,16 +161,20 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
             const path = window.location.pathname;
             let route = PAGE_ROUTES[path];
 
-            // If no route matches, or we'd land on bare PHASER with no overlay,
-            // default to Bloomberg (the main landing page)
+            // If no route matches, use default landing
             if (!route) {
-                route = PAGE_ROUTES['/'];
+                route = { ...PAGE_ROUTES['/'], overlay: getDefaultLandingOverlay() };
+            }
+
+            // Dynamic route resolution for '/' (uses defaultLanding setting)
+            if (route.dynamic) {
+                route = { ...route, overlay: getDefaultLandingOverlay() };
             }
 
             // Safety: if going back to VIEW.PHASER without an overlay,
-            // always show Bloomberg so user doesn't see empty canvas
+            // always show the default landing so user doesn't see empty canvas
             if (route.view === VIEW.PHASER && (!route.overlay || route.overlay === OVERLAY.NONE)) {
-                route = { ...route, overlay: OVERLAY.BLOOMBERG };
+                route = { ...route, overlay: getDefaultLandingOverlay() };
             }
 
             suppressUrlSync.current = true;
