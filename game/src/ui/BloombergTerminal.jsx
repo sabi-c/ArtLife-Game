@@ -1044,7 +1044,7 @@ function ArtworkTearsheet({ work, order, intel, onClose, onBuy, onHaggle, mode, 
                             <button className="bb-ts-btn bb-ts-btn-primary"
                                 disabled={!hasAP(2)}
                                 onClick={() => onHaggle(order)}>
-                                INQUIRE TO ACQUIRE <span className="bb-ts-ap">[2 AP]</span>
+                                INQUIRE <span className="bb-ts-ap">[2 AP]</span>
                             </button>
                         )}
                     </div>
@@ -2075,7 +2075,7 @@ function ArtistDetailCard({ artist, intel, items, feed, onClose }) {
 // data-dense metadata, provenance, market data, price history,
 // and action buttons. Intel-gated progressive disclosure.
 // ══════════════════════════════════════════════════════════════
-function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }) {
+function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList, onImageClick, onInquireEmail }) {
     if (!work) return null;
 
     const s = GameState.state;
@@ -2137,7 +2137,11 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
                 {/* Left: Image + quick actions */}
                 <div className="an-ld-left">
                     {imageUrl ? (
-                        <img className="an-ld-image" src={imageUrl} alt={title} />
+                        <img className="an-ld-image" src={imageUrl} alt={title}
+                            style={{ cursor: 'zoom-in' }}
+                            onClick={() => onImageClick?.(imageUrl)}
+                            title="Click to view full size"
+                        />
                     ) : (
                         <div className="an-ld-image-placeholder">
                             <span className="an-ld-image-text">{title}</span>
@@ -2294,8 +2298,14 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
                                 ) : (
                                     <button className="an-ld-btn an-ld-btn-primary"
                                         disabled={!hasAP(2)}
-                                        onClick={() => onHaggle(work._ownerData)}>
-                                        INQUIRE TO ACQUIRE <span className="an-ld-ap">[2 AP]</span>
+                                        onClick={() => {
+                                            if (onInquireEmail) {
+                                                onInquireEmail(work, work._ownerData);
+                                            } else {
+                                                onHaggle(work._ownerData);
+                                            }
+                                        }}>
+                                        INQUIRE <span className="an-ld-ap">[2 AP]</span>
                                     </button>
                                 )}
                             </>
@@ -2310,7 +2320,7 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
                                     const askPrice = Math.floor(currVal * (1 + (Math.random() * 0.4)));
                                     onHaggle({ mode: 'buy', work, npc, askingPrice: askPrice, playerOffer: currVal });
                                 }}>
-                                HAGGLE TO ACQUIRE <span className="an-ld-ap">[2 AP]</span>
+                                INQUIRE <span className="an-ld-ap">[2 AP]</span>
                             </button>
                         )}
                         {work._ownerType === 'unknown' && (
@@ -2342,7 +2352,7 @@ function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList }
 // lot-by-lot auction results with estimate ranges and ROI.
 // Sortable columns (click header to sort).
 // ══════════════════════════════════════════════════════════════
-function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectOrder, onSelectTrade, onListWork, onHaggle }) {
+function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectOrder, onSelectTrade, onListWork, onHaggle, onImageClick, onInquireEmail }) {
     const s = GameState.state;
     const portfolio = s?.portfolio || [];
     const week = s?.week || 1;
@@ -2748,7 +2758,14 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                         <td className="an-td an-lot">{work._lot}</td>
                                         <td className="an-td an-thumb">
                                             {resolveImageUrl(work) ? (
-                                                <img className="an-thumb-img" src={resolveImageUrl(work)} alt="" />
+                                                <img className="an-thumb-img" src={resolveImageUrl(work)} alt=""
+                                                    style={{ cursor: 'zoom-in' }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (onImageClick) onImageClick(resolveImageUrl(work));
+                                                    }}
+                                                    title="Click to view full size"
+                                                />
                                             ) : (
                                                 <div className="an-thumb-placeholder" />
                                             )}
@@ -2848,6 +2865,8 @@ function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSe
                                                     onClose={() => setDetailWork(null)}
                                                     onBuy={(order) => { if (onSelectOrder) onSelectOrder(order); }}
                                                     onHaggle={(order) => { if (onHaggle) onHaggle(order); else if (onSelectOrder) onSelectOrder(order); }}
+                                                    onImageClick={onImageClick}
+                                                    onInquireEmail={onInquireEmail}
                                                     onList={(w) => { if (onListWork) onListWork(w); }}
                                                 />
                                             </td>
@@ -4303,6 +4322,26 @@ export default function BloombergTerminal({ onClose }) {
         setActiveHaggle(haggleInfo);
     }, [closeModal]);
 
+    // Inquire → Gmail compose flow
+    const handleInquireEmail = useCallback((work, ownerData) => {
+        if (!hasAP(2)) { setStatusMsg('Not enough AP (need 2)'); return; }
+        useAPAndCheckEvents('Bloomberg inquiry email', 2);
+        closeModal();
+        // Dispatch custom event for App.jsx to open Gmail with compose data
+        const artist = work._artist?.name || work.artist || 'Unknown Artist';
+        const title = work.title || 'Untitled';
+        const owner = ownerData?.sellerName || ownerData?.npc?.name || work._ownerData?.sellerName || 'Gallery';
+        const price = ownerData?.askPrice || work.currentVal || 0;
+        const fmtPrice = price >= 1_000_000 ? `$${(price / 1_000_000).toFixed(2)}M` : price >= 1_000 ? `$${(price / 1_000).toFixed(0)}k` : `$${price.toLocaleString()}`;
+        window.dispatchEvent(new CustomEvent('openGmailCompose', {
+            detail: {
+                to: `${owner.toLowerCase().replace(/\s+/g, '.')}@artnet.com`,
+                subject: `Inquiry: ${artist} — ${title}`,
+                body: `Dear ${owner},\n\nI am writing to inquire about the availability of:\n\n${artist}\n"${title}"\nListed at ${fmtPrice}\n\nI would appreciate any additional information regarding provenance, condition, and the possibility of a private viewing.\n\nBest regards`
+            }
+        }));
+    }, [closeModal]);
+
     // List for sale action
     const handleListConfirm = useCallback((work, tier) => {
         if (!hasAP(2)) { setStatusMsg('Not enough AP (need 2)'); return; }
@@ -4449,7 +4488,7 @@ export default function BloombergTerminal({ onClose }) {
                 <ArtnetView intel={intel} onSelectWork={handleSelectPortfolioWork} showPanel={showPanel}
                     feed={feed} selectedArtist={selectedArtist} onSelectArtist={setSelectedArtist}
                     onSelectOrder={handleSelectOrder} onSelectTrade={handleSelectTrade} onListWork={handleListWork}
-                    onHaggle={handleHaggle} />
+                    onHaggle={handleHaggle} onImageClick={(url) => setLightboxUrl(url)} onInquireEmail={handleInquireEmail} />
             )}
 
             {/* Sotheby's mode — luxury lot-by-lot catalogue */}

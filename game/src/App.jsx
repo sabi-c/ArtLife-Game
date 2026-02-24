@@ -48,7 +48,18 @@ export default function App() {
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.BLOOMBERG);
     const [isGridSceneActive, setIsGridSceneActive] = useState(false);
     const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null); // EmailOverlay haggle from any context
+    const [gmailComposeData, setGmailComposeData] = useState(null); // Pre-populated compose for Gmail
     const autoResumedRef = useRef(false);
+
+    // Listen for Bloomberg INQUIRE → Gmail compose events
+    useEffect(() => {
+        const handleGmailCompose = (e) => {
+            setGmailComposeData(e.detail);
+            setActiveOverlay(OVERLAY.GMAIL_GUIDE);
+        };
+        window.addEventListener('openGmailCompose', handleGmailCompose);
+        return () => window.removeEventListener('openGmailCompose', handleGmailCompose);
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -425,7 +436,10 @@ export default function App() {
             )}
 
             {activeOverlay === OVERLAY.GMAIL_GUIDE && (
-                <GmailDesignGuide onClose={() => setActiveOverlay(OVERLAY.NONE)} />
+                <GmailDesignGuide
+                    onClose={() => { setActiveOverlay(OVERLAY.NONE); setGmailComposeData(null); }}
+                    initialCompose={gmailComposeData}
+                />
             )}
 
             {activeOverlay === OVERLAY.IMESSAGE_UI && (

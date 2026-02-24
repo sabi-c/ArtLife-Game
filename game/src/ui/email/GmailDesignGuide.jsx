@@ -259,7 +259,7 @@ const CATEGORIES = [
 // Component
 // ════════════════════════════════════════════════════════════
 
-export default function GmailDesignGuide({ onClose }) {
+export default function GmailDesignGuide({ onClose, initialCompose }) {
     // ── State ──
     const [emails, setEmails] = useState(initialEmails);
     const [view, setView] = useState('inbox');           // 'inbox' | 'thread' | 'sent'
@@ -267,10 +267,10 @@ export default function GmailDesignGuide({ onClose }) {
     const [activeCategory, setActiveCategory] = useState('primary');
     const [activeNav, setActiveNav] = useState('inbox');
     const [searchQuery, setSearchQuery] = useState('');
-    const [showCompose, setShowCompose] = useState(false);
+    const [showCompose, setShowCompose] = useState(!!initialCompose);
     const [replyMode, setReplyMode] = useState(null);     // null | 'reply' | 'replyAll' | 'forward'
     const [replyText, setReplyText] = useState('');
-    const [composeData, setComposeData] = useState({ to: '', subject: '', body: '' });
+    const [composeData, setComposeData] = useState(initialCompose || { to: '', subject: '', body: '' });
     const [sentEmails, setSentEmails] = useState([]);
     const [selectedIds, setSelectedIds] = useState(new Set());
     const threadEndRef = useRef(null);
