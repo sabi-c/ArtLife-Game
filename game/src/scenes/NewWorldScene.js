@@ -108,7 +108,7 @@ export default class NewWorldScene extends Phaser.Scene {
         // Bail early if critical assets failed to load
         if (this._assetErrors.length > 0) {
             this._createFailed = true;
-            this._showError('Asset loading failed:\\n' + this._assetErrors.join('\\n'));
+            this._showError('Asset loading failed:\n' + this._assetErrors.join('\n'));
             return;
         }
 
@@ -327,10 +327,26 @@ export default class NewWorldScene extends Phaser.Scene {
     // Camera
     // ════════════════════════════════════════════════════
     _createCamera() {
-        this.cameras.main.setZoom(2.5);
+        // Detect mobile/touch device
+        const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        // Mobile: wider view (lower zoom) since joypad takes up screen space
+        const zoom = isMobile ? 2.0 : 2.5;
+        this.cameras.main.setZoom(zoom);
+
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.setBackgroundColor('#2d6b30');
+
+        // Mobile: offset camera follow upward so player stays above joypad
+        // Joypad covers ~46vh of the screen from the bottom.
+        // We shift the follow point up by ~20% of the viewport (in world coords).
+        if (isMobile) {
+            const viewportH = this.scale.height / zoom;
+            const offsetY = viewportH * 0.18; // shift player 18% above center
+            this.cameras.main.setFollowOffset(0, offsetY);
+            console.log(`[NewWorldScene] Mobile camera: zoom=${zoom}, followOffset Y=${offsetY.toFixed(0)}`);
+        }
     }
 
     // ════════════════════════════════════════════════════
@@ -436,10 +452,23 @@ export default class NewWorldScene extends Phaser.Scene {
         console.log('[NewWorldScene] exitScene()');
         // Hide MobileJoypad
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
+        // Clean up joypad state
+        window.joypadState = null;
+        window.joypadSprint = false;
         try {
             this.scene.stop();
         } catch (e) { /* ignore */ }
         GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.DASHBOARD);
+    }
+
+    /**
+     * Phaser lifecycle — called when the scene is stopped.
+     * Clean up event listeners and global state.
+     */
+    shutdown() {
+        window.joypadState = null;
+        window.joypadSprint = false;
+        GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
     }
 
     // ════════════════════════════════════════════════════

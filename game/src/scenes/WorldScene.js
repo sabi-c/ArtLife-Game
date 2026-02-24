@@ -1,4 +1,7 @@
 /**
+ * ⚠️  DEPRECATED — Use NewWorldScene.js instead.
+ * This file is kept for reference only. The admin dashboard labels it as "legacy".
+ *
  * WorldScene v2 — Full Pokemon-style overworld with GridEngine tile movement.
  *
  * Features:
