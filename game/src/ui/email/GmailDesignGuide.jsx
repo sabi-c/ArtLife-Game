@@ -71,6 +71,17 @@ const AI_REPLIES = {
     'Can we review the valuations?': `Dear Insurance Department,\n\nBefore I sign the renewal, I'd like to review the current appraisal values. I believe several pieces in the collection have appreciated significantly since the last assessment.\n\nCould we schedule a call to discuss an updated appraisal? I want to make sure the coverage accurately reflects current market values.\n\nThank you.`,
 };
 
+// AI companion persona snippets
+const AI_THINKING_MESSAGES = [
+    'Scanning email...',
+    'Reading through this...',
+    'Let me take a look...',
+    'Analyzing the details...',
+    'Checking this out...',
+];
+
+const AI_COMPANION_NAME = 'Ari';
+
 const initialEmails = () => [
     {
         id: 1, sender: 'Margaux Bellamy', email: 'margaux@bellamy.art',
@@ -78,6 +89,7 @@ const initialEmails = () => [
         preview: 'Dear collector, I have a rare early Basquiat that just came off a private estate...',
         time: '10:07 AM', date: 'Feb 23, 2026', unread: true, starred: true, hasAttachment: true,
         category: 'primary', archived: false, deleted: false,
+        aiAnalysis: `Margaux is offering a 1982 Basquiat "Crown Study" at $285K — with Whitney Biennial and Documenta provenance. That's strong lineage. She says "negotiable," which means there's room to push. I'd ask for the condition report first — never commit without it. 💡 Tip: Basquiat '82 works have appreciated 14% YoY. This could be a smart play.`,
         thread: [
             {
                 id: 'm1', sender: 'Margaux Bellamy', email: 'margaux@bellamy.art',
@@ -94,6 +106,7 @@ const initialEmails = () => [
         preview: 'Your bid on Lot #47 — "Untitled" by Cy Twombly was successful...',
         time: '8:45 PM', date: 'Feb 22, 2026', unread: true, starred: false, hasAttachment: false,
         category: 'updates', archived: false, deleted: false,
+        aiAnalysis: `Congrats! 🎉 You won the Twombly at $892K hammer. Total with premium is $1.115M — that's within the estimate range. Payment is due in 30 days. I'd arrange the wire ASAP to build rapport with Sotheby's client services. Better terms next time.`,
         thread: [
             {
                 id: 'm2', sender: 'Sotheby\'s', email: 'notifications@sothebys.com',
@@ -109,6 +122,7 @@ const initialEmails = () => [
         preview: 'Thank you for considering the Kunsthalle for your upcoming show...',
         time: 'Feb 22', date: 'Feb 22, 2026', unread: false, starred: false, hasAttachment: true,
         category: 'primary', archived: false, deleted: false,
+        aiAnalysis: `Viktor's offering the East Wing Gallery at Kunsthalle Bremen — 400 sqm, that's a serious space. Two windows available: Sept or Jan. I'd go for September — it aligns with the fall gallery season. The exhibition agreement is attached. Review the insurance and shipping terms carefully.`,
         thread: [
             {
                 id: 'm3a', sender: 'You', email: 'collector@artlife.game',
@@ -130,6 +144,7 @@ const initialEmails = () => [
         preview: 'You are cordially invited to the VIP Preview of Art Basel Miami Beach...',
         time: 'Feb 21', date: 'Feb 21, 2026', unread: false, starred: true, hasAttachment: false,
         category: 'promotions', archived: false, deleted: false,
+        aiAnalysis: `VIP Preview access for Art Basel Miami — Dec 2-4. This is premium networking territory. First View on Dec 2 is where the deals happen. I'd RSVP immediately. The collector dinners are invitation-only — being there in person opens doors. 🌴`,
         thread: [
             {
                 id: 'm4', sender: 'Art Basel', email: 'vip@artbasel.com',
@@ -145,6 +160,7 @@ const initialEmails = () => [
         preview: 'Hi, just wanted to give you a quick update on the third panel...',
         time: 'Feb 20', date: 'Feb 20, 2026', unread: false, starred: false, hasAttachment: true,
         category: 'primary', archived: false, deleted: false,
+        aiAnalysis: `Elena's commission is nearly done — 84" × 120" panel, 3 weeks out. She's offering a studio visit before final varnishing. I'd take it — seeing the work in person lets you request adjustments before it's permanent. Plus it deepens the artist relationship. 🎨`,
         thread: [
             {
                 id: 'm5', sender: 'Elena Vasquez', email: 'elena@vasquezgallery.com',
@@ -161,6 +177,7 @@ const initialEmails = () => [
         preview: 'Preview now open for our flagship Post-War & Contemporary evening sale...',
         time: 'Feb 19', date: 'Feb 19, 2026', unread: false, starred: false, hasAttachment: false,
         category: 'promotions', archived: false, deleted: false,
+        aiAnalysis: `Christie's flagship Post-War & Contemporary sale. Richter "Abstraktes Bild" at $8-12M estimate — that's strong. The Mehretu works are interesting too. I'd register interest early for priority catalogue access. Request condition reports for anything you're considering.`,
         thread: [
             {
                 id: 'm6', sender: 'Christie\'s', email: 'lots@christies.com',
@@ -176,6 +193,7 @@ const initialEmails = () => [
         preview: 'Great meeting you yesterday. As discussed, I\'ll send over the condition report...',
         time: 'Feb 18', date: 'Feb 18, 2026', unread: false, starred: false, hasAttachment: false,
         category: 'primary', archived: false, deleted: false,
+        aiAnalysis: `James from White Cube is following up on the Koons. Asking $1.2M but hinting $950K-$1.05M is achievable. That's a 12-20% discount signal. I'd wait for the condition report before countering. If the provenance is clean, $1M is a fair offer. Don't show too much interest.`,
         thread: [
             {
                 id: 'm7', sender: 'James Thornton', email: 'j.thornton@whitecube.com',
@@ -192,6 +210,7 @@ const initialEmails = () => [
         preview: 'This week in the art market: Blue-chip contemporary prices rose 12% in Q1...',
         time: 'Feb 17', date: 'Feb 17, 2026', unread: false, starred: false, hasAttachment: false,
         category: 'social', archived: false, deleted: false,
+        aiAnalysis: `Market intel: Blue-chip up 12%, emerging down 8%. The Basquiat at $45M Phillips is notable — supports the pricing on Margaux's offer. Asian demand is driving the surge. Keep an eye on Mehretu — $9.6M at Christie's positions her for continued growth. 📊`,
         thread: [
             {
                 id: 'm8', sender: 'Artnet News', email: 'digest@artnet.com',
@@ -207,6 +226,7 @@ const initialEmails = () => [
         preview: 'Join us for the opening reception of Louise Bourgeois: The Fabric of Memory...',
         time: 'Feb 16', date: 'Feb 16, 2026', unread: false, starred: false, hasAttachment: false,
         category: 'promotions', archived: false, deleted: false,
+        aiAnalysis: `Hauser & Wirth showing Bourgeois textile works — rarely seen pieces from the estate. Opening March 8. These events are great for networking with serious collectors and gallery directors. I'd attend the reception. The Bourgeois market is stable and historically resilient.`,
         thread: [
             {
                 id: 'm9', sender: 'Hauser & Wirth', email: 'info@hauserwirth.com',
@@ -222,6 +242,7 @@ const initialEmails = () => [
         preview: 'Your annual collection insurance policy is due for renewal on March 15, 2026...',
         time: 'Feb 15', date: 'Feb 15, 2026', unread: false, starred: false, hasAttachment: true,
         category: 'updates', archived: false, deleted: false,
+        aiAnalysis: `Insurance renewal due March 15. Total insured: $4.25M at 0.3% premium ($12,750/yr). Before signing, I'd request updated appraisals — several pieces have likely appreciated. If the Twombly acquisition goes through, you'll need a mid-term adjustment anyway. ⚠️ Don't let this lapse.`,
         thread: [
             {
                 id: 'm10', sender: 'Insurance Dept.', email: 'claims@artinsure.com',
@@ -306,6 +327,18 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
     const [aiFullText, setAiFullText] = useState('');
     const aiIntervalRef = useRef(null);
     const [showAiAssistant, setShowAiAssistant] = useState(false);
+
+    // ── AI Companion State ──
+    const [companionState, setCompanionState] = useState('idle');    // 'idle' | 'reading' | 'analyzing' | 'ready'
+    const [companionText, setCompanionText] = useState('');
+    const [companionThinkMsg, setCompanionThinkMsg] = useState('');
+    const companionIntervalRef = useRef(null);
+    const companionTimeoutRef = useRef(null);
+
+    // ── Sending Animation State ──
+    const [sendingState, setSendingState] = useState('idle');        // 'idle' | 'sending' | 'sent'
+    const [sendProgress, setSendProgress] = useState(0);
+    const sendTimerRef = useRef(null);
 
     // ── New State: Snooze, Drafts, Undo, Settings ──
     const [snoozedEmails, setSnoozedEmails] = useState([]);     // { emailId, returnTime }
@@ -482,7 +515,40 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
         setView('thread');
         setReplyMode(null);
         setReplyText('');
-    }, [markRead]);
+        setAiState('idle');
+        setShowAiAssistant(false);
+
+        // Clear any existing companion animations
+        if (companionIntervalRef.current) clearInterval(companionIntervalRef.current);
+        if (companionTimeoutRef.current) clearTimeout(companionTimeoutRef.current);
+
+        // AI Companion: phased reading flow
+        setCompanionState('reading');
+        setCompanionText('');
+        setCompanionThinkMsg(AI_THINKING_MESSAGES[Math.floor(Math.random() * AI_THINKING_MESSAGES.length)]);
+
+        // Phase 1: "Reading" for 1.5-2s (dotty animation)
+        const readDelay = 1500 + Math.random() * 500;
+        companionTimeoutRef.current = setTimeout(() => {
+            setCompanionState('analyzing');
+
+            // Phase 2: Typewriter the analysis
+            const fullEmail = emails.find(e => e.id === email.id);
+            const analysis = fullEmail?.aiAnalysis || 'Interesting email. Let me think about the best response...';
+            let charIdx = 0;
+            companionIntervalRef.current = setInterval(() => {
+                charIdx += 1 + Math.floor(Math.random() * 2);
+                if (charIdx >= analysis.length) {
+                    charIdx = analysis.length;
+                    clearInterval(companionIntervalRef.current);
+                    companionIntervalRef.current = null;
+                    // Small pause before 'ready'
+                    setTimeout(() => setCompanionState('ready'), 400);
+                }
+                setCompanionText(analysis.substring(0, charIdx));
+            }, 20 + Math.random() * 15);
+        }, readDelay);
+    }, [markRead, emails]);
 
     const backToInbox = useCallback(() => {
         setView('inbox');
@@ -531,58 +597,93 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
         }, thinkDelay);
     }, []);
 
-    // Cleanup interval on unmount
+    // Cleanup intervals on unmount
     useEffect(() => {
-        return () => { if (aiIntervalRef.current) clearInterval(aiIntervalRef.current); };
+        return () => {
+            if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
+            if (companionIntervalRef.current) clearInterval(companionIntervalRef.current);
+            if (companionTimeoutRef.current) clearTimeout(companionTimeoutRef.current);
+            if (sendTimerRef.current) clearTimeout(sendTimerRef.current);
+        };
     }, []);
 
     const sendReply = useCallback(() => {
         if (!replyText.trim() || !selectedEmailId) return;
+        if (sendingState === 'sending') return; // Prevent double-send
 
-        const now = new Date();
-        const timeStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-        const sentId = Date.now();
+        // Start sending animation
+        setSendingState('sending');
+        setSendProgress(0);
 
-        const newMessage = {
-            id: `reply-${sentId}`,
-            sender: 'You',
-            email: 'collector@artlife.game',
-            time: timeStr,
-            to: selectedEmail?.sender || 'Unknown',
-            body: replyText.replace(/\n/g, '<br>'),
-        };
+        // Animate progress bar
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += 8 + Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(progressInterval);
+            }
+            setSendProgress(Math.min(progress, 100));
+        }, 100);
 
-        setEmails(prev => prev.map(em =>
-            em.id === selectedEmailId
-                ? { ...em, thread: [...em.thread, newMessage] }
-                : em
-        ));
+        // Delayed actual send (1.2-1.8s)
+        const sendDelay = 1200 + Math.random() * 600;
+        sendTimerRef.current = setTimeout(() => {
+            clearInterval(progressInterval);
+            setSendProgress(100);
 
-        // Also add to sent
-        setSentEmails(prev => [{
-            id: sentId,
-            sender: 'Me',
-            email: 'collector@artlife.game',
-            subject: `Re: ${selectedEmail?.subject}`,
-            preview: replyText.substring(0, 80),
-            time: 'Just now',
-            date: timeStr,
-            unread: false,
-            starred: false,
-            hasAttachment: false,
-            category: 'primary',
-        }, ...prev]);
+            const now = new Date();
+            const timeStr = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+            const sentId = Date.now();
 
-        setReplyMode(null);
-        setReplyText('');
-        setAiState('idle');
-        setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+            const newMessage = {
+                id: `reply-${sentId}`,
+                sender: 'You',
+                email: 'collector@artlife.game',
+                time: timeStr,
+                to: selectedEmail?.sender || 'Unknown',
+                body: replyText.replace(/\n/g, '<br>'),
+            };
 
-        // Undo send toast
-        if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-        setUndoToast({ type: 'sent', emailId: sentId });
-        undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
-    }, [replyText, selectedEmailId, selectedEmail]);
+            setEmails(prev => prev.map(em =>
+                em.id === selectedEmailId
+                    ? { ...em, thread: [...em.thread, newMessage] }
+                    : em
+            ));
+
+            setSentEmails(prev => [{
+                id: sentId,
+                sender: 'Me',
+                email: 'collector@artlife.game',
+                subject: `Re: ${selectedEmail?.subject}`,
+                preview: replyText.substring(0, 80),
+                time: 'Just now',
+                date: timeStr,
+                unread: false,
+                starred: false,
+                hasAttachment: false,
+                category: 'primary',
+            }, ...prev]);
+
+            // Show 'sent' briefly
+            setSendingState('sent');
+            setTimeout(() => {
+                setSendingState('idle');
+                setSendProgress(0);
+            }, 1500);
+
+            setReplyMode(null);
+            setReplyText('');
+            setAiState('idle');
+            setTimeout(() => threadEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+
+            // Undo send toast
+            if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+            setUndoToast({ type: 'sent', emailId: sentId });
+            undoTimerRef.current = setTimeout(() => setUndoToast(null), 5000);
+        }, sendDelay);
+    }, [replyText, selectedEmailId, selectedEmail, sendingState]);
+
 
     const sendCompose = useCallback(() => {
         if (!composeData.to.trim() || !composeData.body.trim()) return;
@@ -891,6 +992,48 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                                 </div>
                             </div>
 
+                            {/* ═══ AI Companion Panel ═══ */}
+                            {companionState !== 'idle' && (
+                                <div className={`gmail-companion${companionState === 'ready' ? ' gmail-companion--ready' : ''}`}>
+                                    <div className="gmail-companion-header">
+                                        <span className="gmail-companion-avatar">🤖</span>
+                                        <span className="gmail-companion-name">{AI_COMPANION_NAME}</span>
+                                        <span className="gmail-companion-badge">AI Advisor</span>
+                                        {companionState === 'reading' && (
+                                            <span className="gmail-companion-status gmail-companion-status--reading">
+                                                {companionThinkMsg}<span className="gmail-dots-anim">...</span>
+                                            </span>
+                                        )}
+                                        {companionState === 'analyzing' && (
+                                            <span className="gmail-companion-status gmail-companion-status--typing">Analyzing</span>
+                                        )}
+                                        {companionState === 'ready' && (
+                                            <span className="gmail-companion-status gmail-companion-status--ready">✓ Ready</span>
+                                        )}
+                                    </div>
+                                    {(companionState === 'analyzing' || companionState === 'ready') && (
+                                        <div className="gmail-companion-body">
+                                            <div className="gmail-companion-text">
+                                                {companionText}
+                                                {companionState === 'analyzing' && <span className="gmail-companion-cursor">|</span>}
+                                            </div>
+                                            {companionState === 'ready' && selectedEmail?.smartReplies?.length > 0 && (
+                                                <div className="gmail-companion-actions">
+                                                    <span className="gmail-companion-actions-label">Suggested responses:</span>
+                                                    <div className="gmail-companion-chips">
+                                                        {selectedEmail.smartReplies.map(reply => (
+                                                            <button key={reply} className="gmail-companion-chip" onClick={() => triggerAiReply(reply)}>
+                                                                ✨ {reply}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Messages */}
                             {selectedEmail.thread.map((msg) => (
                                 <div key={msg.id} className="gmail-message">
@@ -1003,10 +1146,22 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                                         }}
                                         rows={5}
                                     />
+                                    {/* Sending Progress Bar */}
+                                    {sendingState === 'sending' && (
+                                        <div className="gmail-send-progress">
+                                            <div className="gmail-send-progress-bar" style={{ width: `${sendProgress}%` }} />
+                                        </div>
+                                    )}
                                     <div className="gmail-inline-reply-footer">
-                                        <button className="gmail-send-btn" onClick={sendReply} disabled={!replyText.trim()}>
-                                            <span className="gmail-send-btn-main">Send</span>
-                                            <span className="gmail-send-btn-arrow">▾</span>
+                                        <button
+                                            className={`gmail-send-btn${sendingState === 'sending' ? ' gmail-send-btn--sending' : sendingState === 'sent' ? ' gmail-send-btn--sent' : ''}`}
+                                            onClick={sendReply}
+                                            disabled={!replyText.trim() || sendingState === 'sending'}
+                                        >
+                                            <span className="gmail-send-btn-main">
+                                                {sendingState === 'sending' ? 'Sending...' : sendingState === 'sent' ? '✓ Sent' : 'Send'}
+                                            </span>
+                                            {sendingState === 'idle' && <span className="gmail-send-btn-arrow">▾</span>}
                                         </button>
                                         <button className="gmail-compose-toolbar-icon" title="Formatting">A̲</button>
                                         <button className="gmail-compose-toolbar-icon" title="Attach">📎</button>
@@ -1278,11 +1433,18 @@ export default function GmailDesignGuide({ onClose, initialCompose }) {
                 <div className="gmail-ai-assistant">
                     <div className="gmail-ai-assistant-header">
                         <span className="gmail-ai-assistant-icon">🤖</span>
-                        <span className="gmail-ai-assistant-title">AI Reply Assistant</span>
+                        <span className="gmail-ai-assistant-title">{AI_COMPANION_NAME} — Reply Assistant</span>
                         <button className="gmail-ai-assistant-close" onClick={() => setShowAiAssistant(false)}>✕</button>
                     </div>
                     <div className="gmail-ai-assistant-body">
-                        <div className="gmail-ai-assistant-prompt">What would you like to reply?</div>
+                        {/* Show companion analysis summary if ready */}
+                        {companionState === 'ready' && companionText && (
+                            <div className="gmail-ai-assistant-context">
+                                <div className="gmail-ai-assistant-context-label">📧 Email summary</div>
+                                <div className="gmail-ai-assistant-context-text">{companionText.substring(0, 120)}...</div>
+                            </div>
+                        )}
+                        <div className="gmail-ai-assistant-prompt">How would you like to respond?</div>
                         <div className="gmail-ai-assistant-suggestions">
                             {selectedEmail.smartReplies.map((reply) => (
                                 <button
