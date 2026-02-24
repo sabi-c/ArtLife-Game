@@ -19,7 +19,8 @@ const DEPTH = {
     HUD: 200,
 };
 
-// ─── Animation definitions for the character atlas ─────────────────────────
+// ─── Manual animation fallback definitions ──────────────────────────────────
+// Only used if Aseprite auto-parse doesn't produce the expected anim keys
 const PLAYER_ANIMS = [
     { key: 'character-walk-down', prefix: 'walk-down/character-down', start: 0, end: 3 },
     { key: 'character-walk-up', prefix: 'walk-up/character-up', start: 0, end: 3 },
@@ -32,7 +33,6 @@ const PLAYER_ANIMS = [
 ];
 
 // ─── Tileset name → loaded texture key mapping ─────────────────────────────
-// The names in Tiled (larus.json) map to our preloaded texture keys
 const TILESET_MAP = [
     { tiledName: 'base', textureKey: 'lum_overworld' },
     { tiledName: 'inner', textureKey: 'lum_inner' },
@@ -48,6 +48,7 @@ export default class NewWorldScene extends Phaser.Scene {
         this.warpZones = [];
         this.direction = 'down';
         this._createFailed = false;
+        this._assetErrors = [];
     }
 
     // ════════════════════════════════════════════════════
@@ -55,21 +56,24 @@ export default class NewWorldScene extends Phaser.Scene {
     // ════════════════════════════════════════════════════
     preload() {
         console.log('[NewWorldScene] preload()');
+        this._assetErrors = [];
 
         this.load.on('loaderror', (file) => {
-            console.error(`[NewWorldScene] Asset FAILED: ${file.key} (${file.url})`);
+            const msg = `Asset FAILED: ${file.key} (${file.url})`;
+            console.error(`[NewWorldScene] ${msg}`);
+            this._assetErrors.push(msg);
         });
 
         // Tilemap JSON
         this.load.tilemapTiledJSON('larus', 'assets/luminus/larus.json');
 
-        // Tileset images (extruded versions for anti-bleed)
+        // Tileset images (non-extruded, matching larus.json margin=0/spacing=0)
         this.load.image('lum_overworld', 'assets/luminus/overworld.png');
         this.load.image('lum_inner', 'assets/luminus/inner.png');
         this.load.image('lum_collision', 'assets/luminus/collision.png');
 
-        // Character atlas (sprite sheet + JSON)
-        this.load.atlas('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
+        // Character sprite — Aseprite atlas format (textures[] wrapper, NOT flat frames{})
+        this.load.aseprite('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
 
         // Warp particle
         this.load.image('particle_warp', 'assets/luminus/particle_warp.png');
@@ -78,7 +82,10 @@ export default class NewWorldScene extends Phaser.Scene {
         this.load.image('question_mark', 'assets/luminus/question_mark.png');
 
         this.load.on('complete', () => {
-            console.log('[NewWorldScene] All assets loaded');
+            console.log('[NewWorldScene] All assets loaded.');
+            if (this._assetErrors.length) {
+                console.warn('[NewWorldScene] Failed assets:', this._assetErrors);
+            }
         });
     }
 
@@ -89,6 +96,13 @@ export default class NewWorldScene extends Phaser.Scene {
         console.log('[NewWorldScene] create()');
         this._createFailed = false;
 
+        // Bail early if critical assets failed to load
+        if (this._assetErrors.length > 0) {
+            this._createFailed = true;
+            this._showError('Asset loading failed:\\n' + this._assetErrors.join('\\n'));
+            return;
+        }
+
         try {
             this._createMap();
             this._createAnims();
@@ -97,6 +111,7 @@ export default class NewWorldScene extends Phaser.Scene {
             this._createCamera();
             this._createControls();
             this._createHUD();
+            console.log('[NewWorldScene] ✓ All systems initialized');
         } catch (err) {
             console.error('[NewWorldScene] create() error:', err);
             this._createFailed = true;
@@ -112,13 +127,21 @@ export default class NewWorldScene extends Phaser.Scene {
 
         // Register tilesets
         for (const { tiledName, textureKey } of TILESET_MAP) {
-            this.map.addTilesetImage(tiledName, textureKey);
+            const ts = this.map.addTilesetImage(tiledName, textureKey);
+            if (!ts) {
+                console.warn(`[NewWorldScene] Tileset "${tiledName}" → "${textureKey}" failed to register`);
+            }
         }
 
         // Create all tile layers, respecting Tiled properties for depth and collision
+        let layersCreated = 0;
         for (const layerData of this.map.layers) {
             const layer = this.map.createLayer(layerData.name, this.map.tilesets);
-            if (!layer) continue;
+            if (!layer) {
+                console.warn(`[NewWorldScene] Layer "${layerData.name}" failed to create`);
+                continue;
+            }
+            layersCreated++;
 
             // Read custom properties from Tiled
             const props = {};
@@ -139,34 +162,66 @@ export default class NewWorldScene extends Phaser.Scene {
             }
         }
 
-        console.log('[NewWorldScene] Map created:', this.map.widthInPixels, 'x', this.map.heightInPixels);
+        console.log(`[NewWorldScene] Map: ${this.map.widthInPixels}x${this.map.heightInPixels}, ${layersCreated} layers`);
     }
 
     // ════════════════════════════════════════════════════
     // Animations
     // ════════════════════════════════════════════════════
     _createAnims() {
-        for (const anim of PLAYER_ANIMS) {
-            if (!this.anims.exists(anim.key)) {
+        // Try Aseprite auto-parse first (reads frame tags from the JSON)
+        try {
+            const created = this.anims.createFromAseprite('character');
+            console.log(`[NewWorldScene] Aseprite auto-created ${created.length} animations`);
+        } catch (e) {
+            console.warn('[NewWorldScene] createFromAseprite failed:', e.message);
+        }
+
+        // Check for expected animation keys — create manually if missing
+        const expected = [
+            'character-walk-down', 'character-walk-up', 'character-walk-left', 'character-walk-right',
+            'character-idle-down', 'character-idle-up', 'character-idle-left', 'character-idle-right',
+        ];
+        const missing = expected.filter(k => !this.anims.exists(k));
+
+        if (missing.length > 0) {
+            console.log('[NewWorldScene] Missing anims:', missing, '— creating manually from frame names');
+            for (const anim of PLAYER_ANIMS) {
+                if (this.anims.exists(anim.key)) continue;
+                const frames = this.anims.generateFrameNames('character', {
+                    prefix: anim.prefix,
+                    start: anim.start,
+                    end: anim.end,
+                    zeroPad: 2,
+                });
+                if (frames.length === 0) {
+                    console.warn(`[NewWorldScene] ⚠ 0 frames for "${anim.key}" (prefix: "${anim.prefix}")`);
+                    continue; // Skip — don't create empty animation (that causes the duration crash)
+                }
                 this.anims.create({
                     key: anim.key,
-                    frames: this.anims.generateFrameNames('character', {
-                        prefix: anim.prefix,
-                        start: anim.start,
-                        end: anim.end,
-                        zeroPad: 2,
-                    }),
+                    frames,
                     frameRate: 8,
                     repeat: -1,
                 });
             }
         }
+
+        // Log all available animations for debugging
+        const allAnims = [];
+        this.anims.anims.each(a => allAnims.push(a.key));
+        console.log(`[NewWorldScene] Available animations (${allAnims.length}):`, allAnims.slice(0, 20));
     }
 
     // ════════════════════════════════════════════════════
     // Player
     // ════════════════════════════════════════════════════
     _createPlayer() {
+        // Verify character texture loaded
+        if (!this.textures.exists('character')) {
+            throw new Error('Character texture not loaded — check assets/luminus/character.png + .json');
+        }
+
         // Find spawn point from Tiled object layer
         const spawnPoint = this.map.findObject('spawn', obj => obj.name === 'Spawn Point');
         const x = spawnPoint ? spawnPoint.x : 400;
@@ -178,7 +233,22 @@ export default class NewWorldScene extends Phaser.Scene {
         this.player.body.offset.y = this.player.height / 1.8;
         this.player.setCollideWorldBounds(true);
 
-        this.player.play('character-idle-down');
+        // Play idle animation — use first available
+        const idleKey = 'character-idle-down';
+        if (this.anims.exists(idleKey)) {
+            this.player.play(idleKey);
+        } else {
+            // Fallback: play any available character animation
+            const allAnims = [];
+            this.anims.anims.each(a => allAnims.push(a.key));
+            const fallback = allAnims.find(k => k.includes('character') || k.includes('idle'));
+            if (fallback) {
+                this.player.play(fallback);
+                console.warn(`[NewWorldScene] Using fallback animation: ${fallback}`);
+            } else {
+                console.warn('[NewWorldScene] No animations available — player will be static');
+            }
+        }
 
         // Set world bounds to map size
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -188,7 +258,7 @@ export default class NewWorldScene extends Phaser.Scene {
             this.physics.add.collider(this.player, this.collisionLayer);
         }
 
-        console.log('[NewWorldScene] Player spawned at', x, y);
+        console.log(`[NewWorldScene] Player spawned at (${x}, ${y})`);
     }
 
     // ════════════════════════════════════════════════════
@@ -223,11 +293,9 @@ export default class NewWorldScene extends Phaser.Scene {
                 const gotoId = props.goto;
 
                 if (sceneTarget) {
-                    // Scene transition → emit event for ArtLife system
                     console.log('[NewWorldScene] Warp to scene:', sceneTarget);
                     GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, sceneTarget);
                 } else if (gotoId) {
-                    // Same-map teleport
                     const dest = destinations.find(d => d.id === gotoId);
                     if (dest) {
                         this.cameras.main.fade(500, 0, 0, 0);
@@ -240,7 +308,7 @@ export default class NewWorldScene extends Phaser.Scene {
             });
         }
 
-        console.log('[NewWorldScene] Created', warpSources.length, 'warps');
+        console.log(`[NewWorldScene] Created ${warpSources.length} warps, ${destinations.length} destinations`);
     }
 
     // ════════════════════════════════════════════════════
@@ -275,7 +343,6 @@ export default class NewWorldScene extends Phaser.Scene {
     // HUD
     // ════════════════════════════════════════════════════
     _createHUD() {
-        const { width, height } = this.scale;
         this.exitBtn = this.add.text(16, 16, '← ESC', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '10px',
@@ -304,14 +371,21 @@ export default class NewWorldScene extends Phaser.Scene {
         const up = this.cursors.up.isDown || this.wasd.up.isDown;
         const down = this.cursors.down.isDown || this.wasd.down.isDown;
 
+        // Helper: safely play animation
+        const tryPlay = (key) => {
+            if (this.anims.exists(key)) {
+                this.player.play(key, true);
+            }
+        };
+
         // Horizontal
         if (left) {
             body.setVelocityX(-speed);
-            this.player.play('character-walk-left', true);
+            tryPlay('character-walk-left');
             this.direction = 'left';
         } else if (right) {
             body.setVelocityX(speed);
-            this.player.play('character-walk-right', true);
+            tryPlay('character-walk-right');
             this.direction = 'right';
         }
 
@@ -319,13 +393,13 @@ export default class NewWorldScene extends Phaser.Scene {
         if (up) {
             body.setVelocityY(-speed);
             if (!left && !right) {
-                this.player.play('character-walk-up', true);
+                tryPlay('character-walk-up');
                 this.direction = 'up';
             }
         } else if (down) {
             body.setVelocityY(speed);
             if (!left && !right) {
-                this.player.play('character-walk-down', true);
+                tryPlay('character-walk-down');
                 this.direction = 'down';
             }
         }
@@ -335,7 +409,7 @@ export default class NewWorldScene extends Phaser.Scene {
 
         // Idle animation when not moving
         if (body.velocity.x === 0 && body.velocity.y === 0) {
-            this.player.play(`character-idle-${this.direction}`, true);
+            tryPlay(`character-idle-${this.direction}`);
         }
     }
 
@@ -354,16 +428,21 @@ export default class NewWorldScene extends Phaser.Scene {
     // Error display
     // ════════════════════════════════════════════════════
     _showError(msg) {
+        // Also report to global error log for headless debugging
+        window.__artlife_errors = window.__artlife_errors || [];
+        window.__artlife_errors.push({ scene: 'NewWorldScene', error: msg, time: new Date().toISOString() });
+
         const { width, height } = this.scale;
-        this.add.text(width / 2, height / 2 - 20, 'NewWorldScene Error', {
+        this.add.text(width / 2, height / 2 - 30, 'NewWorldScene Error', {
             fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#ff4444',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
+
         this.add.text(width / 2, height / 2 + 10, msg, {
-            fontFamily: 'monospace', fontSize: '12px', color: '#aaaaaa',
+            fontFamily: 'monospace', fontSize: '11px', color: '#aaaaaa',
             wordWrap: { width: width - 60 },
         }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
 
-        const btn = this.add.text(width / 2, height / 2 + 60, '[ EXIT ]', {
+        const btn = this.add.text(width / 2, height / 2 + 70, '[ EXIT ]', {
             fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true });
         btn.on('pointerdown', () => this.exitScene());
