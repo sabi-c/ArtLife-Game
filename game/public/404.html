@@ -9,7 +9,7 @@
         // When GitHub Pages can't find a file (e.g. /admin, /market, /inbox),
         // it serves this 404.html. We redirect to index.html with the path
         // encoded as a query parameter, then index.html restores it via pushState.
-        var pathSegmentsToKeep = 0; // 0 for user.github.io/repo, 1 for user.github.io
+        var pathSegmentsToKeep = 1; // 1 for project pages (sabi-c.github.io/ArtLife-Game)
         var l = window.location;
         l.replace(
             l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +

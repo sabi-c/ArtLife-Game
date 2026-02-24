@@ -263,7 +263,7 @@ export default function AdminDashboard({ onClose }) {
 
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>BOOT FLOWS</div>
                             {['BOOT', 'PROFILE_MENU', 'PROFILE_CREATE', 'PROFILE_LOGIN', 'PRIMARY_MENU', 'DOSSIER_SELECT', 'CONFIRM', 'AUTH'].map(step => (
-                                <button key={step} style={{ ...btnStyle, fontSize: 11, padding: '6px 12px', minHeight: 36 }}
+                                <button key={step} style={{ ...btnStyle, fontSize: 11, padding: '6px 12px', minHeight: 44 }}
                                     onClick={() => triggerUI(VIEW.BOOT, { previewStep: step })}>
                                     [ {step} ]
                                 </button>
@@ -501,7 +501,7 @@ export default function AdminDashboard({ onClose }) {
                                 <div key={i} style={{ padding: 12, border: '1px solid #333', marginBottom: 10, background: '#0a0a0f' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
                                         <div style={{ color: '#c9a84c', fontWeight: 'bold', fontSize: 13 }}>Wk {csq.triggerWeek} <span style={{ color: '#666', fontWeight: 'normal' }}>({csq.triggerWeek - (GameState.state?.week || 0)}w away)</span></div>
-                                        <button style={{ ...btnStyle, width: 'auto', marginBottom: 0, padding: '4px 12px', minHeight: 36 }} onClick={() => forceConsequence(csq)}>Force</button>
+                                        <button style={{ ...btnStyle, width: 'auto', marginBottom: 0, padding: '4px 12px', minHeight: 44 }} onClick={() => forceConsequence(csq)}>Force</button>
                                     </div>
                                     <div style={{ fontSize: 12, color: '#aaa' }}>
                                         <div><strong>Type:</strong> {csq.type} | <strong>Source:</strong> {csq.sourceEvent || '?'}</div>
