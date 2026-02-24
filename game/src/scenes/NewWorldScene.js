@@ -335,8 +335,20 @@ export default class NewWorldScene extends Phaser.Scene {
         this.cameras.main.setZoom(zoom);
 
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+
+        // IMPORTANT: Phaser config has transparent:true (for other scenes).
+        // Override for this scene so the background color actually renders
+        // instead of showing the dark container through the transparent canvas.
+        this.cameras.main.transparent = false;
         this.cameras.main.setBackgroundColor('#2d6b30');
+
+        // Also set the container background to match, as a fallback
+        const gc = document.getElementById('phaser-game-container');
+        if (gc) gc.style.background = '#2d6b30';
+
+        // DON'T set camera bounds — let the green background fill everywhere
+        // beyond the map edge. Camera bounds would clip the viewport and show
+        // the transparent canvas → dark container on edges.
 
         // Mobile: offset camera follow upward so player stays above joypad
         // Joypad covers ~46vh of the screen from the bottom.
@@ -455,6 +467,9 @@ export default class NewWorldScene extends Phaser.Scene {
         // Clean up joypad state
         window.joypadState = null;
         window.joypadSprint = false;
+        // Restore container background for other scenes
+        const gc = document.getElementById('phaser-game-container');
+        if (gc) gc.style.background = '#0a0a0f';
         try {
             this.scene.stop();
         } catch (e) { /* ignore */ }
@@ -468,6 +483,8 @@ export default class NewWorldScene extends Phaser.Scene {
     shutdown() {
         window.joypadState = null;
         window.joypadSprint = false;
+        const gc = document.getElementById('phaser-game-container');
+        if (gc) gc.style.background = '#0a0a0f';
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
     }
 
