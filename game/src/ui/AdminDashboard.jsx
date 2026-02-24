@@ -153,16 +153,38 @@ export default function AdminDashboard({ onClose }) {
     };
 
     const tabs = [
-        { key: 'ui', label: 'UIs' },
+        { key: 'ui', label: 'PAGES' },
         { key: 'phaser', label: 'SCENES' },
+        { key: 'negotiate', label: 'NEGOTIATE' },
         { key: 'cheats', label: 'TIME' },
         { key: 'economy', label: 'ECONOMY' },
         { key: 'consequences', label: 'QUEUE' },
         { key: 'npcs', label: 'NPCs' },
         { key: 'flags', label: 'FLAGS' },
         { key: 'saves', label: 'SAVES' },
-        { key: 'email', label: 'EMAIL' },
     ];
+
+    /** Launch a specific Bloomberg market style */
+    const launchBloombergStyle = (style) => {
+        try {
+            SettingsManager.set('marketStyle', style);
+            triggerOverlay(OVERLAY.BLOOMBERG);
+        } catch (e) {
+            GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Failed to launch ${style}: ${e.message}`);
+        }
+    };
+
+    /** Safe overlay launcher with error handling */
+    const safeTriggerOverlay = (key, label) => {
+        try { triggerOverlay(key); }
+        catch (e) { GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Failed to open ${label}: ${e.message}`); }
+    };
+
+    /** Safe scene launcher with error handling */
+    const safeTriggerScene = (key, data = {}, label = key) => {
+        try { triggerScene(key, data); }
+        catch (e) { GameEventBus.emit(GameEvents.UI_NOTIFICATION, `Scene error: ${label} — ${e.message}`); }
+    };
 
     return (
         <div style={{
@@ -226,89 +248,88 @@ export default function AdminDashboard({ onClose }) {
                     ))}
                 </div>
 
-                {/* ── UI TAB ── */}
+                {/* ── PAGES TAB ── */}
                 {activeTab === 'ui' && (
                     <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
                         <div>
-                            <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>SYSTEM TOOLS</h3>
-                            <button style={btnStyle} onClick={() => triggerUI(VIEW.TERMINAL)}>■ TERMINAL INTERFACE</button>
-                            <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => triggerOverlay(OVERLAY.MASTER_CMS)}>🏗️ MASTER CMS & VISUAL EDITOR</button>
-                            <button style={{ ...btnStyle, borderColor: '#00e5ff', color: '#00e5ff' }} onClick={() => triggerOverlay(OVERLAY.BLOOMBERG)}>📊 BLOOMBERG MARKET TERMINAL</button>
-                            <button style={{ ...btnStyle, borderColor: '#8b7355', color: '#d4a843' }} onClick={() => triggerOverlay(OVERLAY.SALES_GRID)}>📊 SALES GRID (Beckmans)</button>
-                            <button style={{ ...btnStyle, borderColor: '#4040ff', color: '#8080ff' }} onClick={() => {
-                                SettingsManager.set('marketStyle', 'waterworks');
-                                triggerOverlay(OVERLAY.BLOOMBERG);
-                            }}>🗺️ WATERWORKS WORLD MAP</button>
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>GAME PAGES</div>
+                            <button style={btnStyle} onClick={() => triggerUI(VIEW.TERMINAL)}>■ Terminal Interface</button>
+                            <button style={btnStyle} onClick={() => triggerUI(VIEW.DASHBOARD)}>■ Player Dashboard</button>
+                            <button style={btnStyle} onClick={() => safeTriggerOverlay(OVERLAY.SETTINGS, 'Settings')}>⚙️ Settings</button>
+                            <button style={btnStyle} onClick={() => safeTriggerOverlay(OVERLAY.INVENTORY, 'Inventory')}>📦 Inventory</button>
+
+                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>MARKET TERMINALS</div>
+                            <div style={{ background: '#0a0a0f', border: '1px solid #333', padding: 12, marginBottom: 16 }}>
+                                <div style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>9 market styles — each opens Bloomberg with a different UI skin</div>
+                                {[
+                                    { style: 'gallery', label: 'Seventh House', color: '#c9a84c' },
+                                    { style: 'tearsheet', label: 'Gagosian Tearsheet', color: '#999' },
+                                    { style: 'artnet', label: 'Artnet Price Database', color: '#ff4b00' },
+                                    { style: 'sothebys', label: "Sotheby's Catalogue", color: '#00208b' },
+                                    { style: 'deitch', label: 'Deitch Projects', color: '#fff' },
+                                    { style: 'byform', label: 'Byform Portfolio', color: '#7ecba1' },
+                                    { style: 'waterworks', label: 'Waterworks Map', color: '#4040ff' },
+                                    { style: 'bloomberg', label: 'Bloomberg Terminal', color: '#00e5ff' },
+                                    { style: 'styleguide', label: 'Style Guide', color: '#888' },
+                                ].map(m => (
+                                    <button key={m.style} style={{ ...btnStyle, borderColor: m.color, color: m.color, fontSize: 12, padding: '6px 12px', marginBottom: 6 }}
+                                        onClick={() => launchBloombergStyle(m.style)}>
+                                        {m.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div>
-                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>SYSTEM DIALOGUES</div>
-                            <button style={btnStyle} onClick={() => {
-                                if (window.game?.startDialogue) {
-                                    window.game.startDialogue();
-                                    onClose();
-                                }
-                            }}>[ Trigger Global Dialogue Box ]</button>
-                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>DEVELOPER TOOLS</div>
-                            <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.CMS)}>
-                                [ Content Studio (Legacy) ]
-                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Visual content wiring & timeline editor</div>
-                            </button>
-                            <button style={btnStyle} onClick={() => {
+                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>CONTENT TOOLS</div>
+                            <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => safeTriggerOverlay(OVERLAY.MASTER_CMS, 'Master CMS')}>🏗️ Master CMS</button>
+                            <button style={{ ...btnStyle, borderColor: '#8b7355', color: '#d4a843' }} onClick={() => safeTriggerOverlay(OVERLAY.SALES_GRID, 'Sales Grid')}>📊 Sales Grid (Beckmans)</button>
+                            <button style={btnStyle} onClick={() => safeTriggerOverlay(OVERLAY.ARTWORK_DASHBOARD, 'Artwork Dashboard')}>🖼️ Artwork Dashboard</button>
+                            <button style={btnStyle} onClick={() => safeTriggerOverlay(OVERLAY.MARKET_DASHBOARD, 'Market Dashboard')}>📈 Market Dashboard</button>
+
+                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>DESIGN GUIDES</div>
+                            <button style={btnStyle} onClick={() => safeTriggerOverlay(OVERLAY.DESIGN_GUIDE, 'Email Design Guide')}>[ Email Design Guide (F3) ]</button>
+                            <button style={{ ...btnStyle, borderColor: '#1a73e8', color: '#1a73e8' }} onClick={() => safeTriggerOverlay(OVERLAY.GMAIL_GUIDE, 'Gmail Guide')}>[ Gmail Design Guide ]</button>
+                            <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00' }} onClick={() => safeTriggerOverlay(OVERLAY.ARTNET_UI, 'Artnet UI')}>[ Artnet UI (Login → Dashboard → Marketplace) ]</button>
+                            <button style={{ ...btnStyle, borderColor: '#231f20', color: '#999' }} onClick={() => safeTriggerOverlay(OVERLAY.ARTNET_MARKETPLACE, 'Artnet Marketplace')}>[ Artnet Marketplace ]</button>
+
+                            <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>DEV TOOLS</div>
+                            <button style={{ ...btnStyle, border: '1px solid #555', color: '#888' }} onClick={() => safeTriggerOverlay(OVERLAY.DEBUG_LOG, 'Debug Log')}>[ Debug Log ]</button>
+                            <button style={{ ...btnStyle, border: '1px solid #555', color: '#888' }} onClick={() => {
                                 SettingsManager.set('hasSeenBloombergIntro', false);
-                                GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Tutorial Reset. It will play next time Bloomberg opens.');
-                                forceUpdate();
-                            }}>
-                                [ Reset Bloomberg Tutorial ]
-                            </button>
+                                GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Tutorial reset. It will play next time Bloomberg opens.');
+                            }}>[ Reset Bloomberg Tutorial ]</button>
 
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>BOOT FLOWS</div>
                             {['BOOT', 'PROFILE_MENU', 'PROFILE_CREATE', 'PROFILE_LOGIN', 'PRIMARY_MENU', 'DOSSIER_SELECT', 'CONFIRM', 'AUTH'].map(step => (
-                                <button key={step} style={{ ...btnStyle, fontSize: 11, padding: '6px 12px', minHeight: 44 }}
+                                <button key={step} style={{ ...btnStyle, fontSize: 11, padding: '6px 12px', marginBottom: 6 }}
                                     onClick={() => triggerUI(VIEW.BOOT, { previewStep: step })}>
                                     [ {step} ]
                                 </button>
                             ))}
                         </div>
-                        {/* ── Bloomberg Panel Config ── */}
+                        {/* Bloomberg Panel Config — full width */}
                         <div style={{ gridColumn: '1 / -1', marginTop: 20 }}>
                             <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>BLOOMBERG PANEL CONFIG</h3>
-                            <div style={{
-                                background: '#0a0a0f', border: '1px solid #333', padding: 16,
-                            }}>
-                                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                            <div style={{ background: '#0a0a0f', border: '1px solid #333', padding: 16 }}>
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
                                     {['full', 'minimal', 'trading', 'tearsheet'].map(preset => (
                                         <button key={preset} style={{
                                             ...btnStyle, width: 'auto', marginBottom: 0,
-                                            padding: '6px 14px', fontSize: 10, letterSpacing: '0.15em',
-                                            minHeight: 32,
-                                        }} onClick={() => {
-                                            SettingsManager.applyPreset('bloombergPanels', preset);
-                                            forceUpdate();
-                                        }}>
+                                            padding: '6px 14px', fontSize: 10, letterSpacing: '0.15em', minHeight: 32,
+                                        }} onClick={() => { SettingsManager.applyPreset('bloombergPanels', preset); forceUpdate(); }}>
                                             {preset.toUpperCase()}
                                         </button>
                                     ))}
                                 </div>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: isTouchDevice ? '1fr 1fr' : '1fr 1fr 1fr',
-                                    gap: '6px 16px',
-                                }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr 1fr' : '1fr 1fr 1fr', gap: '6px 16px' }}>
                                     {(SettingsManager.SCHEMA.find(s => s.id === 'bloombergPanels')?.options || []).map(opt => {
                                         const panels = SettingsManager.get('bloombergPanels');
                                         const checked = panels.includes(opt.value);
                                         return (
-                                            <label key={opt.value} style={{
-                                                display: 'flex', alignItems: 'center', gap: 8,
-                                                fontSize: 11, color: checked ? '#e0e0e8' : '#555',
-                                                cursor: 'pointer', padding: '3px 0',
-                                            }}>
+                                            <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: checked ? '#e0e0e8' : '#555', cursor: 'pointer', padding: '3px 0' }}>
                                                 <input type="checkbox" checked={checked}
                                                     style={{ accentColor: '#c9a84c', width: 14, height: 14, cursor: 'pointer' }}
-                                                    onChange={() => {
-                                                        SettingsManager.toggleChecklistItem('bloombergPanels', opt.value);
-                                                        forceUpdate();
-                                                    }}
+                                                    onChange={() => { SettingsManager.toggleChecklistItem('bloombergPanels', opt.value); forceUpdate(); }}
                                                 />
                                                 {opt.display}
                                             </label>
@@ -320,56 +341,35 @@ export default function AdminDashboard({ onClose }) {
                     </div>
                 )}
 
-                {/* ── PHASER TAB ── */}
+                {/* ── SCENES TAB (Phaser only) ── */}
                 {activeTab === 'phaser' && (
                     <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>EXPLORATION</div>
-                            <button style={btnStyle} onClick={() => triggerScene('WorldScene')}>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('WorldScene', {}, 'World Scene')}>
                                 [ Overworld — Pokemon Walk ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Tiled map, NPCs, dialog, encounters</div>
                             </button>
-                            <button style={btnStyle} onClick={() => triggerScene('CityScene')}>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('CityScene', {}, 'City Scene')}>
                                 [ City Hub — Location Map ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Click buildings to enter venues</div>
                             </button>
-                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => triggerScene('OverworldScene')}>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('LocationScene', {}, 'Location Scene')}>
+                                [ Location Scene ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Interior venue scene</div>
+                            </button>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('FastTravelScene', {}, 'Fast Travel')}>
+                                [ Fast Travel ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>City-to-city travel map</div>
+                            </button>
+                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => safeTriggerScene('OverworldScene', {}, 'Legacy Overworld')}>
                                 [ Legacy Overworld (test) ]
                                 <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Old 160px sprites, hardcoded map</div>
                             </button>
                         </div>
                         <div>
-                            <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NEGOTIATION MODES</div>
-                            <div style={{ background: '#0a0a0f', border: '1px solid #333', padding: 12, marginBottom: 16 }}>
-                                <div style={{ fontSize: 11, color: '#666', marginBottom: 10, lineHeight: 1.5 }}>
-                                    3 negotiation UIs — all powered by <strong style={{ color: '#aaa' }}>HaggleManager</strong>
-                                </div>
-
-                                {/* MODE 1: Email Haggle */}
-                                <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => launchEmailHaggle()}>
-                                    ① Email Negotiation
-                                    <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Gmail-style chat bubbles · AI agent guide · tactic selection</div>
-                                </button>
-
-                                {/* MODE 2: Bloomberg Counter-Offer */}
-                                <button style={{ ...btnStyle, borderColor: '#00e5ff', color: '#00e5ff' }} onClick={() => {
-                                    if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
-                                    // Launch Bloomberg with pre-selected counter-offer state
-                                    triggerOverlay(OVERLAY.BLOOMBERG);
-                                }}>
-                                    ② Bloomberg Counter-Offer
-                                    <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Opens market terminal · use ORDER BOOK &gt; COUNTER to haggle in-terminal</div>
-                                </button>
-
-                                {/* MODE 3: Pokemon Battle */}
-                                <button style={{ ...btnStyle, borderColor: '#c9a84c', color: '#c9a84c', opacity: 0.7 }} onClick={launchHaggleBattle}>
-                                    ③ Battle Haggle (Phaser)
-                                    <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Pokemon-style turn-based · Phaser canvas · type effectiveness</div>
-                                </button>
-                            </div>
-
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>DIALOGUE & CUTSCENES</div>
-                            <button style={btnStyle} onClick={() => triggerScene('MacDialogueScene', {
+                            <button style={btnStyle} onClick={() => safeTriggerScene('MacDialogueScene', {
                                 bgKey: 'bg_gallery_main_1bit_1771587911969.png',
                                 dialogueSequence: [
                                     { name: 'Gallerist', speakerSide: 'right', text: 'Welcome to the gallery. I have a few pieces you might find... interesting.' },
@@ -378,20 +378,121 @@ export default function AdminDashboard({ onClose }) {
                                 ],
                                 leftSpriteKey: 'player_back.png',
                                 rightSpriteKey: 'portrait_it_girl_1bit.png',
-                            })}>
+                            }, 'Mac Dialogue')}>
                                 [ Dialogue Scene (Mac) ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>1-bit Macintosh visual novel</div>
                             </button>
+                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => safeTriggerScene('DialogueScene', {}, 'Classic Dialogue')}>
+                                [ Dialogue Scene (Classic) ]
+                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Original dialogue renderer</div>
+                            </button>
+                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => safeTriggerScene('MenuScene', {}, 'Menu Scene')}>
+                                [ Menu Scene ]
+                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>In-game pause menu</div>
+                            </button>
+
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>NEW GAME FLOW</div>
-                            <button style={btnStyle} onClick={() => triggerScene('IntroScene')}>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('TitleScene', {}, 'Title Screen')}>
+                                [ Title Screen ]
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Pulsing "Press SPACE" start screen</div>
+                            </button>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('IntroScene', {}, 'Intro')}>
                                 [ Intro — Cinematic Briefing ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Typewriter narration → character select</div>
                             </button>
-                            <button style={btnStyle} onClick={() => triggerScene('CharacterSelectScene')}>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('CharacterSelectScene', {}, 'Character Select')}>
                                 [ Character Creator ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>6-phase archetype/trait/drip selection</div>
                             </button>
+                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => safeTriggerScene('EndScene', {}, 'End Scene')}>
+                                [ End Scene ]
+                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Game over / credits</div>
+                            </button>
                         </div>
+                    </div>
+                )}
+
+                {/* ── NEGOTIATE TAB ── */}
+                {activeTab === 'negotiate' && (
+                    <div>
+                        {/* Inline EmailOverlay for testing within admin */}
+                        {emailTestMode ? (
+                            <div style={{ position: 'relative', height: '70vh', border: '1px solid #333', overflow: 'hidden' }}>
+                                <HaggleOverlay
+                                    mode={emailTestMode.mode}
+                                    haggleInfo={emailTestMode.haggleInfo}
+                                    event={emailTestMode.event}
+                                    onComplete={() => setEmailTestMode(null)}
+                                />
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
+                                <div>
+                                    <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>NEGOTIATION MODES</div>
+                                    <div style={{ background: '#0a0a0f', border: '1px solid #333', padding: 12, marginBottom: 16 }}>
+                                        <div style={{ fontSize: 11, color: '#666', marginBottom: 10, lineHeight: 1.5 }}>
+                                            3 negotiation UIs — all powered by <strong style={{ color: '#aaa' }}>HaggleManager</strong>
+                                        </div>
+                                        <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => launchEmailHaggle()}>
+                                            ① Email Negotiation
+                                            <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Gmail-style chat bubbles · AI agent guide · tactic selection</div>
+                                        </button>
+                                        <button style={{ ...btnStyle, borderColor: '#00e5ff', color: '#00e5ff' }} onClick={() => {
+                                            if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                            triggerOverlay(OVERLAY.BLOOMBERG);
+                                        }}>
+                                            ② Bloomberg Counter-Offer
+                                            <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Opens market terminal · use ORDER BOOK &gt; COUNTER</div>
+                                        </button>
+                                        <button style={{ ...btnStyle, borderColor: '#c9a84c', color: '#c9a84c', opacity: 0.7 }} onClick={launchHaggleBattle}>
+                                            ③ Battle Haggle (Phaser)
+                                            <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Pokemon-style turn-based · type effectiveness</div>
+                                        </button>
+                                    </div>
+
+                                    <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>HAGGLE SCENARIOS</div>
+                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
+                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                        const haggleInfo = HaggleManager.start({ mode: 'buy', work: { id: 'test_basquiat', title: 'Untitled (Skull)', artist: 'Jean-Michel Basquiat', price: 285000, medium: 'Acrylic on canvas' }, npc: { id: 'dealer_bellamy', name: 'Margaux Bellamy', role: 'patron' }, askingPrice: 285000, playerOffer: 195000 });
+                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
+                                    }}>
+                                        [ Patron Haggle — Basquiat $285K ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Buy negotiation with a patron dealer</div>
+                                    </button>
+                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
+                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                        const haggleInfo = HaggleManager.start({ mode: 'buy', work: { id: 'test_haring', title: 'Radiant Baby', artist: 'Keith Haring', price: 42000, medium: 'Sumi ink on paper' }, npc: { id: 'dealer_chen', name: 'Victor Chen', role: 'mega-dealer' }, askingPrice: 42000, playerOffer: 28000 });
+                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
+                                    }}>
+                                        [ Mega-Dealer Haggle — Haring $42K ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Tough negotiation with aggressive dealer</div>
+                                    </button>
+                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
+                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
+                                        const haggleInfo = HaggleManager.start({ mode: 'sell', work: { id: 'test_koons', title: 'Balloon Dog (Orange)', artist: 'Jeff Koons', price: 1200000, medium: 'Mirror-polished stainless steel' }, npc: { id: 'collector_wu', name: 'Diana Wu', role: 'collector' }, askingPrice: 1200000, playerOffer: 950000 });
+                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
+                                    }}>
+                                        [ Sell Mode — Koons $1.2M ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Selling to a collector</div>
+                                    </button>
+                                </div>
+                                <div>
+                                    <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>EMAIL EVENTS (STATIC)</div>
+                                    <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => {
+                                        setEmailTestMode({ mode: 'static', event: { isEmail: true, id: 'test_deal_offer', title: 'Private Sale Opportunity', emails: [{ from: 'Margaux Bellamy', fromName: 'Margaux Bellamy', subject: 'Private Sale — Basquiat', body: 'Dear collector,\n\nI have a **rare early Basquiat** that just came off a private estate. Before it goes to auction, I wanted to offer it to a select few.\n\nThe asking price is **$285,000** — negotiable for the right buyer.\n\nLet me know if you\'d like to schedule a private viewing.', direction: 'incoming', time: '10:07 AM' }] } });
+                                    }}>
+                                        [ Deal Offer Email ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Incoming private sale offer</div>
+                                    </button>
+                                    <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => {
+                                        setEmailTestMode({ mode: 'static', event: { isEmail: true, id: 'test_auction_result', title: 'Auction Result', emails: [{ from: 'Sotheby\'s', fromName: 'Sotheby\'s Notification', subject: 'Lot #47 — Result', body: 'Your bid on **Lot #47 — "Untitled" by Cy Twombly** was successful.\n\nFinal hammer price: **$892,000**\n\nBuyer\'s premium (25%): $223,000\nTotal: **$1,115,000**\n\nPayment is due within 30 days. Congratulations.', direction: 'incoming', time: '8:45 PM' }] } });
+                                    }}>
+                                        [ Auction Result Email ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Sotheby's bid result notification</div>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -674,146 +775,7 @@ export default function AdminDashboard({ onClose }) {
                     </div>
                 )}
 
-                {/* ── EMAIL HAGGLE TEST TAB ── */}
-                {activeTab === 'email' && (
-                    <div>
-                        <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>EMAIL CUTSCENE / HAGGLE TESTING</div>
-
-                        {/* Inline EmailOverlay for testing within admin */}
-                        {emailTestMode ? (
-                            <div style={{ position: 'relative', height: '70vh', border: '1px solid #333', overflow: 'hidden' }}>
-                                <HaggleOverlay
-                                    mode={emailTestMode.mode}
-                                    haggleInfo={emailTestMode.haggleInfo}
-                                    event={emailTestMode.event}
-                                    onComplete={() => setEmailTestMode(null)}
-                                />
-                            </div>
-                        ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
-                                <div>
-                                    <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>HAGGLE MODE</h3>
-                                    <div style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
-                                        Full email negotiation with AI agent guidance, tactic selection, and dealer responses.
-                                    </div>
-
-                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
-                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
-                                        const haggleInfo = HaggleManager.start({
-                                            mode: 'buy',
-                                            work: { id: 'test_basquiat', title: 'Untitled (Skull)', artist: 'Jean-Michel Basquiat', price: 285000, medium: 'Acrylic on canvas' },
-                                            npc: { id: 'dealer_bellamy', name: 'Margaux Bellamy', role: 'patron' },
-                                            askingPrice: 285000,
-                                            playerOffer: 195000,
-                                        });
-                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
-                                    }}>
-                                        [ Patron Haggle — Basquiat $285K ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Buy negotiation with a patron dealer</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
-                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
-                                        const haggleInfo = HaggleManager.start({
-                                            mode: 'buy',
-                                            work: { id: 'test_haring', title: 'Radiant Baby', artist: 'Keith Haring', price: 42000, medium: 'Sumi ink on paper' },
-                                            npc: { id: 'dealer_chen', name: 'Victor Chen', role: 'mega-dealer' },
-                                            askingPrice: 42000,
-                                            playerOffer: 28000,
-                                        });
-                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
-                                    }}>
-                                        [ Mega-Dealer Haggle — Haring $42K ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Tough negotiation with aggressive dealer</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#1A73E8', color: '#4da6ff' }} onClick={() => {
-                                        if (!GameState.state) { GameState.quickDemoInit(); forceUpdate(); }
-                                        const haggleInfo = HaggleManager.start({
-                                            mode: 'sell',
-                                            work: { id: 'test_koons', title: 'Balloon Dog (Orange)', artist: 'Jeff Koons', price: 1200000, medium: 'Mirror-polished stainless steel' },
-                                            npc: { id: 'collector_wu', name: 'Diana Wu', role: 'collector' },
-                                            askingPrice: 1200000,
-                                            playerOffer: 950000,
-                                        });
-                                        setEmailTestMode({ mode: 'haggle', haggleInfo });
-                                    }}>
-                                        [ Sell Mode — Koons $1.2M ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Selling to a collector</div>
-                                    </button>
-                                </div>
-
-                                <div>
-                                    <h3 style={{ margin: '0 0 10px 0', fontSize: 13, color: '#c9a84c' }}>STATIC / EVENT MODE</h3>
-                                    <div style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
-                                        Non-interactive email events — deal offers, notifications, story beats.
-                                    </div>
-
-                                    <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => {
-                                        setEmailTestMode({
-                                            mode: 'static',
-                                            event: {
-                                                isEmail: true,
-                                                id: 'test_deal_offer',
-                                                title: 'Private Sale Opportunity',
-                                                emails: [
-                                                    { from: 'Margaux Bellamy', fromName: 'Margaux Bellamy', subject: 'Private Sale — Basquiat', body: 'Dear collector,\n\nI have a **rare early Basquiat** that just came off a private estate. Before it goes to auction, I wanted to offer it to a select few.\n\nThe asking price is **$285,000** — negotiable for the right buyer.\n\nLet me know if you\'d like to schedule a private viewing.', direction: 'incoming', time: '10:07 AM' },
-                                                ],
-                                            },
-                                        });
-                                    }}>
-                                        [ Deal Offer Email ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Incoming private sale offer</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#4caf50', color: '#4caf50' }} onClick={() => {
-                                        setEmailTestMode({
-                                            mode: 'static',
-                                            event: {
-                                                isEmail: true,
-                                                id: 'test_auction_result',
-                                                title: 'Auction Result',
-                                                emails: [
-                                                    { from: 'Sotheby\'s', fromName: 'Sotheby\'s Notification', subject: 'Lot #47 — Result', body: 'Your bid on **Lot #47 — "Untitled" by Cy Twombly** was successful.\n\nFinal hammer price: **$892,000**\n\nBuyer\'s premium (25%): $223,000\nTotal: **$1,115,000**\n\nPayment is due within 30 days. Congratulations.', direction: 'incoming', time: '8:45 PM' },
-                                                ],
-                                            },
-                                        });
-                                    }}>
-                                        [ Auction Result Email ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Sotheby's bid result notification</div>
-                                    </button>
-
-                                    <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>TOOLS</div>
-
-                                    <button style={btnStyle} onClick={() => triggerOverlay(OVERLAY.DESIGN_GUIDE)}>
-                                        [ Email Design Guide (F3) ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Component showcase with all email UI pieces</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#1a73e8', color: '#1a73e8' }} onClick={() => triggerOverlay(OVERLAY.GMAIL_GUIDE)}>
-                                        [ Gmail Design Guide ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Full Gmail email client mockup — inbox, threads, compose</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00' }} onClick={() => triggerOverlay(OVERLAY.ARTNET_UI)}>
-                                        [ Artnet Login ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>artnet.com login → dashboard → marketplace flow</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#231f20', color: '#231f20' }} onClick={() => triggerOverlay(OVERLAY.ARTNET_MARKETPLACE)}>
-                                        [ Artnet Marketplace ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>artnet.com search page — browse, filter, sort, inquire</div>
-                                    </button>
-
-                                    <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00', background: 'rgba(255,75,0,0.04)' }} onClick={() => triggerOverlay(OVERLAY.ARTNET_UI)}>
-                                        [ Artnet UI ]
-                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>full flow — loading → login → dashboard → marketplace</div>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* EMAIL tab removed — consolidated into NEGOTIATE tab */}
 
             </div>
         </div>
