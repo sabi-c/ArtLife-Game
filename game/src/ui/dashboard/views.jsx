@@ -16,6 +16,7 @@ import { ARTWORKS } from '../../data/artworks.js';
 import { CITY_DATA } from '../../data/cities.js';
 import { WORLD_LOCATIONS } from '../../data/world_locations.js';
 import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
 import { useNPCStore } from '../../stores/npcStore.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 import { clamp } from '../../utils/math.js';
