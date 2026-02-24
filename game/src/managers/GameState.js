@@ -410,6 +410,7 @@ export class GameState {
     }
 
     static getPortfolioValue() {
+        if (!GameState.state?.portfolio) return 0;
         return GameState.state.portfolio.reduce((sum, work) => {
             return sum + MarketManager.getWorkValue(work);
         }, 0);
