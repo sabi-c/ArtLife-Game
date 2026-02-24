@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { VIEW } from '../constants/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
+import { autoLoadTiledMaps, getAllMapIds } from '../utils/tiledAutoLoader.js';
 
 /**
  * BootScene — Preloads shared assets, then launches TitleScene
@@ -69,36 +70,13 @@ export class BootScene extends Phaser.Scene {
             frameWidth: 160, frameHeight: 160
         });
 
-        // ── Interior Tiled Maps + Tilesets ──
-        this.load.tilemapTiledJSON('map_gallery_test', 'content/maps/gallery_test.json');
-        this.load.tilemapTiledJSON('map_uptown_gallery', 'content/maps/uptown_gallery.json');
-        this.load.tilemapTiledJSON('map_artist_studio_visit', 'content/maps/artist_studio_visit.json');
-        // Multi-room venue: SoHo Gallery (lobby + exhibition + office)
-        this.load.tilemapTiledJSON('map_soho_gallery_lobby', 'content/maps/soho_gallery_lobby.json');
-        this.load.tilemapTiledJSON('map_soho_gallery_exhibition', 'content/maps/soho_gallery_exhibition.json');
-        this.load.tilemapTiledJSON('map_soho_gallery_office', 'content/maps/soho_gallery_office.json');
-        // Chelsea Gallery (showcase room)
-        this.load.tilemapTiledJSON('map_chelsea_gallery', 'content/maps/chelsea_gallery.json');
-        // Chelsea Showcase (museum gallery — 18×14, 9 paintings)
-        this.load.tilemapTiledJSON('map_chelsea_showcase', 'content/maps/chelsea_showcase.json');
-        // Fossil Museum (Princess-Phoenix tileset, scaled 16→48px)
-        this.load.tilemapTiledJSON('map_fossil_museum', 'content/maps/fossil_museum.json');
-        this.load.image('fossil_museum_48x48', 'assets/tilesets/fossil_museum_48x48.png');
-        this.load.image('gallery_tileset', 'assets/tilesets/gallery_tileset.png');
-        this.load.image('Room_Builder_free_48x48', 'assets/tilesets/Room_Builder_free_48x48.png');
-        this.load.image('Interiors_free_48x48', 'assets/tilesets/Interiors_free_48x48.png');
-        // ── Themed LimeZu tilesets (premium Modern Interiors pack) ──
-        this.load.image('7_Art_48x48', 'assets/tilesets/7_Art_48x48.png');
-        this.load.image('22_Museum_48x48', 'assets/tilesets/22_Museum_48x48.png');
-        this.load.image('1_Generic_48x48', 'assets/tilesets/1_Generic_48x48.png');
-        this.load.image('13_Conference_Hall_48x48', 'assets/tilesets/13_Conference_Hall_48x48.png');
-        this.load.image('2_LivingRoom_48x48', 'assets/tilesets/2_LivingRoom_48x48.png');
+        // ── Interior Tiled Maps + Tilesets (auto-discovered from map JSON) ──
+        // The auto-loader reads each map's JSON, extracts tileset references,
+        // and loads only what isn't already cached. No manual tileset registration needed.
+        autoLoadTiledMaps(this, getAllMapIds());
 
         // ── Background-image rooms (pre-composed LimeZu premium art) ──
-        this.load.tilemapTiledJSON('map_art_gallery_museum', 'content/maps/art_gallery_museum.json');
-        this.load.tilemapTiledJSON('map_museum_entrance', 'content/maps/museum_entrance.json');
-        this.load.tilemapTiledJSON('map_dinosaur_museum', 'content/maps/dinosaur_museum.json');
-        this.load.tilemapTiledJSON('map_small_gallery', 'content/maps/small_gallery.json');
+        // These aren't referenced in Tiled JSON, so loaded explicitly
         this.load.image('bg_room_art_gallery_museum', 'assets/rooms/art_gallery_museum.png');
         this.load.image('bg_room_museum_entrance', 'assets/rooms/museum_entrance.png');
         this.load.image('bg_room_dinosaur_museum', 'assets/rooms/dinosaur_museum.png');
