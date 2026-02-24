@@ -32,6 +32,11 @@ const PLAYER_ANIMS = [
     { key: 'character-idle-right', prefix: 'idle-right/idle-right', start: 0, end: 0 },
 ];
 
+// ─── Asset base URL (captured at import time, before SPA routing changes location) ──
+// On localhost:     INITIAL_BASE = 'http://localhost:5175/'
+// On GitHub Pages:  INITIAL_BASE = 'https://sabi-c.github.io/ArtLife-Game/'
+const INITIAL_BASE = new URL('./', window.location.href).href;
+
 // ─── Tileset name → loaded texture key mapping ─────────────────────────────
 const TILESET_MAP = [
     { tiledName: 'base', textureKey: 'lum_overworld' },
@@ -58,13 +63,9 @@ export default class NewWorldScene extends Phaser.Scene {
         console.log('[NewWorldScene] preload()');
         this._assetErrors = [];
 
-        // Set base URL so Phaser loads assets relative to the HTML file, not the SPA route.
-        // Without this, navigating to /admin changes the browser URL and Phaser resolves
-        // 'assets/luminus/...' relative to /admin/ instead of the app root.
-        // document.baseURI gives the actual HTML location regardless of pushState routing.
-        const docBase = new URL('./', document.baseURI).href;
-        this.load.setBaseURL(docBase);
-        console.log('[NewWorldScene] Loader baseURL:', docBase);
+        // Use URL captured at module import time (before SPA routing changed it)
+        this.load.setBaseURL(INITIAL_BASE);
+        console.log('[NewWorldScene] Loader baseURL:', INITIAL_BASE);
 
         this.load.on('loaderror', (file) => {
             const msg = `Asset FAILED: ${file.key} (${file.url})`;
