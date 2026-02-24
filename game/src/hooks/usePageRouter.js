@@ -31,6 +31,48 @@ import { VIEW, OVERLAY } from '../constants/views.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 
+// ════════════════════════════════════════════════════════════
+// Base path — captured at module load time before SPA routing changes the URL.
+// On localhost: '/'
+// On GitHub Pages: '/ArtLife-Game/'
+// ════════════════════════════════════════════════════════════
+const BASE_PATH = (() => {
+    // Vite injects BASE_URL from the `base` config. With `base: './'` it's './'
+    const viteBase = import.meta.env.BASE_URL || '/';
+    if (viteBase.startsWith('/')) return viteBase; // Already absolute
+
+    // Relative base — derive from the initial URL
+    // e.g. https://sabi-c.github.io/ArtLife-Game/ → /ArtLife-Game/
+    const pathname = window.location.pathname;
+    // Find the repo base by looking at the initial pathname
+    // On GH Pages: /ArtLife-Game/ or /ArtLife-Game/admin → base is /ArtLife-Game/
+    // On localhost: / or /admin → base is /
+    const match = pathname.match(/^(\/[^/]+\/)/);
+    // Only use the match if we're NOT on localhost (localhost paths are just /)
+    if (match && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        return match[1]; // e.g. '/ArtLife-Game/'
+    }
+    return '/';
+})();
+
+/** Convert a route path like '/admin' to full URL path like '/ArtLife-Game/admin' */
+function toFullPath(routePath) {
+    if (BASE_PATH === '/') return routePath;
+    // Strip leading / from routePath to avoid double slash
+    const clean = routePath.startsWith('/') ? routePath.slice(1) : routePath;
+    return `${BASE_PATH}${clean}`;
+}
+
+/** Convert a full URL pathname to a route path for lookup */
+function toRoutePath(fullPath) {
+    if (BASE_PATH === '/') return fullPath;
+    if (fullPath.startsWith(BASE_PATH)) {
+        const route = fullPath.slice(BASE_PATH.length - 1); // keep leading /
+        return route || '/';
+    }
+    return fullPath;
+}
+
 // Resolve the user's preferred default landing overlay
 function getDefaultLandingOverlay() {
     try {
@@ -112,9 +154,10 @@ export function navigate(path, options = {}) {
     // Resolve dynamic routes
     if (route.dynamic) route = { ...route, overlay: getDefaultLandingOverlay() };
 
-    // Update URL
+    // Update URL — prepend base path for GitHub Pages compatibility
     const method = options.replace ? 'replaceState' : 'pushState';
-    window.history[method]({ path }, '', path);
+    const fullPath = toFullPath(path);
+    window.history[method]({ path }, '', fullPath);
 
     // Dispatch custom event for App.jsx to handle
     window.dispatchEvent(new CustomEvent('artlife:navigate', {
@@ -126,8 +169,8 @@ export function navigate(path, options = {}) {
  * Get the current route configuration from the URL.
  */
 export function getCurrentRoute() {
-    const path = window.location.pathname;
-    let route = PAGE_ROUTES[path] || PAGE_ROUTES['/'];
+    const routePath = toRoutePath(window.location.pathname);
+    let route = PAGE_ROUTES[routePath] || PAGE_ROUTES['/'];
     if (route.dynamic) route = { ...route, overlay: getDefaultLandingOverlay() };
     return route;
 }
@@ -158,8 +201,8 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
         };
 
         const handlePopState = (e) => {
-            const path = window.location.pathname;
-            let route = PAGE_ROUTES[path];
+            const routePath = toRoutePath(window.location.pathname);
+            let route = PAGE_ROUTES[routePath];
 
             // If no route matches, use default landing
             if (!route) {
@@ -205,18 +248,19 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
         }
 
         // Only update if different from current URL
-        if (window.location.pathname !== path) {
+        const fullPath = toFullPath(path);
+        if (window.location.pathname !== fullPath) {
             // Use pushState for overlay changes (so Back button works between overlays)
             // Use replaceState for same-view updates
-            window.history.pushState({ path }, '', path);
+            window.history.pushState({ path }, '', fullPath);
         }
     }, []);
 
     // Boot: sync initial URL → state (deep linking support)
     useEffect(() => {
-        const path = window.location.pathname;
-        if (path !== '/' && PAGE_ROUTES[path]) {
-            const route = PAGE_ROUTES[path];
+        const routePath = toRoutePath(window.location.pathname);
+        if (routePath !== '/' && PAGE_ROUTES[routePath]) {
+            const route = PAGE_ROUTES[routePath];
             suppressUrlSync.current = true;
             setActiveView(route.view);
             setActiveOverlay(route.overlay || OVERLAY.NONE);
@@ -227,16 +271,18 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
     // Bridge GameEventBus → URL sync
     useEffect(() => {
         const handleUIRoute = (viewKey) => {
-            const path = VIEW_TO_PATH[viewKey] || '/';
-            if (window.location.pathname !== path) {
-                window.history.replaceState({ path }, '', path);
+            const routePath = VIEW_TO_PATH[viewKey] || '/';
+            const fullPath = toFullPath(routePath);
+            if (window.location.pathname !== fullPath) {
+                window.history.replaceState({ path: routePath }, '', fullPath);
             }
         };
 
         const handleOverlayToggle = (overlayKey) => {
-            const path = OVERLAY_TO_PATH[overlayKey] || '/';
-            if (window.location.pathname !== path) {
-                window.history.replaceState({ path }, '', path);
+            const routePath = OVERLAY_TO_PATH[overlayKey] || '/';
+            const fullPath = toFullPath(routePath);
+            if (window.location.pathname !== fullPath) {
+                window.history.replaceState({ path: routePath }, '', fullPath);
             }
         };
 

@@ -84,8 +84,11 @@ export function MobileJoypad() {
         window.joypadState = null;
         window.joypadSprint = false;
         if (window.phaserGame) {
-            const scene = window.phaserGame.scene.getScene('WorldScene');
-            if (scene?.exitScene) { scene.exitScene(); return; }
+            // Check both NewWorldScene and legacy WorldScene
+            for (const key of ['NewWorldScene', 'WorldScene']) {
+                const scene = window.phaserGame.scene.getScene(key);
+                if (scene?.exitScene) { scene.exitScene(); return; }
+            }
         }
         if (window.game?.exitScene) window.game.exitScene();
     }, []);

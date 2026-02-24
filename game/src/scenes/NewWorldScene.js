@@ -121,6 +121,9 @@ export default class NewWorldScene extends Phaser.Scene {
             this._createControls();
             this._createHUD();
             console.log('[NewWorldScene] ✓ All systems initialized');
+
+            // Tell App.jsx to show MobileJoypad on touch devices
+            GameEventBus.emit(GameEvents.SCENE_READY, 'NewWorldScene');
         } catch (err) {
             console.error('[NewWorldScene] create() error:', err);
             this._createFailed = true;
@@ -371,14 +374,18 @@ export default class NewWorldScene extends Phaser.Scene {
     update() {
         if (this._createFailed || !this.player || !this.player.body) return;
 
-        const speed = 80;
+        // Sprint: B button (mobile) doubles speed
+        const baseSpeed = 80;
+        const speed = window.joypadSprint ? baseSpeed * 2 : baseSpeed;
         const body = this.player.body;
         body.setVelocity(0);
 
-        const left = this.cursors.left.isDown || this.wasd.left.isDown;
-        const right = this.cursors.right.isDown || this.wasd.right.isDown;
-        const up = this.cursors.up.isDown || this.wasd.up.isDown;
-        const down = this.cursors.down.isDown || this.wasd.down.isDown;
+        // Read both keyboard AND mobile joypad input
+        const joypad = window.joypadState; // 'UP'|'DOWN'|'LEFT'|'RIGHT'|null
+        const left = this.cursors.left.isDown || this.wasd.left.isDown || joypad === 'LEFT';
+        const right = this.cursors.right.isDown || this.wasd.right.isDown || joypad === 'RIGHT';
+        const up = this.cursors.up.isDown || this.wasd.up.isDown || joypad === 'UP';
+        const down = this.cursors.down.isDown || this.wasd.down.isDown || joypad === 'DOWN';
 
         // Helper: safely play animation
         const tryPlay = (key) => {
@@ -427,6 +434,8 @@ export default class NewWorldScene extends Phaser.Scene {
     // ════════════════════════════════════════════════════
     exitScene() {
         console.log('[NewWorldScene] exitScene()');
+        // Hide MobileJoypad
+        GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
         try {
             this.scene.stop();
         } catch (e) { /* ignore */ }

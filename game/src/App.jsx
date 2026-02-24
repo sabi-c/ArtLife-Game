@@ -252,7 +252,7 @@ export default function App() {
             setActiveView(viewKey);
             setViewPayload(payload);
         };
-        const GRID_SCENES = ['WorldScene', 'LocationScene'];
+        const GRID_SCENES = ['WorldScene', 'NewWorldScene', 'LocationScene'];
         const sceneReadyHandler = (sceneName) => {
             if (GRID_SCENES.includes(sceneName)) setIsGridSceneActive(true);
         };
