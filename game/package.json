@@ -19,6 +19,8 @@
     "expose": "npx localtunnel --port 5173 --subdomain artlife",
     "tunnel": "npx cloudflared tunnel --url http://localhost:5173",
     "validate": "node scripts/validate-build.cjs",
+    "verify": "node scripts/verify.cjs",
+    "verify:static": "node scripts/verify.cjs --static",
     "generate:room": "node tools/generate_room.js",
     "room:new": "node tools/room_pipeline.js new",
     "room:import": "node tools/room_pipeline.js import",

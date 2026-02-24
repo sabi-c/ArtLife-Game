@@ -57,6 +57,12 @@ export default function App() {
         syncUrl(activeView, activeOverlay);
     }, [activeView, activeOverlay, syncUrl]);
 
+    // Expose overlay setter for headless testing (verify.cjs / Playwright)
+    useEffect(() => {
+        window.__artlife_setOverlay = setActiveOverlay;
+        return () => { delete window.__artlife_setOverlay; };
+    }, [setActiveOverlay]);
+
     // ═══════════════════════════════════════════════════════════
     // Gmail compose event listener (from Bloomberg INQUIRE flow)
     // ═══════════════════════════════════════════════════════════
