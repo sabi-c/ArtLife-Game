@@ -1,0 +1,2329 @@
+/**
+ * views.jsx — Full-page dashboard view styles
+ *
+ * Each view replaces the entire content area of the Bloomberg Terminal.
+ * Contains: GalleryView, TearsheetView, ArtnetView, SothebysView,
+ * DeitchView, ByformView, WaterworksView
+ */
+
+import React, { useState, useMemo, useCallback } from 'react';
+import { GameState } from '../../managers/GameState.js';
+import { MarketManager } from '../../managers/MarketManager.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
+import { TerminalAPI } from '../../terminal/TerminalAPI.js';
+import { CONTACTS } from '../../data/contacts.js';
+import { ARTWORKS } from '../../data/artworks.js';
+import { CITY_DATA } from '../../data/cities.js';
+import { WORLD_LOCATIONS } from '../../data/world_locations.js';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { useNPCStore } from '../../stores/npcStore.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
+import { clamp } from '../../utils/math.js';
+import {
+    mask, maskPrice, fmtNum, tearsheetPrice,
+    MiniSparkline, resolveImageUrl, ROLE_COLORS,
+    hasAP, useAPAndCheckEvents,
+} from './dashboardUtils.jsx';
+import {
+    ArtistLeaderboard, OrderBook, PriceChart, TradeFeed, Watchlist,
+    PortfolioTracker, PlayerStatsPanel, NetWorthPanel, NPCDirectoryPanel,
+    CollectionPanel, TransactionHistoryPanel, ArtworkTearsheet,
+} from './panels.jsx';
+import { SharedPanelGrid, ArtnetLayout, TearsheetLayout } from './layouts.jsx';
+
+// ══════════════════════════════════════════════════════════════
+// 14B. Gallery View — Seventh House staggered product grid
+//
+// Inspired by seventhhouse.la: cream bg, monospace letter-spaced
+// type, staggered 2-column artwork grid with generous whitespace.
+// Hero section (stats+networth), artwork grid, then data panels.
+// ══════════════════════════════════════════════════════════════
+function GalleryView({ intel, showPanel, feed, selectedArtist, onSelectArtist, onSelectWork, onSelectOrder, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const portfolio = s?.portfolio || [];
+
+    // Enrich portfolio items
+    const items = portfolio.map(work => {
+        const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(work, false); }
+        catch { currentVal = work.price || work.basePrice || 0; }
+        return { ...work, ...artwork, currentVal };
+    });
+
+    // Market items
+    const marketItems = showPanel('orderbook') ? MarketSimulator.getOpenSellOrders().map(order => {
+        const artwork = ARTWORKS.find(a => a.id === order.artworkId) || {};
+        return { ...artwork, ...order, currentVal: order.askPrice || 0, _isMarket: true };
+    }) : [];
+
+    const allWorks = [...items, ...marketItems];
+
+    // Live market summary
+    const tickSnap = useMemo(() => {
+        try { return MarketManager.getTickSnapshot(); } catch { return null; }
+    }, [items]);
+    const composite = tickSnap?.composite || 0;
+    const cycle = tickSnap?.cycle || 'flat';
+    const collectionVal = items.reduce((s, w) => s + (w.currentVal || 0), 0);
+    const cycleProse = { bull: 'bullish', bear: 'bearish', flat: 'stable' };
+    const cycleIcon = { bull: '↑', bear: '↓', flat: '—' };
+
+    return (
+        <div className="gallery-body">
+            {/* ── Market Pulse Banner — editorial style ── */}
+            <div style={{
+                padding: '24px 32px', borderBottom: '1px solid #d5d0c8',
+                fontFamily: '\'Courier New\', monospace', letterSpacing: 1.5,
+                textTransform: 'uppercase', fontSize: 10, color: '#666',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+                flexWrap: 'wrap', gap: 8,
+            }}>
+                <span>The market is <strong style={{ color: cycle === 'bull' ? '#2f5a2f' : cycle === 'bear' ? '#8b2020' : '#555' }}>
+                    {cycleProse[cycle] || 'stable'}
+                </strong> {cycleIcon[cycle]}</span>
+                <span>Art Index {composite.toLocaleString()}</span>
+                {collectionVal > 0 && <span>Collection {tearsheetPrice(collectionVal)}</span>}
+                <span>{allWorks.length} works</span>
+            </div>
+
+            {/* Hero section — player stats + net worth */}
+            <div className="gallery-hero">
+                {showPanel('playerstats') && <PlayerStatsPanel />}
+                {showPanel('networth') && <NetWorthPanel intel={intel} />}
+            </div>
+
+            {/* Staggered artwork grid — Seventh House style */}
+            {showPanel('collection') && allWorks.length > 0 && (
+                <div className="sh-section">
+                    <div className="sh-section-header">WORKS</div>
+                    <div className="sh-grid">
+                        {allWorks.map((work, i) => {
+                            const imageUrl = resolveImageUrl(work);
+                            const artistName = (work.artist || 'Unknown').toUpperCase();
+                            const title = work.title || 'Untitled';
+                            const medium = work.medium || 'Mixed Media';
+                            const year = work.yearCreated || work.year || '';
+                            // Stagger: odd items get extra top margin
+                            const isOffset = i % 2 === 1;
+
+                            return (
+                                <div key={work.id || i}
+                                    className={`sh-card${isOffset ? ' sh-card-offset' : ''}`}
+                                    onClick={() => onSelectWork && onSelectWork(work)}>
+                                    <div className="sh-card-image">
+                                        {imageUrl ? (
+                                            <img className="sh-card-img" src={imageUrl} alt={title} />
+                                        ) : (
+                                            <div className="sh-card-placeholder">
+                                                <span>{title}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="sh-card-info">
+                                        <div className="sh-card-artist" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {artistName}
+                                            {(() => {
+                                                const artist = MarketManager.artists?.find(a => a.name?.toUpperCase() === artistName);
+                                                if (!artist) return null;
+                                                const h = artist.heat || 0;
+                                                const dotClr = h > 60 ? '#c9a84c' : h > 30 ? '#8b7332' : '#999';
+                                                return <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotClr, display: 'inline-block', flexShrink: 0 }} title={`Heat: ${Math.round(h)}`} />;
+                                            })()}
+                                        </div>
+                                        <div className="sh-card-title">
+                                            <em>{title}</em>{year ? `, ${year}` : ''}
+                                        </div>
+                                        <div className="sh-card-medium">{medium}</div>
+                                        {intel >= 40 && (
+                                            <div className="sh-card-price" style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                                                {tearsheetPrice(work.currentVal)}
+                                                {!work._isMarket && work.purchasePrice > 0 && (() => {
+                                                    const roi = ((work.currentVal - work.purchasePrice) / work.purchasePrice * 100);
+                                                    return (
+                                                        <span style={{
+                                                            fontSize: 8, letterSpacing: 0, textTransform: 'none',
+                                                            color: roi >= 0 ? '#2f5a2f' : '#8b2020',
+                                                        }}>
+                                                            {roi >= 0 ? '+' : ''}{roi.toFixed(1)}%
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </div>
+                                        )}
+                                        {work._isMarket && (
+                                            <div className="sh-card-tag">AVAILABLE</div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* NPC Directory — People section */}
+            {showPanel('directory') && (
+                <div className="sh-section">
+                    <div className="sh-section-header">PEOPLE</div>
+                    <NPCDirectoryPanel intel={intel} />
+                </div>
+            )}
+
+            {/* Data panels — 2-column grid */}
+            <div className="gallery-grid-2col">
+                <div className="gallery-col">
+                    {showPanel('leaderboard') && <ArtistLeaderboard
+                        leaderboard={feed.leaderboard}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                        selectedArtist={selectedArtist}
+                        onSelect={onSelectArtist}
+                    />}
+                    {showPanel('tradefeed') && <TradeFeed intel={intel} onSelectTrade={onSelectTrade} />}
+                    {showPanel('watchlist') && <Watchlist intel={intel} />}
+                </div>
+                <div className="gallery-col">
+                    {showPanel('orderbook') && <OrderBook intel={intel} onSelectOrder={onSelectOrder} />}
+                    {showPanel('pricechart') && <PriceChart
+                        artistId={selectedArtist}
+                        priceHistory={feed.priceHistory}
+                        liveSparklines={feed.liveSparklines}
+                        intel={intel}
+                    />}
+                    {showPanel('overview') && <MarketOverview compositeIndex={feed.compositeIndex} cycle={feed.cycle} intel={intel} compositeHistory={feed.compositeHistory} sectorHistory={feed.sectorHistory} eventLog={feed.eventLog} />}
+                    {showPanel('txhistory') && <TransactionHistoryPanel intel={intel} />}
+                    {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={onListWork} onSelectWork={onSelectWork} />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 15. Tearsheet View — Gagosian / Frieze LA exact-replica layout
+//
+// Renders each artwork in the player's collection as a proper
+// gallery tearsheet: image page → info page, matching the
+// Gagosian Frieze LA 2026 PDF format exactly.
+//
+// Structure per artwork:
+//   PAGE 1: Artwork image (centered, max-height), bottom caption
+//   PAGE 2: Centered small-caps header → artist (bold) + lifespan →
+//           italic title + year → medium → dimensions →
+//           Provenance / Exhibited / Literature sections →
+//           gallery footer
+//
+// Print-ready: @media print rules ensure page breaks between works.
+// ══════════════════════════════════════════════════════════════
+function TearsheetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const portfolio = s?.portfolio || [];
+    const playerName = s?.playerName || 'THE DEALER';
+    const city = s?.currentCity || 'New York';
+    const week = s?.week || 1;
+    const gameYear = 2024 + Math.floor((week - 1) / 52);
+
+    // Stable booth number derived from week (not random on every render)
+    const boothNum = useMemo(() => ((week * 7 + 13) % 40) + 1, [week]);
+
+    // Enrich portfolio items with full artwork data + current value
+    const showCollection = showPanel('collection');
+    const showMarket = showPanel('orderbook');
+    const showStats = showPanel('playerstats');
+    const showNetWorth = showPanel('networth');
+
+    const items = showCollection ? portfolio.map(work => {
+        const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(work, false); }
+        catch { currentVal = work.price || work.basePrice || 0; }
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || work.artistId));
+        return { ...work, ...artwork, currentVal, _artist: artist };
+    }) : [];
+
+    // Market sell orders — only if orderbook panel is visible
+    const marketWorks = showMarket ? MarketSimulator.getOpenSellOrders().map(order => {
+        const artwork = ARTWORKS.find(a => a.id === order.artworkId) || {};
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || order.artistId));
+        return { ...artwork, ...order, _artist: artist, _isMarket: true, _order: order };
+    }) : [];
+
+    const allWorks = [...items, ...marketWorks];
+
+    // Net worth for stats page
+    const cash = s?.cash || 0;
+    const portfolioVal = showNetWorth ? GameState.getPortfolioValue() : 0;
+    const netWorth = cash + portfolioVal;
+
+    if (allWorks.length === 0) {
+        return (
+            <div className="ts-view">
+                <div className="ts-page ts-info-page">
+                    <div className="ts-empty">
+                        <div className="ts-empty-brand">A R T L I F E</div>
+                        <div className="ts-empty-text">No works in collection or on market.</div>
+                        <div className="ts-empty-sub">Toggle Collection or Order Book panels to view works.</div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="ts-view">
+            {/* Cover page — Frieze-style */}
+            <div className="ts-page ts-cover-page">
+                <div className="ts-cover-content">
+                    <h1 className="ts-cover-title">FRIEZE {city.toUpperCase()} {gameYear}</h1>
+                    <div className="ts-cover-dates">
+                        Week {week} &middot; {city}
+                    </div>
+                    <div className="ts-cover-booth">Booth C{boothNum}</div>
+                </div>
+                <div className="ts-cover-brand">A R T L I F E</div>
+            </div>
+
+            {/* ── Market Context Page ── */}
+            {(() => {
+                let snap = null;
+                try { snap = MarketManager.getTickSnapshot(); } catch { }
+                const mCycle = snap?.cycle || 'flat';
+                const mComp = snap?.composite || 0;
+                const mSectors = snap?.sectors || {};
+                const cycleProse = { bull: 'bullish, with strong collector demand', bear: 'bearish, with cautious buying', flat: 'stable, with steady trading' };
+                const artistsInCollection = [...new Set(items.map(w => w.artistId || w._artist?.id).filter(Boolean))];
+                const artistSnaps = (snap?.artists || []).filter(a => artistsInCollection.includes(a.id));
+                return (
+                    <div className="ts-page ts-text-page">
+                        <div className="ts-text-body">
+                            <p style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 12 }}>Market Conditions</p>
+                            <p>
+                                The art market is currently {cycleProse[mCycle] || 'stable'}.
+                                The ArtLife Composite Index stands at <strong>{mComp.toLocaleString()}</strong>,
+                                tracking {snap?.artists?.length || 0} artists across {Object.keys(mSectors).length} market tiers.
+                            </p>
+                            {Object.keys(mSectors).length > 0 && (
+                                <p>
+                                    Sector performance:
+                                    {Object.entries(mSectors).map(([tier, d]) =>
+                                        ` ${tier.replace('-', ' ')} (${d.index})`
+                                    ).join(' · ')}.
+                                </p>
+                            )}
+                            {artistSnaps.length > 0 && (
+                                <>
+                                    <p style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginTop: 24, marginBottom: 8 }}>Artists in this Presentation</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {artistSnaps.map(a => (
+                                            <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '4px 0', borderBottom: '1px solid #eee' }}>
+                                                <span style={{ fontWeight: 'bold' }}>{a.name}</span>
+                                                <span style={{ color: '#666' }}>Index {a.index} · Heat {a.heat} · {a.tier}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="ts-page-brand">G A G O S I A N</div>
+                    </div>
+                );
+            })()}
+
+            {/* Intro text page */}
+            <div className="ts-page ts-text-page">
+                <div className="ts-text-body">
+                    <p>
+                        ArtLife is pleased to announce its participation in
+                        Frieze {city} {gameYear} with a selection of works
+                        {items.length > 0 ? ` from the collection of ${playerName}` : ''}{marketWorks.length > 0 ? (items.length > 0 ? ', in dialogue with' : ' featuring') + ` ${marketWorks.length} works available on the secondary market` : ''}.
+                    </p>
+                    {items.length > 0 && (
+                        <p>
+                            The presentation features {items.length} {items.length === 1 ? 'work' : 'works'} spanning {[...new Set(items.map(w => w.artist || 'Unknown'))].length} {[...new Set(items.map(w => w.artist || 'Unknown'))].length === 1 ? 'artist' : 'artists'},
+                            exploring the intersection of contemporary practice and market dynamics.
+                            {showNetWorth && netWorth > 0 ? ` The collection is currently valued at ${tearsheetPrice(netWorth)}.` : ''}
+                        </p>
+                    )}
+                    {showStats && s && (
+                        <p>
+                            {playerName} brings a reputation score of {s.reputation || 0},
+                            with {s.taste || 0} taste, {s.audacity || 0} audacity,
+                            and {s.intel || 0} intel — navigating the art world in Week {week}.
+                        </p>
+                    )}
+                </div>
+                <div className="ts-page-brand">G A G O S I A N</div>
+            </div>
+
+            {/* Each artwork: image page + info page */}
+            {allWorks.map((work, i) => {
+                const artistName = work.artist || work._artist?.name || 'Unknown Artist';
+                const title = work.title || 'Untitled';
+                const year = work.yearCreated || work.year || '';
+                const medium = work.medium || 'Mixed Media';
+                const dimensions = work.dimensions || '';
+                const dimensionsIn = work.dimensionsIn || '';
+                const edition = work.edition || '';
+                const imageUrl = resolveImageUrl(work);
+                const born = work.artistBorn || work._artist?.born;
+                const died = work.artistDied || work._artist?.died;
+                const lifespan = born ? (died ? `${born}\u2013${died}` : `b. ${born}`) : '';
+                const provChain = work.provenanceChain || [];
+                const provString = typeof work.provenance === 'string' ? work.provenance : '';
+                const runtimeProv = Array.isArray(work.provenance) && typeof work.provenance[0] === 'object' ? work.provenance : [];
+                const exhibitions = work.exhibitions || [];
+                const literature = work.literature || [];
+                const signed = work.signed || '';
+                const price = work._isMarket
+                    ? (work.inquire ? 'Price on Request' : work.askPrice || 0)
+                    : work.currentVal || work.price || 0;
+                const isOwned = !work._isMarket;
+
+                return (
+                    <React.Fragment key={work.id || i}>
+                        {/* ── IMAGE PAGE ── */}
+                        <div className="ts-page ts-image-page">
+                            <div className="ts-image-area">
+                                {imageUrl ? (
+                                    <img className="ts-artwork-img" src={imageUrl} alt={title} />
+                                ) : (
+                                    <div className="ts-artwork-placeholder">
+                                        <div className="ts-placeholder-inner">
+                                            <span className="ts-placeholder-title">{title}</span>
+                                            <span className="ts-placeholder-artist">{artistName}</span>
+                                            {year && <span className="ts-placeholder-year">{year}</span>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="ts-image-caption">
+                                <div className="ts-caption-left">
+                                    <span className="ts-caption-artist">{artistName}, </span>
+                                    <span className="ts-caption-title"><em>{title}</em>{year ? `, ${year}` : ''}</span>
+                                    <br />
+                                    <span className="ts-caption-medium">{medium}</span>
+                                    {dimensions && <><br /><span className="ts-caption-dims">
+                                        {dimensions}{dimensionsIn ? ` (${dimensionsIn})` : ''}
+                                    </span></>}
+                                    {edition && <><br /><span className="ts-caption-edition">{edition}</span></>}
+                                </div>
+                                <div className="ts-caption-brand">ARTLIFE</div>
+                            </div>
+                        </div>
+
+                        {/* ── INFO PAGE (the actual tearsheet) ── */}
+                        <div className="ts-page ts-info-page" onClick={() => onSelectWork && onSelectWork(work)}>
+                            {/* Centered header — small caps, Gagosian style */}
+                            <div className="ts-info-header">
+                                {artistName.toUpperCase()}, <em>{title.toUpperCase()}</em>{year ? ` (${year})` : ''}
+                            </div>
+
+                            {/* Artist + metadata block */}
+                            <div className="ts-info-body">
+                                <div className="ts-info-artist" style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                                    <span><strong>{artistName}</strong>{lifespan ? ` (${lifespan})` : ''}</span>
+                                    {work._artist && (work._artist.heat || 0) > 0 && (
+                                        <span style={{ fontSize: 8, color: '#999' }}>Heat {Math.round(work._artist.heat)}</span>
+                                    )}
+                                </div>
+                                <div className="ts-info-title-line">
+                                    <em>{title}</em>{year ? `, ${year}` : ''}
+                                </div>
+                                <div className="ts-info-meta">{medium}</div>
+                                {dimensions && (
+                                    <div className="ts-info-meta">
+                                        {dimensions}{dimensionsIn ? ` (${dimensionsIn})` : ''}
+                                    </div>
+                                )}
+                                {edition && <div className="ts-info-meta">{edition}</div>}
+                                {signed && <div className="ts-info-meta">{signed}</div>}
+
+                                {/* Price block — intel-gated */}
+                                {intel >= 40 && (
+                                    <div className="ts-info-price-block">
+                                        {work._isMarket
+                                            ? <>
+                                                <div className="ts-info-price-label">Net Price</div>
+                                                <div className="ts-info-price">{tearsheetPrice(price)}</div>
+                                                <div className="ts-info-avail">ONE AVAILABLE</div>
+                                            </>
+                                            : <>
+                                                <div className="ts-info-price-label">Current Estimate</div>
+                                                <div className="ts-info-price">{tearsheetPrice(price)}</div>
+                                            </>
+                                        }
+                                        {isOwned && work.purchasePrice && (
+                                            <div className="ts-info-acquired">
+                                                Acquired {tearsheetPrice(work.purchasePrice)}
+                                                {work.purchaseWeek ? `, Week ${work.purchaseWeek}` : ''}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Provenance — always show for owned works */}
+                                <div className="ts-info-section">
+                                    <div className="ts-info-section-head">Provenance</div>
+                                    {provChain.length > 0
+                                        ? provChain.map((entry, j) => (
+                                            <div key={j} className="ts-info-section-item">{entry}</div>
+                                        ))
+                                        : provString
+                                            ? <div className="ts-info-section-item">{provString}</div>
+                                            : null
+                                    }
+                                    {runtimeProv.map((p, j) => (
+                                        <div key={`rt-${j}`} className="ts-info-section-item">
+                                            {p.type === 'BUY' ? 'Acquired by the present owner' : p.type}
+                                            {p.city ? `, ${p.city}` : ''}
+                                            {p.price ? `, ${tearsheetPrice(p.price)}` : ''}
+                                            {p.week ? `, Week ${p.week}` : ''}
+                                        </div>
+                                    ))}
+                                    {isOwned && provChain.length === 0 && runtimeProv.length === 0 && (
+                                        <div className="ts-info-section-item">ArtLife, {city}</div>
+                                    )}
+                                    {work._isMarket && provChain.length === 0 && (
+                                        <div className="ts-info-section-item">Private collection</div>
+                                    )}
+                                </div>
+
+                                {/* Exhibited */}
+                                {exhibitions.length > 0 && intel >= 50 && (
+                                    <div className="ts-info-section">
+                                        <div className="ts-info-section-head">Exhibited</div>
+                                        {exhibitions.map((ex, j) => (
+                                            <div key={j} className="ts-info-section-item">{ex}</div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Literature */}
+                                {literature.length > 0 && intel >= 70 && (
+                                    <div className="ts-info-section">
+                                        <div className="ts-info-section-head">Literature</div>
+                                        {literature.map((lit, j) => (
+                                            <div key={j} className="ts-info-section-item">{lit}</div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Gallery address block — Gagosian/Seventh House style */}
+                            <div className="ts-info-address">
+                                <div className="ts-address-brand">ARTLIFE</div>
+                                <div className="ts-address-line">980 Madison Avenue</div>
+                                <div className="ts-address-line">{city}</div>
+                                <div className="ts-address-line">artlife.game</div>
+                            </div>
+
+                            {/* Page footer */}
+                            <div className="ts-page-brand">G A G O S I A N</div>
+                        </div>
+                    </React.Fragment>
+                );
+            })}
+
+            {/* ── Additional panels — shared 2-col grid ── */}
+            <SharedPanelGrid prefix="ts" showPanel={showPanel} intel={intel} feed={feed}
+                selectedArtist={selectedArtist} onSelectArtist={onSelectArtist}
+                onSelectTrade={onSelectTrade} onListWork={onListWork} onSelectWork={onSelectWork} />
+
+            {/* Final page — gallery locations */}
+            <div className="ts-page ts-back-page">
+                <div className="ts-back-content">
+                    <div className="ts-back-brand">A R T L I F E</div>
+                    <div className="ts-back-locations">
+                        New York &middot; London &middot; Basel &middot; Hong Kong &middot; Los Angeles
+                    </div>
+                    <div className="ts-back-contact">
+                        <div>980 Madison Avenue, New York</div>
+                        <div>artlife.game</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 15B. Artist Detail Card — artnet-style artist page inline
+//
+// Shows artist bio, tier, heat, owned works, market availability,
+// price history sparkline. Displayed in Artnet view when an
+// artist name is clicked in the table.
+// ══════════════════════════════════════════════════════════════
+function ArtistDetailCard({ artist, intel, items, feed, onClose }) {
+    if (!artist) return null;
+
+    const tier = artist.tier || 'emerging';
+    const heat = artist.heat || 0;
+    const flavor = artist.flavor || '';
+    const medium = artist.medium || '';
+
+    // Works by this artist in current view
+    const artistWorks = items.filter(w =>
+        w.artistId === artist.id || w._artist?.id === artist.id
+    );
+    const ownedWorks = artistWorks.filter(w => w._owned);
+    const marketWorks = artistWorks.filter(w => w._isMarket);
+
+    // Price range
+    const prices = artistWorks.map(w => w.currentVal).filter(Boolean);
+    const priceMin = prices.length > 0 ? Math.min(...prices) : 0;
+    const priceMax = prices.length > 0 ? Math.max(...prices) : 0;
+
+    // Sparkline data from feed
+    const sparkData = feed?.liveSparklines?.[artist.id] || [];
+
+    // Index from leaderboard
+    const lb = feed?.leaderboard?.find(l => l.id === artist.id);
+    const index = lb?.index || 0;
+    const indexDelta = lb?.delta || 0;
+
+    return (
+        <div className="an-artist-detail">
+            <div className="an-ad-header">
+                <div className="an-ad-name">{artist.name}</div>
+                <button className="an-ad-close" onClick={onClose}>✕</button>
+            </div>
+            <div className="an-ad-meta">
+                <span className="an-ad-medium">{medium}</span>
+                <span className="an-ad-tier">{tier.toUpperCase()}</span>
+                <span className="an-ad-heat">
+                    Heat: {heat}
+                    <span className="an-ad-heat-bar">
+                        <span className="an-ad-heat-fill" style={{ width: `${Math.min(heat, 100)}%` }} />
+                    </span>
+                </span>
+            </div>
+            {flavor && intel >= 30 && (
+                <div className="an-ad-flavor">{flavor}</div>
+            )}
+            <div className="an-ad-stats">
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">INDEX</span>
+                    <span className={`an-ad-stat-value ${indexDelta > 0 ? 'up' : indexDelta < 0 ? 'down' : ''}`}>
+                        {index.toFixed(1)}
+                        {indexDelta !== 0 && ` (${indexDelta > 0 ? '+' : ''}${indexDelta.toFixed(1)})`}
+                    </span>
+                </div>
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">PRICE RANGE</span>
+                    <span className="an-ad-stat-value">
+                        {prices.length > 0 ? `$${fmtNum(priceMin)} – $${fmtNum(priceMax)}` : 'No data'}
+                    </span>
+                </div>
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">IN COLLECTION</span>
+                    <span className="an-ad-stat-value">{ownedWorks.length} works</span>
+                </div>
+                <div className="an-ad-stat">
+                    <span className="an-ad-stat-label">ON MARKET</span>
+                    <span className="an-ad-stat-value">{marketWorks.length} available</span>
+                </div>
+            </div>
+            {sparkData.length >= 2 && (
+                <div className="an-ad-chart">
+                    <span className="an-ad-chart-label">PRICE TREND</span>
+                    <MiniSparkline data={sparkData} width={200} height={36} color="#cc0000" />
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 15C. ArtnetLotDetail — Artnet-styled inline artwork detail
+//
+// Opens below clicked row in the Artnet view. Matches artnet.com
+// lot result page: clean white bg, red accents, Helvetica Neue,
+// data-dense metadata, provenance, market data, price history,
+// and action buttons. Intel-gated progressive disclosure.
+// ══════════════════════════════════════════════════════════════
+function ArtnetLotDetail({ work, intel, feed, onClose, onBuy, onHaggle, onList, onImageClick, onInquireEmail }) {
+    if (!work) return null;
+
+    const s = GameState.state;
+    const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+    const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || work.artistId));
+    const artistName = artwork.artist || artist?.name || 'Unknown Artist';
+    const title = artwork.title || work.title || 'Untitled';
+    const medium = artwork.medium || work.medium || 'Mixed Media';
+    const year = artwork.yearCreated || artwork.year || work.yearCreated || '';
+    const dimensions = artwork.dimensions || '';
+    const description = artwork.description || '';
+    const imageUrl = resolveImageUrl(artwork);
+    const price = work.currentVal || work.price || work.askingPrice || 0;
+    const purchasePrice = work.purchasePrice || work.basePrice || 0;
+    const genre = artwork.genre || '';
+    const tier = artist?.tier || artwork.tier || 'mid_career';
+    const heat = artist?.heat || 0;
+    const trend = heat > 60 ? 'RISING' : heat < 30 ? 'FALLING' : 'STABLE';
+    const trendColor = { RISING: '#2a6e2a', FALLING: '#cc0000', STABLE: '#666' };
+    const tierLabels = { 'blue-chip': 'BLUE CHIP', hot: 'HOT', 'mid-career': 'MID-CAREER', emerging: 'EMERGING', speculative: 'SPECULATIVE' };
+
+    // Provenance
+    const provChain = artwork.provenanceChain || [];
+    const provString = typeof artwork.provenance === 'string' ? artwork.provenance : '';
+    const runtimeProv = Array.isArray(work.provenance) ? work.provenance : [];
+
+    // Trade history for this artwork
+    const tradeLog = MarketSimulator.getTradesByArtwork?.(work.id) || [];
+
+    // Sparkline data
+    const sparkData = feed?.liveSparklines?.[artist?.id] || [];
+
+    // ROI calc
+    const roi = purchasePrice > 0 ? ((price - purchasePrice) / purchasePrice * 100).toFixed(1) : null;
+
+    // Lifespan
+    const born = artwork.artistBorn || artist?.born;
+    const died = artwork.artistDied || artist?.died;
+    const lifespan = born ? (died ? `${born}–${died}` : `b. ${born}`) : '';
+
+    // Watchlist
+    const isWatched = TerminalAPI.watchlist.isWatched(work.id);
+    const toggleWatch = () => {
+        if (isWatched) TerminalAPI.watchlist.remove(work.id);
+        else TerminalAPI.watchlist.add('artwork', work.id, price);
+    };
+
+    // Market value for listing
+    let marketValue = 0;
+    try { marketValue = MarketManager.calculatePrice(work, false); }
+    catch { marketValue = price; }
+
+    return (
+        <div className="an-lot-detail">
+            {/* Red accent bar */}
+            <div className="an-ld-accent" />
+
+            <div className="an-ld-content">
+                {/* Left: Image + quick actions */}
+                <div className="an-ld-left">
+                    {imageUrl ? (
+                        <img className="an-ld-image" src={imageUrl} alt={title}
+                            style={{ cursor: 'zoom-in' }}
+                            onClick={() => onImageClick?.(imageUrl)}
+                            title="Click to view full size"
+                        />
+                    ) : (
+                        <div className="an-ld-image-placeholder">
+                            <span className="an-ld-image-text">{title}</span>
+                        </div>
+                    )}
+                    <div className="an-ld-quick-actions">
+                        <button className="an-ld-watch" onClick={toggleWatch}>
+                            {isWatched ? '★ Watching' : '☆ Watch'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Center: Metadata */}
+                <div className="an-ld-center">
+                    <div className="an-ld-artist-line">
+                        <span className="an-ld-artist">{artistName}</span>
+                        {lifespan && <span className="an-ld-lifespan">{lifespan}</span>}
+                    </div>
+                    <div className="an-ld-title">
+                        <em>{title}</em>{year ? `, ${year}` : ''}
+                    </div>
+                    <div className="an-ld-medium">{medium}</div>
+                    {dimensions && <div className="an-ld-dimensions">{dimensions}</div>}
+                    {genre && <div className="an-ld-genre">{genre}</div>}
+                    {description && intel >= 40 && (
+                        <div className="an-ld-description">{description}</div>
+                    )}
+
+                    {/* Market tags */}
+                    <div className="an-ld-tags">
+                        <span className="an-ld-tag an-ld-tag-tier">{tierLabels[tier] || tier.toUpperCase()}</span>
+                        <span className="an-ld-tag" style={{ color: trendColor[trend] }}>{trend}</span>
+                        {work._owned && <span className="an-ld-tag an-ld-tag-owned">IN COLLECTION</span>}
+                        {work._isMarket && <span className="an-ld-tag an-ld-tag-market">FOR SALE</span>}
+                    </div>
+
+                    {/* Provenance */}
+                    {intel >= 30 && (provChain.length > 0 || provString) && (
+                        <div className="an-ld-section">
+                            <div className="an-ld-section-label">PROVENANCE</div>
+                            {provChain.length > 0
+                                ? provChain.map((entry, i) => (
+                                    <div key={i} className="an-ld-prov-item">{entry}</div>
+                                ))
+                                : <div className="an-ld-prov-item">{provString}</div>
+                            }
+                        </div>
+                    )}
+
+                    {/* Runtime provenance — game trades */}
+                    {intel >= 60 && runtimeProv.length > 0 && (
+                        <div className="an-ld-section">
+                            <div className="an-ld-section-label">TRANSACTION HISTORY</div>
+                            {runtimeProv.map((p, i) => (
+                                <div key={i} className="an-ld-prov-item">
+                                    {p.type || 'Transfer'} — Week {p.week}
+                                    {p.city ? `, ${p.city}` : ''}
+                                    {p.price ? ` — $${fmtNum(p.price)}` : ''}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Recent trades for this work */}
+                    {intel >= 40 && tradeLog.length > 0 && (
+                        <div className="an-ld-section">
+                            <div className="an-ld-section-label">AUCTION RESULTS ({tradeLog.length})</div>
+                            <table className="an-ld-trades-table">
+                                <thead>
+                                    <tr>
+                                        <th>Week</th><th>Price</th><th>Buyer</th><th>Seller</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {tradeLog.slice(-5).reverse().map((t, i) => (
+                                        <tr key={i}>
+                                            <td>{t.week || '—'}</td>
+                                            <td>${fmtNum(t.price || 0)}</td>
+                                            <td>{mask(t.buyer, intel, 60, '???')}</td>
+                                            <td>{mask(t.seller, intel, 60, '???')}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right: Price + Market data + Actions */}
+                <div className="an-ld-right">
+                    {/* Price block */}
+                    <div className="an-ld-price-block">
+                        <div className="an-ld-price-label">PRICE REALIZED</div>
+                        <div className="an-ld-price">${fmtNum(price)}</div>
+                        {purchasePrice > 0 && (
+                            <div className="an-ld-price-detail">
+                                Cost basis: ${fmtNum(purchasePrice)}
+                                {roi !== null && (
+                                    <span className={Number(roi) >= 0 ? 'an-gain' : 'an-loss'}>
+                                        {' '}({Number(roi) >= 0 ? '+' : ''}{roi}%)
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                        {work.estLow && work.estHigh && (
+                            <div className="an-ld-estimate">
+                                Estimate: ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Market data */}
+                    {intel >= 40 && artist && (
+                        <div className="an-ld-market">
+                            <div className="an-ld-market-row">
+                                <span className="an-ld-market-label">HEAT INDEX</span>
+                                <span className="an-ld-market-val">{Math.round(heat)}</span>
+                                <div className="an-ld-heat-bar">
+                                    <div className="an-ld-heat-fill" style={{ width: `${Math.min(heat, 100)}%` }} />
+                                </div>
+                            </div>
+                            <div className="an-ld-market-row">
+                                <span className="an-ld-market-label">TREND</span>
+                                <span className="an-ld-market-val" style={{ color: trendColor[trend] }}>{trend}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Price trend sparkline */}
+                    {sparkData.length >= 2 && (
+                        <div className="an-ld-sparkline">
+                            <span className="an-ld-spark-label">PRICE TREND</span>
+                            <MiniSparkline data={sparkData} width={120} height={28} color="#cc0000" />
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="an-ld-actions">
+                        {(work._isMarket || work._ownerType === 'market') && work._ownerData && (
+                            <>
+                                {!(work._ownerData.inquire || work.inquire) ? (
+                                    <>
+                                        <button className="an-ld-btn an-ld-btn-primary"
+                                            disabled={!hasAP(1) || (s?.cash || 0) < (work._ownerData.askPrice || 0)}
+                                            onClick={() => onBuy(work._ownerData)}>
+                                            BUY NOW <span className="an-ld-ap">[1 AP]</span>
+                                        </button>
+                                        <button className="an-ld-btn an-ld-btn-secondary"
+                                            disabled={!hasAP(2)}
+                                            onClick={() => onHaggle(work._ownerData)}>
+                                            COUNTER OFFER <span className="an-ld-ap">[2 AP]</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button className="an-ld-btn an-ld-btn-primary"
+                                        disabled={!hasAP(2)}
+                                        onClick={() => {
+                                            if (onInquireEmail) {
+                                                onInquireEmail(work, work._ownerData);
+                                            } else {
+                                                onHaggle(work._ownerData);
+                                            }
+                                        }}>
+                                        INQUIRE <span className="an-ld-ap">[2 AP]</span>
+                                    </button>
+                                )}
+                            </>
+                        )}
+                        {work._ownerType === 'npc' && (
+                            <button className="an-ld-btn an-ld-btn-primary"
+                                style={{ background: '#cc0000', borderColor: '#cc0000' }}
+                                disabled={!hasAP(2)}
+                                onClick={() => {
+                                    const npc = work._ownerData;
+                                    const currVal = work.currentVal || 0;
+                                    const askPrice = Math.floor(currVal * (1 + (Math.random() * 0.4)));
+                                    onHaggle({ mode: 'buy', work, npc, askingPrice: askPrice, playerOffer: currVal });
+                                }}>
+                                INQUIRE <span className="an-ld-ap">[2 AP]</span>
+                            </button>
+                        )}
+                        {work._ownerType === 'unknown' && (
+                            <button className="an-ld-btn an-ld-btn-secondary" disabled style={{ opacity: 0.5 }}>
+                                LOCATION UNKNOWN
+                            </button>
+                        )}
+                        {(work._owned || work._ownerType === 'player') && (
+                            <button className="an-ld-btn an-ld-btn-secondary"
+                                disabled={!hasAP(2)}
+                                onClick={() => onList(work)}>
+                                LIST FOR SALE <span className="an-ld-ap">[2 AP]</span>
+                            </button>
+                        )}
+                    </div>
+
+                    <button className="an-ld-close" onClick={onClose}>✕ CLOSE</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 16. Artnet Auction Results View
+//
+// Clean, data-dense tabular layout inspired by artnet.com's
+// price database. White bg, red accent header, sans-serif,
+// lot-by-lot auction results with estimate ranges and ROI.
+// Sortable columns (click header to sort).
+// ══════════════════════════════════════════════════════════════
+function ArtnetView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectOrder, onSelectTrade, onListWork, onHaggle, onImageClick, onInquireEmail }) {
+    const s = GameState.state;
+    const portfolio = s?.portfolio || [];
+    const week = s?.week || 1;
+    const city = s?.currentCity || 'New York';
+    const [sortKey, setSortKey] = useState('lot');
+    const [sortDir, setSortDir] = useState('asc');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterTier, setFilterTier] = useState('all');
+    const [filterGenre, setFilterGenre] = useState('all');
+    const [filterOwner, setFilterOwner] = useState('all');
+    const [detailArtist, setDetailArtist] = useState(null);
+    const [detailWork, setDetailWork] = useState(null);
+
+    const toggleSort = (key) => {
+        if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        else { setSortKey(key); setSortDir('asc'); }
+    };
+
+    // Enrich portfolio
+    const showCollection = showPanel('collection');
+    const showMarket = showPanel('orderbook');
+    const showDatabase = showPanel('database');
+
+    const ownedItems = showCollection ? portfolio.map((work, i) => {
+        const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(work, false); }
+        catch { currentVal = work.price || work.basePrice || 0; }
+        const purchasePrice = work.purchasePrice || work.basePrice || currentVal;
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || work.artistId));
+        // Estimate range: ±15% of current value
+        const estLow = Math.round(currentVal * 0.85);
+        const estHigh = Math.round(currentVal * 1.15);
+        return {
+            ...work, ...artwork, currentVal, purchasePrice,
+            estLow, estHigh, _artist: artist, _lot: i + 1, _owned: true,
+        };
+    }) : [];
+
+    const marketItems = showMarket ? MarketSimulator.getOpenSellOrders().map((order, i) => {
+        const artwork = ARTWORKS.find(a => a.id === order.artworkId) || {};
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || order.artistId));
+        const price = order.askPrice || 0;
+        return {
+            ...artwork, ...order, currentVal: price, purchasePrice: 0,
+            estLow: Math.round(price * 0.85), estHigh: Math.round(price * 1.15),
+            _artist: artist, _lot: ownedItems.length + i + 1, _owned: false,
+            _isMarket: true, _order: order,
+        };
+    }) : [];
+
+    // Database View (All Artworks)
+    const databaseItems = showDatabase ? ARTWORKS.map((artwork, i) => {
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(artwork, false); }
+        catch { currentVal = artwork.basePrice || 0; }
+        const artist = MarketManager.artists?.find(a => a.id === artwork.artistId);
+
+        let ownerLabel = 'Unknown';
+        let ownerType = 'unknown'; // 'player', 'market', 'npc', 'unknown'
+        let ownerData = null;
+
+        // Check player
+        if (portfolio.some(w => w.id === artwork.id)) {
+            ownerLabel = 'Player Collection';
+            ownerType = 'player';
+        }
+        // Check market
+        else {
+            const openOrder = MarketSimulator.getOpenSellOrders().find(o => o.artworkId === artwork.id);
+            if (openOrder) {
+                ownerLabel = 'Open Market';
+                ownerType = 'market';
+                currentVal = openOrder.askPrice;
+                ownerData = openOrder;
+            }
+            // Check NPCs
+            else {
+                const npcStore = useNPCStore.getState();
+                const npcs = npcStore.contacts || [];
+                const npcOwner = npcs.find(n => n.collection?.owned?.includes(artwork.id) || n.collection?.forSale?.includes(artwork.id));
+                if (npcOwner) {
+                    ownerLabel = npcOwner.name || npcOwner.id;
+                    ownerType = 'npc';
+                    ownerData = npcOwner;
+                } else if (artwork.ownerId) {
+                    // Fallback to initial owner ID if not yet resolved and not empty
+                    if (artwork.ownerId === 'unknown' || artwork.ownerId === 'market' || artwork.ownerId === 'player') {
+                        ownerLabel = 'Unknown Location';
+                        ownerType = 'unknown';
+                    } else {
+                        const fallbackNpc = npcs.find(n => n.id === artwork.ownerId);
+                        ownerLabel = fallbackNpc ? (fallbackNpc.name || fallbackNpc.id) : 'Private Collection';
+                        ownerType = fallbackNpc ? 'npc' : 'unknown';
+                        ownerData = fallbackNpc || null;
+                    }
+                } else {
+                    ownerLabel = 'Private Collection';
+                }
+            }
+        }
+
+        return {
+            ...artwork, currentVal, purchasePrice: 0,
+            estLow: Math.round(currentVal * 0.85), estHigh: Math.round(currentVal * 1.15),
+            _artist: artist, _lot: i + 1, _owned: ownerType === 'player',
+            _ownerLabel: ownerLabel, _ownerType: ownerType, _ownerData: ownerData
+        };
+    }) : [];
+
+    let allItems = showDatabase ? databaseItems : [...ownedItems, ...marketItems];
+
+    // Collect unique genres/tiers for filter dropdowns
+    const allGenres = useMemo(() => {
+        const set = new Set();
+        (showDatabase ? ARTWORKS : [...(portfolio || [])]).forEach(w => { if (w.genre) set.add(w.genre); });
+        return Array.from(set).sort();
+    }, [showDatabase, portfolio]);
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase();
+        allItems = allItems.filter(w =>
+            (w.artist || '').toLowerCase().includes(q) ||
+            (w.title || '').toLowerCase().includes(q) ||
+            (w.medium || '').toLowerCase().includes(q)
+        );
+    }
+
+    // Filter by tier
+    if (filterTier !== 'all') {
+        allItems = allItems.filter(w => w.tier === filterTier);
+    }
+    // Filter by genre
+    if (filterGenre !== 'all') {
+        allItems = allItems.filter(w => w.genre === filterGenre);
+    }
+    // Filter by owner type (database view only)
+    if (showDatabase && filterOwner !== 'all') {
+        allItems = allItems.filter(w => w._ownerType === filterOwner);
+    }
+
+    // Sort
+    const sortFn = {
+        lot: (a, b) => a._lot - b._lot,
+        artist: (a, b) => (a.artist || '').localeCompare(b.artist || ''),
+        price: (a, b) => a.currentVal - b.currentVal,
+        title: (a, b) => (a.title || '').localeCompare(b.title || ''),
+        year: (a, b) => (a.yearCreated || a.year || 0) - (b.yearCreated || b.year || 0),
+    };
+    if (sortFn[sortKey]) {
+        allItems.sort(sortFn[sortKey]);
+        if (sortDir === 'desc') allItems.reverse();
+    }
+
+    // Summary stats
+    const totalValue = ownedItems.reduce((s, w) => s + w.currentVal, 0);
+    const totalCost = ownedItems.reduce((s, w) => s + w.purchasePrice, 0);
+
+    const SortIcon = ({ k }) => sortKey === k ? (sortDir === 'asc' ? ' ▲' : ' ▼') : '';
+
+    // Sale statistics from trade log
+    const tradeLog = MarketSimulator.getTradeLog();
+    const transactions = s?.transactions || [];
+
+    // Aggregate by artist
+    const artistStats = useMemo(() => {
+        const stats = {};
+        allItems.forEach(w => {
+            const name = w.artist || 'Unknown';
+            if (!stats[name]) stats[name] = { name, lots: 0, totalValue: 0, owned: 0, market: 0 };
+            stats[name].lots++;
+            stats[name].totalValue += w.currentVal || 0;
+            if (w._owned) stats[name].owned++;
+            else stats[name].market++;
+        });
+        return Object.values(stats).sort((a, b) => b.totalValue - a.totalValue);
+    }, [allItems]);
+
+    // Trade volume this session
+    const totalTradeVolume = tradeLog.reduce((s, t) => s + (t.price || 0), 0);
+    const playerSales = transactions.filter(t => t.action === 'SELL');
+    const playerBuys = transactions.filter(t => t.action === 'BUY');
+    const realizedPnl = playerSales.reduce((s, t) => s + (t.profit || 0), 0);
+
+    const [showSaleStats, setShowSaleStats] = useState(false);
+    const [listExpanded, setListExpanded] = useState(false);
+
+    // Live market data for pulse header
+    const tickSnap = useMemo(() => {
+        try { return MarketManager.getTickSnapshot(); } catch { return null; }
+    }, [allItems]);
+    const composite = tickSnap?.composite || 0;
+    const cycle = tickSnap?.cycle || 'flat';
+    const sectors = tickSnap?.sectors || {};
+    const cycleLabel = { bull: '📈 BULL', bear: '📉 BEAR', flat: '📊 FLAT' };
+    const cycleClr = { bull: '#2f7a3b', bear: '#b91c1c', flat: '#555' };
+    const sectorClr = { 'blue-chip': '#8b7332', hot: '#b91c1c', 'mid-career': '#1d4ed8', emerging: '#15803d' };
+
+    return (
+        <div className="an-view">
+            {/* Red header bar */}
+            <div className="an-header-bar">
+                <span className="an-header-title">ARTLIFE PRICE DATABASE</span>
+                <span className="an-header-sub">Week {week} · {city}</span>
+            </div>
+
+            {/* ── Market Pulse Strip ── */}
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: 16, padding: '6px 16px',
+                background: '#f8f7f5', borderBottom: '1px solid #e5e5e5',
+                fontFamily: '\'Helvetica Neue\', Arial, sans-serif', fontSize: 11, color: '#333',
+                flexWrap: 'wrap',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 9, color: '#999', textTransform: 'uppercase', letterSpacing: 1 }}>Art Index</span>
+                    <span style={{ fontSize: 16, fontWeight: 'bold', color: '#111' }}>{composite.toLocaleString()}</span>
+                    {tickSnap && <MiniSparkline data={tickSnap.artists?.map(a => a.index) || []} width={50} height={14} color="#cc0000" />}
+                </div>
+                <span style={{
+                    fontSize: 9, padding: '2px 8px', borderRadius: 2, fontWeight: 'bold',
+                    background: `${cycleClr[cycle]}11`, color: cycleClr[cycle], letterSpacing: 0.5,
+                }}>{cycleLabel[cycle] || 'FLAT'}</span>
+                {Object.entries(sectors).map(([tier, data]) => (
+                    <span key={tier} style={{ fontSize: 9, color: sectorClr[tier] || '#666' }}>
+                        {tier.replace('-', ' ').split(' ').map(w => w[0]?.toUpperCase()).join('')} {data.index}
+                    </span>
+                ))}
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: '#bbb' }}>
+                    {tradeLog.length} trades · Vol ${fmtNum(totalTradeVolume)}
+                </span>
+            </div>
+
+            {/* Search bar — artnet-style */}
+            <div className="an-search-bar">
+                <input
+                    className="an-search-input"
+                    type="text"
+                    placeholder="Search artist, title, or medium..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
+                <span className="an-result-count">{fmtNum(allItems.length)} results</span>
+            </div>
+
+            {/* Filter bar */}
+            <div className="an-filter-bar" style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '6px 16px',
+                background: '#fafafa', borderBottom: '1px solid #e5e5e5',
+                fontFamily: "'Helvetica Neue', Arial, sans-serif", fontSize: 11, color: '#555',
+                flexWrap: 'wrap',
+            }}>
+                <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: '#999' }}>Filters</span>
+                <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
+                    style={{ padding: '3px 8px', border: '1px solid #ddd', background: '#fff', fontSize: 11, color: '#333', cursor: 'pointer' }}>
+                    <option value="all">All Tiers</option>
+                    <option value="classic">Classic</option>
+                    <option value="mid_career">Mid-Career</option>
+                    <option value="speculative">Speculative</option>
+                </select>
+                {allGenres.length > 0 && (
+                    <select value={filterGenre} onChange={e => setFilterGenre(e.target.value)}
+                        style={{ padding: '3px 8px', border: '1px solid #ddd', background: '#fff', fontSize: 11, color: '#333', cursor: 'pointer' }}>
+                        <option value="all">All Genres</option>
+                        {allGenres.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                )}
+                {showDatabase && (
+                    <select value={filterOwner} onChange={e => setFilterOwner(e.target.value)}
+                        style={{ padding: '3px 8px', border: '1px solid #ddd', background: '#fff', fontSize: 11, color: '#333', cursor: 'pointer' }}>
+                        <option value="all">All Owners</option>
+                        <option value="player">My Collection</option>
+                        <option value="market">On Market</option>
+                        <option value="npc">NPC Holdings</option>
+                        <option value="unknown">Private/Unknown</option>
+                    </select>
+                )}
+                {(filterTier !== 'all' || filterGenre !== 'all' || filterOwner !== 'all' || searchTerm.trim()) && (
+                    <button onClick={() => { setFilterTier('all'); setFilterGenre('all'); setFilterOwner('all'); setSearchTerm(''); }}
+                        style={{ padding: '3px 10px', border: '1px solid #ccc', background: '#fff', fontSize: 10, color: '#999', cursor: 'pointer', letterSpacing: 0.5 }}>
+                        Clear All
+                    </button>
+                )}
+            </div>
+
+            {/* Summary strip */}
+            {showPanel('networth') && (
+                <div className="an-summary">
+                    <span>Collection: {ownedItems.length} lots</span>
+                    <span>Total Value: ${fmtNum(totalValue)}</span>
+                    <span>Total Cost: ${fmtNum(totalCost)}</span>
+                    <span>P&L: <span className={totalValue - totalCost >= 0 ? 'an-gain' : 'an-loss'}>
+                        {totalValue - totalCost >= 0 ? '+' : ''}${fmtNum(totalValue - totalCost)}
+                    </span></span>
+                </div>
+            )}
+
+            {/* Sale statistics toggle */}
+            <div className="an-stats-toggle">
+                <button className="an-stats-btn" onClick={() => setShowSaleStats(!showSaleStats)}>
+                    {showSaleStats ? '▼' : '▶'} SALE STATISTICS
+                </button>
+                <span className="an-stats-summary">
+                    {tradeLog.length} trades · Volume ${fmtNum(totalTradeVolume)}
+                    {playerSales.length > 0 && ` · ${playerSales.length} sales`}
+                    {playerBuys.length > 0 && ` · ${playerBuys.length} purchases`}
+                </span>
+            </div>
+
+            {showSaleStats && (
+                <div className="an-sale-stats">
+                    <div className="an-ss-grid">
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">TOTAL LOTS</div>
+                            <div className="an-ss-card-value">{allItems.length}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">COLLECTION</div>
+                            <div className="an-ss-card-value">{ownedItems.length}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">ON MARKET</div>
+                            <div className="an-ss-card-value">{marketItems.length}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">TRADE VOLUME</div>
+                            <div className="an-ss-card-value">${fmtNum(totalTradeVolume)}</div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">REALIZED P&L</div>
+                            <div className={`an-ss-card-value ${realizedPnl >= 0 ? 'an-gain' : 'an-loss'}`}>
+                                {realizedPnl >= 0 ? '+' : ''}${fmtNum(Math.abs(realizedPnl))}
+                            </div>
+                        </div>
+                        <div className="an-ss-card">
+                            <div className="an-ss-card-label">UNREALIZED P&L</div>
+                            <div className={`an-ss-card-value ${totalValue - totalCost >= 0 ? 'an-gain' : 'an-loss'}`}>
+                                {totalValue - totalCost >= 0 ? '+' : ''}${fmtNum(Math.abs(totalValue - totalCost))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* By artist breakdown */}
+                    {artistStats.length > 0 && (
+                        <div className="an-ss-artist-table">
+                            <div className="an-ss-artist-header">PERFORMANCE BY ARTIST</div>
+                            <table className="an-ss-table">
+                                <thead>
+                                    <tr>
+                                        <th className="an-ss-th">Artist</th>
+                                        <th className="an-ss-th">Lots</th>
+                                        <th className="an-ss-th">Total Value</th>
+                                        <th className="an-ss-th">Owned</th>
+                                        <th className="an-ss-th">Market</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {artistStats.map(a => (
+                                        <tr key={a.name} className="an-ss-row">
+                                            <td className="an-ss-td an-ss-artist-name">{a.name}</td>
+                                            <td className="an-ss-td">{a.lots}</td>
+                                            <td className="an-ss-td">${fmtNum(a.totalValue)}</td>
+                                            <td className="an-ss-td">{a.owned}</td>
+                                            <td className="an-ss-td">{a.market}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {allItems.length === 0 ? (
+                <div className="an-empty">No auction results to display. Toggle Collection or Order Book panels.</div>
+            ) : (
+                <table className="an-table">
+                    <thead>
+                        <tr>
+                            <th className="an-th" onClick={() => toggleSort('lot')}>Lot{SortIcon({ k: 'lot' })}</th>
+                            <th className="an-th an-th-img"></th>
+                            <th className="an-th" onClick={() => toggleSort('artist')}>Artist{SortIcon({ k: 'artist' })}</th>
+                            <th className="an-th" onClick={() => toggleSort('title')}>Title{SortIcon({ k: 'title' })}</th>
+                            <th className="an-th" onClick={() => toggleSort('year')}>Year{SortIcon({ k: 'year' })}</th>
+                            <th className="an-th">Medium</th>
+                            {showDatabase && <th className="an-th">Owner</th>}
+                            <th className="an-th" style={{ width: 50 }}>Heat</th>
+                            <th className="an-th">Estimate</th>
+                            <th className="an-th" onClick={() => toggleSort('price')}>Price{SortIcon({ k: 'price' })}</th>
+                            <th className="an-th">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {(listExpanded ? allItems : allItems.slice(0, 10)).map((work, i) => {
+                            const roi = work.purchasePrice > 0
+                                ? ((work.currentVal - work.purchasePrice) / work.purchasePrice * 100).toFixed(1) : null;
+                            const isExpanded = detailWork?.id === work.id || (detailWork?._lot === work._lot && !work.id);
+                            return (
+                                <React.Fragment key={work.id || i}>
+                                    <tr className={`an-row ${isExpanded ? 'an-row-active' : ''}`}
+                                        onClick={() => setDetailWork(isExpanded ? null : work)}
+                                        style={{ cursor: 'pointer' }}>
+                                        <td className="an-td an-lot">{work._lot}</td>
+                                        <td className="an-td an-thumb">
+                                            {resolveImageUrl(work) ? (
+                                                <img className="an-thumb-img" src={resolveImageUrl(work)} alt=""
+                                                    style={{ cursor: 'zoom-in' }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (onImageClick) onImageClick(resolveImageUrl(work));
+                                                    }}
+                                                    title="Click to view full size"
+                                                />
+                                            ) : (
+                                                <div className="an-thumb-placeholder" />
+                                            )}
+                                        </td>
+                                        <td className="an-td an-artist-cell">
+                                            <div className="an-artist-name an-artist-link"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDetailArtist(detailArtist?.id === work._artist?.id ? null : work._artist);
+                                                }}>{work.artist || 'Unknown'}</div>
+                                            {work._artist && (
+                                                <div className="an-artist-meta">
+                                                    {work.artistBorn || work._artist?.born
+                                                        ? `(${work.artistBorn || work._artist?.born}${work.artistDied || work._artist?.died ? '–' + (work.artistDied || work._artist?.died) : ''})`
+                                                        : ''}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="an-td an-title-cell">
+                                            <em>{work.title || 'Untitled'}</em>
+                                        </td>
+                                        <td className="an-td" style={{ fontSize: 11, color: '#666' }}>{work.yearCreated || work.year || '—'}</td>
+                                        <td className="an-td an-medium">{work.medium || 'Mixed Media'}</td>
+                                        {showDatabase && (
+                                            <td className="an-td" style={{ color: work._ownerType === 'player' ? '#15803d' : work._ownerType === 'market' ? '#1d4ed8' : '#666', fontWeight: work._ownerType !== 'unknown' ? 'bold' : 'normal', fontSize: 11 }}>
+                                                {work._ownerLabel}
+                                            </td>
+                                        )}
+                                        <td className="an-td" style={{ padding: '4px 6px' }}>
+                                            {work._artist && (() => {
+                                                const h = work._artist.heat || 0;
+                                                const tier = work._artist.tier || 'emerging';
+                                                const tClr = { 'blue-chip': '#8b7332', hot: '#cc0000', 'mid-career': '#1d4ed8', emerging: '#15803d' };
+                                                return (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <div style={{
+                                                            width: 32, height: 4, background: '#eee', borderRadius: 2, overflow: 'hidden',
+                                                        }}>
+                                                            <div style={{
+                                                                width: `${Math.min(h, 100)}%`, height: '100%',
+                                                                background: tClr[tier] || '#999', borderRadius: 2,
+                                                            }} />
+                                                        </div>
+                                                        <span style={{ fontSize: 8, color: '#999' }}>{Math.round(h)}</span>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td className="an-td an-estimate">
+                                            ${fmtNum(work.estLow)} – ${fmtNum(work.estHigh)}
+                                        </td>
+                                        <td className="an-td an-price">
+                                            <div className="an-price-main">
+                                                {work._isMarket || work._ownerType === 'market' ? (
+                                                    <strong style={{ color: '#111' }}>${fmtNum(work.currentVal)}</strong>
+                                                ) : (
+                                                    intel >= 20 ? `$${fmtNum(work.currentVal)}` : '$???'
+                                                )}
+                                            </div>
+                                            {work._owned && work.purchasePrice > 0 && (
+                                                <div className="an-price-sub">
+                                                    Paid ${fmtNum(work.purchasePrice)}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="an-td an-status">
+                                            {showDatabase ? (
+                                                work._ownerType === 'player' ? (
+                                                    <span className="an-badge an-badge-held">HELD</span>
+                                                ) : work._ownerType === 'market' ? (
+                                                    <span className="an-badge an-badge-available">FOR SALE</span>
+                                                ) : work._ownerType === 'npc' ? (
+                                                    <span className="an-badge" style={{ background: '#f5f5f5', color: '#666', border: '1px solid #ccc' }}>PRIVATE</span>
+                                                ) : (
+                                                    <span className="an-badge" style={{ background: '#fff', color: '#ccc', border: '1px dashed #eee' }}>UNKNOWN</span>
+                                                )
+                                            ) : (
+                                                work._isMarket ? (
+                                                    <span className="an-badge an-badge-available">FOR SALE</span>
+                                                ) : roi !== null ? (
+                                                    <span className={`an-badge ${Number(roi) >= 0 ? 'an-badge-sold' : 'an-badge-loss'}`}>
+                                                        {Number(roi) >= 0 ? '+' : ''}{roi}%
+                                                    </span>
+                                                ) : (
+                                                    <span className="an-badge an-badge-held">HELD</span>
+                                                )
+                                            )}
+                                        </td>
+                                    </tr>
+                                    {isExpanded && (
+                                        <tr className="an-detail-row">
+                                            <td colSpan="11" style={{ padding: 0 }}>
+                                                <ArtnetLotDetail
+                                                    work={work}
+                                                    intel={intel}
+                                                    feed={feed}
+                                                    onClose={() => setDetailWork(null)}
+                                                    onBuy={(order) => { if (onSelectOrder) onSelectOrder(order); }}
+                                                    onHaggle={(order) => { if (onHaggle) onHaggle(order); else if (onSelectOrder) onSelectOrder(order); }}
+                                                    onImageClick={onImageClick}
+                                                    onInquireEmail={onInquireEmail}
+                                                    onList={(w) => { if (onListWork) onListWork(w); }}
+                                                />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            )}
+
+            {allItems.length > 10 && (
+                <div style={{ textAlign: 'center', margin: '16px 0' }}>
+                    <button
+                        className="an-btn"
+                        style={{ padding: '8px 24px', fontSize: 12, letterSpacing: 1 }}
+                        onClick={() => setListExpanded(!listExpanded)}
+                    >
+                        {listExpanded ? 'Collapse List ▲' : `View All ${allItems.length} Artworks ▼`}
+                    </button>
+                </div>
+            )}
+
+            {/* Artist detail card — shown when artist name is clicked */}
+            {detailArtist && (
+                <ArtistDetailCard
+                    artist={detailArtist}
+                    intel={intel}
+                    items={allItems}
+                    feed={feed}
+                    onClose={() => setDetailArtist(null)}
+                />
+            )}
+
+            {/* ── Additional panels below the table — shared 2-col grid ── */}
+            <SharedPanelGrid prefix="an" showPanel={showPanel} intel={intel} feed={feed}
+                selectedArtist={selectedArtist} onSelectArtist={onSelectArtist}
+                onSelectTrade={onSelectTrade} onListWork={onListWork} onSelectWork={onSelectWork} />
+
+            {/* Footer */}
+            <div className="an-footer">
+                <span>artlife.game</span>
+                <span>All prices in USD. Estimates are approximate.</span>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 17. Sotheby's Catalogue View
+//
+// Ultra-luxury lot-by-lot catalogue. Centered single-column,
+// generous margins, serif body + sans headers, blue lot numbers,
+// formal hierarchy matching Sotheby's PDF catalogue pages.
+// ══════════════════════════════════════════════════════════════
+function SothebysView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const portfolio = s?.portfolio || [];
+    const playerName = s?.playerName || 'THE DEALER';
+    const city = s?.currentCity || 'New York';
+    const week = s?.week || 1;
+    const [activeLot, setActiveLot] = useState(null);
+
+    const showCollection = showPanel('collection');
+    const showMarket = showPanel('orderbook');
+
+    const ownedItems = showCollection ? portfolio.map((work, i) => {
+        const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(work, false); }
+        catch { currentVal = work.price || work.basePrice || 0; }
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || work.artistId));
+        return { ...work, ...artwork, currentVal, _artist: artist, _lot: i + 1, _owned: true };
+    }) : [];
+
+    const marketItems = showMarket ? MarketSimulator.getOpenSellOrders().map((order, i) => {
+        const artwork = ARTWORKS.find(a => a.id === order.artworkId) || {};
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || order.artistId));
+        return {
+            ...artwork, ...order, currentVal: order.askPrice || 0,
+            _artist: artist, _lot: ownedItems.length + i + 1, _owned: false,
+            _isMarket: true, _order: order,
+        };
+    }) : [];
+
+    const allItems = [...ownedItems, ...marketItems];
+    const totalEstimate = allItems.reduce((s, w) => s + w.currentVal, 0);
+
+    return (
+        <div className="sb-view">
+            {/* Sale header */}
+            <div className="sb-sale-header">
+                <div className="sb-sale-brand">ARTLIFE</div>
+                <div className="sb-sale-title">Contemporary Art</div>
+                <div className="sb-sale-info">{city} · Week {week} · {allItems.length} Lots</div>
+                <div className="sb-sale-estimate">
+                    Total Estimate ${fmtNum(Math.round(totalEstimate * 0.85))} – ${fmtNum(Math.round(totalEstimate * 1.15))}
+                </div>
+            </div>
+
+            {/* Lot navigation pills */}
+            {allItems.length > 1 && (
+                <div className="sb-lot-nav">
+                    {allItems.map(w => (
+                        <button
+                            key={w._lot}
+                            className={`sb-lot-pill${activeLot === w._lot ? ' sb-lot-active' : ''}`}
+                            onClick={() => {
+                                setActiveLot(w._lot);
+                                document.getElementById(`sb-lot-${w._lot}`)?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                        >{w._lot}</button>
+                    ))}
+                </div>
+            )}
+
+            {allItems.length === 0 ? (
+                <div className="sb-empty">No lots available for this sale.</div>
+            ) : (
+                <div className="sb-lots">
+                    {allItems.map(work => {
+                        const artistName = work.artist || work._artist?.name || 'Unknown Artist';
+                        const title = work.title || 'Untitled';
+                        const year = work.yearCreated || work.year || '';
+                        const medium = work.medium || 'Mixed Media';
+                        const dimensions = work.dimensions || '';
+                        const born = work.artistBorn || work._artist?.born;
+                        const died = work.artistDied || work._artist?.died;
+                        const lifespan = born ? (died ? `${born}\u2013${died}` : `b. ${born}`) : '';
+                        const nationality = work.artistNationality || work._artist?.nationality || '';
+                        const provChain = work.provenanceChain || [];
+                        const provString = typeof work.provenance === 'string' ? work.provenance : '';
+                        const exhibitions = work.exhibitions || [];
+                        const literature = work.literature || [];
+                        const description = work.description || '';
+                        const estLow = Math.round(work.currentVal * 0.85);
+                        const estHigh = Math.round(work.currentVal * 1.15);
+                        const propertyFrom = work._owned
+                            ? `PROPERTY FROM THE COLLECTION OF ${playerName.toUpperCase()}`
+                            : 'PROPERTY OF A PRIVATE COLLECTOR';
+                        const imageUrl = resolveImageUrl(work);
+
+                        // Condition rating based on age
+                        const age = year ? (2026 - Number(year)) : 0;
+                        const condition = age < 5 ? 'Excellent' : age < 20 ? 'Very Good' : age < 50 ? 'Good' : 'Fair';
+
+                        return (
+                            <div key={work.id || work._lot} id={`sb-lot-${work._lot}`}
+                                className="sb-lot" onClick={() => onSelectWork && onSelectWork(work)}>
+                                {/* Blue lot number */}
+                                <div className="sb-lot-number">LOT {work._lot}</div>
+
+                                {/* Property from */}
+                                <div className="sb-property">{propertyFrom}</div>
+
+                                {/* Artwork image */}
+                                <div className="sb-lot-image">
+                                    {imageUrl ? (
+                                        <img className="sb-lot-img" src={imageUrl} alt={title} />
+                                    ) : (
+                                        <div className="sb-lot-placeholder">
+                                            <span>{title}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Artist + metadata */}
+                                <div className="sb-lot-meta">
+                                    <div className="sb-lot-artist">
+                                        {artistName.toUpperCase()}
+                                        {nationality || lifespan ? (
+                                            <span className="sb-lot-origin">
+                                                {' '}({[nationality, lifespan].filter(Boolean).join(', ')})
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    <div className="sb-lot-title"><em>{title}</em>{year ? `, ${year}` : ''}</div>
+                                    <div className="sb-lot-medium">{medium}</div>
+                                    {dimensions && <div className="sb-lot-dims">{dimensions}</div>}
+                                </div>
+
+                                {/* Estimate */}
+                                <div className="sb-estimate">
+                                    ESTIMATE ${fmtNum(estLow)} – ${fmtNum(estHigh)}
+                                </div>
+
+                                {/* Sold / Current value */}
+                                {work._owned && work.purchasePrice > 0 && (
+                                    <div className="sb-sold">
+                                        ACQUIRED FOR ${fmtNum(work.purchasePrice)}
+                                        {work.purchaseWeek ? ` · WEEK ${work.purchaseWeek}` : ''}
+                                    </div>
+                                )}
+                                {work._isMarket && (
+                                    <div className="sb-sold sb-available">
+                                        OFFERED AT ${fmtNum(work.currentVal)}
+                                    </div>
+                                )}
+
+                                {/* Condition */}
+                                <div className="sb-condition">Condition: {condition}</div>
+
+                                {/* Catalogue note */}
+                                {description && intel >= 40 && (
+                                    <div className="sb-catalogue-note">
+                                        <div className="sb-note-label">CATALOGUE NOTE</div>
+                                        <p>{description}</p>
+                                    </div>
+                                )}
+
+                                {/* Provenance */}
+                                {(provChain.length > 0 || provString) && intel >= 30 && (
+                                    <div className="sb-section">
+                                        <div className="sb-section-label">PROVENANCE</div>
+                                        {provChain.length > 0
+                                            ? provChain.map((e, j) => <div key={j} className="sb-section-item">{e}</div>)
+                                            : <div className="sb-section-item">{provString}</div>
+                                        }
+                                    </div>
+                                )}
+
+                                {/* Exhibited */}
+                                {exhibitions.length > 0 && intel >= 50 && (
+                                    <div className="sb-section">
+                                        <div className="sb-section-label">EXHIBITED</div>
+                                        {exhibitions.map((ex, j) => <div key={j} className="sb-section-item">{ex}</div>)}
+                                    </div>
+                                )}
+
+                                {/* Literature */}
+                                {literature.length > 0 && intel >= 70 && (
+                                    <div className="sb-section">
+                                        <div className="sb-section-label">LITERATURE</div>
+                                        {literature.map((lit, j) => <div key={j} className="sb-section-item">{lit}</div>)}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* ── Additional panels below lots — shared 2-col grid ── */}
+            <SharedPanelGrid prefix="sb" showPanel={showPanel} intel={intel} feed={feed}
+                selectedArtist={selectedArtist} onSelectArtist={onSelectArtist}
+                onSelectTrade={onSelectTrade} onListWork={onListWork} onSelectWork={onSelectWork} />
+
+            {/* Sale footer */}
+            <div className="sb-sale-footer">
+                <div className="sb-footer-brand">ARTLIFE</div>
+                <div className="sb-footer-locations">
+                    New York &middot; London &middot; Basel &middot; Hong Kong &middot; Los Angeles
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 18. Deitch Projects View
+//
+// Downtown/underground gallery aesthetic. Bold, graphic,
+// collage/masonry grid. Giant artist names, fluorescent accents,
+// prices hidden by default (click to reveal), zine energy.
+// ══════════════════════════════════════════════════════════════
+function DeitchView({ intel, onSelectWork, showPanel, feed, selectedArtist, onSelectArtist, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const portfolio = s?.portfolio || [];
+    const week = s?.week || 1;
+    const city = s?.currentCity || 'New York';
+    const [revealedPrices, setRevealedPrices] = useState({});
+
+    // Stable fluorescent accent per session — 1 of 4 neon colors
+    const accentColor = useMemo(() => {
+        const colors = ['#ff00ff', '#ffff00', '#ff6600', '#00ff66'];
+        return colors[((week * 3 + 7) % colors.length)];
+    }, [week]);
+
+    const showCollection = showPanel('collection');
+    const showMarket = showPanel('orderbook');
+
+    const ownedItems = showCollection ? portfolio.map(work => {
+        const artwork = ARTWORKS.find(a => a.id === work.id) || work;
+        let currentVal = 0;
+        try { currentVal = MarketManager.calculatePrice(work, false); }
+        catch { currentVal = work.price || work.basePrice || 0; }
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || work.artistId));
+        return { ...work, ...artwork, currentVal, _artist: artist, _owned: true };
+    }) : [];
+
+    const marketItems = showMarket ? MarketSimulator.getOpenSellOrders().map(order => {
+        const artwork = ARTWORKS.find(a => a.id === order.artworkId) || {};
+        const artist = MarketManager.artists?.find(a => a.id === (artwork.artistId || order.artistId));
+        return {
+            ...artwork, ...order, currentVal: order.askPrice || 0,
+            _artist: artist, _owned: false, _isMarket: true, _order: order,
+        };
+    }) : [];
+
+    const allItems = [...ownedItems, ...marketItems];
+
+    // Featured artist — highest heat
+    const featured = allItems.reduce((best, w) => {
+        const heat = w._artist?.heat || 0;
+        return heat > (best?._artist?.heat || 0) ? w : best;
+    }, null);
+
+    const togglePrice = (id, e) => {
+        e.stopPropagation();
+        setRevealedPrices(p => ({ ...p, [id]: !p[id] }));
+    };
+
+    return (
+        <div className="dp-view" style={{ '--dp-accent': accentColor }}>
+            {/* Giant header */}
+            <div className="dp-header">
+                <div className="dp-header-title">DEITCH</div>
+                <div className="dp-header-show">
+                    WEEK {week}: {city.toUpperCase()}
+                </div>
+                {featured && (
+                    <div className="dp-now-showing">
+                        NOW SHOWING: <span className="dp-featured-name">
+                            {(featured.artist || 'Unknown').toUpperCase()}
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            {allItems.length === 0 ? (
+                <div className="dp-empty">
+                    <div className="dp-empty-text">NO WORKS ON VIEW</div>
+                    <div className="dp-empty-sub">Toggle Collection or Order Book panels.</div>
+                </div>
+            ) : (
+                <div className="dp-grid">
+                    {allItems.map((work, i) => {
+                        const artistName = work.artist || 'UNKNOWN';
+                        const title = work.title || 'Untitled';
+                        const year = work.yearCreated || work.year || '';
+                        const medium = work.medium || '';
+                        const imageUrl = resolveImageUrl(work);
+                        const isRevealed = revealedPrices[work.id];
+                        // Card size variation: every 3rd card is large
+                        const isLarge = i % 3 === 0;
+
+                        return (
+                            <div key={work.id || i}
+                                className={`dp-card${isLarge ? ' dp-card-lg' : ''}`}
+                                onClick={() => onSelectWork && onSelectWork(work)}>
+                                {/* Artwork */}
+                                <div className="dp-card-image">
+                                    {imageUrl ? (
+                                        <img className="dp-card-img" src={imageUrl} alt={title} />
+                                    ) : (
+                                        <div className="dp-card-placeholder">
+                                            <span className="dp-card-ph-title">{title}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Giant artist name */}
+                                <div className="dp-card-artist">{artistName.toUpperCase()}</div>
+
+                                {/* Title + year, small */}
+                                <div className="dp-card-title">
+                                    <em>{title}</em>{year ? `, ${year}` : ''}
+                                </div>
+
+                                {/* Medium */}
+                                {medium && <div className="dp-card-medium">{medium}</div>}
+
+                                {/* Price — hidden by default, click to reveal */}
+                                <div className="dp-card-price" onClick={(e) => togglePrice(work.id, e)}>
+                                    {isRevealed && intel >= 40 ? (
+                                        <span className="dp-price-revealed">${fmtNum(work.currentVal)}</span>
+                                    ) : (
+                                        <span className="dp-price-hidden">INQUIRE</span>
+                                    )}
+                                </div>
+
+                                {/* Status sticker */}
+                                {work._isMarket && (
+                                    <div className="dp-sticker">AVAILABLE</div>
+                                )}
+                                {work._owned && (
+                                    <div className="dp-sticker dp-sticker-owned">COLLECTION</div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* ── Additional panels below cards — shared 2-col grid ── */}
+            <SharedPanelGrid prefix="dp" showPanel={showPanel} intel={intel} feed={feed}
+                selectedArtist={selectedArtist} onSelectArtist={onSelectArtist}
+                onSelectTrade={onSelectTrade} onListWork={onListWork} onSelectWork={onSelectWork} />
+
+            {/* Footer */}
+            <div className="dp-footer">
+                <div className="dp-footer-brand">DEITCH PROJECTS</div>
+                <div className="dp-footer-info">76 Grand Street, New York · artlife.game</div>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 20. ByformView — Swiss/modernist portfolio table (bf-* prefix)
+// Reference: design.byform.co — clean serif header, black circle, monospace table
+// ══════════════════════════════════════════════════════════════
+
+/** NPC-to-city mapping derived from backstories */
+const NPC_CITY_MAP = {
+    sasha_klein: 'new-york', marcus_price: 'new-york', elena_ross: 'new-york',
+    james_whitfield: 'london', diana_chen: 'new-york', robert_hall: 'new-york',
+    yuki_tanaka: 'hong-kong', kwame_asante: 'new-york', victoria_sterling: 'los-angeles',
+    philippe_noir: 'switzerland', nina_ward: 'london', lorenzo_gallo: 'new-york',
+    charles_vandermeer: 'london', nico_strand: 'new-york', margaux_fontaine: 'paris',
+    dr_eloise_park: 'london',
+};
+
+function ByformView({ intel, onSelectWork, showPanel, feed, onSelectTrade, onListWork }) {
+    const s = GameState.state;
+    const week = s?.week || 1;
+    const cash = s?.cash || 0;
+    const portfolio = s?.portfolio || [];
+    const archetype = s?.archetype || 'Collector';
+    const playerName = s?.playerName || 'Anonymous';
+    const [filter, setFilter] = useState('all'); // 'all' | 'mine' | 'npc'
+
+    // Merge player transactions + simulator trade log, de-duped by a composite key
+    const allTrades = useMemo(() => {
+        const playerTx = (s?.transactions || []).map(t => ({ ...t, _source: 'player' }));
+        const simTrades = (MarketSimulator.getTradeLog?.() || []).map(t => ({ ...t, _source: 'sim' }));
+        const merged = [...playerTx, ...simTrades];
+
+        // De-dup by week+artwork+buyer+price
+        const seen = new Set();
+        const unique = merged.filter(t => {
+            const key = `${t.week}-${t.artwork || t.artworkId}-${t.buyer || ''}-${t.price || t.amount || 0}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        // Sort by week descending
+        unique.sort((a, b) => (b.week || 0) - (a.week || 0));
+        return unique;
+    }, [week, s?.transactions]);
+
+    // Apply filter
+    const filtered = useMemo(() => {
+        if (filter === 'mine') return allTrades.filter(t => t.buyer === 'player' || t.seller === 'player');
+        if (filter === 'npc') return allTrades.filter(t => t.buyer !== 'player' && t.seller !== 'player');
+        return allTrades;
+    }, [allTrades, filter]);
+
+    // Portfolio value
+    const portfolioValue = useMemo(() => {
+        return portfolio.reduce((sum, w) => {
+            try { return sum + MarketManager.calculatePrice(w, false); }
+            catch { return sum + (w.price || w.basePrice || 0); }
+        }, 0);
+    }, [portfolio, week]);
+
+    const tradeCount = allTrades.filter(t => t.buyer === 'player' || t.seller === 'player').length;
+
+    return (
+        <div className="bf-view">
+            {/* Bio header */}
+            <div className="bf-header">
+                <div className="bf-header-left">
+                    <div className="bf-name">{playerName}</div>
+                    <div className="bf-meta">{archetype} · Week {week}</div>
+                    <div className="bf-meta">Portfolio: ${fmtNum(Math.round(portfolioValue))} · Cash: ${fmtNum(cash)}</div>
+                </div>
+                <div className="bf-header-right">
+                    <div className="bf-circle">
+                        <span className="bf-circle-num">{tradeCount}</span>
+                        <span className="bf-circle-label">TRADES</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter pills */}
+            <div className="bf-filters">
+                {['all', 'mine', 'npc'].map(f => (
+                    <button key={f} className={`bf-pill${filter === f ? ' bf-pill-active' : ''}`}
+                        onClick={() => setFilter(f)}>
+                        {f.toUpperCase()}
+                    </button>
+                ))}
+            </div>
+
+            {/* Transaction table */}
+            <div className="bf-table-wrap">
+                <table className="bf-table">
+                    <thead>
+                        <tr>
+                            <th>WEEK</th>
+                            <th>ARTWORK</th>
+                            <th>TYPE</th>
+                            <th>PARTY</th>
+                            <th className="bf-th-right">PRICE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtered.length === 0 && (
+                            <tr><td colSpan={5} className="bf-empty">No transactions yet.</td></tr>
+                        )}
+                        {filtered.map((t, i) => {
+                            const artwork = ARTWORKS.find(a => a.id === (t.artwork || t.artworkId));
+                            const title = artwork?.title || t.title || t.artwork || '—';
+                            const isPlayer = t.buyer === 'player' || t.seller === 'player';
+                            const isBuy = t.buyer === 'player' || t.type === 'buy' || t.type === 'BUY';
+                            const isSell = t.seller === 'player' || t.type === 'sell' || t.type === 'SELL';
+                            const typeLabel = isBuy ? 'BUY' : isSell ? 'SELL' : 'TRADE';
+                            const typeClass = isBuy ? 'bf-type-buy' : isSell ? 'bf-type-sell' : 'bf-type-trade';
+                            const party = t.buyer === 'player'
+                                ? (CONTACTS.find(c => c.id === t.seller)?.name || '—')
+                                : t.seller === 'player'
+                                    ? (CONTACTS.find(c => c.id === t.buyer)?.name || '—')
+                                    : intel >= 60
+                                        ? (CONTACTS.find(c => c.id === (t.buyer || t.seller))?.name || '—')
+                                        : '—';
+                            const price = t.price || t.amount || 0;
+
+                            return (
+                                <tr key={i} className={isPlayer ? 'bf-row-player' : ''}
+                                    onClick={() => artwork && onSelectWork?.(artwork)}>
+                                    <td>{t.week || '—'}</td>
+                                    <td className="bf-td-title">{title}</td>
+                                    <td><span className={`bf-type ${typeClass}`}>{typeLabel}</span></td>
+                                    <td>{party}</td>
+                                    <td className="bf-th-right">{maskPrice(price, intel)}</td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Footer panels — shared 2-col grid */}
+            <SharedPanelGrid prefix="bf" showPanel={showPanel} intel={intel} feed={feed}
+                selectedArtist={null} onSelectArtist={() => { }}
+                onSelectTrade={onSelectTrade} onListWork={onListWork} onSelectWork={onSelectWork} />
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 21. WaterworksView — Deep blue SVG world map (ww-* prefix)
+// Reference: waterworksproject.nl — blue bg, circle markers, sidebar filters
+// ══════════════════════════════════════════════════════════════
+
+/** Fixed city positions for the abstract SVG map (viewBox 0 0 900 500) */
+const CITY_POSITIONS = {
+    'new-york': { x: 250, y: 180 },
+    'los-angeles': { x: 100, y: 220 },
+    'miami': { x: 230, y: 300 },
+    'london': { x: 450, y: 140 },
+    'paris': { x: 480, y: 180 },
+    'berlin': { x: 520, y: 150 },
+    'switzerland': { x: 490, y: 210 },
+    'hong-kong': { x: 780, y: 260 },
+};
+
+/** NYC sub-locations positioned radially around the NY circle */
+function getNYSubLocations() {
+    const nyLocs = WORLD_LOCATIONS.filter(l => l.city === 'new-york' && l.type !== 'taxi');
+    const cx = CITY_POSITIONS['new-york'].x;
+    const cy = CITY_POSITIONS['new-york'].y;
+    const radius = 60;
+    return nyLocs.map((loc, i) => {
+        const angle = (i / nyLocs.length) * Math.PI * 2 - Math.PI / 2;
+        return { ...loc, _x: cx + Math.cos(angle) * radius, _y: cy + Math.sin(angle) * radius };
+    });
+}
+
+function WaterworksView({ intel, showPanel, feed }) {
+    const s = GameState.state;
+    const visitedCities = s?.visitedCities || [];
+    const currentCity = s?.currentCity || 'new-york';
+    const week = s?.week || 1;
+    const [selectedCity, setSelectedCity] = useState(null);
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [showNYSubs, setShowNYSubs] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+
+    const cityKeys = Object.keys(CITY_DATA);
+    const nySubs = useMemo(() => getNYSubLocations(), []);
+    const totalLocations = WORLD_LOCATIONS.length;
+
+    // Unique location types for filter pills
+    const locTypes = useMemo(() => {
+        const types = new Set(WORLD_LOCATIONS.map(l => l.type));
+        return ['all', ...Array.from(types)];
+    }, []);
+
+    // NPCs in selected city
+    const cityNPCs = useMemo(() => {
+        if (!selectedCity) return [];
+        return CONTACTS.filter(c => NPC_CITY_MAP[c.id] === selectedCity);
+    }, [selectedCity]);
+
+    // City activity — count of trades/transactions involving that city
+    const cityActivity = useMemo(() => {
+        const activity = {};
+        cityKeys.forEach(k => { activity[k] = 0; });
+        (MarketSimulator.getTradeLog?.() || []).forEach(t => {
+            const buyerCity = NPC_CITY_MAP[t.buyer];
+            const sellerCity = NPC_CITY_MAP[t.seller];
+            if (buyerCity) activity[buyerCity] = (activity[buyerCity] || 0) + 1;
+            if (sellerCity) activity[sellerCity] = (activity[sellerCity] || 0) + 1;
+        });
+        return activity;
+    }, [week]);
+
+    // Travel route lines — connect visited cities in order
+    const routeLines = useMemo(() => {
+        if (visitedCities.length < 2) return [];
+        const lines = [];
+        for (let i = 0; i < visitedCities.length - 1; i++) {
+            const from = CITY_POSITIONS[visitedCities[i]];
+            const to = CITY_POSITIONS[visitedCities[i + 1]];
+            if (from && to) lines.push({ x1: from.x, y1: from.y, x2: to.x, y2: to.y });
+        }
+        return lines;
+    }, [visitedCities]);
+
+    const handleCityClick = (cityId) => {
+        setSelectedCity(prev => prev === cityId ? null : cityId);
+        if (cityId === 'new-york') setShowNYSubs(prev => !prev);
+        else setShowNYSubs(false);
+        setSidebarOpen(true);
+    };
+
+    const detail = selectedCity ? CITY_DATA[selectedCity] : null;
+    const cityLocations = selectedCity
+        ? WORLD_LOCATIONS.filter(l => l.city === selectedCity && (typeFilter === 'all' || l.type === typeFilter))
+        : [];
+
+    return (
+        <div className="ww-view">
+            {/* Top-left header — Waterworks style */}
+            <div className="ww-header">
+                <span className="ww-header-title">WATERWORKS</span>
+                <button className="ww-glass-btn" onClick={() => setSidebarOpen(o => !o)}>
+                    <span className="ww-bracket" aria-hidden="true">(</span>
+                    {sidebarOpen ? 'Hide' : 'Show'}
+                    <span className="ww-bracket" aria-hidden="true">)</span>
+                </button>
+            </div>
+
+            {/* Map area — full viewport background */}
+            <div className="ww-map-area">
+                <svg viewBox="0 0 900 500" className="ww-svg" preserveAspectRatio="xMidYMid meet">
+                    {/* Travel route lines */}
+                    {routeLines.map((line, i) => (
+                        <line key={`route-${i}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2}
+                            stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="6 4" />
+                    ))}
+
+                    {/* City markers — hollow circles with center dots (Waterworks style) */}
+                    {cityKeys.map(cityId => {
+                        const pos = CITY_POSITIONS[cityId];
+                        if (!pos) return null;
+                        const isVisited = visitedCities.includes(cityId);
+                        const isCurrent = currentCity === cityId;
+                        const isSelected = selectedCity === cityId;
+                        const activity = cityActivity[cityId] || 0;
+                        // Waterworks uses fixed-size circles; larger for "historical" type
+                        const isLarge = activity > 3;
+                        const r = isLarge ? 19 : 10;
+
+                        return (
+                            <g key={cityId} className={`ww-marker${isSelected ? ' ww-marker-active' : ''}`}
+                                onClick={() => handleCityClick(cityId)} style={{ cursor: 'pointer' }}>
+                                {/* Pulsing ring for current city */}
+                                {isCurrent && (
+                                    <circle cx={pos.x} cy={pos.y} r={r + 6}
+                                        fill="none" stroke="white" strokeWidth="1" opacity="0.4">
+                                        <animate attributeName="r" values={`${r + 3};${r + 12};${r + 3}`}
+                                            dur="3s" repeatCount="indefinite" />
+                                        <animate attributeName="opacity" values="0.4;0.05;0.4"
+                                            dur="3s" repeatCount="indefinite" />
+                                    </circle>
+                                )}
+                                {/* Hollow circle — inset stroke (like box-shadow: inset 0 0 0 1px) */}
+                                <circle cx={pos.x} cy={pos.y} r={r}
+                                    fill="none"
+                                    stroke="white"
+                                    strokeWidth={isSelected ? 2 : 1}
+                                    opacity={isVisited ? 1 : 0.35} />
+                                {/* Center dot */}
+                                <circle cx={pos.x} cy={pos.y} r={isLarge ? 2 : 1}
+                                    fill="white"
+                                    opacity={isVisited ? 1 : 0.35} />
+                                {/* Leader line (angled, like Waterworks ::before) */}
+                                <line x1={pos.x + r * 0.7} y1={pos.y - r * 0.7}
+                                    x2={pos.x + r + 24} y2={pos.y - r - 18}
+                                    stroke="white" strokeWidth="0.5"
+                                    opacity={isVisited ? 0.8 : 0.25}
+                                    className="ww-leader" />
+                                {/* Label (positioned at end of leader line, like ::after) */}
+                                <text x={pos.x + r + 26} y={pos.y - r - 16}
+                                    fill="white" fontSize="10"
+                                    fontFamily="'IBM Plex Mono', monospace" fontWeight="500"
+                                    opacity={isVisited ? 1 : 0.3}
+                                    className="ww-label">
+                                    {CITY_DATA[cityId]?.name || cityId}
+                                </text>
+                            </g>
+                        );
+                    })}
+
+                    {/* NYC sub-locations — smaller hollow circles when NY is selected */}
+                    {showNYSubs && nySubs.map(loc => (
+                        <g key={loc.id} className="ww-sub-marker">
+                            <line x1={CITY_POSITIONS['new-york'].x} y1={CITY_POSITIONS['new-york'].y}
+                                x2={loc._x} y2={loc._y}
+                                stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                            <circle cx={loc._x} cy={loc._y} r={6}
+                                fill="none" stroke="white" strokeWidth="0.5" opacity="0.7" />
+                            <circle cx={loc._x} cy={loc._y} r={0.75}
+                                fill="white" opacity="0.7" />
+                            <text x={loc._x + 10} y={loc._y + 3}
+                                fill="white" fontSize="7"
+                                fontFamily="'IBM Plex Mono', monospace" fontWeight="500"
+                                opacity="0.5">
+                                {loc.name}
+                            </text>
+                        </g>
+                    ))}
+                </svg>
+            </div>
+
+            {/* Sidebar — slides in from right (Waterworks pattern) */}
+            <aside className={`ww-sidebar${sidebarOpen ? ' ww-sidebar-open' : ''}`}>
+                {/* Location count + see all */}
+                <div className="ww-sidebar-header">
+                    <span>{totalLocations} Locations</span>
+                    <button className="ww-glass-btn ww-glass-btn-sm" onClick={() => setSelectedCity(null)}>
+                        <span className="ww-bracket" aria-hidden="true">(</span>
+                        See all
+                        <span className="ww-bracket" aria-hidden="true">)</span>
+                    </button>
+                </div>
+
+                {/* Filter nav — glassmorphism pills */}
+                <nav className="ww-filters">
+                    {locTypes.map(t => (
+                        <button key={t}
+                            className={`ww-glass-btn ww-glass-btn-sm${typeFilter === t ? ' ww-pill-active' : ''}`}
+                            onClick={() => setTypeFilter(t)}>
+                            {t.toUpperCase()}
+                        </button>
+                    ))}
+                </nav>
+
+                {/* Scrollable city list */}
+                <ul className="ww-city-list">
+                    {cityKeys.map(cityId => {
+                        const city = CITY_DATA[cityId];
+                        const isSelected = selectedCity === cityId;
+                        const isVisited = visitedCities.includes(cityId);
+                        return (
+                            <li key={cityId}>
+                                <button
+                                    className={`ww-city-btn${isSelected ? ' ww-city-selected' : ''}${isVisited ? '' : ' ww-city-dim'}`}
+                                    onClick={() => handleCityClick(cityId)}>
+                                    <span>{city.name}</span>
+                                    {currentCity === cityId && <span className="ww-current-badge">HERE</span>}
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+
+                {/* Detail panel — slides in when city selected */}
+                {detail && (
+                    <div className="ww-detail">
+                        <div className="ww-detail-name">{detail.name}</div>
+                        <div className="ww-detail-vibe">{detail.vibe}</div>
+                        <div className="ww-detail-row">
+                            <span className="ww-detail-label">Specialty</span>
+                            <span>{detail.specialty}</span>
+                        </div>
+                        <div className="ww-detail-row">
+                            <span className="ww-detail-label">Market Bonus</span>
+                            <span>{detail.marketBonus > 1 ? '+' : ''}{Math.round((detail.marketBonus - 1) * 100)}%</span>
+                        </div>
+
+                        {detail.venues?.length > 0 && (
+                            <div className="ww-detail-section">
+                                <div className="ww-detail-label">Venues</div>
+                                {detail.venues.map((v, i) => (
+                                    <div key={i} className="ww-detail-venue">{v}</div>
+                                ))}
+                            </div>
+                        )}
+
+                        {cityNPCs.length > 0 && (
+                            <div className="ww-detail-section">
+                                <div className="ww-detail-label">Known Contacts</div>
+                                {cityNPCs.map(npc => (
+                                    <div key={npc.id} className="ww-detail-npc">
+                                        <span className="ww-npc-emoji">{npc.emoji || '●'}</span>
+                                        <span>{npc.name}</span>
+                                        <span className="ww-npc-role">{npc.role}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {cityLocations.length > 0 && (
+                            <div className="ww-detail-section">
+                                <div className="ww-detail-label">Locations</div>
+                                {cityLocations.map(loc => (
+                                    <div key={loc.id} className="ww-detail-loc">
+                                        <span>{loc.icon}</span>
+                                        <span>{loc.name}</span>
+                                        <span className="ww-loc-type">{loc.type}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </aside>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 19. Panel Config Dropdown (gear icon → checkbox list + presets)
+// ══════════════════════════════════════════════════════════════
+function PanelConfigDropdown({ visiblePanels, setVisiblePanels, isGallery }) {
+    const [open, setOpen] = useState(false);
+    const schema = SettingsManager.SCHEMA.find(s => s.id === 'bloombergPanels');
+    if (!schema) return null;
+
+    const toggle = (value) => {
+        SettingsManager.toggleChecklistItem('bloombergPanels', value);
+        setVisiblePanels([...SettingsManager.get('bloombergPanels')]);
+    };
+
+    const applyPreset = (name) => {
+        SettingsManager.applyPreset('bloombergPanels', name);
+        setVisiblePanels([...SettingsManager.get('bloombergPanels')]);
+    };
+
+    return (
+        <div className="bb-config-wrapper">
+            <button
+                className="bb-config-btn"
+                onClick={() => setOpen(o => !o)}
+                title="Configure visible panels"
+            >⚙</button>
+            {open && (
+                <>
+                    <div className="bb-config-backdrop" onClick={() => setOpen(false)} />
+                    <div className={`bb-config-dropdown${isGallery ? ' bb-config-gallery' : ''}`}>
+                        <div className="bb-config-title">VISIBLE PANELS</div>
+                        <div className="bb-config-list">
+                            {schema.options.map(opt => (
+                                <label key={opt.value} className="bb-config-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={visiblePanels.includes(opt.value)}
+                                        onChange={() => toggle(opt.value)}
+                                    />
+                                    <span>{opt.display}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="bb-config-presets">
+                            <button className="bb-config-preset" onClick={() => applyPreset('full')}>ALL</button>
+                            <button className="bb-config-preset" onClick={() => applyPreset('minimal')}>MINIMAL</button>
+                            <button className="bb-config-preset" onClick={() => applyPreset('trading')}>TRADING</button>
+                            <button className="bb-config-preset" onClick={() => applyPreset('tearsheet')}>PRINT</button>
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+export { GalleryView, TearsheetView, ArtnetView, SothebysView, DeitchView, ByformView, WaterworksView, PanelConfigDropdown };

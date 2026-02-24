@@ -661,7 +661,7 @@ export default function AdminDashboard({ onClose }) {
                         {/* Inline EmailOverlay for testing within admin */}
                         {emailTestMode ? (
                             <div style={{ position: 'relative', height: '70vh', border: '1px solid #333', overflow: 'hidden' }}>
-                                <EmailOverlay
+                                <HaggleOverlay
                                     mode={emailTestMode.mode}
                                     haggleInfo={emailTestMode.haggleInfo}
                                     event={emailTestMode.event}

@@ -32,7 +32,11 @@ import { VIEW, OVERLAY } from './constants/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
 import { SettingsManager } from './managers/SettingsManager.js';
+import { usePageRouter, navigate } from './hooks/usePageRouter.js';
 import './api/ContentAPI.js'; // Side-effect: registers window.ContentAPI
+
+// Make navigate() available globally (for Phaser scenes, terminal, etc.)
+window.navigate = navigate;
 
 export default function App() {
     const [game, setGame] = useState(null);
@@ -51,6 +55,14 @@ export default function App() {
     const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null); // HaggleOverlay haggle from any context
     const [gmailComposeData, setGmailComposeData] = useState(null); // Pre-populated compose for Gmail
     const autoResumedRef = useRef(false);
+
+    // URL ↔ state sync (enables /market, /admin, /inbox deep links + back/forward)
+    const { syncUrl } = usePageRouter(setActiveView, setActiveOverlay, setViewPayload);
+
+    // Sync outgoing state changes → URL
+    useEffect(() => {
+        syncUrl(activeView, activeOverlay);
+    }, [activeView, activeOverlay, syncUrl]);
 
     // Listen for Bloomberg INQUIRE → Gmail compose events
     useEffect(() => {

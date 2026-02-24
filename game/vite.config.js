@@ -67,6 +67,12 @@ export default defineConfig({
                         return;
                     }
 
+                    // SPA History Fallback — serve index.html for all non-asset, non-API paths
+                    // This enables URL-based routing (e.g. /admin, /market, /inbox)
+                    if (req.method === 'GET' && !req.url.startsWith('/api/') && !req.url.includes('.')) {
+                        req.url = '/index.html';
+                    }
+
                     // Existing headers
                     res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
                     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
