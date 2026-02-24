@@ -127,27 +127,50 @@ export default function ViewRouter({
     viewPayload,
     onLoginComplete,
 }) {
-    // Track whether Phaser has started rendering a real scene
+    // Track whether Phaser has EVER been ready (once true, never goes back to false)
+    const phaserReadyRef = React.useRef(false);
     const [phaserReady, setPhaserReady] = React.useState(false);
 
     React.useEffect(() => {
-        // Mark ready when IntroScene or any non-Boot scene starts
+        if (phaserReadyRef.current) return; // Already done, don't re-poll
+
         const checkReady = setInterval(() => {
+            // Ready if Phaser game exists AND has run at least one scene create()
             if (window.phaserGame) {
                 const scenes = window.phaserGame.scene.scenes || [];
-                const activeScene = scenes.find(s => s.sys?.isActive?.());
-                if (activeScene && activeScene.sys.settings.key !== 'BootScene') {
+                const hasActiveScene = scenes.some(s => {
+                    try { return s.sys?.isActive?.() && s.sys.settings.key !== 'BootScene'; }
+                    catch { return false; }
+                });
+                // Also check if any scene has ever had create() called (even if stopped now)
+                const hasCreatedScene = scenes.some(s => {
+                    try { return s.sys?.settings?.status >= 5; } // RUNNING = 5
+                    catch { return false; }
+                });
+                if (hasActiveScene || hasCreatedScene) {
+                    phaserReadyRef.current = true;
                     setPhaserReady(true);
                     clearInterval(checkReady);
                 }
             }
         }, 200);
-        return () => clearInterval(checkReady);
+
+        // Absolute timeout: after 8s, force-dismiss loading screen
+        const timeout = setTimeout(() => {
+            if (!phaserReadyRef.current) {
+                console.warn('[ViewRouter] Phaser did not become ready in 8s — dismissing loading screen');
+                phaserReadyRef.current = true;
+                setPhaserReady(true);
+                clearInterval(checkReady);
+            }
+        }, 8000);
+
+        return () => { clearInterval(checkReady); clearTimeout(timeout); };
     }, []);
 
     return (
         <Suspense fallback={<ViewLoadingFallback />}>
-            {/* ── Loading screen while Phaser boots ── */}
+            {/* ── Loading screen ONLY during initial Phaser boot ── */}
             {activeView === VIEW.PHASER && !phaserReady && (
                 <PhaserLoadingScreen />
             )}
