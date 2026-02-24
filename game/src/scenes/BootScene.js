@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { VIEW } from '../constants/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
-import { autoLoadTiledMaps, getAllMapIds } from '../utils/tiledAutoLoader.js';
+import { autoLoadTiledMaps, preloadAllTilesets, getAllMapIds } from '../utils/tiledAutoLoader.js';
 
 /**
  * BootScene — Preloads shared assets, then launches TitleScene
@@ -74,6 +74,7 @@ export class BootScene extends Phaser.Scene {
         // The auto-loader reads each map's JSON, extracts tileset references,
         // and loads only what isn't already cached. No manual tileset registration needed.
         autoLoadTiledMaps(this, getAllMapIds());
+        preloadAllTilesets(this); // Single-pass: all tilesets load alongside maps
 
         // ── Background-image rooms (pre-composed LimeZu premium art) ──
         // These aren't referenced in Tiled JSON, so loaded explicitly
@@ -124,11 +125,11 @@ export class BootScene extends Phaser.Scene {
         }
 
         const ui = window.game?.ui;
-        // The React `TerminalLogin` is now the true title screen.
+        // The React `ArtnetLogin` is now the true login screen.
         // Expose a method so React can command Phaser to start the game loop when ready.
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'new') {
-                // Fresh visit: play cinematic intro, then hand back to React TerminalLogin
+                // Fresh visit: play cinematic intro, then hand back to React ArtnetLogin
                 safeSceneLaunch(this, 'IntroScene', { ui });
             } else if (mode === 'charselect') {
                 // After login "New" selection: go straight to character builder

@@ -76,24 +76,42 @@ export default class WorldScene extends BaseScene {
     }
 
     preload() {
+        console.log('[WorldScene] preload() called');
+
         // Catch asset-load errors so we get diagnostics instead of silent black screens
         this.load.on('loaderror', (file) => {
-            console.error(`[WorldScene] Asset failed to load: ${file.key} (${file.url})`);
+            console.error(`[WorldScene] Asset FAILED to load: ${file.key} (${file.url})`);
             window.ArtLife?.recordMissingAsset?.(file.key, file.url);
         });
 
-        // Tiled JSON map — always queue load; Phaser deduplicates internally
+        // Log when preload completes
+        this.load.on('complete', () => {
+            console.log('[WorldScene] preload complete — all assets loaded');
+            console.log('[WorldScene] Texture check:', {
+                world: this.textures.exists('world'),
+                world2: this.textures.exists('world2'),
+                grounds: this.textures.exists('grounds'),
+                grounds2: this.textures.exists('grounds2'),
+                pallet_town: this.cache.tilemap.has('pallet_town'),
+                world_player: this.textures.exists('world_player'),
+            });
+        });
+
+        // ── Tiled JSON map ──
+        // Always queue — Phaser deduplicates internally via cache
         this.load.tilemapTiledJSON('pallet_town', 'content/maps/pallet_town.json');
 
-        // Tilesets
-        const tilesets = ['world', 'world2', 'grounds', 'grounds2'];
-        for (const ts of tilesets) {
-            if (!this.textures.exists(ts)) {
-                this.load.image(ts, `assets/tilesets/${ts}.png`);
-            }
-        }
+        // ── Tilesets — ALWAYS load (don't skip via cache check) ──
+        // Phaser ignores duplicate load calls for keys that are already cached.
+        // Skipping via textures.exists() was causing issues when textures hadn't
+        // finished loading from BootScene's preloadAllTilesets() pass.
+        this.load.image('world', 'assets/tilesets/world.png');
+        this.load.image('world2', 'assets/tilesets/world2.png');
+        this.load.image('grounds', 'assets/tilesets/grounds.png');
+        this.load.image('grounds2', 'assets/tilesets/grounds2.png');
+        console.log('[WorldScene] Queued 4 tilesets for loading');
 
-        // Player spritesheet — 216x384, 3 cols x 4 rows = 12 frames at 72x96
+        // ── Player spritesheet — 216×384, 3 cols × 4 rows = 12 frames at 72×96 ──
         if (!this.textures.exists('world_player')) {
             this.load.spritesheet('world_player', 'assets/sprites/player.png', {
                 frameWidth: 72,
@@ -101,8 +119,7 @@ export default class WorldScene extends BaseScene {
             });
         }
 
-        // NPC walk spritesheets (160×160 frames, 4×4 grid: down/left/right/up × 4 frames)
-        // These are the same sprites used in LocationScene for contact-specific NPCs
+        // ── NPC walk spritesheets (160×160 frames, 4×4 grid) ──
         const npcWalkKeys = [
             'walk_legacy_gallerist_walk', 'walk_auction_house_type_walk', 'walk_elena_ross_walk',
             'walk_old_money_gallerist_walk', 'walk_academic_curator_walk', 'walk_young_artist_walk',
@@ -116,6 +133,7 @@ export default class WorldScene extends BaseScene {
                 this.load.spritesheet(key, `sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
             }
         }
+        console.log('[WorldScene] preload() finished queuing assets');
     }
 
     create(data) {
@@ -185,8 +203,13 @@ export default class WorldScene extends BaseScene {
 
     _buildScene(data) {
         // ── Build tilemap ──
+        console.log('[WorldScene] _buildScene: creating tilemap with key "pallet_town"');
+        console.log('[WorldScene] tilemap cache has pallet_town?', this.cache.tilemap.has('pallet_town'));
         this.map = this.make.tilemap({ key: 'pallet_town' });
-        this.mapKey = 'pallet_town'; // Store for returnArgs on scene re-entry from DialogueScene
+        this.mapKey = 'pallet_town';
+
+        console.log('[WorldScene] Tilemap created. Tilesets in JSON:', this.map.tilesets.map(t => t.name).join(', '));
+        console.log('[WorldScene] Texture keys available:', this.textures.getTextureKeys().filter(k => ['world', 'world2', 'grounds', 'grounds2'].includes(k)).join(', '));
 
         const grounds = this.map.addTilesetImage('grounds', 'grounds');
         const world = this.map.addTilesetImage('world', 'world');
@@ -194,14 +217,16 @@ export default class WorldScene extends BaseScene {
         const grounds2 = this.map.addTilesetImage('grounds2', 'grounds2');
         const allSets = [grounds, world, world2, grounds2].filter(Boolean);
 
+        console.log('[WorldScene] addTilesetImage results:', {
+            grounds: !!grounds, world: !!world, world2: !!world2, grounds2: !!grounds2,
+            totalLoaded: allSets.length,
+        });
+
         if (allSets.length === 0) {
             console.error('[WorldScene] No tilesets loaded — check tileset names match Tiled export');
             console.error('[WorldScene] Available textures:', this.textures.getTextureKeys().join(', '));
             this._showError('No tilesets loaded — tileset images may be missing.\nPress ESC to exit.');
             this._createFailed = true;
-            // Still allow ESC to exit
-            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
-                .on('down', () => this.exitScene());
             return;
         }
 
@@ -1296,7 +1321,16 @@ export default class WorldScene extends BaseScene {
         window.joypadState = null;
         window.joypadSprint = false;
         window.joypadAction = false;
-        WebAudioService.sceneExit();
+        try { WebAudioService.sceneExit(); } catch (e) { /* WebAudioService may not be available */ }
+
+        // Fast-exit for error states (no fade animation)
+        if (this._createFailed) {
+            GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
+            GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
+            this.showTerminalUI();
+            this.scene.stop();
+            return;
+        }
 
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
@@ -1333,7 +1367,7 @@ export default class WorldScene extends BaseScene {
 
     _showError(msg) {
         const { width, height } = this.scale;
-        this.add.text(width / 2, height / 2 - 20, 'WorldScene Error', {
+        this.add.text(width / 2, height / 2 - 30, 'WorldScene Error', {
             fontFamily: '"Press Start 2P"', fontSize: '14px', color: '#ff4444',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
         this.add.text(width / 2, height / 2 + 10, msg, {
@@ -1341,9 +1375,13 @@ export default class WorldScene extends BaseScene {
             wordWrap: { width: width - 60 },
         }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD);
 
-        const btn = this.add.text(width / 2, height / 2 + 60, '[ EXIT ]', {
+        const btn = this.add.text(width / 2, height / 2 + 60, '[ EXIT — ESC ]', {
             fontFamily: '"Press Start 2P"', fontSize: '12px', color: '#ff8888',
         }).setOrigin(0.5).setScrollFactor(0).setDepth(DEPTH.HUD).setInteractive({ useHandCursor: true });
+
+        // Both click and ESC exit — exitScene() handles _createFailed fast-path
         btn.on('pointerdown', () => this.exitScene());
+        this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+            .on('down', () => this.exitScene());
     }
 }

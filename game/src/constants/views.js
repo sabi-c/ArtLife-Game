@@ -6,7 +6,7 @@
  */
 
 export const VIEW = {
-    BOOT: 'BOOT',                   // The TerminalLogin boot sequence
+    BOOT: 'BOOT',                   // The ArtnetLogin boot/login screen
     PHASER: 'PHASER',               // The raw game canvas (overworld, haggle, etc.)
     TERMINAL: 'TERMINAL',           // DOM terminal only (no React overlays, no canvas)
     DASHBOARD: 'DASHBOARD',         // The main Player Dashboard stats/ledger

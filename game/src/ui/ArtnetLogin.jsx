@@ -13,7 +13,8 @@
  * Accessible via admin dashboard → TOOLS → Artnet Login
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { GameState } from '../managers/GameState.js';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Component
@@ -29,12 +30,34 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
     const [submitted, setSubmitted] = useState(false);
     const emailRef = useRef(null);
 
+    // ── Detect existing save slots (autofill-style) ──
+    const savedSlots = useMemo(() => {
+        const slots = [];
+        for (let i = 0; i < 3; i++) {
+            try {
+                const raw = localStorage.getItem(`artlife_save_${i}`);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    slots.push({
+                        index: i,
+                        name: data.playerName || data.name || 'Unknown',
+                        week: data.week || 1,
+                        cash: data.cash || 0,
+                        archetype: data.archetype?.name || data.id || '',
+                        lastPlayed: data.lastSaved || null,
+                    });
+                }
+            } catch (e) { /* corrupt slot */ }
+        }
+        return slots;
+    }, []);
+
     useEffect(() => {
         setTimeout(() => emailRef.current?.focus(), 200);
     }, [mode]);
 
     useEffect(() => {
-        const h = (e) => { if (e.key === 'Escape') onClose(); };
+        const h = (e) => { if (e.key === 'Escape' && onClose) onClose(); };
         window.addEventListener('keydown', h);
         return () => window.removeEventListener('keydown', h);
     }, [onClose]);
@@ -59,11 +82,17 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
         if (validate()) {
             setSubmitted(true);
             if (onLoginSuccess) {
-                // Unified flow: notify parent with credentials
-                setTimeout(() => onLoginSuccess({ email }), 600);
+                setTimeout(() => onLoginSuccess({ email, action: 'new' }), 600);
             } else {
                 setTimeout(() => setSubmitted(false), 2000);
             }
+        }
+    };
+
+    const handleLoadSlot = (slot) => {
+        const loaded = GameState.load(slot.index);
+        if (loaded && onLoginSuccess) {
+            onLoginSuccess({ email: '', action: 'load', slot: slot.index });
         }
     };
 
@@ -336,6 +365,58 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
                             This is a demo recreation of artnet.com's login page for design reference purposes within ArtLife.
                             No data is submitted or stored.
                         </div>
+
+                        {/* ── Saved Profiles (Google autofill-style) ── */}
+                        {savedSlots.length > 0 && (
+                            <div style={{ marginTop: 32 }}>
+                                <div style={{
+                                    fontSize: 14, fontWeight: 700, color: '#231f20',
+                                    marginBottom: 12, letterSpacing: 0,
+                                }}>
+                                    Continue as...
+                                </div>
+                                {savedSlots.map(slot => (
+                                    <div
+                                        key={slot.index}
+                                        onClick={() => handleLoadSlot(slot)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 12,
+                                            padding: '12px 16px', marginBottom: 8,
+                                            background: '#fff', borderRadius: 6,
+                                            border: '1px solid #e0e0e0',
+                                            cursor: 'pointer', transition: 'border-color 0.15s, box-shadow 0.15s',
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.borderColor = '#ff4b00';
+                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(255,75,0,0.12)';
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.borderColor = '#e0e0e0';
+                                            e.currentTarget.style.boxShadow = 'none';
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: 40, height: 40, borderRadius: '50%',
+                                            background: '#ff4b00', color: '#fff',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: 18, fontWeight: 700, flexShrink: 0,
+                                        }}>
+                                            {slot.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 700, fontSize: 15, color: '#231f20' }}>
+                                                {slot.name}
+                                            </div>
+                                            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
+                                                Week {slot.week} · ${slot.cash.toLocaleString()}
+                                                {slot.archetype ? ` · ${slot.archetype}` : ''}
+                                            </div>
+                                        </div>
+                                        <div style={{ color: '#999', fontSize: 20 }}>→</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

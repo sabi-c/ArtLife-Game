@@ -44,7 +44,7 @@ export default function App() {
         return VIEW.PHASER;
     });
     const [viewPayload, setViewPayload] = useState(null);
-    const [activeOverlay, setActiveOverlay] = useState(OVERLAY.BLOOMBERG);
+    const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
     const [isGridSceneActive, setIsGridSceneActive] = useState(false);
     const [globalHaggleEmail, setGlobalHaggleEmail] = useState(null);
     const [gmailComposeData, setGmailComposeData] = useState(null);
@@ -216,8 +216,9 @@ export default function App() {
     // ═══════════════════════════════════════════════════════════
     // Login handler
     // ═══════════════════════════════════════════════════════════
-    const handleLoginComplete = ({ action }) => {
+    const handleLoginComplete = ({ action, email, slot }) => {
         if (action === 'new') {
+            // New game: go to character creator
             setActiveView(VIEW.CHARACTER_CREATOR);
         } else if (action === 'devmode') {
             try {
@@ -237,14 +238,8 @@ export default function App() {
             setActiveView(VIEW.TERMINAL);
             setActiveOverlay(OVERLAY.MASTER_CMS);
         } else if (action === 'load') {
-            const ui = window.TerminalUIInstance;
-            if (ui?.container) {
-                ui.container.style.display = '';
-                import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
-                    ui.pushScreen(dashboardScreen(ui));
-                });
-            }
-            setActiveView(VIEW.TERMINAL);
+            // Load from save slot (GameState.load already called by ArtnetLogin)
+            setActiveView(VIEW.PHASER);
             setActiveOverlay(OVERLAY.BLOOMBERG);
         }
     };

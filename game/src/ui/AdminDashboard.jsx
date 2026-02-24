@@ -51,7 +51,7 @@ export default function AdminDashboard({ onClose }) {
 
     const triggerScene = (sceneKey, data = {}) => {
         // Scenes that need game state — auto-init if missing
-        const needsState = ['WorldScene', 'CityScene', 'OverworldScene', 'LocationScene', 'HaggleScene'];
+        const needsState = ['WorldScene', 'NewWorldScene', 'CityScene', 'OverworldScene', 'LocationScene', 'HaggleScene'];
         if (needsState.includes(sceneKey) && !GameState.state) {
             GameState.quickDemoInit();
             forceUpdate();
@@ -346,9 +346,9 @@ export default function AdminDashboard({ onClose }) {
                     <div style={{ display: 'grid', gridTemplateColumns: isTouchDevice ? '1fr' : '1fr 1fr', gap: '0 20px' }}>
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>EXPLORATION</div>
-                            <button style={btnStyle} onClick={() => safeTriggerScene('WorldScene', {}, 'World Scene')}>
+                            <button style={btnStyle} onClick={() => safeTriggerScene('NewWorldScene', {}, 'New World Scene')}>
                                 [ Overworld — Pokemon Walk ]
-                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Tiled map, NPCs, dialog, encounters</div>
+                                <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>luminus-rpg map, arcade physics, 8-dir movement</div>
                             </button>
                             <button style={btnStyle} onClick={() => safeTriggerScene('CityScene', {}, 'City Scene')}>
                                 [ City Hub — Location Map ]
@@ -365,6 +365,10 @@ export default function AdminDashboard({ onClose }) {
                             <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => safeTriggerScene('OverworldScene', {}, 'Legacy Overworld')}>
                                 [ Legacy Overworld (test) ]
                                 <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Old 160px sprites, hardcoded map</div>
+                            </button>
+                            <button style={{ ...btnStyle, opacity: 0.4 }} onClick={() => safeTriggerScene('WorldScene', {}, 'Legacy World Scene')}>
+                                [ Legacy WorldScene (deprecated) ]
+                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Old GridEngine tileset — broken</div>
                             </button>
                         </div>
                         <div>
