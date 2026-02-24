@@ -201,15 +201,17 @@ export function MobileJoypad() {
                     height: 46vh;
                     min-height: 220px;
                     max-height: 340px;
-                    background: linear-gradient(180deg, #bcc3c9 0%, #a8aeb4 40%, #969ba0 100%);
-                    border-top: 3px solid #d4d8dc;
+                    background: rgba(20, 25, 30, 0.75);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    border-top: 3px solid rgba(212, 216, 220, 0.4);
                     border-radius: 20px 20px 0 0;
                     z-index: 998;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
-                    box-shadow: 0 -4px 20px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+                    box-shadow: 0 -4px 20px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.1);
                     touch-action: none;
                     user-select: none;
                     -webkit-user-select: none;
@@ -276,7 +278,7 @@ export function MobileJoypad() {
                     margin: 0;
                 }
                 .gb-dpad-btn.active {
-                    background: #1e272e;
+                    background: rgba(30, 39, 46, 0.9);
                 }
                 .gb-dpad-btn .gb-arrow {
                     font-size: clamp(12px, 3.5vw, 16px);

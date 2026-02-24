@@ -340,10 +340,10 @@ export default class NewWorldScene extends Phaser.Scene {
 
         // Mobile: offset camera follow upward so player stays above joypad
         // Joypad covers ~46vh of the screen from the bottom.
-        // We shift the follow point up by ~20% of the viewport (in world coords).
+        // Negative Y = player rendered in upper portion of screen, above d-pad.
         if (isMobile) {
             const viewportH = this.scale.height / zoom;
-            const offsetY = viewportH * 0.18; // shift player 18% above center
+            const offsetY = -(viewportH * 0.22); // shift player 22% UP from center
             this.cameras.main.setFollowOffset(0, offsetY);
             console.log(`[NewWorldScene] Mobile camera: zoom=${zoom}, followOffset Y=${offsetY.toFixed(0)}`);
         }
