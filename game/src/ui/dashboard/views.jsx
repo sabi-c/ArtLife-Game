@@ -26,7 +26,7 @@ import {
     hasAP, useAPAndCheckEvents,
 } from './dashboardUtils.jsx';
 import {
-    ArtistLeaderboard, OrderBook, PriceChart, TradeFeed, Watchlist,
+    ArtistLeaderboard, OrderBook, MarketOverview, PriceChart, TradeFeed, Watchlist,
     PortfolioTracker, PlayerStatsPanel, NetWorthPanel, NPCDirectoryPanel,
     CollectionPanel, TransactionHistoryPanel, ArtworkTearsheet,
 } from './panels.jsx';
