@@ -82,7 +82,7 @@ export default function App() {
         const handleKeyDown = (e) => {
             if (e.key === 'F1') {
                 e.preventDefault();
-                setActiveOverlay(prev => prev === OVERLAY.CMS ? OVERLAY.NONE : OVERLAY.CMS);
+                setActiveOverlay(prev => prev === OVERLAY.MASTER_CMS ? OVERLAY.NONE : OVERLAY.MASTER_CMS);
             } else if (e.key === 'F2') {
                 e.preventDefault();
                 setActiveOverlay(prev => prev === OVERLAY.DEBUG_LOG ? OVERLAY.NONE : OVERLAY.DEBUG_LOG);

@@ -1,6 +1,7 @@
 import { BaseScene } from './BaseScene.js';
 import { useUIStore } from '../stores/uiStore.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { VIEW } from '../constants/views.js';
 
 export class MacDialogueScene extends BaseScene {
     constructor() {
@@ -90,7 +91,7 @@ export class MacDialogueScene extends BaseScene {
             cleaned = true;
             this.showTerminalUI();
             GameEventBus.emit(GameEvents.SCENE_EXIT, 'MacDialogueScene');
-            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+            GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
 
             if (!isForceExit && this.dialogueData.onComplete) {
                 this.dialogueData.onComplete();

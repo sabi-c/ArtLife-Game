@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { EventRegistry } from '../managers/EventRegistry.js';
+import { VIEW } from '../constants/views.js';
+import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 /**
  * BootScene — Preloads shared assets, then launches TitleScene
@@ -149,15 +151,15 @@ export class BootScene extends Phaser.Scene {
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'new') {
                 // Fresh visit: play cinematic intro, then hand back to React TerminalLogin
-                this.scene.launch('IntroScene', { ui });
+                safeSceneLaunch(this, 'IntroScene', { ui });
             } else if (mode === 'charselect') {
                 // After login "New" selection: go straight to character builder
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
-                    GameEventBus.emit(GameEvents.UI_ROUTE, 'CHARACTER_CREATOR');
+                    GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.CHARACTER_CREATOR);
                 });
             } else {
                 // If loading a save, skip straight to Overworld/Menu.
-                this.scene.launch('OverworldScene', { ui });
+                safeSceneLaunch(this, 'OverworldScene', { ui });
             }
             // Hide the boot scene
             this.scene.stop();

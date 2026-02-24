@@ -47,7 +47,7 @@ export const PAGE_ROUTES = {
     '/artnet/ui': { view: VIEW.PHASER, overlay: OVERLAY.ARTNET_UI, title: 'Artnet UI', icon: '🖼️' },
     '/sales': { view: VIEW.PHASER, overlay: OVERLAY.SALES_GRID, title: 'Gallery Sales', icon: '💰' },
     '/admin': { view: VIEW.PHASER, overlay: OVERLAY.ADMIN, title: 'Admin Panel', icon: '⚙️' },
-    '/cms': { view: VIEW.PHASER, overlay: OVERLAY.CMS, title: 'Content Studio', icon: '🎬' },
+    '/cms': { view: VIEW.PHASER, overlay: OVERLAY.MASTER_CMS, title: 'Master CMS', icon: '📝' },
     '/cms/master': { view: VIEW.PHASER, overlay: OVERLAY.MASTER_CMS, title: 'Master CMS', icon: '📝' },
     '/settings': { view: VIEW.PHASER, overlay: OVERLAY.SETTINGS, title: 'Settings', icon: '⚙️' },
     '/inventory': { view: VIEW.PHASER, overlay: OVERLAY.INVENTORY, title: 'Inventory', icon: '🎒' },

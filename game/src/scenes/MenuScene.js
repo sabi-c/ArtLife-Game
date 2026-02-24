@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { safeSceneStart, safeSceneLaunch } from "../utils/safeScene.js";
 
 export class MenuScene extends Phaser.Scene {
     constructor() {
@@ -62,7 +63,7 @@ export class MenuScene extends Phaser.Scene {
                 txt.on('pointerdown', () => {
                     this.cameras.main.fadeOut(300, 10, 10, 15);
                     this.cameras.main.once('camerafadeoutcomplete', () => {
-                        this.scene.start(item.scene);
+                        safeSceneStart(this, item.scene);
                     });
                 });
             }

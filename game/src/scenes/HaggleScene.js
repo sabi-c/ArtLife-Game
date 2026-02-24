@@ -37,6 +37,8 @@ import { DEALER_DIALOGUE } from '../data/haggle_config.js';
 import { HaggleRendererMixin } from './haggle/HaggleRenderer.js';
 import { HaggleTacticsMixin } from './haggle/HaggleTactics.js';
 import { HaggleDialogueMixin } from './haggle/HaggleDialogue.js';
+import { VIEW } from '../constants/views.js';
+import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 export class HaggleScene extends BaseScene {
     constructor() {
@@ -210,7 +212,7 @@ export class HaggleScene extends BaseScene {
             try { HaggleManager.applyResult(); } catch (e) { /* no active haggle to apply */ }
             GameEventBus.emit(GameEvents.HAGGLE_END, { dealerType: this.state?.dealerTypeKey, result: 'force_exit', round: this.state?.round });
             this.showTerminalUI();
-            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+            GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
             if (this.ui) {
                 if (this.returnCallback) {
                     this.returnCallback(this.ui);
@@ -242,7 +244,7 @@ export class HaggleScene extends BaseScene {
             } else {
                 // Fall back to terminal dashboard
                 this.showTerminalUI();
-                GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+                GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
                 if (this.ui) {
                     if (this.returnCallback) {
                         this.returnCallback(this.ui);

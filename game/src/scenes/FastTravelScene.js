@@ -3,6 +3,7 @@ import { GameState } from '../managers/GameState.js';
 import { WORLD_LOCATIONS, LOCATIONS_BY_ID, FAST_TRAVEL_DESTINATIONS, TAXI_STOPS } from '../data/world_locations.js';
 import { CITY_DATA } from '../data/cities.js';
 import { QualityGate } from '../managers/QualityGate.js';
+import { safeSceneStart, safeSceneLaunch } from "../utils/safeScene.js";
 
 /**
  * FastTravelScene — Phase 41 Taxi / Transit Overlay

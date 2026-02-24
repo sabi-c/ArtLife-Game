@@ -4,6 +4,8 @@ import { NPC } from '../sprites/NPC.js';
 import { registerAllAnims } from '../anims/CharacterAnims.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
+import { VIEW } from '../constants/views.js';
+import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 /**
  * OverworldScene — Phase 40.5 Top-Down Exploration Engine (Refactored)
@@ -254,7 +256,7 @@ export class OverworldScene extends BaseScene {
     leaveLocation() {
         GameEventBus.emit(GameEvents.OVERWORLD_EXIT, { venueId: this.venueId });
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'OverworldScene');
-        GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+        GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
             this.showTerminalUI();

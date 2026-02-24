@@ -1,10 +1,8 @@
 /**
  * views.js
  * 
- * Defines the mutually exclusive UI states for the main App.jsx router.
- * Only ONE of these views can be active at any given time, guaranteeing
- * that we don't accidentally stack TerminalLogin, Dashboard, and SceneEngine
- * on top of each other.
+ * Defines the mutually exclusive UI states for the main App.jsx router,
+ * overlay states, and Phaser scene keys. All routing constants in one file.
  */
 
 export const VIEW = {
@@ -24,9 +22,7 @@ export const OVERLAY = {
     ADMIN: 'ADMIN',
     SETTINGS: 'SETTINGS',
     INVENTORY: 'INVENTORY',
-    CMS: 'CMS',
     DEBUG_LOG: 'DEBUG_LOG',
-    // Legacy: STORYLINE_CMS and EVENT_CMS removed (superseded by MASTER_CMS)
     MASTER_CMS: 'MASTER_CMS',
     MARKET_DASHBOARD: 'MARKET_DASHBOARD',
     ARTWORK_DASHBOARD: 'ARTWORK_DASHBOARD',
@@ -38,3 +34,10 @@ export const OVERLAY = {
     ARTNET_MARKETPLACE: 'ARTNET_MARKETPLACE',
     ARTNET_UI: 'ARTNET_UI',
 };
+
+/**
+ * Phaser scene keys — use these instead of raw strings.
+ * Re-exported from scene-keys.js for convenience.
+ */
+export { SCENE_KEYS as SCENE } from '../data/scene-keys.js';
+

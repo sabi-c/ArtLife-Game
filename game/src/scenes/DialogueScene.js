@@ -10,6 +10,8 @@ import { SCENE_KEYS } from '../data/scene-keys.js';
 import { CONTACTS } from '../data/contacts.js';
 import { useUIStore } from '../stores/uiStore.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { VIEW } from '../constants/views.js';
+import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 /**
  * Dialogue / Event scene — Multi-step engine
@@ -341,7 +343,7 @@ export class DialogueScene extends BaseScene {
             this.cameras.main.fadeOut(400, 0, 0, 0);
             this.cameras.main.once('camerafadeoutcomplete', () => {
                 this.scene.stop();
-                this.scene.start(targetScene, launchData);
+                safeSceneStart(this, targetScene, launchData);
             });
             return;
         }
@@ -866,10 +868,10 @@ export class DialogueScene extends BaseScene {
         this.cameras.main.fadeOut(500, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
             if (this.returnScene) {
-                this.scene.start(this.returnScene, { ...this.returnArgs, ui: this.ui });
+                safeSceneStart(this, this.returnScene, { ...this.returnArgs, ui: this.ui });
             } else {
                 GameEventBus.emit(GameEvents.SCENE_EXIT, 'DialogueScene');
-                GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+                GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
                 this.showTerminalUI();
                 if (this.onExitCallback) {
                     this.onExitCallback();

@@ -22,7 +22,7 @@ const AdminDashboardModule = lazy(() => import('./AdminDashboard.jsx'));
 const LazyAdminFAB = lazy(() => import('./AdminDashboard.jsx').then(m => ({ default: m.AdminFAB })));
 const SettingsOverlay = lazy(() => import('./SettingsOverlay.jsx'));
 const InventoryDashboard = lazy(() => import('./InventoryDashboard.jsx'));
-const ContentStudio = lazy(() => import('./ContentStudio.jsx'));
+const ContentStudio = null; // DEPRECATED: superseded by MasterCMS - kept as null to avoid import breaks
 const MasterCMS = lazy(() => import('./MasterCMS.jsx'));
 const MarketDashboard = lazy(() => import('./MarketDashboard.jsx'));
 const ArtworkDashboard = lazy(() => import('./ArtworkDashboard.jsx'));
@@ -100,14 +100,7 @@ export default function OverlayRouter({
                 </OverlayErrorBoundary>
             )}
 
-            {/* ── CMS (ContentStudio) ── */}
-            {activeOverlay === OVERLAY.CMS && (
-                <OverlayErrorBoundary name="Content Studio" onClose={closeOverlay}>
-                    <ContentStudio onClose={closeOverlay} />
-                </OverlayErrorBoundary>
-            )}
-
-            {/* ── Master CMS ── */}
+            {/* ── Master CMS (also handles legacy /cms route) ── */}
             {activeOverlay === OVERLAY.MASTER_CMS && (
                 <OverlayErrorBoundary name="Master CMS" onClose={closeOverlay}>
                     <MasterCMS onClose={closeOverlay} />

@@ -22,6 +22,7 @@ import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 import { NPCManager } from '../managers/NPCManager.js';
+import { VIEW } from '../constants/views.js';
 
 // ── Layer depth constants ──
 const DEPTH = {
@@ -1300,7 +1301,7 @@ export default class WorldScene extends BaseScene {
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
             GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
-            GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
+            GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.TERMINAL);
             this.showTerminalUI();
             this.scene.stop();
         });
