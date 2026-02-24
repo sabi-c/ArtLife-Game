@@ -788,6 +788,11 @@ export default function AdminDashboard({ onClose }) {
                                         [ Artnet Marketplace ]
                                         <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>artnet.com search page — browse, filter, sort, inquire</div>
                                     </button>
+
+                                    <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00', background: 'rgba(255,75,0,0.04)' }} onClick={() => triggerOverlay(OVERLAY.ARTNET_UI)}>
+                                        [ Artnet UI ]
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>full flow — loading → login → dashboard → marketplace</div>
+                                    </button>
                                 </div>
                             </div>
                         )}

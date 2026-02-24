@@ -18,7 +18,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // ═════════════════════════════════════════════════════════════════════════════
 // Component
 // ═════════════════════════════════════════════════════════════════════════════
-export default function ArtnetLogin({ onClose }) {
+export default function ArtnetLogin({ onClose, onLoginSuccess }) {
     const [mode, setMode] = useState('login'); // 'login', 'signup', 'forgot'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -58,7 +58,12 @@ export default function ArtnetLogin({ onClose }) {
         e.preventDefault();
         if (validate()) {
             setSubmitted(true);
-            setTimeout(() => setSubmitted(false), 2000);
+            if (onLoginSuccess) {
+                // Unified flow: notify parent with credentials
+                setTimeout(() => onLoginSuccess({ email }), 600);
+            } else {
+                setTimeout(() => setSubmitted(false), 2000);
+            }
         }
     };
 
