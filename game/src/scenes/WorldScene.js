@@ -194,7 +194,14 @@ export default class WorldScene extends BaseScene {
         const allSets = [grounds, world, world2, grounds2].filter(Boolean);
 
         if (allSets.length === 0) {
-            throw new Error('No tilesets loaded — check tileset names match Tiled export');
+            console.error('[WorldScene] No tilesets loaded — check tileset names match Tiled export');
+            console.error('[WorldScene] Available textures:', this.textures.getTextureKeys().join(', '));
+            this._showError('No tilesets loaded — tileset images may be missing.\nPress ESC to exit.');
+            this._createFailed = true;
+            // Still allow ESC to exit
+            this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+                .on('down', () => this.exitScene());
+            return;
         }
 
         // ── Render tile layers ──

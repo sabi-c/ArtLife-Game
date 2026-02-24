@@ -55,21 +55,25 @@ const DEFAULT_EDGES = [
 
 function generateDefaultNodes() {
     const nodes = [];
-    let col = 0;
 
-    // Views — left column
+    // Views — left column (generous vertical spacing)
     Object.keys(VIEW).forEach((key, i) => {
-        nodes.push({ id: `VIEW:${key}`, type: 'view', label: key, x: 80, y: 60 + i * 80 });
+        nodes.push({ id: `VIEW:${key}`, type: 'view', label: key, x: 80, y: 60 + i * 100 });
     });
 
-    // Scenes — middle column
+    // Scenes — middle column (two sub-columns for readability)
     PHASER_SCENES.forEach((name, i) => {
-        nodes.push({ id: `SCENE:${name}`, type: 'scene', label: name.replace('Scene', ''), x: 360, y: 60 + i * 64 });
+        const col = i < 7 ? 0 : 1;
+        const row = i < 7 ? i : i - 7;
+        nodes.push({ id: `SCENE:${name}`, type: 'scene', label: name.replace('Scene', ''), x: 480 + col * 200, y: 60 + row * 80 });
     });
 
-    // Overlays — right column
-    Object.keys(OVERLAY).filter(k => OVERLAY[k] !== null).forEach((key, i) => {
-        nodes.push({ id: `OVERLAY:${key}`, type: 'overlay', label: key.replace(/_/g, ' '), x: 640, y: 60 + i * 64 });
+    // Overlays — right column (two sub-columns)
+    const overlayKeys = Object.keys(OVERLAY).filter(k => OVERLAY[k] !== null);
+    overlayKeys.forEach((key, i) => {
+        const col = i < 8 ? 0 : 1;
+        const row = i < 8 ? i : i - 8;
+        nodes.push({ id: `OVERLAY:${key}`, type: 'overlay', label: key.replace(/_/g, ' '), x: 960 + col * 200, y: 60 + row * 72 });
     });
 
     return nodes;
@@ -453,7 +457,7 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
                 <button style={btnStyle} onClick={fitToView}>FIT</button>
                 <button style={btnStyle} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>100%</button>
                 <button style={{ ...btnStyle, borderColor: '#c94040', color: '#c94040' }} onClick={resetLayout}>RESET</button>
-                {selectedNode && (
+                {selectedNode && edges.some(e => e.from === selectedNode || e.to === selectedNode) && (
                     <button style={{ ...btnStyle, borderColor: '#c94040', color: '#f87171' }}
                         onClick={deleteSelectedEdge}>DEL EDGES ({selectedNode.split(':')[1]})</button>
                 )}
