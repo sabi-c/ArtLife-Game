@@ -16,6 +16,7 @@ import { TerminalAPI } from '../../terminal/TerminalAPI.js';
 import { CONTACTS } from '../../data/contacts.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { useNPCStore } from '../../stores/npcStore.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
 import { clamp } from '../../utils/math.js';
 import {
     mask, maskPrice, fmtNum, tearsheetPrice,
