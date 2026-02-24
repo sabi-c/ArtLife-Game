@@ -1,11 +1,12 @@
 /**
  * ArtnetUI.jsx — Unified Artnet Experience Flow
  *
- * Single wrapper component managing 3 animated phases:
- *   loading → login → bloomberg terminal
+ * Single wrapper component managing 4 animated phases:
+ *   loading → login → bloomberg terminal ↔ marketplace
  *
  * After the Artnet loading screen and login, the user lands on the
- * existing Bloomberg Terminal — the game's main trading interface.
+ * Bloomberg Terminal. From there they can navigate to the Artnet
+ * Marketplace search page and back.
  *
  * Animations inspired by Fintech Salon: smooth reveals, slide-up staggers,
  * line-draw accents, crossfade transitions.
@@ -14,6 +15,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ArtnetLogin from './ArtnetLogin.jsx';
 import BloombergTerminal from './BloombergTerminal.jsx';
+import ArtnetMarketplace from './ArtnetMarketplace.jsx';
 
 const FONT = '"ArtnetGrotesk", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
@@ -39,7 +41,7 @@ function injectStyles() {
             to { opacity: 1; transform: translateY(0); }
         }
         @keyframes an-scale-in {
-            from { opacity: 0; transform: scale(0.95); }
+            from { opacity: 0; transform: scale(0.97); }
             to { opacity: 1; transform: scale(1); }
         }
         @keyframes an-logo-pulse {
@@ -66,6 +68,14 @@ function injectStyles() {
         @keyframes an-shimmer {
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
+        }
+        @keyframes an-slide-in-right {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes an-slide-in-left {
+            from { opacity: 0; transform: translateX(-40px); }
+            to { opacity: 1; transform: translateX(0); }
         }
     `;
     document.head.appendChild(style);
@@ -183,7 +193,8 @@ export default function ArtnetUI({ onClose }) {
     useEffect(() => {
         const h = (e) => {
             if (e.key === 'Escape') {
-                if (phase === 'bloomberg') transitionTo('login');
+                if (phase === 'marketplace') transitionTo('bloomberg');
+                else if (phase === 'bloomberg') transitionTo('login');
                 else onClose();
             }
         };
@@ -203,10 +214,15 @@ export default function ArtnetUI({ onClose }) {
         transitionTo('bloomberg');
     }, [transitionTo]);
 
+    // Choose background based on phase
+    const bgColor = phase === 'loading' ? '#1a1a1a'
+        : phase === 'marketplace' ? '#fff'
+            : '#0d1117';
+
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9500,
-            background: phase === 'loading' ? '#1a1a1a' : '#0d1117',
+            background: bgColor,
             fontFamily: FONT,
             transition: 'background 0.4s ease',
         }}>
@@ -214,8 +230,8 @@ export default function ArtnetUI({ onClose }) {
             {transitioning && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 99999,
-                    background: '#0d1117',
-                    animation: 'an-fade-in 0.3s ease-out',
+                    background: bgColor,
+                    animation: 'an-fade-in 0.25s ease-out',
                 }} />
             )}
 
@@ -230,11 +246,25 @@ export default function ArtnetUI({ onClose }) {
             )}
 
             {phase === 'bloomberg' && (
-                <div style={{ animation: 'an-fade-in 0.3s ease-out', position: 'absolute', inset: 0 }}>
-                    <BloombergTerminal onClose={onClose} />
+                <div style={{
+                    animation: 'an-scale-in 0.4s cubic-bezier(0.16,1,0.3,1) both',
+                    position: 'absolute', inset: 0,
+                }}>
+                    <BloombergTerminal
+                        onClose={onClose}
+                        onBrowseMarketplace={() => transitionTo('marketplace')}
+                    />
+                </div>
+            )}
+
+            {phase === 'marketplace' && (
+                <div style={{
+                    animation: 'an-slide-in-right 0.4s cubic-bezier(0.16,1,0.3,1) both',
+                    position: 'absolute', inset: 0,
+                }}>
+                    <ArtnetMarketplace onClose={() => transitionTo('bloomberg')} />
                 </div>
             )}
         </div>
     );
 }
-

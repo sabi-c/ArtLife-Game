@@ -4161,7 +4161,7 @@ function EventOverlay({ event, onComplete }) {
 // ══════════════════════════════════════════════════════════════
 // Main Bloomberg Terminal
 // ══════════════════════════════════════════════════════════════
-export default function BloombergTerminal({ onClose }) {
+export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
     const feed = useBloombergFeed();
 
     // State
@@ -4442,6 +4442,9 @@ export default function BloombergTerminal({ onClose }) {
                             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                             if (onClose) onClose();
                         }} title="Check Messages & Contacts">[ PHONE ]</button>
+                        {onBrowseMarketplace && (
+                            <button style={{ background: 'none', border: 'none', color: '#ff4b00', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={onBrowseMarketplace} title="Search Artnet Marketplace">[ ARTNET SEARCH ]</button>
+                        )}
                     </span>
                 </div>
                 <div className="bb-header-right">
