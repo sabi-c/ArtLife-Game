@@ -5,7 +5,7 @@
  * Strategy: Cache-first for assets, network-first for HTML.
  */
 
-const CACHE_NAME = 'artlife-v3';
+const CACHE_NAME = 'artlife-v4';
 
 // Core assets to pre-cache on install
 // Use relative paths so the SW works on any deployment subpath (e.g. GitHub Pages /ArtLife-Game/)
@@ -17,7 +17,7 @@ const PRECACHE_ASSETS = [
 ];
 
 // Asset extensions to cache on fetch
-const CACHEABLE_EXTENSIONS = ['.js', '.css', '.png', '.jpg', '.webp', '.woff2', '.woff'];
+const CACHEABLE_EXTENSIONS = ['.js', '.css', '.png', '.jpg', '.webp', '.woff2', '.woff', '.json'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(

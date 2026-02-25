@@ -128,12 +128,16 @@ export function createPhaserGame() {
     phaserGame.canvas.style.position = 'fixed';
     phaserGame.canvas.style.top = '0';
     phaserGame.canvas.style.left = '0';
+    phaserGame.canvas.style.width = '100vw';
+    phaserGame.canvas.style.height = '100vh';
     phaserGame.canvas.style.marginTop = '0';
     phaserGame.canvas.style.marginLeft = '0';
     phaserGame.canvas.style.zIndex = '0';
 
-    // Keep margins zeroed if Scale Manager fires a resize event
+    // Keep sized correctly on resize
     phaserGame.scale.on('resize', () => {
+        phaserGame.canvas.style.width = '100vw';
+        phaserGame.canvas.style.height = '100vh';
         phaserGame.canvas.style.marginTop = '0';
         phaserGame.canvas.style.marginLeft = '0';
     });
