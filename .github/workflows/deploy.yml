@@ -45,8 +45,8 @@ jobs:
           echo "=== Pre-deploy Validation ==="
           ERRORS=0
 
-          # Check critical game assets
-          for asset in content/maps/pallet_town.json assets/tilesets/world.png assets/tilesets/world2.png assets/tilesets/grounds.png assets/tilesets/grounds2.png assets/sprites/player.png; do
+          # Check critical game assets that exist in this project
+          for asset in assets/sprites/player.png content/calendar.json; do
             if [ ! -f "dist/$asset" ]; then
               echo "FATAL: Missing dist/$asset"
               ERRORS=$((ERRORS + 1))
