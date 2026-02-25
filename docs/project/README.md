@@ -44,12 +44,17 @@ The game should feel **analog and tactile** — like a typewriter, not a web app
 |---|---|---|
 | **Antigravity** | CMS Data Hub, MarketSimulator robustness, CI fix, project audit | 🟢 Active |
 
-### Latest Session (2026-02-23 Session 27)
+### Latest Session (2026-02-23 Session 29)
+- **Email Haggle Game-Wide Integration**: `EMAIL_HAGGLE_START` event added to GameEventBus; App.jsx renders `EmailOverlay` on top of all views when triggered from any context; DialogueScene now launches email negotiation instead of Phaser HaggleScene
+- **Admin EMAIL Test Tab**: New EMAIL tab in AdminDashboard with 5 test scenarios (Patron $285K Basquiat, Mega-Dealer $42K Haring, Sell $1.2M Koons, static deal offer, auction result notification)
+- **Files changed:** `GameEventBus.js` (+1 event), `App.jsx` (+EmailOverlay global state), `AdminDashboard.jsx` (+EMAIL tab), `DialogueScene.js` (email haggle instead of Phaser HaggleScene)
+- **Build**: Clean
+
+### Session 27 (2026-02-23)
 - **Unified Email Overlay System**: Merged `EmailDialogueOverlay.jsx` + `HaggleEmailOverlay.jsx` into `src/ui/email/` module (5 files)
 - Gmail-style tactic chips with type-color dots, category navigation (TACTICS/POWERS/INFO/DEAL), dialogue sub-choices
 - Dark-mode professional design with `email-` CSS prefix, full thread view, haggle status bar
 - `useEmailState.js` hook: unified state machine for both static deal events and HaggleManager negotiations
-- **Build**: Clean
 
 ### Known Issues & Recent Fixes (2026-02-23)
 
@@ -109,10 +114,10 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 
 > **See [Roadmap.md](Roadmap.md) for the full task tracker.**
 
-1. **Scene Flow Visual Editor** — Node-based React Flow editor connecting all building blocks (scenes, transitions, events) into playable sequences. See `Scene_Flow_Visual_Editor_Plan.md`.
-2. **Tone System** — 5 dialogue tones (Friendly, Schmoozing, Direct, Generous, Ruthless) that modify NPC responses and unlock specialization perks after Week 20.
-3. **MarketEngine** — Weekly art price fluctuation: `basePrice x artistHeat x eraModifier x (1 +/- volatility)`. Makes the market feel alive.
-4. **Week 26 Endgame Sequence** — Museum Retrospective vs SEC Investigation reckoning. Caps the MVP arc.
+1. **Week 26 Endgame Sequence** — Museum Retrospective vs SEC Investigation vs Shadow Broker. Caps the MVP arc.
+2. **Zustand Migration** — Replace `GameState.js` singleton with `gameStore` (Zustand) for testability and reactivity. See `Code_Audit_and_Refactoring_Plan.md`.
+3. **Guided Onboarding / Tutorial** — Week 1 hand-holding for new players so the game makes sense on first visit.
+4. **Real-World Art Data Ingestion** — Feed actual auction results into the market simulation. See `Data_Ingestion_Template.md`.
 5. **More ink Scenes** — Expand the 3-scene library with deeper branching and NPC callbacks.
 
 ---
@@ -141,16 +146,15 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 
 | Layer | Files | Notes |
 |---|---|---|
-| `scenes/` | 14 | WorldScene (450 LOC), HaggleScene (23KB), DialogueScene (36KB), MacDialogueScene (15KB), LocationScene, CityScene, FastTravelScene, etc. |
-| `managers/` | 16 | GameState, WeekEngine, DealResolver, NPCMemory, GameEventBus, HaggleManager, MarketManager, PhoneManager, ConsequenceScheduler, DialogueEngine, SettingsManager, WebAudioService, etc. |
-| `data/` | 10 + `events/` (8) + `scenes/` (3) + `maps/` | events split by category, 3 ink scenes (boom_room, gallery_opening, studio_visit), rooms.js (76KB) |
-| `terminal/` | TerminalUI + TerminalAPI + 11 screen modules | Screens split: dashboard, market, phone, world, character, events, venue, system, haggle, journal, collection |
-| `engines/` | 1 | SceneEngine.js — ink.js visual novel engine |
-| `stores/` | 8 | gameStore, npcStore, inventoryStore, marketStore, eventStore, contentStore, storylineStore, **cmsStore** (Zustand) |
-| `api/` | 1 | ContentAPI.js — CRUD facade, `window.ContentAPI` |
-| `utils/` | 5 | shuffle.js, id.js, ErrorRegistry.js, GameDebugAPI.js, ContentExporter.js |
-| `sprites/` | 2 | Player.js, NPC.js (decoupled entity classes) |
-| `ui/` | 20+ | AdminDashboard, PlayerDashboard, InventoryDashboard, ScenePlayer, TerminalLogin, SettingsOverlay, DialogueBox, MobileJoypad, ErrorBoundary, ContentStudio, CalendarHUD, MarketDashboard, ArtworkDashboard, BloombergTerminal, SalesGrid, **MasterCMS** (7 editors: NPC, Artwork, Venue, Storyline, Dialogue, Haggle, DataHub) |
+| `scenes/` | 14 + `haggle/` (3 mixins) | HaggleScene refactored to orchestrator + HaggleRenderer.js, HaggleTactics.js, HaggleDialogue.js; WorldScene, DialogueScene (36KB), MacDialogueScene (15KB), LocationScene, CityScene, FastTravelScene, etc. |
+| `managers/` | 24+ | GameState (~55KB god object — Phase 4 refactor target), WeekEngine, DealResolver, NPCManager, GameEventBus, HaggleManager, MarketManager, MarketSimulator (~52KB), PhoneManager, ConsequenceScheduler, DialogueEngine, SettingsManager, WebAudioService, ActivityLogger, DecisionLog, etc. |
+| `data/` | 21+ | `events/` (8 category files + index), `scenes/` (3 ink JSONs), `maps/`, plus artists, artworks, contacts, rooms.js (76KB), storylines.js, world_locations.js, etc. |
+| `core/` | 5 | views.js (VIEW & OVERLAY constants), GameTick.js, SceneEngine.js, SystemicTriggers.js, ExpressionEngine.js |
+| `terminal/` | TerminalUI + TerminalAPI + 15 screen modules | Dashboard split: dashboard.js (hub), dashboard-venue.js, dashboard-weekly.js, dashboard-cutscenes.js + shared-helpers.js; market, phone, ego, world, character, events, venue, system, haggle, journal, collection, index |
+| `stores/` | 11+ | gameStore, npcStore, inventoryStore, marketStore, eventStore, contentStore, storylineStore, calendarStore, consequenceStore, uiStore, **cmsStore** (670 LOC — auto-save, snapshots, dirty flags) |
+| `hooks/` | 2 | usePageRouter.js (URL ↔ state sync, 20+ routes), useBloombergFeed.js |
+| `utils/` | 12+ | math.js (clamp), format.js (money/pct), shuffle.js, id.js, ErrorRegistry.js, GameDebugAPI.js, ContentAPI.js, ContentExporter.js, SceneTransition.js, Controls.js, assets.js, safeScene.js, tiledAutoLoader.js |
+| `ui/` | 75+ | AdminDashboard (7 tabs incl. EMAIL), ViewRouter, OverlayRouter, MasterCMS (15 tabs), cms/ (18+ editors incl. **PageEditor v3**, FlowEditor, MapEditor), email/ (EmailOverlay, EmailThread, EmailCompose, inbox/, haggle/), dashboard/ (Bloomberg sub-components), terminal/ screens |
 
 ### Patterns
 - **GameEventBus** — singleton EventEmitter bridging Phaser scenes ↔ React UI ↔ Terminal
@@ -168,13 +172,13 @@ All 8 tasks finished. New files: `DealResolver.js`, `WeekEngine.js`, `NPCMemory.
 ```bash
 cd game
 npm install
-npm run dev          # Vite dev server on http://localhost:5173
+npm run dev          # Vite dev server on http://localhost:5175
 ```
 
 ### Running Tests
 ```bash
 # Unit tests (needs dev server running on port 5175)
-npm test             # 36/36 tests
+npm test             # 5/5 tests
 
 # Full Playwright scene flow tests
 npm run test:flow    # 53/53 tests
@@ -239,9 +243,16 @@ npm run build        # Vite production build → dist/
 ```
 game/
 ├── src/
-│   ├── phaserInit.js               # Phaser config + scene registration + GameEventBus bridge
+│   ├── phaserInit.js               # Phaser config + scene registration + GameEventBus + SW registration
 │   ├── App.jsx                     # React root — central UI router + overlay registry
-│   ├── style.css                   # All styling (~35KB)
+│   ├── style.css                   # All styling (~60KB)
+│   │
+│   ├── core/                       # ── ROUTING & GAME LOOP ──
+│   │   ├── views.js                # VIEW and OVERLAY route constants
+│   │   ├── GameTick.js             # Week tick orchestration
+│   │   ├── SceneEngine.js          # ink.js visual novel engine
+│   │   ├── SystemicTriggers.js     # Event trigger system
+│   │   └── ExpressionEngine.js     # Dialogue expression parser
 │   │
 │   ├── data/                       # ── DATA LAYER ──
 │   │   ├── artists.js              # 8 artists + work generator
@@ -252,59 +263,114 @@ game/
 │   │   ├── cities.js               # 5 cities with travel costs
 │   │   ├── contacts.js             # 16 NPC contacts across 10 roles
 │   │   ├── dialogue_trees.js       # V2 dialogue trees (9 trees)
+│   │   ├── storylines.js           # Story arc definitions
+│   │   ├── world_locations.js      # City/venue location data
 │   │   ├── events/                 # 49+ events split by category (8 files + index barrel)
 │   │   ├── haggle_config.js        # Haggle types, tactics, dealer types
 │   │   ├── rooms.js                # Room/venue data (76KB, 6 venues)
 │   │   ├── scene-keys.js           # Frozen scene key constants
 │   │   ├── scenes/                 # ink.js compiled story JSONs (3 scenes)
-│   │   └── maps/                   # Tiled JSON map data (pallet_town)
+│   │   └── maps/                   # Tiled JSON map data
 │   │
-│   ├── managers/                   # ── ENGINE LAYER ──
-│   │   ├── GameState.js            # Central state singleton
+│   ├── managers/                   # ── ENGINE LAYER (24+ files) ──
+│   │   ├── GameState.js            # Central state singleton (~55KB — Phase 4 refactor target)
 │   │   ├── WeekEngine.js           # Weekly advance orchestrator (try/catch isolated)
 │   │   ├── DealResolver.js         # Deal/offer resolution logic
 │   │   ├── GameEventBus.js         # Singleton event bridge (20+ event types)
 │   │   ├── HaggleManager.js        # Haggle battle state machine
 │   │   ├── MarketManager.js        # Art market simulation
+│   │   ├── MarketSimulator.js      # NPC trading simulation (~52KB)
+│   │   ├── NPCManager.js           # NPC behavior & memory
 │   │   ├── PhoneManager.js         # NPC messaging hub
 │   │   ├── ConsequenceScheduler.js # Delayed effect queue
 │   │   ├── DialogueEngine.js       # Branching narrative parser
 │   │   ├── DialogueTreeManager.js  # V2 dialogue tree manager
 │   │   ├── EventRegistry.js        # Event selection + pacing
-│   │   ├── OverworldHelper.js      # Map/physics helper
-│   │   ├── QualityGate.js          # Stat-gating system
 │   │   ├── SettingsManager.js      # Schema-driven settings persistence
-│   │   └── WebAudioService.js      # Procedural sound effects (16 methods)
+│   │   ├── WebAudioService.js      # Procedural sound effects (16 methods)
+│   │   ├── ActivityLogger.js       # Game activity log
+│   │   ├── DecisionLog.js          # Player decision recording
+│   │   └── _deprecated/            # Old managers kept for reference
 │   │
-│   ├── engines/                    # ── NARRATIVE ENGINE ──
-│   │   └── SceneEngine.js          # ink.js visual novel engine
-│   │
-│   ├── terminal/                   # ── TERMINAL UI LAYER ──
-│   │   ├── TerminalUI.js           # Screen stack renderer
-│   │   ├── TerminalAPI.js          # Data facade for screens
-│   │   └── screens/                # 11 screen modules (dashboard, market, phone, etc.)
-│   │
-│   ├── stores/                     # ── ZUSTAND STORES ──
+│   ├── stores/                     # ── ZUSTAND STORES (11+) ──
 │   │   ├── gameStore.js            # Core game state store
 │   │   ├── npcStore.js             # NPC relationship data
 │   │   ├── inventoryStore.js       # Player inventory
 │   │   ├── marketStore.js          # Market price data
-│   │   └── eventStore.js           # Event tracking
+│   │   ├── eventStore.js           # Event tracking
+│   │   ├── contentStore.js         # CMS content tracking
+│   │   ├── storylineStore.js       # Story arc state
+│   │   ├── calendarStore.js        # Calendar/tick state
+│   │   ├── consequenceStore.js     # Scheduled consequence queue
+│   │   ├── uiStore.js              # UI state (view, overlay, panels)
+│   │   └── cmsStore.js             # CMS bundle save/load/export (670 LOC)
 │   │
-│   ├── ui/                         # ── REACT UI COMPONENTS ──
-│   │   ├── AdminDashboard.jsx      # God Mode (6 tabs + mobile FAB)
+│   ├── hooks/                      # ── REACT HOOKS ──
+│   │   ├── usePageRouter.js        # URL ↔ VIEW/OVERLAY state sync (20+ routes)
+│   │   └── useBloombergFeed.js     # Bloomberg terminal data feed
+│   │
+│   ├── utils/                      # ── UTILITIES (12+) ──
+│   │   ├── math.js                 # clamp() and math helpers
+│   │   ├── format.js               # formatMoney(), formatPct(), formatPriceByIntel()
+│   │   ├── shuffle.js              # Array shuffle
+│   │   ├── id.js                   # ID generation
+│   │   ├── ContentAPI.js           # CRUD facade, window.ContentAPI
+│   │   ├── ContentExporter.js      # Save/load/preset system
+│   │   ├── GameDebugAPI.js         # Debug tools
+│   │   ├── ErrorRegistry.js        # Error tracking
+│   │   ├── SceneTransition.js      # Scene launch helper
+│   │   ├── Controls.js             # Input handling
+│   │   ├── assets.js               # Asset path resolver
+│   │   ├── safeScene.js            # Safe scene access
+│   │   └── tiledAutoLoader.js      # Tiled map auto-loader
+│   │
+│   ├── ui/                         # ── REACT UI COMPONENTS (75+) ──
+│   │   ├── ViewRouter.jsx          # Full-page view router (lazy-loaded views)
+│   │   ├── OverlayRouter.jsx       # Lazy-loaded overlay router with error boundaries
+│   │   ├── AdminDashboard.jsx      # God Mode (7 tabs + mobile FAB, incl. EMAIL tab)
+│   │   ├── MasterCMS.jsx           # Content Management System (15 tabs)
+│   │   ├── BloombergTerminal.jsx   # Market terminal UI (9 view styles)
 │   │   ├── PlayerDashboard.jsx     # Stats/ledger overlay
 │   │   ├── InventoryDashboard.jsx  # Collection viewer
 │   │   ├── ScenePlayer.jsx         # ink.js scene selector + player
 │   │   ├── TerminalLogin.jsx       # Boot sequence / profile select
 │   │   ├── SettingsOverlay.jsx     # Game settings UI
-│   │   ├── DialogueBox.jsx         # Global dialogue overlay
 │   │   ├── MobileJoypad.jsx        # D-pad + A/B buttons
-│   │   └── ErrorBoundary.jsx       # React error boundary
-│   │
-│   ├── sprites/                    # ── ENTITY CLASSES ──
-│   │   ├── Player.js               # Decoupled player sprite
-│   │   └── NPC.js                  # Decoupled NPC sprite
+│   │   ├── ErrorBoundary.jsx       # React error boundary
+│   │   ├── OverlayErrorBoundary.jsx# Per-overlay error boundary (name + CLOSE/RETRY)
+│   │   ├── cms/                    # 18+ CMS editor components
+│   │   │   ├── PageEditor.jsx      # Game page/scene manager (v3 — hierarchical tree + inspector)
+│   │   │   ├── FlowEditor.jsx      # Node-based scene transition graph
+│   │   │   ├── MapEditor.jsx       # Tiled map visual editor
+│   │   │   ├── VenueEditor.jsx     # Venue/room editor
+│   │   │   ├── RoomManager.jsx     # Room management (large — 1700+ LOC)
+│   │   │   ├── EventEditor.jsx     # Event/dialogue authoring
+│   │   │   ├── StorylineEditor.jsx # Narrative arc manager with graph viz
+│   │   │   ├── NPCEditor.jsx       # Contact profiles and relationships
+│   │   │   ├── ArtworkEditor.jsx   # Artwork catalog with market panel
+│   │   │   ├── HaggleEditor.jsx    # Haggle battle configuration
+│   │   │   ├── MarketSimDashboard.jsx # 8-tab market analysis
+│   │   │   ├── DataHub.jsx         # Central data ingestion + templates
+│   │   │   ├── KanbanBoard.jsx     # Project board tracking
+│   │   │   ├── TimelineCalendar.jsx# Timeline override management
+│   │   │   ├── ActivityLogViewer.jsx# Change logging
+│   │   │   ├── ArtTerminal.jsx     # Live terminal interface
+│   │   │   ├── EngineOverview.jsx  # Engine status dashboard
+│   │   │   ├── TearSheetView.jsx   # Artwork tearsheet view
+│   │   │   └── mapUtils.js         # Shared map utilities
+│   │   ├── email/                  # Unified email negotiation system
+│   │   │   ├── EmailOverlay.jsx    # Main email overlay shell
+│   │   │   ├── EmailThread.jsx     # Email thread left panel
+│   │   │   ├── EmailCompose.jsx    # Compose/reply right panel
+│   │   │   ├── useEmailState.js    # State machine for both deal + haggle modes
+│   │   │   ├── EmailOverlay.css    # Dark-mode email styles
+│   │   │   ├── inbox/              # Gmail-style inbox (InboxShell.jsx, etc.)
+│   │   │   └── haggle/             # Email haggle overlay (HaggleOverlay.jsx)
+│   │   ├── dashboard/              # Bloomberg sub-components (views, panels, modals)
+│   │   └── terminal/               # TerminalUI.js + TerminalAPI.js + 15 screen modules
+│   │       └── screens/            # dashboard, dashboard-venue, dashboard-weekly, dashboard-cutscenes,
+│   │                               # market, phone, ego, world, character, events, venue, system,
+│   │                               # haggle, journal, collection, shared-helpers, index
 │   │
 │   └── scenes/                     # ── PHASER SCENES (14) ──
 │       ├── BaseScene.js            # Shared lifecycle (UI hide/show, cleanup)
@@ -312,10 +378,13 @@ game/
 │       ├── TitleScene.js           # Title screen (New/Load/QuickStart)
 │       ├── IntroScene.js           # Cinematic narrator intro
 │       ├── CharacterSelectScene.js # 6-phase character creator
-│       ├── WorldScene.js           # GridEngine overworld (NPCs, dialog, encounters)
+│       ├── NewWorldScene.js        # GridEngine overworld (NPCs, dialog, encounters)
 │       ├── CityScene.js            # City hub (clickable location cards)
 │       ├── LocationScene.js        # Room navigation (venue interiors)
-│       ├── HaggleScene.js          # Haggle battle (pre-battle cinematic + tactics)
+│       ├── HaggleScene.js          # Haggle battle orchestrator (3-mixin split)
+│       │   ├── haggle/HaggleRenderer.js  # Battle arena, sprites, bars
+│       │   ├── haggle/HaggleTactics.js   # Menu system, tactic execution
+│       │   └── haggle/HaggleDialogue.js  # Typewriter, animations
 │       ├── DialogueScene.js        # Event rendering + multi-step engine
 │       ├── MacDialogueScene.js     # 1-bit Macintosh visual novel
 │       ├── FastTravelScene.js      # Taxi/fast travel system
@@ -326,15 +395,17 @@ game/
 │   ├── backgrounds/                # 15+ pixel art backgrounds
 │   ├── sprites/                    # 8 dealer sprites + 18 NPC portraits
 │   ├── portraits/                  # 3 character class portraits
-│   ├── art/                        # In-game artwork assets
+│   ├── artworks/                   # In-game artwork assets
 │   ├── assets/tilesets/            # 4 tilesets (grounds, world, world2, grounds2)
 │   ├── assets/sprites/             # Player spritesheet (216x384, 12 frames)
-│   ├── content/maps/               # Tiled JSON maps (pallet_town)
+│   ├── content/maps/               # Tiled JSON maps (larus.json overworld)
 │   ├── icons/                      # PWA icons
-│   └── manifest.json, sw.js
-├── test_game.cjs                   # Unit tests (36 tests)
-├── test_flow.cjs                   # Playwright flow tests (53 tests)
-└── vite.config.js
+│   └── manifest.json, sw.js       # (sw.js auto-versioned by vite.config.js on each build)
+├── tests/
+│   └── headless/
+│       ├── test_game.cjs           # Unit tests (5 tests via Puppeteer)
+│       └── test_flow.cjs           # Playwright flow tests (53 tests)
+└── vite.config.js                  # Build config (SW auto-versioning, COEP headers, chunk splitting)
 ```
 
 ---
@@ -381,7 +452,12 @@ game/
 | Sales Grid (Beckmans-inspired admin tool) | ✅ |
 | MarketSimulator (provenance chains, trade type tags) | ✅ |
 | Persistent artwork trade history + save/load | ✅ |
-| MasterCMS (7 editors: NPC, Artwork, Venue, Storyline, Dialogue, Haggle, DataHub) | ✅ |
+| MasterCMS (15 tabs — Board, Timeline, Storylines, Events, NPCs, Artworks, Haggle, MarketSim, Terminal, Venues, ActivityLog, DataHub, Engines, **Pages**, FlowMap) | ✅ |
+| PageEditor v3 (hierarchical page tree, property panel, flow breadcrumbs, data sources) | ✅ |
+| FlowEditor (node-based scene transition graph with accurate routing) | ✅ |
+| Email haggle game-wide integration (EmailOverlay from any context) | ✅ |
+| Code refactoring sprint (math.js, format.js, shared-helpers.js, dashboard split, HaggleScene split) | ✅ |
+| SW auto-versioning on every build + controllerchange reload | ✅ |
 | Endgame reckoning (Week 26) | TODO |
 
 ---

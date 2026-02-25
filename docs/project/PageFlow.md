@@ -1,7 +1,7 @@
 # ArtLife — Complete Page Flow Map
 
 > Visual map of every screen, overlay, and scene transition in the game.
-> Updated: 2026-02-22
+> Updated: 2026-02-25
 
 ---
 
@@ -187,20 +187,29 @@ MacDialogueScene (Phaser)
 
 ```
 OVERLAYS (managed by App.jsx overlay router)
-  ├─ ` (backtick)  → AdminDashboard (God Mode)
-  ├─ F1            → ContentStudio (CMS)
-  ├─ F2            → Diagnostics panel
+  ├─ ` (backtick)  → AdminDashboard (God Mode — 7 tabs incl. EMAIL test)
+  ├─ F2            → DebugLog panel
   │
-  ├─ Via Dashboard options or Admin buttons:
+  ├─ Via URL routes or Admin buttons:
+  │    ├─ /cms        → MASTER_CMS (MasterCMS — 15-tab full content editor)
+  │    ├─ /market     → BLOOMBERG (Bloomberg terminal — 9 view styles)
+  │    ├─ /artnet     → ARTNET_MARKETPLACE (Artnet marketplace browser)
+  │    ├─ /inbox      → GMAIL_GUIDE (Gmail-style email inbox)
+  │    ├─ /debug      → DEBUG_LOG (diagnostic panel)
+  │    ├─ /sales      → SALES_GRID (sales admin grid)
   │    ├─ MARKET      → MarketDashboard (Recharts analytics)
   │    ├─ ARTWORK     → ArtworkDashboard (Bloomberg-style deep dive)
   │    ├─ INVENTORY   → InventoryDashboard
   │    ├─ SETTINGS    → SettingsOverlay
-  │    ├─ CMS         → MasterCMS (full content editor)
   │    └─ PLAYER      → PlayerDashboard
+  │
+  ├─ Via email haggle flow (EMAIL_HAGGLE_START event):
+  │    └─ EMAIL_OVERLAY → EmailOverlay (Gmail-style tactic chips + negotiation)
   │
   └─ All close with ESC
 ```
+
+> **Note:** `ContentStudio` (F1 key) is deprecated — superseded by `MasterCMS` (accessible via `/cms` route or the backtick AdminDashboard → CMS tab).
 
 ---
 
@@ -211,7 +220,8 @@ OVERLAYS (managed by App.jsx overlay router)
 | `BootScene` | `scenes/BootScene.js` | Asset preloader, exposes startPhaserGame |
 | `IntroScene` | `scenes/IntroScene.js` | Cinematic narrator intro |
 | `CharacterSelectScene` | `scenes/CharacterSelectScene.js` | 6-phase character builder |
-| `OverworldScene` | `scenes/OverworldScene.js` | Legacy overworld (deprecated, kept for saves) |
+| `OverworldScene` | `scenes/OverworldScene.js` | **Deprecated** legacy overworld (kept for backward-compat saves) |
+| `NewWorldScene` | `scenes/NewWorldScene.js` | Current overworld (GridEngine, tile-based) |
 | `WorldScene` | `scenes/WorldScene.js` | Pokemon-style grid walking |
 | `LocationScene` | `scenes/LocationScene.js` | Interior room exploration (classic + Tiled modes) |
 | `HaggleScene` | `scenes/HaggleScene.js` | Pokemon-style negotiation battle |
@@ -227,12 +237,33 @@ OVERLAYS (managed by App.jsx overlay router)
 ## View State Machine (App.jsx)
 
 ```
-VIEW.PHASER    → Show Phaser canvas, hide React terminal
-VIEW.BOOT      → Show TerminalLogin React component
-VIEW.TERMINAL  → Show Terminal DOM (dashboard, screens)
+VIEW.PHASER             → Show Phaser canvas, hide React terminal
+VIEW.BOOT               → Show TerminalLogin React component
+VIEW.TERMINAL           → Show Terminal DOM (dashboard, screens)
+VIEW.DASHBOARD          → Bloomberg/market dashboard view
+VIEW.CHARACTER_CREATOR  → React character creation flow
+VIEW.SCENE_ENGINE       → Ink.js visual novel scene player
 ```
 
 Transitions between views are triggered by `GameEventBus.emit(GameEvents.UI_ROUTE, viewName)`.
+
+---
+
+## URL Route Reference (`usePageRouter.js`)
+
+| URL | View | Overlay |
+|-----|------|---------|
+| `/` | PHASER | Bloomberg or Artnet (user preference) |
+| `/boot` | BOOT | — |
+| `/terminal` | TERMINAL | — |
+| `/market` | PHASER | BLOOMBERG |
+| `/inbox` | PHASER | GMAIL_GUIDE |
+| `/artnet` | PHASER | ARTNET_MARKETPLACE |
+| `/cms` | PHASER | MASTER_CMS |
+| `/admin` | PHASER | ADMIN |
+| `/character` | CHARACTER_CREATOR | — |
+| `/debug` | PHASER | DEBUG_LOG |
+| `/sales` | PHASER | SALES_GRID |
 
 ---
 
