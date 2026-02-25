@@ -101,10 +101,13 @@ function countObjects(mapJSON) {
 /** Safely get flat tile data from a layer (handles both flat data and chunked infinite format) */
 function getLayerData(layer, mapWidth, mapHeight) {
     if (!layer) return [];
-    if (layer.data) return layer.data;
+    if (layer.data && Array.isArray(layer.data)) return layer.data;
     if (layer.chunks) {
+        // Check if chunk data is base64-encoded (string) — can't decode in CMS
+        if (layer.chunks[0]?.data && typeof layer.chunks[0].data === 'string') return [];
         const flat = new Array(mapWidth * mapHeight).fill(0);
         for (const chunk of layer.chunks) {
+            if (!Array.isArray(chunk.data)) continue;
             for (let row = 0; row < chunk.height; row++) {
                 for (let col = 0; col < chunk.width; col++) {
                     const mx = chunk.x + col;
@@ -118,6 +121,15 @@ function getLayerData(layer, mapWidth, mapHeight) {
         return flat;
     }
     return [];
+}
+
+/** Check if a map uses infinite/encoded format that can't be edited in-browser */
+function isInfiniteMap(mapJSON) {
+    if (!mapJSON) return false;
+    if (mapJSON.infinite) return true;
+    const tileLayer = (mapJSON.layers || []).find(l => l.type === 'tilelayer');
+    if (tileLayer?.chunks?.[0]?.data && typeof tileLayer.chunks[0].data === 'string') return true;
+    return false;
 }
 
 /** Generate ASCII mini-map from Tiled layers */
@@ -1459,16 +1471,33 @@ export default function RoomManager({ onClose }) {
                             }}
                         >▶ PLAY</button>
                         {mapData['larus'] && (
-                            <button
-                                onClick={() => setEditingMapId('larus')}
-                                style={{
-                                    flex: 1, padding: '8px 8px',
-                                    background: '#1a1a0a', border: '1px solid #c9a84c',
-                                    color: '#c9a84c', cursor: 'pointer',
-                                    fontFamily: mono, fontSize: 10,
-                                    borderRadius: 2,
-                                }}
-                            >✎ EDIT MAP</button>
+                            isInfiniteMap(mapData['larus']) ? (
+                                <button
+                                    onClick={() => {
+                                        const cmd = `open -a Tiled "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/public/assets/luminus/larus.json"`;
+                                        navigator.clipboard.writeText(cmd);
+                                    }}
+                                    title="Map uses infinite/encoded format — open in Tiled to edit"
+                                    style={{
+                                        flex: 1, padding: '8px 8px',
+                                        background: '#0a1a2a', border: '1px solid #3a6a9c',
+                                        color: '#88bbdd', cursor: 'pointer',
+                                        fontFamily: mono, fontSize: 10,
+                                        borderRadius: 2,
+                                    }}
+                                >🗺️ OPEN IN TILED</button>
+                            ) : (
+                                <button
+                                    onClick={() => setEditingMapId('larus')}
+                                    style={{
+                                        flex: 1, padding: '8px 8px',
+                                        background: '#1a1a0a', border: '1px solid #c9a84c',
+                                        color: '#c9a84c', cursor: 'pointer',
+                                        fontFamily: mono, fontSize: 10,
+                                        borderRadius: 2,
+                                    }}
+                                >✎ EDIT MAP</button>
+                            )
                         )}
                     </div>
                 </div>

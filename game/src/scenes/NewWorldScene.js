@@ -266,9 +266,6 @@ export default class NewWorldScene extends Phaser.Scene {
             }
         }
 
-        // Set world bounds to map size
-        this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-
         // Collision with tilemap
         if (this.collisionLayer) {
             this.physics.add.collider(this.player, this.collisionLayer);
