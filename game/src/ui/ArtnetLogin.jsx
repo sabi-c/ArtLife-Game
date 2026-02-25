@@ -20,8 +20,6 @@ import { GameState } from '../managers/GameState.js';
 // Component
 // ═════════════════════════════════════════════════════════════════════════════
 export default function ArtnetLogin({ onClose, onLoginSuccess }) {
-    const [phase, setPhase] = useState('loading'); // 'loading' or 'login'
-    const [progress, setProgress] = useState(0);
     const [mode, setMode] = useState('login'); // 'login', 'signup', 'forgot'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -31,23 +29,6 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
     const [errors, setErrors] = useState({});
     const [submitted, setSubmitted] = useState(false);
     const emailRef = useRef(null);
-
-    // ── Artnet loading phase — spinner + orange bar for 3 seconds ──
-    useEffect(() => {
-        if (phase !== 'loading') return;
-        const duration = 3000;
-        const interval = 30;
-        let elapsed = 0;
-        const timer = setInterval(() => {
-            elapsed += interval;
-            setProgress(Math.min(elapsed / duration, 1));
-            if (elapsed >= duration) {
-                clearInterval(timer);
-                setPhase('login');
-            }
-        }, interval);
-        return () => clearInterval(timer);
-    }, [phase]);
 
     // ── Detect existing save slots (autofill-style) ──
     const savedSlots = useMemo(() => {
@@ -117,78 +98,6 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
 
     const font = '"ArtnetGrotesk", Helvetica, Arial, sans-serif';
 
-    // ── Loading Phase: Artnet splash with spinner + orange bar ──
-    if (phase === 'loading') {
-        return (
-            <div style={{
-                position: 'fixed', inset: 0, zIndex: 9000,
-                background: '#0a0a0e',
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                fontFamily: font,
-            }}>
-                {/* Inline keyframes for spinner */}
-                <style>{`
-                    @keyframes artnet-spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    @keyframes artnet-fade-in {
-                        0% { opacity: 0; transform: translateY(10px); }
-                        100% { opacity: 1; transform: translateY(0); }
-                    }
-                `}</style>
-
-                {/* Artnet Logo */}
-                <div style={{
-                    fontFamily: font, fontWeight: 700,
-                    fontSize: 42, color: '#ffffff',
-                    letterSpacing: '-1px',
-                    animation: 'artnet-fade-in 0.8s ease-out',
-                    marginBottom: 40,
-                }}>
-                    artnet
-                </div>
-
-                {/* Spinner */}
-                <div style={{
-                    width: 32, height: 32,
-                    border: '3px solid #1a1a2e',
-                    borderTop: '3px solid #ff4b00',
-                    borderRadius: '50%',
-                    animation: 'artnet-spin 0.8s linear infinite',
-                    marginBottom: 32,
-                }} />
-
-                {/* Progress Bar */}
-                <div style={{
-                    width: 220, height: 3,
-                    background: '#1a1a2e',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                }}>
-                    <div style={{
-                        width: `${progress * 100}%`,
-                        height: '100%',
-                        background: '#ff4b00',
-                        borderRadius: 2,
-                        transition: 'width 30ms linear',
-                    }} />
-                </div>
-
-                {/* Loading text */}
-                <div style={{
-                    marginTop: 16, fontSize: 11,
-                    color: '#555', letterSpacing: '0.12em',
-                    fontFamily: '"SF Mono", Courier, monospace',
-                }}>
-                    CONNECTING TO ARTNET
-                </div>
-            </div>
-        );
-    }
-
-    // ── Login Phase: Full Artnet login form ──
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9000,
