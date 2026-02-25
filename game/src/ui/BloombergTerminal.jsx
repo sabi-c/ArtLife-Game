@@ -35,6 +35,7 @@ import {
     TickerBar, ArtistLeaderboard, OrderBook, MarketOverview,
     PriceChart, TradeFeed, Watchlist, PortfolioTracker,
     NotificationBar, ArtworkTearsheet,
+    ArtistDetailPanel, ArtworkValuationPanel, CollectorProfilePanel,
 } from './dashboard/panels.jsx';
 import {
     GalleryView, TearsheetView, ArtnetView, SothebysView,
@@ -57,6 +58,7 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
     const [activeHaggle, setActiveHaggle] = useState(null);
     const [statusMsg, setStatusMsg] = useState(null);
     const [lightboxUrl, setLightboxUrl] = useState(null);
+    const [drilldown, setDrilldown] = useState(null); // { type: 'artist'|'artwork'|'collector', id: string }
     const [, forceRender] = useState(0);
 
     // Pending event overlay — driven by useEventStore
@@ -446,6 +448,35 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
                         {showPanel('portfolio') && <PortfolioTracker intel={intel} onListWork={handleListWork} onSelectWork={handleSelectPortfolioWork} />}
                         {showPanel('directory') && <NPCDirectoryPanel intel={intel} />}
                     </div>
+
+                    {/* Drill-down panels — slide in from right */}
+                    {drilldown && (
+                        <div className="bb-drilldown">
+                            {drilldown.type === 'artist' && (
+                                <ArtistDetailPanel
+                                    artistId={drilldown.id}
+                                    intel={intel}
+                                    onSelectWork={(w) => { setDrilldown({ type: 'artwork', id: w.id }); }}
+                                    onClose={() => setDrilldown(null)}
+                                />
+                            )}
+                            {drilldown.type === 'artwork' && (
+                                <ArtworkValuationPanel
+                                    workId={drilldown.id}
+                                    intel={intel}
+                                    onClose={() => setDrilldown(null)}
+                                />
+                            )}
+                            {drilldown.type === 'collector' && (
+                                <CollectorProfilePanel
+                                    ownerId={drilldown.id}
+                                    intel={intel}
+                                    onSelectWork={(w) => { setDrilldown({ type: 'artwork', id: w.id }); }}
+                                    onClose={() => setDrilldown(null)}
+                                />
+                            )}
+                        </div>
+                    )}
                 </>
             )}
 
