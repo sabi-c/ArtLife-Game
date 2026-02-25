@@ -22,11 +22,13 @@ import DataHub from './cms/DataHub.jsx';
 import EngineOverview from './cms/EngineOverview.jsx';
 import FlowEditor from './cms/FlowEditor.jsx';
 import PageEditor from './cms/PageEditor.jsx';
+import SceneGraph from './cms/SceneGraph.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board', dirtyDomain: 'kanban' },
     { id: 'pages', icon: '📑', label: 'Pages' },
     { id: 'flow', icon: '🔀', label: 'Flow Map', dirtyDomain: 'flow' },
+    { id: 'scenegraph', icon: '🗺️', label: 'Scene Graph' },
     { id: 'timeline', icon: '📅', label: 'Timeline', dirtyDomain: 'timeline' },
     { id: 'storylines', icon: '⛓️', label: 'Storylines', dirtyDomain: 'storylines' },
     { id: 'events', icon: '🎭', label: 'Events / Dialogue', dirtyDomain: 'events' },
@@ -184,6 +186,7 @@ export default function MasterCMS({ onClose }) {
                 flowGraph={JSON.parse(localStorage.getItem('artlife_flow_graph') || 'null')}
                 onUpdate={(graph) => localStorage.setItem('artlife_flow_graph', JSON.stringify(graph))}
             />;
+            case 'scenegraph': return <SceneGraph onNavigate={(tab) => setActiveTab(tab)} />;
             default: return null;
         }
     };
