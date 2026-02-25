@@ -43,15 +43,31 @@ const DEFAULT_REGISTRY = [
         id: 'boot_sequence', group: 'Boot Flow', type: 'scene',
         name: 'Boot Scene', key: 'BootScene',
         file: 'scenes/BootScene.js',
-        desc: 'Preloads all game assets. Routes to character creation when done.',
+        desc: 'Preloads all game assets. Routes to loading screen when done.',
         status: 'active',
         transitions: [
-            { to: 'artnet_login', label: 'Assets loaded', method: 'GameEventBus UI_ROUTE' },
+            { to: 'artnet_loading', label: 'Assets loaded', method: 'GameEventBus UI_ROUTE' },
         ],
         properties: {
             'Asset Manifest': 'Defined in preload() — sprites, tilesets, audio, maps',
             'Loading Bar': 'BootScene progress bar with percentage',
             'Boot Duration': '~2-4 seconds depending on cache',
+        },
+    },
+    {
+        id: 'artnet_loading', group: 'Boot Flow', type: 'view',
+        name: 'Artnet Loading Screen', key: VIEW.BOOT,
+        file: 'ui/ArtnetLogin.jsx',
+        desc: 'Artnet-branded loading screen — spinner, "Preparing interface..." text, 3-second delay.',
+        status: 'active',
+        transitions: [
+            { to: 'artnet_login', label: 'Loading complete', method: 'setTimeout → state transition' },
+        ],
+        properties: {
+            'Animation': 'Spinner + progress dots',
+            'Duration': '~3 seconds',
+            'Background': 'Dark gradient with Artnet branding',
+            'Copy': '"Preparing your Artnet experience..."',
         },
     },
     {
@@ -63,6 +79,7 @@ const DEFAULT_REGISTRY = [
         transitions: [
             { to: 'character_creator', label: 'Login (new user)', method: 'setActiveView' },
             { to: 'terminal', label: 'Login (returning)', method: 'setActiveView' },
+            { to: 'artnet_dashboard', label: 'Artnet Dashboard', method: 'openOverlay' },
         ],
         properties: {
             'Email Field': 'Text input with artnet.com branding',
@@ -92,13 +109,27 @@ const DEFAULT_REGISTRY = [
         desc: 'Graphical title screen with "Press Start" prompt.',
         status: 'active',
         transitions: [
-            { to: 'overworld', label: 'Press Start', method: 'scene.stop → launch NewWorldScene' },
+            { to: 'intro', label: 'Press Start', method: 'scene.start IntroScene' },
         ],
         properties: {
             'Title Text': 'ART LIFE',
             'Subtitle': 'A Game About the Art Market',
             'Music': 'title_theme.mp3',
             'Background': 'Animated art gallery montage',
+        },
+    },
+    {
+        id: 'intro', group: 'Boot Flow', type: 'scene',
+        name: 'Intro Cutscene', key: 'IntroScene',
+        file: 'scenes/IntroScene.js',
+        desc: 'Story introduction cutscene with typewriter narration.',
+        status: 'active',
+        transitions: [
+            { to: 'terminal', label: 'Intro complete', method: 'GameEventBus UI_ROUTE' },
+        ],
+        properties: {
+            'Text Sequence': 'Intro narration slides',
+            'Background': 'Art market imagery',
         },
     },
 
@@ -147,6 +178,12 @@ const DEFAULT_REGISTRY = [
         status: 'active',
         transitions: [
             { to: 'overworld', label: 'Enter World', method: 'navigate to PHASER' },
+            { to: 'bloomberg', label: '` key', method: 'openOverlay BLOOMBERG' },
+            { to: 'cms', label: 'CMS btn', method: 'openOverlay MASTER_CMS' },
+            { to: 'inventory', label: 'I key', method: 'openOverlay INVENTORY' },
+            { to: 'settings', label: 'ESC', method: 'openOverlay SETTINGS' },
+            { to: 'gmail', label: 'Email btn', method: 'openOverlay GMAIL_GUIDE' },
+            { to: 'endgame', label: 'Week 26', method: 'scene.start EndScene' },
         ],
         properties: {
             'Screens': 'dashboard, market, phone, journal, world, ego, character, system',
@@ -183,6 +220,7 @@ const DEFAULT_REGISTRY = [
         transitions: [
             { to: 'haggle_game', label: 'Buy/Sell art', method: 'scene.start HaggleScene' },
             { to: 'dialogue', label: 'Talk to NPC', method: 'scene.launch DialogueScene' },
+            { to: 'mac_dialogue', label: 'Visual Talk', method: 'scene.launch MacDialogueScene' },
             { to: 'city_hub', label: 'Leave venue', method: 'scene.start (return)' },
         ],
         properties: {
@@ -275,20 +313,6 @@ const DEFAULT_REGISTRY = [
         },
     },
     {
-        id: 'intro', group: 'Support', type: 'scene',
-        name: 'Intro Cutscene', key: 'IntroScene',
-        file: 'scenes/IntroScene.js',
-        desc: 'Story introduction cutscene.',
-        status: 'active',
-        transitions: [
-            { to: 'artnet_login', label: 'Intro complete', method: 'GameEventBus UI_ROUTE' },
-        ],
-        properties: {
-            'Text Sequence': 'Intro narration slides',
-            'Background': 'Art market imagery',
-        },
-    },
-    {
         id: 'menu', group: 'Support', type: 'scene',
         name: 'Menu', key: 'MenuScene',
         file: 'scenes/MenuScene.js',
@@ -304,7 +328,7 @@ const DEFAULT_REGISTRY = [
         desc: 'Game over / final results.',
         status: 'active',
         transitions: [
-            { to: 'menu', label: 'Restart', method: 'scene.start MenuScene' },
+            { to: 'title_screen', label: 'Restart', method: 'scene.start TitleScene' },
         ],
         properties: { 'End Conditions': 'Week limit reached or triggered event', 'Score': 'Portfolio value + reputation' },
     },
@@ -316,8 +340,21 @@ const DEFAULT_REGISTRY = [
         file: 'ui/BloombergTerminal.jsx',
         desc: 'Market data terminal with real-time art analytics.',
         status: 'active',
-        transitions: [],
+        transitions: [
+            { to: 'bloomberg_tutorial', label: 'First time', method: 'overlay switch' },
+        ],
         properties: { 'Data Feeds': 'Market indices, artist prices', 'Charts': 'Line, bar, candlestick', 'Ticker': 'Scrolling market updates' },
+    },
+    {
+        id: 'bloomberg_tutorial', group: 'Overlays', type: 'view',
+        name: 'Bloomberg Tutorial', key: 'BLOOMBERG_TUTORIAL',
+        file: 'ui/BloombergTutorial.jsx',
+        desc: 'First-time walkthrough of Bloomberg terminal features.',
+        status: 'active',
+        transitions: [
+            { to: 'bloomberg', label: 'Tutorial complete', method: 'close tutorial' },
+        ],
+        properties: { 'Steps': 'Multi-step guided tour', 'Highlight': 'Interactive hotspot overlays' },
     },
     {
         id: 'cms', group: 'Overlays', type: 'overlay',
@@ -347,6 +384,51 @@ const DEFAULT_REGISTRY = [
         properties: { 'Grid': 'Artwork cards with thumbnails', 'Sort': 'By value, date, artist', 'Value': 'Current market price estimate' },
     },
     {
+        id: 'settings', group: 'Overlays', type: 'overlay',
+        name: 'Settings', key: OVERLAY.SETTINGS,
+        file: 'ui/SettingsOverlay.jsx',
+        desc: 'Game settings — audio, display, controls.',
+        status: 'active',
+        transitions: [],
+        properties: { 'Audio': 'Volume sliders for music/sfx', 'Display': 'Fullscreen, resolution', 'Controls': 'Keybind configuration' },
+    },
+    {
+        id: 'diagnostics', group: 'Overlays', type: 'overlay',
+        name: 'Diagnostics', key: OVERLAY.DEBUG_LOG,
+        file: 'ui/DiagnosticsOverlay.jsx',
+        desc: 'Performance monitoring and state debugging overlay.',
+        status: 'active',
+        transitions: [],
+        properties: { 'FPS': 'Real-time frame rate display', 'Memory': 'Heap usage tracking', 'State': 'Zustand store inspector' },
+    },
+    {
+        id: 'calendar_hud', group: 'Overlays', type: 'view',
+        name: 'Calendar HUD', key: 'CALENDAR_HUD',
+        file: 'ui/CalendarHUD.jsx',
+        desc: 'Week/day calendar overlay showing schedule and events.',
+        status: 'active',
+        transitions: [],
+        properties: { 'Display': 'Monthly calendar grid', 'Events': 'Upcoming gallery openings, auctions', 'Navigation': 'Click day for details' },
+    },
+    {
+        id: 'admin', group: 'Overlays', type: 'overlay',
+        name: 'Admin Panel', key: OVERLAY.ADMIN,
+        file: 'ui/AdminDashboard.jsx',
+        desc: 'God-mode debug tools for development.',
+        status: 'active',
+        transitions: [],
+        properties: { 'Controls': 'Time skip, stat editing, teleport', 'Logs': 'GameState history viewer' },
+    },
+    {
+        id: 'sales_grid', group: 'Overlays', type: 'overlay',
+        name: 'Sales Grid', key: OVERLAY.SALES_GRID,
+        file: 'ui/SalesGrid.jsx',
+        desc: 'Beckmans-style trade history and analytics.',
+        status: 'active',
+        transitions: [],
+        properties: { 'Grid': 'Past trade records', 'Filters': 'By artist, buyer, price range' },
+    },
+    {
         id: 'artnet_dashboard', group: 'Overlays', type: 'overlay',
         name: 'Artnet Dashboard', key: OVERLAY.ARTNET_UI,
         file: 'ui/ArtnetUI.jsx',
@@ -365,6 +447,15 @@ const DEFAULT_REGISTRY = [
         status: 'planned',
         transitions: [],
         properties: { 'Listings': 'Artwork cards with bid/buy', 'Search': 'Filter by artist, medium, price', 'Cart': 'Purchase flow' },
+    },
+    {
+        id: 'mobile_joypad', group: 'Overlays', type: 'view',
+        name: 'Mobile Joypad', key: 'MOBILE_JOYPAD',
+        file: 'ui/MobileJoypad.jsx',
+        desc: 'Touch controls overlay for mobile play.',
+        status: 'active',
+        transitions: [],
+        properties: { 'D-Pad': 'Virtual directional pad', 'Buttons': 'A/B action buttons', 'Position': 'Bottom corners, auto-hide on desktop' },
     },
 
     // ── Legacy ──

@@ -37,10 +37,12 @@ const LANES = [
     {
         label: 'Boot Flow', color: '#c9a84c',
         nodes: [
+            { id: 'SCENE:BootScene', type: 'scene', label: 'Boot Loader', file: 'scenes/BootScene.js', status: 'active', desc: 'Asset preloader — sprites, tilesets, audio, maps' },
+            { id: 'VIEW:LOADING', type: 'view', label: 'Artnet Loading', file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Loading screen — spinner, progress bar, "Preparing interface..."' },
+            { id: 'VIEW:BOOT', type: 'view', label: 'Artnet Login', file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Email login screen with artnet branding' },
+            { id: 'VIEW:CHARACTER_CREATOR', type: 'view', label: 'Character Creator', file: 'ui/CharacterCreator.jsx', status: 'active', desc: '6-phase character creation' },
             { id: 'SCENE:TitleScene', type: 'scene', label: 'Title Screen', file: 'scenes/TitleScene.js', status: 'active', desc: 'Graphical title, Press Start' },
             { id: 'SCENE:IntroScene', type: 'scene', label: 'Intro Briefing', file: 'scenes/IntroScene.js', status: 'active', desc: 'Cinematic typewriter intro' },
-            { id: 'VIEW:BOOT', type: 'view', label: 'Artnet Login', file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Loading screen → email login' },
-            { id: 'VIEW:CHARACTER_CREATOR', type: 'view', label: 'Character Creator', file: 'ui/CharacterCreator.jsx', status: 'active', desc: '6-phase character creation' },
         ]
     },
     {
@@ -70,47 +72,79 @@ const LANES = [
         ]
     },
     {
-        label: 'Overlays', color: '#4488cc',
+        label: 'Artnet Ecosystem', color: '#ff4b00',
         nodes: [
-            { id: 'OVERLAY:ADMIN', type: 'overlay', label: 'Admin Panel', file: 'ui/AdminDashboard.jsx', status: 'active', desc: 'God-mode debug tools' },
-            { id: 'OVERLAY:BLOOMBERG', type: 'overlay', label: 'Bloomberg', file: 'ui/BloombergTerminal.jsx', status: 'active', desc: '9-style market terminal' },
-            { id: 'OVERLAY:MASTER_CMS', type: 'overlay', label: 'CMS', file: 'ui/MasterCMS.jsx', status: 'active', desc: '15-tab content studio' },
-            { id: 'OVERLAY:SETTINGS', type: 'overlay', label: 'Settings', file: 'ui/SettingsPanel.jsx', status: 'active', desc: 'Audio, display settings' },
-            { id: 'OVERLAY:INVENTORY', type: 'overlay', label: 'Inventory', file: 'ui/InventoryPanel.jsx', status: 'active', desc: 'Player items grid' },
-            { id: 'OVERLAY:GMAIL_GUIDE', type: 'overlay', label: 'Email Client', file: 'ui/email/', status: 'active', desc: 'Gmail-style email overlay' },
-            { id: 'OVERLAY:SALES_GRID', type: 'overlay', label: 'Sales Grid', file: 'ui/SalesGrid.jsx', status: 'active', desc: 'Beckmans trade history' },
+            { id: 'OVERLAY:ARTNET_UI', type: 'overlay', label: 'Artnet Dashboard', file: 'ui/ArtnetUI.jsx', status: 'planned', desc: 'Artnet-branded marketplace, news, listings' },
+            { id: 'OVERLAY:ARTNET_MARKETPLACE', type: 'overlay', label: 'Marketplace', file: 'ui/ArtnetMarketplace.jsx', status: 'planned', desc: 'Browse and purchase art online' },
+            { id: 'OVERLAY:BLOOMBERG', type: 'overlay', label: 'Bloomberg', file: 'ui/BloombergTerminal.jsx', status: 'active', desc: '9-panel market terminal' },
+            { id: 'VIEW:BLOOMBERG_TUTORIAL', type: 'view', label: 'Bloomberg Tutorial', file: 'ui/BloombergTutorial.jsx', status: 'active', desc: 'First-time Bloomberg terminal walkthrough' },
         ]
     },
     {
-        label: 'Legacy / Planned', color: '#666',
+        label: 'Overlays & HUD', color: '#4488cc',
+        nodes: [
+            { id: 'OVERLAY:ADMIN', type: 'overlay', label: 'Admin Panel', file: 'ui/AdminDashboard.jsx', status: 'active', desc: 'God-mode debug tools' },
+            { id: 'OVERLAY:MASTER_CMS', type: 'overlay', label: 'CMS', file: 'ui/MasterCMS.jsx', status: 'active', desc: '15-tab content studio' },
+            { id: 'OVERLAY:SETTINGS', type: 'overlay', label: 'Settings', file: 'ui/SettingsOverlay.jsx', status: 'active', desc: 'Audio, display settings' },
+            { id: 'OVERLAY:INVENTORY', type: 'overlay', label: 'Inventory', file: 'ui/InventoryDashboard.jsx', status: 'active', desc: 'Player items grid' },
+            { id: 'OVERLAY:GMAIL_GUIDE', type: 'overlay', label: 'Email Client', file: 'ui/email/', status: 'active', desc: 'Gmail-style email overlay' },
+            { id: 'OVERLAY:SALES_GRID', type: 'overlay', label: 'Sales Grid', file: 'ui/SalesGrid.jsx', status: 'active', desc: 'Beckmans trade history' },
+            { id: 'OVERLAY:DIAGNOSTICS', type: 'overlay', label: 'Diagnostics', file: 'ui/DiagnosticsOverlay.jsx', status: 'active', desc: 'Performance + state debugger' },
+            { id: 'VIEW:CALENDAR_HUD', type: 'view', label: 'Calendar HUD', file: 'ui/CalendarHUD.jsx', status: 'active', desc: 'Week/day calendar overlay' },
+        ]
+    },
+    {
+        label: 'Legacy / Deprecated', color: '#666',
         nodes: [
             { id: 'SCENE:WorldScene', type: 'scene', label: 'WorldScene (old)', file: 'scenes/WorldScene.js', status: 'unused', desc: 'Deprecated — use NewWorldScene' },
             { id: 'SCENE:OverworldScene', type: 'scene', label: 'Overworld (old)', file: 'scenes/OverworldScene.js', status: 'unused', desc: 'Deprecated legacy overworld' },
-            { id: 'SCENE:BootScene', type: 'scene', label: 'Boot Loader', file: 'scenes/BootScene.js', status: 'active', desc: 'Asset preloader' },
-            { id: 'OVERLAY:ARTNET_MARKETPLACE', type: 'overlay', label: 'Marketplace', file: 'ui/ArtnetMarketplace.jsx', status: 'planned', desc: 'Artnet marketplace (planned)' },
         ]
     },
 ];
 
 const EDGES = [
+    // ── Boot flow (linear) ──
+    { from: 'SCENE:BootScene', to: 'VIEW:LOADING', label: 'Assets loaded' },
+    { from: 'VIEW:LOADING', to: 'VIEW:BOOT', label: '3s timer' },
+    { from: 'VIEW:BOOT', to: 'VIEW:CHARACTER_CREATOR', label: 'New user login' },
+    { from: 'VIEW:BOOT', to: 'VIEW:TERMINAL', label: 'Returning user' },
+    { from: 'VIEW:CHARACTER_CREATOR', to: 'SCENE:TitleScene', label: 'Character created' },
     { from: 'SCENE:TitleScene', to: 'SCENE:IntroScene', label: 'Press Start' },
-    { from: 'SCENE:IntroScene', to: 'VIEW:BOOT', label: 'Fadeout' },
-    { from: 'VIEW:BOOT', to: 'VIEW:CHARACTER_CREATOR', label: 'Login' },
-    { from: 'VIEW:CHARACTER_CREATOR', to: 'VIEW:TERMINAL', label: 'Done' },
+    { from: 'SCENE:IntroScene', to: 'VIEW:TERMINAL', label: 'Fadeout' },
+
+    // ── Core gameplay ──
     { from: 'VIEW:TERMINAL', to: 'SCENE:NewWorldScene', label: 'Walk Around' },
     { from: 'SCENE:NewWorldScene', to: 'VIEW:TERMINAL', label: 'ESC / Exit' },
     { from: 'SCENE:NewWorldScene', to: 'SCENE:CityScene', label: 'Enter City' },
+
+    // ── Venue flow ──
     { from: 'SCENE:CityScene', to: 'SCENE:LocationScene', label: 'Enter Venue' },
     { from: 'SCENE:CityScene', to: 'SCENE:FastTravelScene', label: 'Fast Travel' },
     { from: 'SCENE:CityScene', to: 'VIEW:TERMINAL', label: 'Leave City' },
     { from: 'SCENE:FastTravelScene', to: 'SCENE:LocationScene', label: 'Arrive' },
+
+    // ── Interaction ──
     { from: 'SCENE:LocationScene', to: 'SCENE:DialogueScene', label: 'Talk to NPC' },
+    { from: 'SCENE:LocationScene', to: 'SCENE:MacDialogueScene', label: 'Visual Talk' },
     { from: 'SCENE:LocationScene', to: 'SCENE:HaggleScene', label: 'Buy/Sell Art' },
     { from: 'SCENE:DialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue' },
     { from: 'SCENE:MacDialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue' },
     { from: 'SCENE:HaggleScene', to: 'VIEW:TERMINAL', label: 'Finish Haggle' },
+
+    // ── Overlays (from Terminal) ──
     { from: 'VIEW:TERMINAL', to: 'OVERLAY:BLOOMBERG', label: '` key' },
     { from: 'VIEW:TERMINAL', to: 'OVERLAY:ADMIN', label: '~ key' },
+    { from: 'VIEW:TERMINAL', to: 'OVERLAY:INVENTORY', label: 'I key' },
+    { from: 'VIEW:TERMINAL', to: 'OVERLAY:SETTINGS', label: 'ESC' },
+    { from: 'VIEW:TERMINAL', to: 'OVERLAY:GMAIL_GUIDE', label: 'Email btn' },
+    { from: 'VIEW:TERMINAL', to: 'OVERLAY:MASTER_CMS', label: 'CMS btn' },
+
+    // ── Artnet ecosystem ──
+    { from: 'OVERLAY:BLOOMBERG', to: 'VIEW:BLOOMBERG_TUTORIAL', label: 'First time' },
+    { from: 'VIEW:BOOT', to: 'OVERLAY:ARTNET_UI', label: 'Artnet Dashboard' },
+    { from: 'OVERLAY:ARTNET_UI', to: 'OVERLAY:ARTNET_MARKETPLACE', label: 'Browse Market' },
+
+    // ── Endgame ──
     { from: 'VIEW:TERMINAL', to: 'SCENE:EndScene', label: 'Week 26' },
     { from: 'SCENE:EndScene', to: 'SCENE:TitleScene', label: 'Restart' },
 ];
@@ -122,8 +156,13 @@ const EDGES = [
 const USER_FLOWS = [
     {
         id: 'new_player', label: '🎮 New Player', color: '#c9a84c', estMin: 5,
-        desc: 'First-time player journey from title to gameplay',
-        path: ['SCENE:TitleScene', 'SCENE:IntroScene', 'VIEW:BOOT', 'VIEW:CHARACTER_CREATOR', 'VIEW:TERMINAL'],
+        desc: 'First-time player journey from boot to gameplay',
+        path: ['SCENE:BootScene', 'VIEW:LOADING', 'VIEW:BOOT', 'VIEW:CHARACTER_CREATOR', 'SCENE:TitleScene', 'SCENE:IntroScene', 'VIEW:TERMINAL'],
+    },
+    {
+        id: 'returning_player', label: '⚡ Returning Player', color: '#4ade80', estMin: 1,
+        desc: 'Load and jump straight into gameplay',
+        path: ['SCENE:BootScene', 'VIEW:LOADING', 'VIEW:BOOT', 'VIEW:TERMINAL'],
     },
     {
         id: 'gallery_visit', label: '🎨 Gallery Visit', color: '#f59e0b', estMin: 3,
@@ -136,14 +175,14 @@ const USER_FLOWS = [
         path: ['VIEW:TERMINAL', 'SCENE:NewWorldScene', 'SCENE:CityScene', 'SCENE:LocationScene', 'SCENE:DialogueScene', 'VIEW:TERMINAL'],
     },
     {
-        id: 'auction_run', label: '🏛️ Auction Run', color: '#a78bfa', estMin: 4,
-        desc: 'Fast travel to auction house and bid on art',
-        path: ['VIEW:TERMINAL', 'SCENE:NewWorldScene', 'SCENE:CityScene', 'SCENE:FastTravelScene', 'SCENE:LocationScene', 'SCENE:HaggleScene', 'VIEW:TERMINAL'],
+        id: 'market_check', label: '📊 Market Check', color: '#a78bfa', estMin: 1,
+        desc: 'Open Bloomberg terminal to check art prices',
+        path: ['VIEW:TERMINAL', 'OVERLAY:BLOOMBERG'],
     },
     {
-        id: 'quick_play', label: '⚡ Quick Play', color: '#4ade80', estMin: 1,
-        desc: 'Load an existing save and jump into gameplay',
-        path: ['SCENE:TitleScene', 'VIEW:BOOT', 'VIEW:TERMINAL'],
+        id: 'artnet_flow', label: '🌐 Artnet Flow', color: '#ff4b00', estMin: 3,
+        desc: 'Loading screen → Login → Artnet Dashboard → Browse Marketplace',
+        path: ['SCENE:BootScene', 'VIEW:LOADING', 'VIEW:BOOT', 'OVERLAY:ARTNET_UI', 'OVERLAY:ARTNET_MARKETPLACE'],
     },
     {
         id: 'endgame', label: '🏆 Endgame', color: '#e879f9', estMin: 2,

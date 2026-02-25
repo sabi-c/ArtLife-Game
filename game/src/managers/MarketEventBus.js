@@ -41,60 +41,143 @@
  *   MarketEventBus.emit('artist_death', { artistId: 'artist_03' });
  */
 
-// ────────────────────────────────────────────────────
-// Event impact definitions — how each event type
-// affects market prices and NPC trust
-// ────────────────────────────────────────────────────
-
 export const EVENT_IMPACTS = {
-    // Market events
+    // ═══════════════════════════════════════════════════════
+    // MARKET EVENTS — Affect prices, heat, NPC behavior
+    // ═══════════════════════════════════════════════════════
+
+    // ── Artist-Specific Events ──
     artist_death: {
-        priceMultiplier: 1.40,    // +40% for the artist
+        priceMultiplier: 1.40,    // +40% for the artist's works
         tierSpillover: 0.05,      // +5% for same-tier artists
-        heatDelta: 30,            // Heat spike
-        decayWeeks: 12,           // Effect fades over 12 weeks
+        heatDelta: 30,
+        decayWeeks: 12,
+        npcBuyProbMod: 0.25,      // +25% NPC buy probability for this artist
+        npcSellProbMod: -0.15,    // Holders less likely to sell
+        affectedTiers: [],        // Empty = affects the artist's own tier
         description: '💀 Artist has passed away. Market revaluation in progress.',
     },
+    artist_estate_dispute: {
+        priceMultiplier: 0.75,
+        tierSpillover: -0.02,
+        heatDelta: -20,
+        decayWeeks: 16,
+        npcSellProbMod: 0.20,     // Estate works flood market
+        affectedTiers: [],
+        description: '⚖️ Estate dispute freezes authentication. Market uncertainty.',
+    },
     scandal: {
-        priceMultiplier: 0.80,    // -20% for involved artist
-        tierSpillover: -0.03,     // -3% tier contagion
+        priceMultiplier: 0.80,
+        tierSpillover: -0.03,
         heatDelta: -25,
         decayWeeks: 8,
+        npcSellProbMod: 0.30,     // Panic selling
+        npcBuyProbMod: -0.20,     // Buyers avoid
+        affectedTiers: [],
         description: '⚠️ Scandal rocks the art world.',
     },
+    forgery_discovery: {
+        priceMultiplier: 0.60,    // -40% — devastating
+        tierSpillover: -0.05,
+        heatDelta: -35,
+        decayWeeks: 20,
+        npcBuyProbMod: -0.40,     // Nobody wants to buy
+        npcSellProbMod: 0.50,     // Everyone dumps
+        affectedTiers: [],
+        description: '🔍 Forgery ring exposed. Authenticity crisis.',
+    },
     museum_acquisition: {
-        priceMultiplier: 1.15,    // +15%
+        priceMultiplier: 1.15,
         tierSpillover: 0.02,
         heatDelta: 20,
         decayWeeks: 6,
+        npcBuyProbMod: 0.15,
+        affectedTiers: [],
         description: '🏛️ Major museum acquisition. Institutional validation.',
     },
+    biennial_selection: {
+        priceMultiplier: 1.20,
+        tierSpillover: 0.03,
+        heatDelta: 25,
+        decayWeeks: 8,
+        npcBuyProbMod: 0.20,
+        affectedTiers: ['emerging', 'mid-career'],
+        description: '🌍 Venice Biennale selection. International spotlight.',
+    },
     auction_record: {
-        priceMultiplier: 1.10,    // +10% market-wide
+        priceMultiplier: 1.10,
         tierSpillover: 0.04,
         heatDelta: 15,
         decayWeeks: 4,
+        npcBuyProbMod: 0.10,
+        affectedTiers: [],
         description: '🔨 Auction record broken. Collector confidence surges.',
     },
+    gallery_closure: {
+        priceMultiplier: 0.90,
+        tierSpillover: -0.02,
+        heatDelta: -15,
+        decayWeeks: 6,
+        npcSellProbMod: 0.25,
+        affectedTiers: [],
+        description: '🚪 Gallery closure. Represented artists seek new homes.',
+    },
+    gallery_mega_merger: {
+        priceMultiplier: 1.08,
+        tierSpillover: 0.02,
+        heatDelta: 10,
+        decayWeeks: 8,
+        npcBuyProbMod: 0.05,
+        affectedTiers: ['blue-chip'],
+        description: '🏢 Mega-gallery merger reshapes market landscape.',
+    },
+    emerging_artist_discovery: {
+        priceMultiplier: 1.50,    // +50% for the specific artist
+        tierSpillover: 0.02,
+        heatDelta: 40,
+        decayWeeks: 10,
+        npcBuyProbMod: 0.30,
+        affectedTiers: ['emerging'],
+        description: '⭐ New artist sensation discovered. Bidding war erupts.',
+    },
+    social_media_viral: {
+        priceMultiplier: 1.12,
+        tierSpillover: 0.01,
+        heatDelta: 18,
+        decayWeeks: 3,
+        npcBuyProbMod: 0.15,
+        affectedTiers: ['emerging', 'mid-career'],
+        description: '📱 Work goes viral on social media. Mainstream attention.',
+    },
+
+    // ── Economy-Wide Events ──
     recession_start: {
-        priceMultiplier: 0.85,    // -15% broad
-        tierSpillover: -0.10,     // -10% all tiers
+        priceMultiplier: 0.85,
+        tierSpillover: -0.10,
         heatDelta: -10,
         decayWeeks: 52,
+        npcBuyProbMod: -0.30,     // Major reduction in buying
+        npcSellProbMod: 0.15,     // Some distressed selling
+        affectedTiers: ['emerging', 'mid-career', 'blue-chip'],
         description: '📉 Economic recession. Art market tightens.',
     },
     recession_end: {
-        priceMultiplier: 1.05,    // Small bounce
+        priceMultiplier: 1.05,
         tierSpillover: 0.03,
         heatDelta: 5,
         decayWeeks: 8,
+        npcBuyProbMod: 0.10,
+        affectedTiers: ['emerging', 'mid-career', 'blue-chip'],
         description: '📈 Recession easing. Market cautiously optimistic.',
     },
     bubble_pop: {
-        priceMultiplier: 0.70,    // -30% crash
+        priceMultiplier: 0.70,
         tierSpillover: -0.08,
         heatDelta: -20,
         decayWeeks: 16,
+        npcBuyProbMod: -0.40,
+        npcSellProbMod: 0.35,
+        affectedTiers: ['emerging', 'mid-career', 'blue-chip'],
         description: '💥 Speculative bubble burst. Fire sales begin.',
     },
     fair_success: {
@@ -102,17 +185,107 @@ export const EVENT_IMPACTS = {
         tierSpillover: 0.02,
         heatDelta: 10,
         decayWeeks: 3,
+        npcBuyProbMod: 0.12,
+        affectedTiers: [],
         description: '🎨 Art fair delivers strong sales.',
     },
-    gallery_closure: {
-        priceMultiplier: 0.90,    // -10% for represented artists
-        tierSpillover: -0.02,
-        heatDelta: -15,
+    tax_regulation_change: {
+        priceMultiplier: 0.92,
+        tierSpillover: -0.04,
+        heatDelta: -5,
+        decayWeeks: 26,
+        npcBuyProbMod: -0.15,
+        npcSellProbMod: 0.10,
+        affectedTiers: ['blue-chip'],
+        description: '📋 New tax regulations on art transactions. Market adjusts.',
+    },
+    crypto_art_crash: {
+        priceMultiplier: 0.88,
+        tierSpillover: -0.03,
+        heatDelta: -12,
+        decayWeeks: 10,
+        npcBuyProbMod: -0.10,
+        affectedTiers: ['emerging'],
+        description: '🪙 Crypto art market crashes. Digital skepticism rises.',
+    },
+    trade_war_sanctions: {
+        priceMultiplier: 0.90,
+        tierSpillover: -0.05,
+        heatDelta: -8,
+        decayWeeks: 20,
+        npcBuyProbMod: -0.20,
+        affectedTiers: ['blue-chip', 'mid-career'],
+        description: '🌐 Trade sanctions disrupt international art movement.',
+    },
+    political_censorship: {
+        priceMultiplier: 1.10,    // Controversy = value for some
+        tierSpillover: 0.02,
+        heatDelta: 15,
         decayWeeks: 6,
-        description: '🚪 Gallery closure. Represented artists seek new homes.',
+        npcBuyProbMod: 0.10,
+        affectedTiers: ['emerging', 'mid-career'],
+        description: '🔒 Government censorship drives collector solidarity.',
     },
 
-    // Player events (primarily affect NPC trust, not market prices)
+    // ── Collector/Dealer Events ──
+    collector_death: {
+        priceMultiplier: 1.08,    // Collection hitting market = price discovery
+        tierSpillover: 0.01,
+        heatDelta: 5,
+        decayWeeks: 8,
+        npcSellProbMod: 0.20,     // Estate sale
+        affectedTiers: [],
+        description: '🕯️ Prominent collector passes. Estate sale anticipated.',
+    },
+    collection_donation: {
+        priceMultiplier: 1.12,
+        tierSpillover: 0.02,
+        heatDelta: 12,
+        decayWeeks: 6,
+        npcBuyProbMod: 0.08,
+        affectedTiers: [],
+        description: '🎁 Major collection donated to museum. Validation boost.',
+    },
+    tech_billionaire_entry: {
+        priceMultiplier: 1.18,
+        tierSpillover: 0.06,
+        heatDelta: 15,
+        decayWeeks: 10,
+        npcBuyProbMod: 0.20,
+        affectedTiers: ['blue-chip', 'emerging'],
+        description: '💰 Tech billionaire enters art collecting. Price inflation.',
+    },
+    blue_chip_deaccession: {
+        priceMultiplier: 0.92,
+        tierSpillover: -0.03,
+        heatDelta: -8,
+        decayWeeks: 4,
+        npcSellProbMod: 0.15,
+        affectedTiers: ['blue-chip'],
+        description: '📦 Blue-chip collector deaccessions. Supply floods market.',
+    },
+    insurance_fraud_bust: {
+        priceMultiplier: 0.85,
+        tierSpillover: -0.04,
+        heatDelta: -15,
+        decayWeeks: 12,
+        npcBuyProbMod: -0.25,
+        affectedTiers: [],
+        description: '🚔 Insurance fraud scheme exposed. Trust shaken.',
+    },
+    new_gallery_opening: {
+        priceMultiplier: 1.04,
+        tierSpillover: 0.01,
+        heatDelta: 8,
+        decayWeeks: 4,
+        npcBuyProbMod: 0.08,
+        affectedTiers: ['emerging', 'mid-career'],
+        description: '🏪 Exciting new gallery opens. Fresh energy in the market.',
+    },
+
+    // ═══════════════════════════════════════════════════════
+    // PLAYER EVENTS — Primarily affect NPC trust
+    // ═══════════════════════════════════════════════════════
     player_lowballed: {
         trustDelta: -0.15,
         respectDelta: -0.10,
@@ -154,7 +327,9 @@ export const EVENT_IMPACTS = {
         description: 'Player sold a work.',
     },
 
-    // NPC events
+    // ═══════════════════════════════════════════════════════
+    // NPC EVENTS — NPC-to-NPC relationship dynamics
+    // ═══════════════════════════════════════════════════════
     npc_betrayal: {
         trustDelta: -0.30,
         respectDelta: -0.20,
@@ -163,7 +338,7 @@ export const EVENT_IMPACTS = {
         description: 'NPC betrayal detected.',
     },
     npc_gossip: {
-        trustDelta: 0,    // depends on content
+        trustDelta: 0,
         significance: 0.3,
         description: 'Gossip circulating.',
     },
