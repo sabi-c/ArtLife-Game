@@ -331,6 +331,7 @@ export default function App() {
             <ViewRouter
                 activeView={activeView}
                 setActiveView={setActiveView}
+                setActiveOverlay={setActiveOverlay}
                 viewPayload={viewPayload}
                 onLoginComplete={handleLoginComplete}
             />

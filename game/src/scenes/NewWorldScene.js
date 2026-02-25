@@ -121,11 +121,9 @@ export default class NewWorldScene extends Phaser.Scene {
         _log('create()');
         this._createFailed = false;
 
-        // Bail early if critical assets failed to load
+        // Warn about failed assets but continue — missing NPC sprites are non-critical
         if (this._assetErrors.length > 0) {
-            this._createFailed = true;
-            this._showError('Asset loading failed:\n' + this._assetErrors.join('\n'));
-            return;
+            console.warn('[NewWorldScene] Some assets failed to load (will skip):', this._assetErrors);
         }
 
         try {

@@ -24,7 +24,6 @@ const NPC_SPRITES = {
     walk_art_flipper_walk: { file: 'assets/processed/walk_art_flipper_walk.png' },
     walk_power_collector_f_walk: { file: 'assets/processed/walk_power_collector_f_walk.png' },
     walk_art_critic_walk: { file: 'assets/processed/walk_art_critic_walk.png' },
-    walk_young_power_dealer_walk: { file: 'assets/processed/walk_young_power_dealer_walk.png' },
     walk_it_girl_dealer_walk: { file: 'assets/processed/walk_it_girl_dealer_walk.png' },
     walk_margaux_villiers_walk: { file: 'assets/processed/walk_margaux_villiers_walk.png' },
     walk_avant_garde_curator_walk: { file: 'assets/processed/walk_avant_garde_curator_walk.png' },

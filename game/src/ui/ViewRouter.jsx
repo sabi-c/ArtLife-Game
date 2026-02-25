@@ -9,7 +9,7 @@
  */
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { VIEW } from '../core/views.js';
+import { VIEW, OVERLAY } from '../core/views.js';
 
 // ════════════════════════════════════════════════════════════
 // Lazy View Imports
@@ -138,6 +138,7 @@ function PhaserLoadingScreen() {
 export default function ViewRouter({
     activeView,
     setActiveView,
+    setActiveOverlay,
     viewPayload,
     onLoginComplete,
 }) {
@@ -196,13 +197,20 @@ export default function ViewRouter({
 
             {/* ── Narrative Intro (typewriter text) ── */}
             {activeView === VIEW.NARRATIVE && (
-                <NarrativeIntro onContinue={() => setActiveView(VIEW.ARTNET_HUB)} />
+                <NarrativeIntro onContinue={() => {
+                    setActiveView(VIEW.PHASER);
+                    // Small delay so Phaser view mounts before overlay
+                    setTimeout(() => setActiveOverlay(OVERLAY.BLOOMBERG), 300);
+                }} />
             )}
 
-            {/* ── Artnet Hub (main game interface) ── */}
+            {/* ── Artnet Hub (accessible from Bloomberg ‘Browse Marketplace’ button) ── */}
             {activeView === VIEW.ARTNET_HUB && (
                 <ArtnetMarketplace
-                    onClose={() => { }}
+                    onClose={() => {
+                        setActiveView(VIEW.PHASER);
+                        setTimeout(() => setActiveOverlay(OVERLAY.BLOOMBERG), 200);
+                    }}
                     onExplore={() => setActiveView(VIEW.PHASER)}
                 />
             )}
