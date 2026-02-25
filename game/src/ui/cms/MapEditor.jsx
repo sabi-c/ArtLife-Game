@@ -901,7 +901,7 @@ const inputStyle = {
 // Main MapEditor Component
 // ════════════════════════════════════════════════════════════════
 
-export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, onSave }) {
+export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, onSave, mapBasePath = '' }) {
     const [mapJSON, setMapJSON] = useState(() => JSON.parse(JSON.stringify(initialMapJSON)));
     const [selectedObjId, setSelectedObjId] = useState(null);
     const [tilesetImages, setTilesetImages] = useState({});
@@ -955,8 +955,11 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
         for (const ts of (mapJSON.tilesets || [])) {
             if (ts.image) {
                 let imgPath = ts.image;
-                if (imgPath.startsWith('../') || imgPath.startsWith('assets/')) {
-                    imgPath = imgPath.replace(/^\.\.\//, '').replace(/^\.\.\//, '');
+                // Strip leading ../ prefixes
+                imgPath = imgPath.replace(/^(\.\.\/)+/, '');
+                // If path doesn't start with assets/ or http, prepend the base path
+                if (mapBasePath && !imgPath.startsWith('assets/') && !imgPath.startsWith('http')) {
+                    imgPath = mapBasePath + imgPath;
                 }
                 promises.push(
                     loadImage(imgPath).then(img => { images[ts.name] = img; }).catch(() => {

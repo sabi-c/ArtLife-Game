@@ -1330,6 +1330,7 @@ export default function RoomManager({ onClose }) {
                 <MapEditor
                     mapJSON={mapData[editingMapId]}
                     roomData={editingRoom}
+                    mapBasePath={editingMapId === 'larus' ? 'assets/luminus/' : 'content/maps/'}
                     onClose={() => setEditingMapId(null)}
                     onSave={handleSaveMap}
                 />

@@ -753,7 +753,6 @@ const GALLERY_TEST = {
         {
             id: 'gallery_test_main',
             venue: 'gallery_test',
-            tiledMap: 'gallery_test',
             name: 'Main Exhibition',
             desc: 'Kenji Nomura & Amara Osei: New Works. The opening crowd has thinned. Good.',
             look: 'A clean white box — 2,000 square feet of gallery perfection. Six paintings hung at exactly 57 inches center. Track lighting. Polished concrete. A dealer stands near the back wall, watching who looks at what.',
@@ -785,7 +784,6 @@ const UPTOWN_GALLERY = {
         {
             id: 'uptown_gallery_main',
             venue: 'uptown_gallery',
-            tiledMap: 'uptown_gallery',
             name: 'Group Show',
             desc: 'Uptown Contemporary — Group Show. The crowd is thin. A dealer stands near the back.',
             look: 'High ceilings, track lighting, polished floors. The gallery feels more institutional than the downtown spaces.',
@@ -817,7 +815,6 @@ const ARTIST_STUDIO_VISIT = {
         {
             id: 'artist_studio_visit_main',
             venue: 'artist_studio_visit',
-            tiledMap: 'artist_studio_visit',
             name: 'Main Studio',
             desc: 'Kwame Asante\'s working studio. Unfinished canvases lean against every surface.',
             look: 'The smell of turpentine and linseed oil. Natural light pours through skylights. This is where the work happens.',
@@ -849,7 +846,6 @@ const SOHO_GALLERY = {
         {
             id: 'soho_gallery_lobby_main',
             venue: 'soho_gallery',
-            tiledMap: 'soho_gallery_lobby',
             name: 'Gallery — Lobby',
             desc: 'Gallery — Lobby',
             look: 'A gallery interior.',
@@ -863,7 +859,6 @@ const SOHO_GALLERY = {
         {
             id: 'soho_gallery_exhibition_main',
             venue: 'soho_gallery',
-            tiledMap: 'soho_gallery_exhibition',
             name: 'Main Exhibition',
             desc: 'Main Exhibition',
             look: 'A gallery interior.',
@@ -877,7 +872,6 @@ const SOHO_GALLERY = {
         {
             id: 'soho_gallery_office_main',
             venue: 'soho_gallery',
-            tiledMap: 'soho_gallery_office',
             name: 'Back Office',
             desc: 'Back Office',
             look: 'An office interior.',
@@ -908,7 +902,6 @@ const CHELSEA_GALLERY = {
         {
             id: 'chelsea_gallery_main',
             venue: 'chelsea_gallery',
-            tiledMap: 'chelsea_gallery',
             name: 'Main Exhibition',
             desc: 'A curated show of contemporary works. Nine paintings line the walls. A gold sofa faces the north wall.',
             look: 'Warm beige floors, white walls, track lighting. A reception desk sits near the entrance. Plants soften the corners. The dealer watches from near the back.',
@@ -941,7 +934,6 @@ const CHELSEA_SHOWCASE = {
         {
             id: 'chelsea_showcase_main',
             venue: 'chelsea_showcase',
-            tiledMap: 'chelsea_showcase',
             name: 'Museum Gallery',
             desc: 'Nine paintings line the walls — Basquiat, Haring, Koons, Sherman. A gold sofa faces the north wall. Elena Ross watches from near the reception desk.',
             look: 'Warm beige floors, white walls with picture rail molding. Four large paintings dominate the north wall. A gold viewing sofa sits on a Persian rug. The reception desk has a laptop and a desk lamp. Plants soften the corners. Elena Ross stands near the east wall, drink in hand.',
@@ -974,7 +966,6 @@ const FOSSIL_MUSEUM = {
         {
             id: 'fossil_museum_main',
             venue: 'fossil_museum',
-            tiledMap: 'fossil_museum',
             name: 'Paleontology Wing',
             desc: 'A grand hall with vaulted arches. Two dinosaur skeletons — a T-Rex and a velociraptor pack — dominate the center. Display cases line the walls with amber, fossils, and geological specimens.',
             look: 'The T-Rex skull alone is worth more than your apartment. The information plaques are written in that particular museum tone — confident, timeless, faintly condescending.',
@@ -1013,7 +1004,6 @@ const ART_GALLERY_MUSEUM = {
         {
             id: 'art_gallery_museum_main',
             venue: 'art_gallery_museum',
-            tiledMap: 'art_gallery_museum',
             name: 'Metropolitan Gallery',
             desc: 'The Great Wave. The Starry Night study. A suspected La Gioconda workshop copy. The lighting is museum-perfect.',
             look: 'Columns and arches frame the galleries. Display cases hold illuminated manuscripts and Roman bronze. A curator watches from behind the reception desk.',
@@ -1046,7 +1036,6 @@ const MUSEUM_ENTRANCE = {
         {
             id: 'museum_entrance_main',
             venue: 'museum_entrance',
-            tiledMap: 'museum_entrance',
             name: 'Entrance Hall',
             desc: 'The museum entrance. Greek amphoras and Egyptian scarabs guard the threshold. A ticket booth demands $25.',
             look: 'High ceilings. Display cases filled with ancient pottery. A turnstile separates the lobby from the galleries proper.',
@@ -1079,7 +1068,6 @@ const DINOSAUR_MUSEUM = {
         {
             id: 'dinosaur_museum_main',
             venue: 'dinosaur_museum',
-            tiledMap: 'dinosaur_museum',
             name: 'Dinosaur Hall',
             desc: 'The Parasaurolophus centerpiece could produce sounds audible for miles. The collection includes Pachycephalosaurus, Ankylosaurus, and extensive fossil beds.',
             look: 'Bones upon bones. The hall is cathedral-like. Display cases line the walls. The painted Triceratops mural at the far end feels almost alive.',
@@ -1112,7 +1100,6 @@ const SMALL_GALLERY = {
         {
             id: 'small_gallery_main',
             venue: 'small_gallery',
-            tiledMap: 'small_gallery',
             name: 'Contemporary Works',
             desc: 'Three works: Nomura\'s "Untitled (Meridian)", Osei\'s "Crown (Gold)", and Nomura\'s "Binary Sunset #7". Elena Ross is circling.',
             look: 'Small but curated. Warm lighting on white walls. The gold leaf on Osei\'s piece catches the gallery spots.',
