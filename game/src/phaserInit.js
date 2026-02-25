@@ -274,17 +274,80 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// PWA: Register Service Worker
+// PWA: Register Service Worker + Stale Cache Auto-Recovery
 // ──────────────────────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then((reg) => console.log('SW registered:', reg.scope))
+            .then((reg) => {
+                console.log('SW registered:', reg.scope);
+                // Check for waiting SW (new version ready but not yet active)
+                if (reg.waiting) {
+                    console.log('[SW] New version waiting — activating immediately');
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+                // Also handle future updates discovered while the page is open
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('[SW] New version installed — activating');
+                                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                            }
+                        });
+                    }
+                });
+            })
             .catch((err) => console.log('SW registration failed:', err));
 
         // Reload when a new SW takes control (clients.claim()) so fresh assets are served.
-        // This fixes the "Pages tab missing" issue where old cached bundles kept running
-        // after a new deployment updated the SW. One-time reload per SW update; no loop.
-        navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+        // Uses a flag to prevent reload loops.
+        let reloading = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!reloading) {
+                reloading = true;
+                window.location.reload();
+            }
+        });
     });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Global Chunk Load Error Recovery
+// When a deployment changes bundle hashes, lazy-loaded imports fail with
+// "Failed to fetch dynamically imported module". This catches those errors
+// and auto-clears caches + reloads (once per session to avoid loops).
+// ──────────────────────────────────────────────────────────────────────────────
+window.addEventListener('error', (e) => {
+    if (e.message?.includes('dynamically imported module') || e.message?.includes('Loading chunk')) {
+        handleChunkLoadError();
+    }
+});
+window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason?.message || String(e.reason || '');
+    if (msg.includes('dynamically imported module') || msg.includes('Failed to fetch') && msg.includes('module')) {
+        handleChunkLoadError();
+    }
+});
+
+async function handleChunkLoadError() {
+    // Prevent infinite reload loops — only attempt once per session
+    if (sessionStorage.getItem('artlife_chunk_recovery')) return;
+    sessionStorage.setItem('artlife_chunk_recovery', '1');
+
+    console.warn('[Recovery] Stale chunk detected — clearing caches and reloading');
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+        }
+    } catch (err) {
+        console.warn('[Recovery] Cache clear failed:', err);
+    }
+    window.location.reload();
 }

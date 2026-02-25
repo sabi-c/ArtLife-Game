@@ -9,7 +9,7 @@
  */
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { VIEW, OVERLAY } from '../core/views.js';
+import { VIEW } from '../core/views.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 // ════════════════════════════════════════════════════════════
@@ -76,7 +76,6 @@ function PhaserLoadingScreen() {
                 if (activeScene) {
                     const key = activeScene.sys.settings.key;
                     if (key === 'BootScene') setStatus('Loading assets...');
-                    else if (key === 'IntroScene') setStatus('Starting...');
                     else setStatus(`Scene: ${key}`);
                 }
             }
@@ -159,9 +158,9 @@ export default function ViewRouter({
                     try { return s.sys?.isActive?.() && s.sys.settings.key !== 'BootScene'; }
                     catch { return false; }
                 });
-                // Also check if any scene has ever had create() called (even if stopped now)
+                // Also check if any non-boot scene has ever had create() called
                 const hasCreatedScene = scenes.some(s => {
-                    try { return s.sys?.settings?.status >= 5; } // RUNNING = 5
+                    try { return s.sys?.settings?.status >= 5 && s.sys.settings.key !== 'BootScene'; }
                     catch { return false; }
                 });
                 if (hasActiveScene || hasCreatedScene) {
@@ -218,41 +217,11 @@ export default function ViewRouter({
                 <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#0a0a0f' }}>
                     <BloombergTerminal
                         onBrowseMarketplace={() => setActiveView(VIEW.ARTNET_HUB)}
+                        onExploreWorld={() => {
+                            GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                            setActiveView(VIEW.PHASER);
+                        }}
                     />
-                    {/* Navigation buttons */}
-                    <div style={{
-                        position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-                        display: 'flex', gap: 16, zIndex: 200,
-                    }}>
-                        <button
-                            onClick={() => setActiveView(VIEW.ARTNET_HUB)}
-                            style={{
-                                padding: '10px 24px', border: '1px solid #c9a84c',
-                                background: 'rgba(201,168,76,0.1)', color: '#c9a84c',
-                                fontFamily: '"Press Start 2P", monospace', fontSize: 10,
-                                cursor: 'pointer', letterSpacing: 1,
-                            }}
-                        >
-                            🌐 BROWSE MARKET
-                        </button>
-                        <button
-                            onClick={() => {
-                                // Launch overworld via the proven DEBUG_LAUNCH_SCENE handler
-                                // which properly: stops other scenes, makes canvas visible,
-                                // refreshes scale, then starts NewWorldScene
-                                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
-                                setActiveView(VIEW.PHASER);
-                            }}
-                            style={{
-                                padding: '10px 24px', border: '1px solid #4aff88',
-                                background: 'rgba(74,255,136,0.1)', color: '#4aff88',
-                                fontFamily: '"Press Start 2P", monospace', fontSize: 10,
-                                cursor: 'pointer', letterSpacing: 1,
-                            }}
-                        >
-                            🗺️ EXPLORE WORLD
-                        </button>
-                    </div>
                 </div>
             )}
 

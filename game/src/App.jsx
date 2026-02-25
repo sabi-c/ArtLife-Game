@@ -151,14 +151,18 @@ export default function App() {
 
         const params = new URLSearchParams(window.location.search);
         if (params.get('skipBoot')) {
+            // Dev shortcut: skip intro flow, launch overworld directly
             const pollStart = Date.now();
             const pollId = setInterval(() => {
-                if (window.startPhaserGame) {
+                if (window.phaserGame) {
                     clearInterval(pollId);
-                    window.startPhaserGame('new');
+                    // Use the proven DEBUG_LAUNCH_SCENE handler
+                    import('./managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
+                        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                    });
                 } else if (Date.now() - pollStart > 5000) {
                     clearInterval(pollId);
-                    console.error('[App] skipBoot: startPhaserGame never registered');
+                    console.error('[App] skipBoot: phaserGame never initialized');
                 }
             }, 100);
             setActiveView(VIEW.PHASER);

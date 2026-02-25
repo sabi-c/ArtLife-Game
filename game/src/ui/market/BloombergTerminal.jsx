@@ -47,7 +47,7 @@ import { StyleGuideView, EventOverlay } from '../dashboard/modals.jsx';
 // ══════════════════════════════════════════════════════════════
 // Main Bloomberg Terminal
 // ══════════════════════════════════════════════════════════════
-export default function BloombergTerminal({ onClose, onBrowseMarketplace, onDrilldownArtist, onDrilldownGallery }) {
+export default function BloombergTerminal({ onClose, onBrowseMarketplace, onExploreWorld, onDrilldownArtist, onDrilldownGallery }) {
     const feed = useBloombergFeed();
 
     // State
@@ -323,7 +323,10 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace, onDril
                             if (onClose) onClose();
                         }} title="Check Messages & Contacts">[ PHONE ]</button>
                         {onBrowseMarketplace && (
-                            <button style={{ background: 'none', border: 'none', color: '#ff4b00', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={onBrowseMarketplace} title="Search Artnet Marketplace">[ ARTNET SEARCH ]</button>
+                            <button style={{ background: 'none', border: 'none', color: '#ff4b00', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={onBrowseMarketplace} title="Search Artnet Marketplace">[ 🌐 ARTNET SEARCH ]</button>
+                        )}
+                        {onExploreWorld && (
+                            <button style={{ background: 'none', border: 'none', color: '#4aff88', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={onExploreWorld} title="Enter the Overworld">[ 🗺️ EXPLORE WORLD ]</button>
                         )}
                         {onDrilldownArtist && selectedArtist && (
                             <button style={{ background: 'none', border: 'none', color: '#4a90d9', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={() => onDrilldownArtist(selectedArtist)} title="View full artist profile">[ ARTIST VIEW ]</button>

@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { VIEW } from '../core/views.js';
-import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
+import { safeSceneStart } from '../utils/safeScene.js';
 import { autoLoadTiledMaps, preloadAllTilesets, getAllMapIds } from '../utils/tiledAutoLoader.js';
 
 /**
- * BootScene — Preloads shared assets, then launches TitleScene
- * Extracted from phaserInit.js during architectural refactor.
+ * BootScene — Preloads shared assets, stays alive until scene launch command.
+ * React handles the intro flow (SPLASH → NARRATIVE → LOGIN → Bloomberg).
+ * NewWorldScene starts only when user clicks "Explore World".
  */
 export class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
