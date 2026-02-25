@@ -10,6 +10,7 @@
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { VIEW, OVERLAY } from '../core/views.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 // ════════════════════════════════════════════════════════════
 // Lazy View Imports
@@ -236,10 +237,10 @@ export default function ViewRouter({
                         </button>
                         <button
                             onClick={() => {
-                                // Start Phaser scene on demand
-                                if (window.startPhaserGame) {
-                                    window.startPhaserGame('overworld');
-                                }
+                                // Launch overworld via the proven DEBUG_LAUNCH_SCENE handler
+                                // which properly: stops other scenes, makes canvas visible,
+                                // refreshes scale, then starts NewWorldScene
+                                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
                                 setActiveView(VIEW.PHASER);
                             }}
                             style={{
@@ -260,7 +261,7 @@ export default function ViewRouter({
                 <ArtnetMarketplace
                     onClose={() => setActiveView(VIEW.BLOOMBERG)}
                     onExplore={() => {
-                        if (window.startPhaserGame) window.startPhaserGame('overworld');
+                        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
                         setActiveView(VIEW.PHASER);
                     }}
                 />

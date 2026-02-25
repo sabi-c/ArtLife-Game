@@ -110,9 +110,9 @@ export class BootScene extends Phaser.Scene {
         // Expose a method so React can command Phaser to start the game loop when ready.
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'overworld' || mode === 'load') {
-                // User clicked "Explore World" — launch the overworld
-                safeSceneLaunch(this, 'NewWorldScene', { ui });
-                this.scene.stop();
+                // User clicked "Explore World" — start the overworld
+                // scene.start() REPLACES this scene (clean handoff, no parallel scenes)
+                safeSceneStart(this, 'NewWorldScene', { ui });
             } else if (mode === 'charselect') {
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
                     GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.CHARACTER_CREATOR);
