@@ -36,36 +36,39 @@ const PHASER_SCENES = [
     'WorldScene', 'MenuScene', 'EndScene',
 ];
 
-// Transitions traced from the actual codebase (scene.start, scene.launch, GameEventBus)
 const DEFAULT_EDGES = [
-    // Boot flow
-    { from: 'SCENE:BootScene', to: 'VIEW:CHARACTER_CREATOR', label: 'UI_ROUTE', action: 'GameEventBus' },
+    // ── Main User Flow (SPLASH → NARRATIVE → LOGIN → Bloomberg → Market/Overworld) ──
+    { from: 'VIEW:SPLASH', to: 'VIEW:NARRATIVE', label: 'Click / Tap', action: 'setActiveView' },
+    { from: 'VIEW:NARRATIVE', to: 'VIEW:BOOT', label: 'Continue', action: 'setActiveView' },
+    { from: 'VIEW:BOOT', to: 'VIEW:BLOOMBERG', label: 'Login Success', action: 'onLoginComplete → setActiveView' },
+    { from: 'VIEW:BLOOMBERG', to: 'VIEW:ARTNET_HUB', label: '🌐 Browse Market', action: 'setActiveView' },
+    { from: 'VIEW:BLOOMBERG', to: 'VIEW:PHASER', label: '🗺️ Explore World', action: 'DEBUG_LAUNCH_SCENE + setActiveView' },
+    { from: 'VIEW:ARTNET_HUB', to: 'VIEW:BLOOMBERG', label: 'Back', action: 'setActiveView' },
+    { from: 'VIEW:ARTNET_HUB', to: 'VIEW:PHASER', label: 'Explore', action: 'DEBUG_LAUNCH_SCENE + setActiveView' },
+    // ── Character Creator (from 'new' login action) ──
+    { from: 'VIEW:BOOT', to: 'VIEW:CHARACTER_CREATOR', label: 'New Game', action: 'onLoginComplete' },
     { from: 'VIEW:CHARACTER_CREATOR', to: 'VIEW:TERMINAL', label: 'Done', action: 'navigate' },
-    { from: 'SCENE:TitleScene', to: 'SCENE:NewWorldScene', label: 'Press Start', action: 'scene.stop → launch' },
-    // Overworld exits
+    // ── Phaser Scenes (BootScene preloads, NewWorldScene is the overworld) ──
+    { from: 'SCENE:BootScene', to: 'SCENE:NewWorldScene', label: 'startPhaserGame(overworld)', action: 'scene.start' },
+    // ── Overworld exits ──
     { from: 'SCENE:NewWorldScene', to: 'VIEW:DASHBOARD', label: 'ESC / Exit', action: 'GameEventBus UI_ROUTE' },
     { from: 'SCENE:NewWorldScene', to: 'SCENE:CityScene', label: 'Warp (dungeon)', action: 'GameEventBus LAUNCH_SCENE' },
-    // City flow
+    // ── City flow ──
     { from: 'SCENE:CityScene', to: 'SCENE:LocationScene', label: 'Enter Location', action: 'scene.start' },
     { from: 'SCENE:CityScene', to: 'SCENE:FastTravelScene', label: 'Fast Travel', action: 'scene.launch' },
     { from: 'SCENE:CityScene', to: 'VIEW:TERMINAL', label: 'Leave City', action: 'GameEventBus UI_ROUTE' },
-    // Location flow
+    // ── Location flow ──
     { from: 'SCENE:LocationScene', to: 'SCENE:HaggleScene', label: 'Buy/Sell Art', action: 'scene.start' },
     { from: 'SCENE:LocationScene', to: 'SCENE:DialogueScene', label: 'Talk to NPC', action: 'scene.launch' },
-    // Haggle / Dialogue exits
+    // ── Haggle / Dialogue exits ──
     { from: 'SCENE:HaggleScene', to: 'VIEW:TERMINAL', label: 'Finish Haggle', action: 'GameEventBus UI_ROUTE' },
     { from: 'SCENE:DialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
     { from: 'SCENE:MacDialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
-    // World scenes
-    { from: 'SCENE:OverworldScene', to: 'SCENE:DialogueScene', label: 'NPC Talk', action: 'scene.start' },
-    { from: 'SCENE:WorldScene', to: 'VIEW:TERMINAL', label: 'Exit World', action: 'GameEventBus' },
+    // ── World scenes ──
     { from: 'SCENE:FastTravelScene', to: 'SCENE:LocationScene', label: 'Arrive', action: 'scene.start' },
-    // End game
+    // ── End game ──
     { from: 'SCENE:EndScene', to: 'SCENE:MenuScene', label: 'Restart', action: 'scene.start' },
-    // React view transitions
-    { from: 'VIEW:TERMINAL', to: 'VIEW:PHASER', label: 'Enter World', action: 'navigate' },
-    { from: 'VIEW:BOOT', to: 'VIEW:PHASER', label: 'Login Success', action: 'setActiveView' },
-    { from: 'OVERLAY:BLOOMBERG', to: 'VIEW:TERMINAL', label: 'Close', action: 'navigate' },
+    // ── Overlays ──
     { from: 'OVERLAY:MASTER_CMS', to: 'VIEW:TERMINAL', label: 'Close', action: 'navigate' },
 ];
 
@@ -73,18 +76,22 @@ const DEFAULT_EDGES = [
 // Node metadata — file paths, descriptions, and status
 // ══════════════════════════════════════════════════════════════
 const NODE_META = {
-    // Views
-    'VIEW:BOOT': { file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Artnet-style email login screen' },
-    'VIEW:PHASER': { file: 'phaserInit.js', status: 'active', desc: 'Raw Phaser canvas (game world)' },
+    // ── Views (React full-page states) ──
+    'VIEW:SPLASH': { file: 'ui/boot/BootSplash.jsx', status: 'active', desc: 'Animated tiled computer splash — entry point' },
+    'VIEW:NARRATIVE': { file: 'ui/boot/NarrativeIntro.jsx', status: 'active', desc: '"$67 million" typewriter intro text' },
+    'VIEW:BOOT': { file: 'ui/boot/ArtnetLogin.jsx', status: 'active', desc: 'Artnet-style email login screen' },
+    'VIEW:BLOOMBERG': { file: 'ui/market/BloombergTerminal.jsx', status: 'active', desc: 'Bloomberg Terminal full-page hub — Market + Overworld buttons' },
+    'VIEW:ARTNET_HUB': { file: 'ui/market/ArtnetMarketplace.jsx', status: 'active', desc: 'Artnet-style marketplace browser' },
+    'VIEW:PHASER': { file: 'phaserInit.js', status: 'active', desc: 'Raw Phaser canvas (overworld, haggle, etc.)' },
     'VIEW:TERMINAL': { file: 'ui/terminal/TerminalUI.js', status: 'active', desc: 'DOM terminal — text menus, dashboard, events' },
-    'VIEW:DASHBOARD': { file: 'ui/PlayerDashboard.jsx', status: 'active', desc: 'React stats & ledger overlay' },
-    'VIEW:SCENE_ENGINE': { file: 'ui/ScenePlayer.jsx', status: 'active', desc: 'Visual-novel cutscene player' },
-    'VIEW:CHARACTER_CREATOR': { file: 'ui/CharacterCreator.jsx', status: 'active', desc: 'React character creation flow' },
-    // Scenes
-    'SCENE:BootScene': { file: 'scenes/BootScene.js', status: 'active', desc: 'Asset preloader → routes to character select' },
-    'SCENE:TitleScene': { file: 'scenes/TitleScene.js', status: 'active', desc: 'Graphical title screen, Press Start' },
-    'SCENE:IntroScene': { file: 'scenes/IntroScene.js', status: 'active', desc: 'Story intro cutscene' },
-    'SCENE:NewWorldScene': { file: 'scenes/NewWorldScene.js', status: 'active', desc: 'Larus overworld — NPCs, warps, dialogue' },
+    'VIEW:DASHBOARD': { file: 'ui/player/PlayerDashboard.jsx', status: 'active', desc: 'React stats & ledger overlay' },
+    'VIEW:SCENE_ENGINE': { file: 'ui/game/ScenePlayer.jsx', status: 'active', desc: 'Visual-novel cutscene player' },
+    'VIEW:CHARACTER_CREATOR': { file: 'ui/boot/CharacterCreator.jsx', status: 'active', desc: 'React character creation flow' },
+    // ── Phaser Scenes ──
+    'SCENE:BootScene': { file: 'scenes/BootScene.js', status: 'active', desc: 'Asset preloader — defines startPhaserGame()' },
+    'SCENE:TitleScene': { file: 'scenes/TitleScene.js', status: 'unused', desc: 'Legacy graphical title screen (replaced by BootSplash)' },
+    'SCENE:IntroScene': { file: 'scenes/IntroScene.js', status: 'unused', desc: 'Legacy story intro (replaced by NarrativeIntro)' },
+    'SCENE:NewWorldScene': { file: 'scenes/NewWorldScene.js', status: 'active', desc: 'Larus overworld — NPCs, warps, dialogue, tilemap' },
     'SCENE:OverworldScene': { file: 'scenes/OverworldScene.js', status: 'unused', desc: 'Legacy grid-engine overworld (replaced by NewWorld)' },
     'SCENE:WorldScene': { file: 'scenes/WorldScene.js', status: 'unused', desc: 'Legacy infinite world (replaced by NewWorld)' },
     'SCENE:CityScene': { file: 'scenes/CityScene.js', status: 'active', desc: 'City hub — venue list, fast travel' },
@@ -95,7 +102,7 @@ const NODE_META = {
     'SCENE:FastTravelScene': { file: 'scenes/FastTravelScene.js', status: 'active', desc: 'City-to-city travel overlay' },
     'SCENE:MenuScene': { file: 'scenes/MenuScene.js', status: 'active', desc: 'Pause/settings menu' },
     'SCENE:EndScene': { file: 'scenes/EndScene.js', status: 'active', desc: 'Game over / final screen' },
-    // Overlays
+    // ── Overlays ──
     'OVERLAY:ADMIN': { file: 'ui/AdminDashboard.jsx', status: 'active', desc: 'Admin panel — debug tools' },
     'OVERLAY:SETTINGS': { file: 'ui/SettingsPanel.jsx', status: 'active', desc: 'Game settings (audio, display)' },
     'OVERLAY:INVENTORY': { file: 'ui/InventoryPanel.jsx', status: 'active', desc: 'Player inventory grid' },
@@ -103,12 +110,12 @@ const NODE_META = {
     'OVERLAY:MASTER_CMS': { file: 'ui/cms/', status: 'active', desc: 'Content Management System' },
     'OVERLAY:MARKET_DASHBOARD': { file: 'ui/dashboard/', status: 'active', desc: 'Market analytics dashboard' },
     'OVERLAY:ARTWORK_DASHBOARD': { file: 'ui/ArtworkDashboard.jsx', status: 'planned', desc: 'Artwork detail viewer (planned)' },
-    'OVERLAY:BLOOMBERG': { file: 'ui/BloombergTerminal.jsx', status: 'active', desc: 'Bloomberg-style market terminal' },
+    'OVERLAY:BLOOMBERG': { file: 'ui/market/BloombergTerminal.jsx', status: 'active', desc: 'Bloomberg-style market terminal (overlay variant)' },
     'OVERLAY:SALES_GRID': { file: 'ui/SalesGrid.jsx', status: 'planned', desc: 'Sales history grid (planned)' },
     'OVERLAY:DESIGN_GUIDE': { file: 'ui/DesignGuide.jsx', status: 'planned', desc: 'Visual design reference' },
     'OVERLAY:GMAIL_GUIDE': { file: 'ui/email/', status: 'active', desc: 'In-game email client' },
-    'OVERLAY:ARTNET_LOGIN': { file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Artnet login overlay variant' },
-    'OVERLAY:ARTNET_MARKETPLACE': { file: 'ui/ArtnetMarketplace.jsx', status: 'planned', desc: 'Artnet marketplace browser' },
+    'OVERLAY:ARTNET_LOGIN': { file: 'ui/boot/ArtnetLogin.jsx', status: 'active', desc: 'Artnet login overlay variant' },
+    'OVERLAY:ARTNET_MARKETPLACE': { file: 'ui/market/ArtnetMarketplace.jsx', status: 'active', desc: 'Artnet marketplace overlay variant' },
     'OVERLAY:ARTNET_UI': { file: 'ui/ArtnetUI.jsx', status: 'planned', desc: 'Artnet UI shell' },
 };
 
