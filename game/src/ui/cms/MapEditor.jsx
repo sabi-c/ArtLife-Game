@@ -942,13 +942,16 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
         const images = {};
         const promises = [];
 
+        // Resolve asset base — handles GitHub Pages subpath deployment
+        const assetBase = import.meta.env.BASE_URL || './';
+
         const bgProp = Array.isArray(mapJSON.properties)
             ? mapJSON.properties.find(p => p.name === 'bgImage')?.value
             : mapJSON.properties?.bgImage;
 
         if (bgProp) {
             promises.push(
-                loadImage(bgProp).then(img => { images._bgImage = img; }).catch(() => { })
+                loadImage(assetBase + bgProp).then(img => { images._bgImage = img; }).catch(() => { })
             );
         }
 
@@ -957,9 +960,13 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
                 let imgPath = ts.image;
                 // Strip leading ../ prefixes
                 imgPath = imgPath.replace(/^(\.\.\/)+/, '');
-                // If path doesn't start with assets/ or http, prepend the base path
+                // If path doesn't start with assets/ or http, prepend the map's base path
                 if (mapBasePath && !imgPath.startsWith('assets/') && !imgPath.startsWith('http')) {
                     imgPath = mapBasePath + imgPath;
+                }
+                // Prepend asset base for deployment
+                if (!imgPath.startsWith('http')) {
+                    imgPath = assetBase + imgPath;
                 }
                 promises.push(
                     loadImage(imgPath).then(img => { images[ts.name] = img; }).catch(() => {
@@ -970,7 +977,7 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
         }
 
         Promise.all(promises).then(() => setTilesetImages(images));
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [mapBasePath]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Keyboard shortcuts
     useEffect(() => {

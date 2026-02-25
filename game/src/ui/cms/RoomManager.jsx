@@ -231,11 +231,20 @@ function TilesetPreview({ mapJSON }) {
     useEffect(() => {
         const imgs = {};
         const promises = [];
+        const assetBase = import.meta.env.BASE_URL || './';
         for (const ts of (mapJSON.tilesets || [])) {
             if (ts.image) {
                 let imgPath = ts.image;
-                // Normalize relative paths for dev server
-                if (imgPath.startsWith('../')) imgPath = imgPath.replace(/^(\.\.\/)+/, '');
+                // Normalize relative paths
+                imgPath = imgPath.replace(/^(\.\.\/)+/, '');
+                // If relative (no assets/ prefix), assume it's relative to the map's dir
+                if (!imgPath.startsWith('assets/') && !imgPath.startsWith('http')) {
+                    imgPath = 'assets/luminus/' + imgPath;
+                }
+                // Prepend deployment base
+                if (!imgPath.startsWith('http')) {
+                    imgPath = assetBase + imgPath;
+                }
                 promises.push(
                     new Promise((resolve) => {
                         const img = new Image();
