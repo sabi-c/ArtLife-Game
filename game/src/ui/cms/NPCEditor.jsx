@@ -1159,11 +1159,20 @@ function MarketActivityTab({ npc }) {
 // ═══════════════════════════════════════════════════════════
 export default function NPCEditor() {
     const contacts = useNPCStore(s => s.contacts);
+    const init = useNPCStore(s => s.init);
     const markDirty = useCmsStore(s => s.markDirty);
     const [selectedId, setSelectedId] = useState(null);
     const [activeTab, setActiveTab] = useState('identity');
     const [notification, setNotification] = useState(null);
     const [search, setSearch] = useState('');
+
+    // ── Auto-initialize NPC store if empty ──
+    // This ensures NPCs are loaded even when CMS is opened before a game session
+    React.useEffect(() => {
+        if (!contacts || contacts.length === 0) {
+            init();
+        }
+    }, [contacts, init]);
 
     const allNpcs = useMemo(() =>
         [...contacts].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
