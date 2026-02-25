@@ -3,6 +3,7 @@ dist/
 .nyc_output/
 *.log
 .env
+.DS_Store
 
 # Bulk scraper artifacts
 game/scripts/bulk_art_scraper/node_modules/
@@ -13,3 +14,7 @@ game/scripts/bundles/
 game/scripts/.venv/
 __pycache__/
 *.pyc
+
+# Local archive and reference (not part of the game)
+_Archive/
+_reference/
