@@ -57,31 +57,14 @@ export class BootScene extends Phaser.Scene {
             });
         });
 
-        // ── Overworld tilesets ──
-        this.load.spritesheet('tiles_urban', 'assets/tilesets/kenney_rpg_urban_pack/Tilemap/tilemap_packed.png', {
-            frameWidth: 16, frameHeight: 16, margin: 0, spacing: 1
-        });
-        this.load.spritesheet('tiles_indoor', 'assets/tilesets/kenney_roguelike_indoors/Tilesheets/roguelikeIndoor_transparent.png', {
-            frameWidth: 16, frameHeight: 16, margin: 0, spacing: 1
-        });
+        // ── Interior Maps (currently none — overworld loaded by NewWorldScene) ──
+        // autoLoadTiledMaps(this, getAllMapIds());
+        // preloadAllTilesets(this);
 
         // ── Player walk spritesheet ──
         this.load.spritesheet('player_walk', 'sprites/player_walk.png', {
             frameWidth: 160, frameHeight: 160
         });
-
-        // ── Interior Tiled Maps + Tilesets (auto-discovered from map JSON) ──
-        // The auto-loader reads each map's JSON, extracts tileset references,
-        // and loads only what isn't already cached. No manual tileset registration needed.
-        autoLoadTiledMaps(this, getAllMapIds());
-        preloadAllTilesets(this); // Single-pass: all tilesets load alongside maps
-
-        // ── Background-image rooms (pre-composed LimeZu premium art) ──
-        // These aren't referenced in Tiled JSON, so loaded explicitly
-        this.load.image('bg_room_art_gallery_museum', 'assets/rooms/art_gallery_museum.png');
-        this.load.image('bg_room_museum_entrance', 'assets/rooms/museum_entrance.png');
-        this.load.image('bg_room_dinosaur_museum', 'assets/rooms/dinosaur_museum.png');
-        this.load.image('bg_room_small_gallery', 'assets/rooms/small_gallery.png');
 
         // ── Event JSON Data ──
         this.load.json('events_json', 'content/events.json');
