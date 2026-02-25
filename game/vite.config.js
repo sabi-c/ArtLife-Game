@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { readFileSync, createWriteStream } from 'fs';
+import { readFileSync, writeFileSync, createWriteStream } from 'fs';
 import { execSync } from 'child_process';
 import path from 'path';
 
@@ -78,6 +78,25 @@ export default defineConfig({
                     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
                     next();
                 });
+            }
+        },
+        // Auto-version service worker — stamps dist/sw.js with git hash after build
+        // This ensures every deployment invalidates the old cache automatically
+        {
+            name: 'auto-version-sw',
+            closeBundle() {
+                try {
+                    const swPath = path.resolve(__dirname, 'dist/sw.js');
+                    let sw = readFileSync(swPath, 'utf-8');
+                    sw = sw.replace(
+                        /const CACHE_NAME = '[^']*'/,
+                        `const CACHE_NAME = 'artlife-${gitHash}-${Date.now()}'`
+                    );
+                    writeFileSync(swPath, sw);
+                    console.log(`\n  ✓ SW cache stamped: artlife-${gitHash}-${Date.now()}`);
+                } catch (e) {
+                    console.warn('  ⚠ Could not stamp sw.js:', e.message);
+                }
             }
         }
     ]
