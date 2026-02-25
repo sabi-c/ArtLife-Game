@@ -110,8 +110,8 @@ export class BootScene extends Phaser.Scene {
         // Expose a method so React can command Phaser to start the game loop when ready.
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'new') {
-                // Fresh visit: play cinematic intro, then hand back to React ArtnetLogin
-                safeSceneLaunch(this, 'IntroScene', { ui });
+                // React handles splash/narrative intro — go straight to overworld
+                safeSceneLaunch(this, 'NewWorldScene', { ui });
             } else if (mode === 'charselect') {
                 // After login "New" selection: go straight to character builder
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
