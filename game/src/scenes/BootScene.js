@@ -110,7 +110,7 @@ export class BootScene extends Phaser.Scene {
         const eventsData = this.cache.json.get('events_json');
         if (eventsData && Array.isArray(eventsData)) {
             EventRegistry.jsonEvents = eventsData;
-            console.log(`[BootScene] Injected ${eventsData.length} decoupled events into EventRegistry`);
+            console.log(`[BootScene] ${eventsData.length} decoupled events loaded`);
         } else {
             console.warn('[BootScene] No events.json data found or failed to parse.');
         }
@@ -119,7 +119,7 @@ export class BootScene extends Phaser.Scene {
         const storylinesData = this.cache.json.get('storylines_json');
         if (storylinesData && Array.isArray(storylinesData)) {
             EventRegistry.jsonStorylines = storylinesData;
-            console.log(`[BootScene] Injected ${storylinesData.length} storylines into EventRegistry`);
+            console.log(`[BootScene] ${storylinesData.length} storylines loaded`);
         } else {
             console.warn('[BootScene] No storylines.json data found or failed to parse.');
         }
@@ -138,7 +138,7 @@ export class BootScene extends Phaser.Scene {
                 });
             } else {
                 // If loading a save, skip straight to Overworld/Menu.
-                safeSceneLaunch(this, 'OverworldScene', { ui });
+                safeSceneLaunch(this, 'NewWorldScene', { ui });
             }
             // Hide the boot scene
             this.scene.stop();

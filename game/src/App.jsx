@@ -307,19 +307,19 @@ export default function App() {
 
             const isMobile = window.innerWidth < 769;
             if (showPhaser && isGridSceneActive && isMobile) {
+                // Mobile overworld: game takes top ~54%, joypad takes bottom ~46%.
+                // Use the container dimensions — don't override canvas CSS (phaserInit sets 100vw/100vh).
                 requestAnimationFrame(() => {
                     const topH = Math.floor(window.innerHeight * 0.54);
                     container.style.height = topH + 'px';
                     container.style.bottom = 'auto';
-                    if (game?.canvas) {
-                        game.canvas.style.height = topH + 'px';
-                    }
+                    container.style.overflow = 'hidden';
                     game?.scale?.resize(window.innerWidth, topH);
                 });
             } else {
                 container.style.height = '100%';
                 container.style.bottom = '';
-                if (game?.canvas) game.canvas.style.height = '';
+                container.style.overflow = '';
                 if (showPhaser && game) {
                     requestAnimationFrame(() => game?.scale?.refresh());
                 }
