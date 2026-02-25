@@ -92,8 +92,8 @@ export default class NewWorldScene extends Phaser.Scene {
         this.load.image('lum_inner', 'assets/luminus/inner.png');
         this.load.image('lum_collision', 'assets/luminus/collision.png');
 
-        // Character sprite — Aseprite atlas format (textures[] wrapper, NOT flat frames{})
-        this.load.aseprite('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
+        // Character sprite — TexturePacker atlas format
+        this.load.atlas('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
 
         // ── All NPC + player spritesheets via SpriteRegistry ──
         const selectedSprite = SettingsManager.get('playerSprite') || 'character';
@@ -120,6 +120,10 @@ export default class NewWorldScene extends Phaser.Scene {
     create() {
         _log('create()');
         this._createFailed = false;
+
+        // Wire up shutdown/clean up events to prevent memory leaks
+        this.events.on('shutdown', this.shutdown, this);
+        this.events.on('destroy', this.shutdown, this);
 
         // Warn about failed assets but continue — missing NPC sprites are non-critical
         if (this._assetErrors.length > 0) {
@@ -166,6 +170,7 @@ export default class NewWorldScene extends Phaser.Scene {
 
         // Create all tile layers, respecting Tiled properties for depth and collision
         let layersCreated = 0;
+        this.collisionLayers = [];
         for (const layerData of this.map.layers) {
             const layer = this.map.createLayer(layerData.name, this.map.tilesets);
             if (!layer) {
@@ -189,7 +194,7 @@ export default class NewWorldScene extends Phaser.Scene {
             if (props.collides) {
                 layer.setCollisionByProperty({ collides: true });
                 layer.setAlpha(0); // hide collision tiles
-                this.collisionLayer = layer;
+                this.collisionLayers.push(layer);
             }
         }
 
@@ -296,8 +301,10 @@ export default class NewWorldScene extends Phaser.Scene {
         }
 
         // Collision with tilemap
-        if (this.collisionLayer) {
-            this.physics.add.collider(this.player, this.collisionLayer);
+        if (this.collisionLayers?.length) {
+            for (const cl of this.collisionLayers) {
+                this.physics.add.collider(this.player, cl);
+            }
         }
 
         // Listen for sprite changes from admin settings
@@ -371,6 +378,10 @@ export default class NewWorldScene extends Phaser.Scene {
 
             // Collision → teleport
             this.physics.add.collider(zone, this.player, () => {
+                // Prevent multiple triggers while transition is happening
+                if (this._warping) return;
+                this._warping = true;
+
                 const sceneTarget = props.scene;
                 const gotoId = props.goto;
 
@@ -384,8 +395,13 @@ export default class NewWorldScene extends Phaser.Scene {
                         this.time.delayedCall(500, () => {
                             this.player.setPosition(dest.x, dest.y);
                             this.cameras.main.fadeIn(500);
+                            this.time.delayedCall(500, () => { this._warping = false; });
                         });
+                    } else {
+                        this._warping = false; // reset if destination not found
                     }
+                } else {
+                    this._warping = false; // reset if no target
                 }
             });
         }
@@ -404,11 +420,13 @@ export default class NewWorldScene extends Phaser.Scene {
         const zoom = isMobile ? 2.0 : 2.5;
         this.cameras.main.setZoom(zoom);
 
+        // Prevent tile bleeding/seam artifacts via sub-pixel rounding
+        this.cameras.main.roundPixels = true;
+
         this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
         // IMPORTANT: Phaser config has transparent:true (for other scenes).
         // Override for this scene so the background color actually renders
-        // instead of showing the dark container through the transparent canvas.
         this.cameras.main.transparent = false;
         this.cameras.main.setBackgroundColor('#2d6b30');
 
@@ -416,13 +434,10 @@ export default class NewWorldScene extends Phaser.Scene {
         const gc = document.getElementById('phaser-game-container');
         if (gc) gc.style.background = '#2d6b30';
 
-        // DON'T set camera bounds — let the green background fill everywhere
-        // beyond the map edge. Camera bounds would clip the viewport and show
-        // the transparent canvas → dark container on edges.
+        // Constrain camera to map bounds to prevent green void at edges
+        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
 
         // Mobile: offset camera follow upward so player stays above joypad
-        // Joypad covers ~46vh of the screen from the bottom.
-        // Negative Y = player rendered in upper portion of screen, above d-pad.
         if (isMobile) {
             const viewportH = this.scale.height / zoom;
             const offsetY = -(viewportH * 0.22); // shift player 22% UP from center
@@ -473,7 +488,7 @@ export default class NewWorldScene extends Phaser.Scene {
     // ════════════════════════════════════════════════════
     // Update — 8-directional movement
     // ════════════════════════════════════════════════════
-    update() {
+    update(time, delta) {
         if (this._createFailed || !this.player || !this.player.body) return;
 
         // Freeze movement during dialogue (still allow action key to dismiss)
@@ -552,8 +567,12 @@ export default class NewWorldScene extends Phaser.Scene {
             }
         }
 
-        // Normalize diagonal speed
-        body.velocity.normalize().scale(speed);
+        // Normalize diagonal speed, but guard zero-vectors to prevent sudden movements
+        if (left || right || up || down) {
+            body.velocity.normalize().scale(speed);
+        } else {
+            body.setVelocity(0);
+        }
 
         // Idle animation + breathing tween when not moving
         if (body.velocity.x === 0 && body.velocity.y === 0) {
@@ -680,6 +699,7 @@ export default class NewWorldScene extends Phaser.Scene {
         if (!enemyLayer) { _log('No enemies layer'); return; }
 
         this.npcs = [];
+        this._npcColliders = [];
         for (const obj of enemyLayer.objects) {
             const npcX = obj.x + (obj.width / 2);
             const npcY = obj.y + (obj.height / 2);
@@ -752,8 +772,9 @@ export default class NewWorldScene extends Phaser.Scene {
             npc.setData('contactId', contact?.id || null);
             this.npcs.push(npc);
 
-            // Collision so player can't walk through
-            this.physics.add.collider(this.player, npc);
+            // Store collision so we can clean it up later
+            const collider = this.physics.add.collider(this.player, npc);
+            this._npcColliders.push(collider);
         }
         _log(`Created ${this.npcs.length} NPCs (${this.npcs.filter(n => n.getData('_spriteKey')).length} with sprites)`);
     }
@@ -798,9 +819,12 @@ export default class NewWorldScene extends Phaser.Scene {
 
         this._dialogueActive = true;
         const cam = this.cameras.main;
-        const boxW = cam.width * 0.85;
+        const visibleW = cam.width / cam.zoom;
+        const visibleH = cam.height / cam.zoom;
+
+        const boxW = Math.min(visibleW * 0.85, 400); // Max width of 400px
         const boxH = 70;
-        const boxX = cam.width * 0.075;
+        const boxX = (cam.width - boxW) / 2;
         const boxY = cam.height - boxH - 16;
 
         // Dark semi-transparent backdrop
@@ -876,7 +900,9 @@ export default class NewWorldScene extends Phaser.Scene {
         if (gc) gc.style.background = '#0a0a0f';
         try {
             this.scene.stop();
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            console.warn('[NewWorldScene] scene.stop() error:', e);
+        }
         GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.DASHBOARD);
     }
 
@@ -896,6 +922,10 @@ export default class NewWorldScene extends Phaser.Scene {
         if (this._breathTween) {
             this._breathTween.stop();
             this._breathTween = null;
+        }
+        if (this._npcColliders) {
+            this._npcColliders.forEach(c => c.destroy());
+            this._npcColliders = [];
         }
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
     }
