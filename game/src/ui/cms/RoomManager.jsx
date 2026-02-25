@@ -155,13 +155,13 @@ function RoomList({ selectedVenueId, onSelectVenue, mapData }) {
             <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
                 {VENUES.map(venue => {
                     const isSelected = selectedVenueId === venue.id;
-                    const hasTiled = venue.rooms.some(r => r.tiledMap);
-                    const roomCount = venue.rooms.length;
+                    const hasTiled = (venue.rooms || []).some(r => r.tiledMap);
+                    const roomCount = (venue.rooms || []).length;
 
                     // Count total objects across all Tiled maps in this venue
                     let totalPaintings = 0;
                     let totalNPCs = 0;
-                    for (const room of venue.rooms) {
+                    for (const room of (venue.rooms || [])) {
                         if (room.tiledMap && mapData[room.tiledMap]) {
                             const c = countObjects(mapData[room.tiledMap]);
                             totalPaintings += c.paintings;
@@ -341,7 +341,7 @@ function RoomInspector({ venue, mapData }) {
         );
     }
 
-    const room = venue.rooms.find(r => r.id === selectedRoomId) || venue.rooms[0];
+    const room = (venue.rooms || []).find(r => r.id === selectedRoomId) || (venue.rooms || [])[0];
     const mapJSON = room?.tiledMap ? mapData[room.tiledMap] : null;
     const counts = mapJSON ? countObjects(mapJSON) : null;
     const ascii = mapJSON ? generateAsciiMap(mapJSON) : null;
@@ -376,12 +376,12 @@ function RoomInspector({ venue, mapData }) {
             </div>
 
             {/* Room tabs if multi-room venue */}
-            {venue.rooms.length > 1 && (
+            {(venue.rooms || []).length > 1 && (
                 <div style={{
                     display: 'flex', gap: 4, padding: '8px 12px',
                     borderBottom: '1px solid #1a1a2e', flexWrap: 'wrap',
                 }}>
-                    {venue.rooms.map(r => (
+                    {(venue.rooms || []).map(r => (
                         <button
                             key={r.id}
                             onClick={() => setSelectedRoomId(r.id)}
@@ -612,7 +612,7 @@ function ActionsPanel({ venue, mapData, onClose, onEditMap }) {
         );
     }
 
-    const firstTiledRoom = venue.rooms.find(r => r.tiledMap);
+    const firstTiledRoom = (venue.rooms || []).find(r => r.tiledMap);
     const mapJSON = firstTiledRoom?.tiledMap ? mapData[firstTiledRoom.tiledMap] : null;
 
     const handleTestRoom = () => {
@@ -640,7 +640,7 @@ function ActionsPanel({ venue, mapData, onClose, onEditMap }) {
             venue,
             maps: {},
         };
-        for (const room of venue.rooms) {
+        for (const room of (venue.rooms || [])) {
             if (room.tiledMap && mapData[room.tiledMap]) {
                 data.maps[room.tiledMap] = mapData[room.tiledMap];
             }
@@ -733,7 +733,7 @@ function ActionsPanel({ venue, mapData, onClose, onEditMap }) {
                         borderRadius: 2, padding: 8, fontFamily: mono, fontSize: 10,
                     }}>
                         <div style={{ color: '#888' }}>ID: <span style={{ color: '#ddd' }}>{venue.id}</span></div>
-                        <div style={{ color: '#888' }}>Rooms: <span style={{ color: '#ddd' }}>{venue.rooms.length}</span></div>
+                        <div style={{ color: '#888' }}>Rooms: <span style={{ color: '#ddd' }}>{(venue.rooms || []).length}</span></div>
                         <div style={{ color: '#888' }}>Time Limit: <span style={{ color: '#ddd' }}>{venue.timeLimit} turns</span></div>
                         <div style={{ color: '#888' }}>Available: <span style={{ color: '#ddd' }}>{venue.availableWeeks}</span></div>
                         {venue.requires && (
@@ -1261,7 +1261,7 @@ export default function RoomManager({ onClose }) {
         // Always include the overworld map
         tiledMaps.add('larus');
         for (const venue of VENUES) {
-            for (const room of venue.rooms) {
+            for (const room of (venue.rooms || [])) {
                 if (room.tiledMap) tiledMaps.add(room.tiledMap);
             }
         }
