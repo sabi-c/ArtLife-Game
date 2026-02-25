@@ -1,4 +1,5 @@
 import { ARTISTS } from '../data/artists.js';
+import { ARTWORKS } from '../data/artworks.js';
 import { GameState } from './GameState.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
@@ -146,6 +147,120 @@ export class MarketManager {
 
         // Tick event bus (decay active effects)
         MarketEventBus.tick();
+    }
+
+    /**
+     * Standalone tick for CMS simulation — doesn't require GameState.
+     * Evolves heat, recalculates prices, and updates artist indices
+     * using the provided market cycle parameter.
+     *
+     * @param {string} cycle — 'bull' | 'bear' | 'flat'
+     */
+    static tickForSim(cycle = 'flat') {
+        if (MarketManager.artists.length === 0) MarketManager.ensureInitForSim();
+
+        // Update each artist's heat
+        MarketManager.artists.forEach((artist) => {
+            const volatility = artist.heatVolatility || 10;
+            const change = (Math.random() - 0.45) * volatility * 2;
+            artist.heat = clamp(artist.heat + change, 0, 100);
+
+            if (cycle === 'bull') {
+                artist.heat = Math.min(100, artist.heat + 0.5);
+            } else if (cycle === 'bear') {
+                artist.heat = Math.max(0, artist.heat - 0.8);
+            }
+
+            // Gallery Buyback Simulation
+            if (artist.heat < 20 && !artist.buybackActive) {
+                if (Math.random() < 0.3) {
+                    artist.buybackActive = true;
+                    artist.buybackFloor = artist.heat;
+                }
+            }
+            if (artist.buybackActive) {
+                artist.heat = Math.max(artist.buybackFloor, artist.heat);
+                if (Math.random() < 0.10) {
+                    artist.buybackActive = false;
+                    artist.heat = Math.max(0, artist.heat - 15);
+                }
+            }
+
+            // Compute Artist Index
+            artist.artistIndex = MarketManager._computeArtistIndex(artist);
+        });
+
+        // Update work prices with O-U jitter (sim-safe: no GameState dependency)
+        MarketManager.works.forEach((work) => {
+            const artist = MarketManager.getArtist(work.artistId);
+            if (!artist) return;
+
+            const heatMultiplier = 0.5 + Math.pow(artist.heat / 32, 2);
+            const marketMultiplier = cycle === 'bull' ? 1.2 : cycle === 'bear' ? 0.8 : 1.0;
+            const hedonicMultiplier = MarketManager._hedonicScore(work);
+            const eventModifier = MarketEventBus.getPriceModifier(work.artistId, artist.tier);
+
+            const targetPrice = work.basePrice * heatMultiplier * marketMultiplier * hedonicMultiplier * eventModifier;
+
+            // O-U mean-reverting jitter
+            const prevPrice = work.price || targetPrice;
+            const theta = 0.2;
+            const vol = (artist.heatVolatility || 10) / 100;
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            const Z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            const randomShock = vol * prevPrice * Z;
+            const meanReversion = theta * (targetPrice - prevPrice);
+            work.price = Math.max(10, Math.round(prevPrice + meanReversion + randomShock));
+        });
+
+        // Occasionally add new works to market
+        if (Math.random() < 0.15) {
+            MarketManager.addNewWorkToMarket();
+        }
+
+        // Tick event bus
+        MarketEventBus.tick();
+    }
+
+    /**
+     * Ensure MarketManager is initialized for standalone CMS simulation.
+     * If artists are empty, initialize from ARTISTS data.
+     */
+    static ensureInitForSim() {
+        if (MarketManager.artists.length === 0) {
+            MarketManager.artists = ARTISTS.map(a => ({ ...a }));
+            console.log(`[MarketManager] Sim-init: loaded ${MarketManager.artists.length} artists`);
+        }
+        if (MarketManager.works.length === 0) {
+            // Use artworks data for simulation
+            if (ARTWORKS?.length > 0) {
+                MarketManager.works = ARTWORKS.map(w => ({ ...w, price: w.basePrice || w.price || 10000 }));
+            } else {
+                // Fallback: generate works from artists
+                for (const artist of MarketManager.artists) {
+                    const count = artist.tier === 'blue-chip' ? 8 : artist.tier === 'mid-career' ? 5 : 3;
+                    for (let i = 0; i < count; i++) {
+                        const price = Math.round(
+                            artist.basePriceMin + Math.random() * (artist.basePriceMax - artist.basePriceMin)
+                        );
+                        MarketManager.works.push({
+                            id: `sim_${artist.id}_${i}`,
+                            title: `Work #${i + 1}`,
+                            artistId: artist.id,
+                            artist: artist.name,
+                            medium: artist.medium,
+                            basePrice: price,
+                            price: price,
+                            yearCreated: 2020 + Math.floor(Math.random() * 5),
+                            onMarket: Math.random() < 0.6,
+                        });
+                    }
+                }
+            }
+            console.log(`[MarketManager] Sim-init: loaded ${MarketManager.works.length} works`);
+        }
     }
 
     static calculatePrice(work, includeJitter = false) {

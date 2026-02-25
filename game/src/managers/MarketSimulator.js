@@ -151,6 +151,9 @@ export class MarketSimulator {
     /** Monotonically increasing order ID counter */
     static _nextOrderId = 1;
 
+    // ── Simulation Log (structured per-week data for debugging) ──
+    static simulationLog = [];
+
     // ══════════════════════════════════════════════════════════════
     // Initialization
     // ══════════════════════════════════════════════════════════════
@@ -281,11 +284,12 @@ export class MarketSimulator {
         }
 
         // Build weekly report
+        const weekVolume = trades.reduce((s, t) => s + t.price, 0);
         MarketSimulator.weeklyReport = {
             week,
             tradesExecuted: trades.length,
-            totalVolume: trades.reduce((s, t) => s + t.price, 0),
-            avgPrice: trades.length > 0 ? Math.round(trades.reduce((s, t) => s + t.price, 0) / trades.length) : 0,
+            totalVolume: weekVolume,
+            avgPrice: trades.length > 0 ? Math.round(weekVolume / trades.length) : 0,
             sellOrderCount: sellOrders.length,
             buyOrderCount: buyOrders.length,
             matchCount: matches.length,
@@ -300,6 +304,26 @@ export class MarketSimulator {
                 artistId: t.artwork?.artistId || '',
             })),
         };
+
+        // ── Simulation Log Entry (structured data for debugging) ──
+        let compositeIndex = 1000;
+        try { compositeIndex = MarketManager.getCompositeIndex(); } catch { /* ok */ }
+        MarketSimulator.simulationLog.push({
+            week,
+            cycle: marketCycle,
+            sellOrders: sellOrders.length,
+            buyOrders: buyOrders.length,
+            matchAttempts: matches.length,
+            tradesExecuted: trades.length,
+            volume: weekVolume,
+            avgPrice: MarketSimulator.weeklyReport.avgPrice,
+            compositeIndex,
+            topMover: trades.length > 0 ? trades[0].artwork?.title || '' : '',
+        });
+        // Cap log at 500 entries
+        if (MarketSimulator.simulationLog.length > 500) {
+            MarketSimulator.simulationLog = MarketSimulator.simulationLog.slice(-500);
+        }
 
         // Trim trade log
         MarketSimulator.tradeLog.push(...MarketSimulator.weeklyReport.trades);
@@ -380,27 +404,35 @@ export class MarketSimulator {
 
     /** Decide what an NPC wants to buy this week */
     static _decideBuys(npc, week, marketCycle) {
-        if (npc.cash < 2000) return []; // Too broke
+        if (npc.cash < 500) return []; // Too broke (lowered from $2000)
         if (npc.owned.length >= npc.maxCapacity) return []; // Collection full
 
-        let buyProbability = 0.15; // Base 15% chance to be buying
+        let buyProbability = 0.35; // Base 35% chance to be buying (was 15%)
 
         // Bull market → more buying
-        if (marketCycle === 'bull') buyProbability += 0.15;
+        if (marketCycle === 'bull') buyProbability += 0.20;
 
         // Cash-rich → more buying
-        if (npc.cash > npc.spendingCeiling * 2) buyProbability += 0.10;
+        if (npc.cash > npc.spendingCeiling * 2) buyProbability += 0.15;
+        else if (npc.cash > npc.spendingCeiling) buyProbability += 0.08;
 
         // Risk appetite
-        if (npc.riskAppetite === 'aggressive') buyProbability += 0.10;
+        if (npc.riskAppetite === 'aggressive') buyProbability += 0.15;
         if (npc.riskAppetite === 'conservative') buyProbability -= 0.05;
+
+        // Role-based modifiers
+        if (npc.dealerType === 'flipper') buyProbability += 0.10;
+        if (npc.role === 'collector') buyProbability += 0.05;
+
+        // Bear market dampening (but still possible)
+        if (marketCycle === 'bear') buyProbability -= 0.10;
 
         if (Math.random() > buyProbability) return [];
 
-        // Budget: min of spending ceiling and 40% of liquid cash
-        const budget = Math.min(npc.spendingCeiling, npc.cash * 0.4);
+        // Budget: min of spending ceiling and 50% of liquid cash (was 40%)
+        const budget = Math.min(npc.spendingCeiling, npc.cash * 0.5);
 
-        return [{
+        const orders = [{
             type: 'buy',
             npcId: npc.id,
             budget,
@@ -409,6 +441,22 @@ export class MarketSimulator {
             avoidedGenres: npc.avoidedGenres,
             riskTolerance: npc.riskTolerance,
         }];
+
+        // Cash-rich NPCs may submit a 2nd buy order (~30% chance)
+        if (npc.cash > npc.spendingCeiling * 1.5 && npc.owned.length < npc.maxCapacity - 1 && Math.random() < 0.30) {
+            orders.push({
+                type: 'buy',
+                npcId: npc.id,
+                budget: Math.min(npc.spendingCeiling * 0.7, npc.cash * 0.25),
+                preferredGenres: npc.preferredGenres,
+                preferredTiers: npc.preferredTiers,
+                avoidedGenres: npc.avoidedGenres,
+                riskTolerance: npc.riskTolerance,
+                _secondOrder: true,
+            });
+        }
+
+        return orders;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -419,13 +467,16 @@ export class MarketSimulator {
     static _matchOrders(buyOrders, sellOrders, npcState) {
         const matches = [];
         const usedSells = new Set();
-        const usedBuys = new Set();
+        // Track buys per NPC: allow up to 2 per week
+        const buyCountPerNPC = {};
+        const MAX_BUYS_PER_NPC = 2;
 
         // Shuffle for fairness
         const shuffledBuys = [...buyOrders].sort(() => Math.random() - 0.5);
 
         for (const buy of shuffledBuys) {
-            if (usedBuys.has(buy.npcId)) continue; // 1 buy per NPC per week
+            const npcBuys = buyCountPerNPC[buy.npcId] || 0;
+            if (npcBuys >= MAX_BUYS_PER_NPC) continue;
 
             // Score each available sell order for this buyer
             const scored = sellOrders
@@ -446,7 +497,7 @@ export class MarketSimulator {
                 const best = scored[0].sell;
                 matches.push({ buy, sell: best });
                 usedSells.add(best.artworkId);
-                usedBuys.add(buy.npcId);
+                buyCountPerNPC[buy.npcId] = npcBuys + 1;
             }
         }
 
@@ -528,8 +579,8 @@ export class MarketSimulator {
         const finalPrice = Math.round((bid + ask) / 2);
         const gap = Math.abs(ask - bid) / ask;
 
-        // Walk-away check
-        if (gap > (1 - seller.walkawayThreshold)) return null; // Too far apart
+        // Walk-away check (relaxed: multiply threshold by 0.7 for more deals)
+        if (gap > (1 - seller.walkawayThreshold * 0.7)) return null; // Too far apart
         if (finalPrice > maxBid) return null; // Buyer can't afford
         if (finalPrice > buyer.cash) return null; // Liquidity check
 

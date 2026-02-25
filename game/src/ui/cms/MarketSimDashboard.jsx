@@ -747,6 +747,103 @@ function EmptyState() {
 }
 
 // ══════════════════════════════════════════════
+// TAB: SIM LOG
+// ══════════════════════════════════════════════
+
+function SimLogTab({ log }) {
+    if (!log?.length) return (
+        <div style={{ textAlign: 'center', color: '#333', padding: 40 }}>
+            No simulation log data. Run a simulation to generate per-week data.
+        </div>
+    );
+
+    const avgTrades = (log.reduce((s, l) => s + l.tradesExecuted, 0) / log.length).toFixed(1);
+    const avgVol = Math.round(log.reduce((s, l) => s + l.volume, 0) / log.length);
+    const compositeRange = {
+        min: Math.min(...log.map(l => l.compositeIndex)),
+        max: Math.max(...log.map(l => l.compositeIndex)),
+    };
+
+    return (
+        <div>
+            {/* Summary stats */}
+            <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 10, color: '#888' }}>
+                <span>AVG TRADES/WK: <b style={{ color: '#4ade80' }}>{avgTrades}</b></span>
+                <span>AVG VOL/WK: <b style={{ color: '#c9a84c' }}>${avgVol.toLocaleString()}</b></span>
+                <span>COMPOSITE RANGE: <b style={{ color: '#60a5fa' }}>{compositeRange.min} — {compositeRange.max}</b></span>
+                <span>TOTAL WEEKS: <b style={{ color: '#ddd' }}>{log.length}</b></span>
+            </div>
+            <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10 }}>
+                    <thead>
+                        <tr style={{ borderBottom: '1px solid #333', position: 'sticky', top: 0, background: '#0a0a12' }}>
+                            <th style={{ textAlign: 'left', padding: 5, color: '#555' }}>WK</th>
+                            <th style={{ textAlign: 'center', padding: 5, color: '#555' }}>CYCLE</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>SELLS</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>BUYS</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>MATCH</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>TRADES</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>VOLUME</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>AVG $</th>
+                            <th style={{ textAlign: 'right', padding: 5, color: '#555' }}>INDEX</th>
+                            <th style={{ textAlign: 'left', padding: 5, color: '#555' }}>TOP MOVER</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {log.map((entry, i) => {
+                            const prevIdx = i > 0 ? log[i - 1].compositeIndex : entry.compositeIndex;
+                            const idxDelta = entry.compositeIndex - prevIdx;
+                            return (
+                                <tr key={i} style={{
+                                    borderBottom: '1px solid #111',
+                                    background: entry.tradesExecuted > 5 ? 'rgba(74,222,128,0.03)' : 'transparent',
+                                }}>
+                                    <td style={{ padding: 5, color: '#888' }}>W{entry.week}</td>
+                                    <td style={{ padding: 5, textAlign: 'center' }}>
+                                        <span style={{
+                                            fontSize: 8, padding: '1px 6px', borderRadius: 3,
+                                            background: `${cycleColors[entry.cycle] || '#555'}15`,
+                                            color: cycleColors[entry.cycle] || '#555',
+                                        }}>{entry.cycle}</span>
+                                    </td>
+                                    <td style={{ padding: 5, textAlign: 'right', color: '#fb923c' }}>{entry.sellOrders}</td>
+                                    <td style={{ padding: 5, textAlign: 'right', color: '#60a5fa' }}>{entry.buyOrders}</td>
+                                    <td style={{ padding: 5, textAlign: 'right', color: '#888' }}>{entry.matchAttempts}</td>
+                                    <td style={{
+                                        padding: 5, textAlign: 'right', fontWeight: 'bold',
+                                        color: entry.tradesExecuted > 0 ? '#4ade80' : '#333',
+                                    }}>{entry.tradesExecuted}</td>
+                                    <td style={{ padding: 5, textAlign: 'right', color: '#c9a84c' }}>
+                                        {entry.volume > 0 ? `$${entry.volume.toLocaleString()}` : '-'}
+                                    </td>
+                                    <td style={{ padding: 5, textAlign: 'right', color: '#aaa' }}>
+                                        {entry.avgPrice > 0 ? `$${entry.avgPrice.toLocaleString()}` : '-'}
+                                    </td>
+                                    <td style={{
+                                        padding: 5, textAlign: 'right', fontWeight: 'bold',
+                                        color: idxDelta > 0 ? '#4ade80' : idxDelta < 0 ? '#f87171' : '#888',
+                                    }}>
+                                        {entry.compositeIndex}
+                                        {idxDelta !== 0 && (
+                                            <span style={{ fontSize: 7, marginLeft: 3 }}>
+                                                {idxDelta > 0 ? '▲' : '▼'}{Math.abs(idxDelta)}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td style={{ padding: 5, color: '#666', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {entry.topMover || '-'}
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════
 // MAIN EXPORT
 // ══════════════════════════════════════════════
 
@@ -808,7 +905,10 @@ export default function MarketSimDashboard() {
                 }
             } catch { /* optional */ }
 
-            // Run one week
+            // ── CRITICAL FIX: Tick MarketManager to evolve heat, prices, indices ──
+            MarketManager.tickForSim(cycle);
+
+            // Run one week of NPC trading
             const report = MarketSimulator.simulate(week, cycle);
 
             // Snapshot prices
@@ -860,6 +960,9 @@ export default function MarketSimDashboard() {
         // Reset state
         MarketSimulator._npcState = null;
         MarketSimulator.tradeLog = [];
+        MarketSimulator.simulationLog = [];
+        // Ensure MarketManager has artists + works loaded
+        MarketManager.ensureInitForSim();
         accumulatedRef.current = { priceHistory: [], marketEvents: [], cycleHistory: [], totalTrades: 0, totalVolume: 0 };
         setPlaybackWeek(0);
         setPlaybackCycle('flat');
@@ -948,6 +1051,7 @@ export default function MarketSimDashboard() {
         { id: 'strategies', icon: '🎯', label: 'Strategies' },
         { id: 'alerts', icon: '⚠️', label: 'Alerts' },
         { id: 'events', icon: '⚡', label: 'Events' },
+        { id: 'simlog', icon: '📋', label: 'Sim Log' },
     ];
 
     return (
@@ -1029,6 +1133,30 @@ export default function MarketSimDashboard() {
                     <button onClick={runSimInstant} title="Instant run (no animation)" style={{
                         ...miniBtn, color: '#333', fontSize: 7, padding: '4px 6px',
                     }}>⚡</button>
+
+                    {/* Export Sim Log */}
+                    {simResult && (
+                        <button onClick={() => {
+                            const data = {
+                                timestamp: new Date().toISOString(),
+                                weeks: simResult.weeks,
+                                totalTrades: simResult.totalTrades,
+                                totalVolume: simResult.totalVolume,
+                                simulationLog: MarketSimulator.simulationLog,
+                                tradeLog: tradeLog.slice(-200),
+                                priceHistory: priceHistory,
+                                marketEvents: marketEvents,
+                            };
+                            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = `sim_log_${simResult.weeks}wk.json`;
+                            a.click(); URL.revokeObjectURL(url);
+                            showNotif('📋 Sim log exported');
+                        }} title="Export simulation log as JSON" style={{
+                            ...miniBtn, color: '#60a5fa', fontSize: 7, padding: '4px 6px',
+                        }}>📋</button>
+                    )}
                 </div>
             </div>
 
@@ -1105,6 +1233,7 @@ export default function MarketSimDashboard() {
                 {activeTab === 'strategies' && <StrategiesTab npcs={npcs} />}
                 {activeTab === 'alerts' && <AlertsTab npcs={npcs} trades={tradeLog} simResult={simResult} priceHistory={priceHistory} />}
                 {activeTab === 'events' && <EventsTab marketEvents={marketEvents} />}
+                {activeTab === 'simlog' && <SimLogTab log={MarketSimulator.simulationLog} />}
             </div>
         </div>
     );
