@@ -23,6 +23,7 @@ const PlayerDashboard = lazy(() => import('./player/PlayerDashboard.jsx'));
 const ScenePlayer = lazy(() => import('./game/ScenePlayer.jsx'));
 const DialogueBox = lazy(() => import('./game/DialogueBox.jsx'));
 const ArtnetMarketplace = lazy(() => import('./market/ArtnetMarketplace.jsx'));
+const BloombergTerminal = lazy(() => import('./market/BloombergTerminal.jsx'));
 
 // ════════════════════════════════════════════════════════════
 // Deferred Loading Fallback
@@ -197,31 +198,70 @@ export default function ViewRouter({
 
             {/* ── Narrative Intro (typewriter text) ── */}
             {activeView === VIEW.NARRATIVE && (
-                <NarrativeIntro onContinue={() => {
-                    setActiveView(VIEW.PHASER);
-                    // Small delay so Phaser view mounts before overlay
-                    setTimeout(() => setActiveOverlay(OVERLAY.BLOOMBERG), 300);
-                }} />
+                <NarrativeIntro onContinue={() => setActiveView(VIEW.BOOT)} />
             )}
 
-            {/* ── Artnet Hub (accessible from Bloomberg ‘Browse Marketplace’ button) ── */}
-            {activeView === VIEW.ARTNET_HUB && (
-                <ArtnetMarketplace
-                    onClose={() => {
-                        setActiveView(VIEW.PHASER);
-                        setTimeout(() => setActiveOverlay(OVERLAY.BLOOMBERG), 200);
+            {/* ── Artnet Login ── */}
+            {activeView === VIEW.BOOT && (
+                <ArtnetLogin
+                    onClose={() => setActiveView(VIEW.SPLASH)}
+                    onLoginSuccess={({ email }) => {
+                        onLoginComplete({ action: 'load', email });
+                        setActiveView(VIEW.BLOOMBERG);
                     }}
-                    onExplore={() => setActiveView(VIEW.PHASER)}
                 />
             )}
 
-            {/* ── Boot / Login Screen (Artnet Login) ── */}
-            {activeView === VIEW.BOOT && (
-                <ArtnetLogin
-                    onClose={() => setActiveView(VIEW.PHASER)}
-                    onLoginSuccess={({ email }) => {
-                        // Wire ArtnetLogin success into the game flow
-                        onLoginComplete({ action: 'new', email });
+            {/* ── Bloomberg Terminal (full-page view, main hub) ── */}
+            {activeView === VIEW.BLOOMBERG && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#0a0a0f' }}>
+                    <BloombergTerminal
+                        onBrowseMarketplace={() => setActiveView(VIEW.ARTNET_HUB)}
+                    />
+                    {/* Navigation buttons */}
+                    <div style={{
+                        position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+                        display: 'flex', gap: 16, zIndex: 200,
+                    }}>
+                        <button
+                            onClick={() => setActiveView(VIEW.ARTNET_HUB)}
+                            style={{
+                                padding: '10px 24px', border: '1px solid #c9a84c',
+                                background: 'rgba(201,168,76,0.1)', color: '#c9a84c',
+                                fontFamily: '"Press Start 2P", monospace', fontSize: 10,
+                                cursor: 'pointer', letterSpacing: 1,
+                            }}
+                        >
+                            🌐 BROWSE MARKET
+                        </button>
+                        <button
+                            onClick={() => {
+                                // Start Phaser scene on demand
+                                if (window.startPhaserGame) {
+                                    window.startPhaserGame('overworld');
+                                }
+                                setActiveView(VIEW.PHASER);
+                            }}
+                            style={{
+                                padding: '10px 24px', border: '1px solid #4aff88',
+                                background: 'rgba(74,255,136,0.1)', color: '#4aff88',
+                                fontFamily: '"Press Start 2P", monospace', fontSize: 10,
+                                cursor: 'pointer', letterSpacing: 1,
+                            }}
+                        >
+                            🗺️ EXPLORE WORLD
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Artnet Marketplace (accessible from Bloomberg) ── */}
+            {activeView === VIEW.ARTNET_HUB && (
+                <ArtnetMarketplace
+                    onClose={() => setActiveView(VIEW.BLOOMBERG)}
+                    onExplore={() => {
+                        if (window.startPhaserGame) window.startPhaserGame('overworld');
+                        setActiveView(VIEW.PHASER);
                     }}
                 />
             )}

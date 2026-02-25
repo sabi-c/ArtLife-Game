@@ -109,20 +109,20 @@ export class BootScene extends Phaser.Scene {
         // The React `ArtnetLogin` is now the true login screen.
         // Expose a method so React can command Phaser to start the game loop when ready.
         window.startPhaserGame = (mode = 'new') => {
-            if (mode === 'new') {
-                // React handles splash/narrative intro — go straight to overworld
+            if (mode === 'overworld' || mode === 'load') {
+                // User clicked "Explore World" — launch the overworld
                 safeSceneLaunch(this, 'NewWorldScene', { ui });
+                this.scene.stop();
             } else if (mode === 'charselect') {
-                // After login "New" selection: go straight to character builder
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
                     GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.CHARACTER_CREATOR);
                 });
-            } else {
-                // If loading a save, skip straight to Overworld/Menu.
-                safeSceneLaunch(this, 'NewWorldScene', { ui });
+                this.scene.stop();
+            } else if (mode === 'new') {
+                // React handles the intro flow — don't launch any scene yet.
+                // BootScene stays alive to keep preloaded assets available.
+                console.log('[BootScene] Ready — waiting for scene launch command');
             }
-            // Hide the boot scene
-            this.scene.stop();
         };
     }
 }

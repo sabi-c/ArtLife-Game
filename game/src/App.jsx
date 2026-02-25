@@ -163,20 +163,9 @@ export default function App() {
             }, 100);
             setActiveView(VIEW.PHASER);
         } else {
-            // ── New boot flow: SPLASH → NARRATIVE → ARTNET_HUB ──
-            // Don't auto-resume old terminal/Bloomberg — the new flow handles everything.
-            // Phaser boots in background, ready when user clicks "Explore" from Artnet hub.
-            // Just start the Phaser game engine silently for when it's needed.
-            const introStart = Date.now();
-            const introPoll = setInterval(() => {
-                if (window.startPhaserGame) {
-                    clearInterval(introPoll);
-                    window.startPhaserGame('new');
-                } else if (Date.now() - introStart > 8000) {
-                    clearInterval(introPoll);
-                    console.warn('[App] startPhaserGame never registered — Phaser will init on demand');
-                }
-            }, 200);
+            // ── New boot flow: SPLASH → NARRATIVE → LOGIN → BLOOMBERG ──
+            // Phaser engine boots (BootScene preloads shared assets) but
+            // NO game scene starts until user clicks "Explore World".
             // activeView is already VIEW.SPLASH (set in useState initializer)
         }
 
@@ -210,9 +199,8 @@ export default function App() {
             setActiveView(VIEW.TERMINAL);
             setActiveOverlay(OVERLAY.MASTER_CMS);
         } else if (action === 'load') {
-            // Load from save slot (GameState.load already called by ArtnetLogin)
-            setActiveView(VIEW.PHASER);
-            setActiveOverlay(OVERLAY.BLOOMBERG);
+            // Load from save slot or fresh game — go to Bloomberg hub
+            setActiveView(VIEW.BLOOMBERG);
         }
     };
 

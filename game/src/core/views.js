@@ -10,6 +10,7 @@ export const VIEW = {
     NARRATIVE: 'NARRATIVE',         // Story text intro sequence
     ARTNET_HUB: 'ARTNET_HUB',     // Artnet Marketplace as main game hub
     BOOT: 'BOOT',                   // The ArtnetLogin boot/login screen
+    BLOOMBERG: 'BLOOMBERG',         // Bloomberg Terminal as full-page view
     PHASER: 'PHASER',               // The raw game canvas (overworld, haggle, etc.)
     TERMINAL: 'TERMINAL',           // DOM terminal only (no React overlays, no canvas)
     DASHBOARD: 'DASHBOARD',         // The main Player Dashboard stats/ledger
