@@ -30,7 +30,7 @@ import WorldScene from './scenes/WorldScene.js';
 import NewWorldScene from './scenes/NewWorldScene.js';
 
 // Managers & stores
-import { TerminalUI } from './terminal/TerminalUI.js';
+import { TerminalUI } from './ui/terminal/TerminalUI.js';
 import { GameEventBus, GameEvents } from './managers/GameEventBus.js';
 
 import './style.css';

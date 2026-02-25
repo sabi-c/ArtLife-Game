@@ -1,10 +1,10 @@
 import { BaseScene } from './BaseScene.js';
-import { Player } from '../sprites/Player.js';
-import { NPC } from '../sprites/NPC.js';
-import { registerAllAnims } from '../anims/CharacterAnims.js';
+import { Player } from './Player.js';
+import { NPC } from './NPC.js';
+import { registerAllAnims } from './CharacterAnims.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 /**

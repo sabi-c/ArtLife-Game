@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { EventRegistry } from '../managers/EventRegistry.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 import { autoLoadTiledMaps, preloadAllTilesets, getAllMapIds } from '../utils/tiledAutoLoader.js';
 

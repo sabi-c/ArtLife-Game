@@ -6,7 +6,7 @@ import {
 import './PlayerDashboard.css';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
-import { OVERLAY } from '../constants/views.js';
+import { OVERLAY } from '../core/views.js';
 
 // ─── Stat metadata (matches STAT_DEFS in CharacterSelectScene) ───────────────
 const STAT_META = [

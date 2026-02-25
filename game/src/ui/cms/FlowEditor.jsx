@@ -9,7 +9,7 @@
  */
 
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { VIEW, OVERLAY } from '../../constants/views.js';
+import { VIEW, OVERLAY } from '../../core/views.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 import { navigate } from '../../hooks/usePageRouter.js';
 

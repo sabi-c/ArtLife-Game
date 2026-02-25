@@ -25,7 +25,7 @@ import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 import { NPCManager } from '../managers/NPCManager.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 
 // ── Layer depth constants ──
 const DEPTH = {

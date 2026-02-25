@@ -39,30 +39,30 @@
  *   const works = TerminalAPI.artworks;
  */
 
-import { GameState } from '../managers/GameState.js';
-import { QualityGate } from '../managers/QualityGate.js';
-import { MarketManager } from '../managers/MarketManager.js';
-import { HaggleManager } from '../managers/HaggleManager.js';
-import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
-import { DecisionLog } from '../managers/DecisionLog.js';
-import { DialogueTreeManager } from '../managers/DialogueTreeManager.js';
-import { TickerSystem } from '../ui/TickerSystem.js';
-import { useUIStore } from '../stores/uiStore.js';
-import { ARTWORKS } from '../data/artworks.js';
-import { VENUES } from '../data/rooms.js';
-import { CHARACTERS } from '../data/characters.js';
-import { CONTACTS } from '../data/contacts.js';
-import { DIALOGUE_TREES, TREES_BY_NPC } from '../data/dialogue_trees.js';
-import { PhoneManager } from '../managers/PhoneManager.js';
-import { useNPCStore } from '../stores/npcStore.js';
-import { useEventStore } from '../stores/eventStore.js';
-import { useMarketStore } from '../stores/marketStore.js';
-import { useInventoryStore } from '../stores/inventoryStore.js';
-import { useConsequenceStore } from '../stores/consequenceStore.js';
-import { EventRegistry } from '../managers/EventRegistry.js';
-import { MarketSimulator } from '../managers/MarketSimulator.js';
+import { GameState } from '../../managers/GameState.js';
+import { QualityGate } from '../../managers/QualityGate.js';
+import { MarketManager } from '../../managers/MarketManager.js';
+import { HaggleManager } from '../../managers/HaggleManager.js';
+import { ConsequenceScheduler } from '../../managers/ConsequenceScheduler.js';
+import { DecisionLog } from '../../managers/DecisionLog.js';
+import { DialogueTreeManager } from '../../managers/DialogueTreeManager.js';
+import { TickerSystem } from '../TickerSystem.js';
+import { useUIStore } from '../../stores/uiStore.js';
+import { ARTWORKS } from '../../data/artworks.js';
+import { VENUES } from '../../data/rooms.js';
+import { CHARACTERS } from '../../data/characters.js';
+import { CONTACTS } from '../../data/contacts.js';
+import { DIALOGUE_TREES, TREES_BY_NPC } from '../../data/dialogue_trees.js';
+import { PhoneManager } from '../../managers/PhoneManager.js';
+import { useNPCStore } from '../../stores/npcStore.js';
+import { useEventStore } from '../../stores/eventStore.js';
+import { useMarketStore } from '../../stores/marketStore.js';
+import { useInventoryStore } from '../../stores/inventoryStore.js';
+import { useConsequenceStore } from '../../stores/consequenceStore.js';
+import { EventRegistry } from '../../managers/EventRegistry.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
 // Import WeekEngine to trigger self-registration with GameState
-import { WeekEngine } from '../managers/WeekEngine.js';
+import { WeekEngine } from '../../managers/WeekEngine.js';
 
 export const TerminalAPI = {
     // ── State & Managers ──

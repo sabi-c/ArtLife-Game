@@ -3,7 +3,7 @@ import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { GameState } from '../managers/GameState.js';
 import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
-import { VIEW, OVERLAY } from '../constants/views.js';
+import { VIEW, OVERLAY } from '../core/views.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 import HaggleOverlay from './email/haggle/HaggleOverlay.jsx';

@@ -10,7 +10,7 @@
 
 import React, { Suspense, lazy } from 'react';
 import { OverlayErrorBoundary } from './OverlayErrorBoundary.jsx';
-import { OVERLAY } from '../constants/views.js';
+import { OVERLAY } from '../core/views.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
 // ════════════════════════════════════════════════════════════

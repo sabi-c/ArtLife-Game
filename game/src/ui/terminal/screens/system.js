@@ -4,11 +4,11 @@
  */
 
 import { TerminalAPI } from '../TerminalAPI.js';
-import { GameState } from '../../managers/GameState.js';
-import { ProfileManager } from '../../managers/ProfileManager.js';
-import { PhoneManager } from '../../managers/PhoneManager.js';
-import { ConsequenceScheduler } from '../../managers/ConsequenceScheduler.js';
-import { DecisionLog } from '../../managers/DecisionLog.js';
+import { GameState } from '../../../managers/GameState.js';
+import { ProfileManager } from '../../../managers/ProfileManager.js';
+import { PhoneManager } from '../../../managers/PhoneManager.js';
+import { ConsequenceScheduler } from '../../../managers/ConsequenceScheduler.js';
+import { DecisionLog } from '../../../managers/DecisionLog.js';
 import { H, SUB, DIV, DIM, GOLD, RED, GREEN, BLANK, STAT } from './shared.js';
 import { characterSelectScreen } from './character.js';
 

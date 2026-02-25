@@ -17,12 +17,12 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPhaserGame } from './phaserInit.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
 import { GameEventBus, GameEvents } from './managers/GameEventBus.js';
-import { VIEW, OVERLAY } from './constants/views.js';
+import { VIEW, OVERLAY } from './core/views.js';
 import { GameState } from './managers/GameState.js';
 import { WebAudioService } from './managers/WebAudioService.js';
 import { SettingsManager } from './managers/SettingsManager.js';
 import { usePageRouter, navigate } from './hooks/usePageRouter.js';
-import './api/ContentAPI.js'; // Side-effect: registers window.ContentAPI
+import './utils/ContentAPI.js'; // Side-effect: registers window.ContentAPI
 
 // Extracted routers (all children are lazy-loaded)
 import ViewRouter from './ui/ViewRouter.jsx';
@@ -173,7 +173,7 @@ export default function App() {
                         const ui = window.TerminalUIInstance;
                         if (ui?.container) {
                             ui.container.style.display = '';
-                            import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
+                            import('./ui/terminal/screens/index.js').then(({ dashboardScreen }) => {
                                 ui.pushScreen(dashboardScreen(ui));
                             }).catch(err => {
                                 console.error('[App] Failed to load dashboard:', err);
@@ -231,7 +231,7 @@ export default function App() {
             const ui = window.TerminalUIInstance;
             if (ui?.container) {
                 ui.container.style.display = '';
-                import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
+                import('./ui/terminal/screens/index.js').then(({ dashboardScreen }) => {
                     ui.pushScreen(dashboardScreen(ui));
                 });
             }

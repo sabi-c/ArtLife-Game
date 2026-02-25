@@ -11,7 +11,7 @@ import { shuffle } from '../utils/shuffle.js';
 import { clamp } from '../utils/math.js';
 import { generateId } from '../utils/id.js';
 import { ProfileManager } from './ProfileManager.js';
-import { resetSystemicTriggers } from '../engines/SystemicTriggers.js';
+import { resetSystemicTriggers } from '../core/SystemicTriggers.js';
 import { WebAudioService } from './WebAudioService.js';
 
 /**

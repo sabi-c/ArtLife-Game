@@ -10,7 +10,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { GameState } from '../../managers/GameState.js';
 import { MarketManager } from '../../managers/MarketManager.js';
 import { MarketSimulator } from '../../managers/MarketSimulator.js';
-import { TerminalAPI } from '../../terminal/TerminalAPI.js';
+import { TerminalAPI } from '../terminal/TerminalAPI.js';
 import { CONTACTS } from '../../data/contacts.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { CITY_DATA } from '../../data/cities.js';

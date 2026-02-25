@@ -105,7 +105,7 @@ export default function CharacterCreator({ ui }) {
             ui.container.style.display = '';
         }
 
-        import('../terminal/screens/index.js').then(({ dashboardScreen }) => {
+        import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
             if (ui) ui.pushScreen(dashboardScreen(ui));
             const phaserCanvas = document.getElementById('phaser-game-container');
             if (phaserCanvas) phaserCanvas.style.display = 'none';

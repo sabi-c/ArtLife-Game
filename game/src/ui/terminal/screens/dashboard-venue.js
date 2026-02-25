@@ -11,7 +11,7 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, BLANK, DIM, GOLD, RED, STAT } from './shared.js';
-import { SettingsManager } from '../../managers/SettingsManager.js';
+import { SettingsManager } from '../../../managers/SettingsManager.js';
 import { MAX_ACTIONS, getActionsRemaining, hasActions, useAction } from './shared-helpers.js';
 
 // ════════════════════════════════════════════

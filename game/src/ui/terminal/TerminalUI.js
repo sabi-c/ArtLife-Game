@@ -1,4 +1,4 @@
-import { WebAudioService } from '../managers/WebAudioService.js';
+import { WebAudioService } from '../../managers/WebAudioService.js';
 
 /**
  * TerminalUI — Core text-based game renderer

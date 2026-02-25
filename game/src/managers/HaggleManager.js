@@ -38,7 +38,7 @@
  */
 
 import { DEALER_TYPES, TACTICS, BLUE_OPTIONS, DEALER_DIALOGUE, ROLE_TO_DEALER_TYPE, HAGGLE_CONFIG, HAGGLE_TYPES, TYPE_EFFECTIVENESS } from '../data/haggle_config.js';
-import { ExpressionEngine } from '../engine/ExpressionEngine.js';
+import { ExpressionEngine } from '../core/ExpressionEngine.js';
 import { GameState } from './GameState.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { ARTWORK_MAP } from '../data/artworks.js';

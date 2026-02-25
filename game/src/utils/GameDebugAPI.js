@@ -8,7 +8,7 @@ import { GameState } from '../managers/GameState.js';
 import { useUIStore } from '../stores/uiStore.js';
 import { MarketManager } from '../managers/MarketManager.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { dashboardScreen } from '../terminal/screens/index.js';
+import { dashboardScreen } from '../ui/terminal/screens/index.js';
 
 export function configureGameDebugAPI(ui) {
     window.game = {

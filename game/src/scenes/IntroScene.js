@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 
 /**
  * IntroScene — Cinematic narrator intro before TerminalLogin.

@@ -9,7 +9,7 @@
  */
 
 import React, { Suspense, lazy } from 'react';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 
 // ════════════════════════════════════════════════════════════
 // Lazy View Imports

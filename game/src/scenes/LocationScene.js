@@ -26,7 +26,7 @@ import { SCENE_KEYS } from '../data/scene-keys.js';
 import { ARTWORK_MAP } from '../data/artworks.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { useCmsStore } from '../stores/cmsStore.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 // ── Layer depth constants (matches WorldScene) ──

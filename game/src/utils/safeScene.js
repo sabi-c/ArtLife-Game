@@ -11,7 +11,7 @@
  */
 
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 
 /**
  * Safely start a scene, replacing the current one.

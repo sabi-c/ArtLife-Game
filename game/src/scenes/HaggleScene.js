@@ -37,7 +37,7 @@ import { DEALER_DIALOGUE } from '../data/haggle_config.js';
 import { HaggleRendererMixin } from './haggle/HaggleRenderer.js';
 import { HaggleTacticsMixin } from './haggle/HaggleTactics.js';
 import { HaggleDialogueMixin } from './haggle/HaggleDialogue.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 export class HaggleScene extends BaseScene {
@@ -250,7 +250,7 @@ export class HaggleScene extends BaseScene {
                         this.returnCallback(this.ui);
                     } else {
                         // Dynamic import via barrel to stay consistent with other lazy-loaders
-                        const { dashboardScreen } = await import('../terminal/screens/index.js');
+                        const { dashboardScreen } = await import('../ui/terminal/screens/index.js');
                         this.ui.replaceScreen(dashboardScreen(this.ui));
                     }
                 }

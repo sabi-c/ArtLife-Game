@@ -15,9 +15,9 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, BLANK, DIM, GOLD, GREEN, RED, STAT, NEWS, WORLDMAP } from './shared.js';
-import { TickerSystem } from '../../ui/TickerSystem.js';
-import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
-import { VIEW, OVERLAY } from '../../constants/views.js';
+import { TickerSystem } from '../../TickerSystem.js';
+import { GameEventBus, GameEvents } from '../../../managers/GameEventBus.js';
+import { VIEW, OVERLAY } from '../../../core/views.js';
 import { characterSelectScreen } from './character.js';
 import { marketScreen, portfolioScreen } from './market.js';
 import { phoneScreen } from './phone.js';
@@ -25,7 +25,7 @@ import { cityScreen, newsScreen } from './world.js';
 import { eventScreen, eventStepScreen } from './events.js';
 import { journalScreen, legacyEndScreen } from './journal.js';
 import { pauseMenuScreen } from './system.js';
-import { getUpcomingEvents } from '../../data/calendar_events.js';
+import { getUpcomingEvents } from '../../../data/calendar_events.js';
 import { egoDashboardScreen } from './ego.js';
 
 // ── Sub-module imports ──

@@ -27,7 +27,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { VIEW, OVERLAY } from '../constants/views.js';
+import { VIEW, OVERLAY } from '../core/views.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 

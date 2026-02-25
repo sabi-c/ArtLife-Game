@@ -16,7 +16,7 @@ import { GameEventBus, GameEvents } from './GameEventBus.js';
 import { EventRegistry } from './EventRegistry.js';
 import { useEventStore } from '../stores/eventStore.js';
 import { useMarketStore } from '../stores/marketStore.js';
-import { checkSystemicTriggers } from '../engines/SystemicTriggers.js';
+import { checkSystemicTriggers } from '../core/SystemicTriggers.js';
 import { useStorylineStore } from '../stores/storylineStore.js';
 import { MarketSimulator } from './MarketSimulator.js';
 import { ArtistProductionEngine } from './ArtistProductionEngine.js';

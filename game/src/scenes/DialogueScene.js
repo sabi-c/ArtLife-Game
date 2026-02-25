@@ -10,7 +10,7 @@ import { SCENE_KEYS } from '../data/scene-keys.js';
 import { CONTACTS } from '../data/contacts.js';
 import { useUIStore } from '../stores/uiStore.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
 
 /**

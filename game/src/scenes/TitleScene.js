@@ -336,7 +336,7 @@ export class TitleScene extends Phaser.Scene {
             this.ui.container.style.display = '';
         }
 
-        import('../terminal/screens/index.js').then(({ dashboardScreen }) => {
+        import('../ui/terminal/screens/index.js').then(({ dashboardScreen }) => {
             if (this.ui) this.ui.pushScreen(dashboardScreen(this.ui));
             this.sys.game.canvas.style.display = 'none';
             this.scene.stop();

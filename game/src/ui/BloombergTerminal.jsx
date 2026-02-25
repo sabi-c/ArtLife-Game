@@ -21,8 +21,8 @@ import { MarketSimulator } from '../managers/MarketSimulator.js';
 import { HaggleManager } from '../managers/HaggleManager.js';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { ARTWORKS } from '../data/artworks.js';
-import { VIEW } from '../constants/views.js';
-import { TerminalAPI } from '../terminal/TerminalAPI.js';
+import { VIEW } from '../core/views.js';
+import { TerminalAPI } from './terminal/TerminalAPI.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
 import { useEventStore } from '../stores/eventStore.js';
 import BloombergTutorial from './BloombergTutorial.jsx';
@@ -309,13 +309,13 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
                     <span className="bb-nav-links" style={{ marginLeft: 24, display: 'flex', gap: 16, fontFamily: "'SF Mono', Courier, monospace", fontSize: 11, color: '#888' }}>
                         <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => {
                             const ui = window.TerminalUIInstance;
-                            import('../terminal/screens/index.js').then(screens => ui?.pushScreen(screens.cityScreen(ui)));
+                            import('./terminal/screens/index.js').then(screens => ui?.pushScreen(screens.cityScreen(ui)));
                             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                             if (onClose) onClose();
                         }} title="Access World Map & Locations">[ WORLD MAP ]</button>
                         <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => {
                             const ui = window.TerminalUIInstance;
-                            import('../terminal/screens/index.js').then(screens => ui?.pushScreen(screens.phoneScreen(ui)));
+                            import('./terminal/screens/index.js').then(screens => ui?.pushScreen(screens.phoneScreen(ui)));
                             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                             if (onClose) onClose();
                         }} title="Check Messages & Contacts">[ PHONE ]</button>

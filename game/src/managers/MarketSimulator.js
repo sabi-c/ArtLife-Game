@@ -48,7 +48,7 @@ import { MarketManager } from './MarketManager.js';
 import { GameState } from './GameState.js';
 import { ActivityLogger } from './ActivityLogger.js';
 import { useNPCStore } from '../stores/npcStore.js';
-import { ExpressionEngine } from '../engine/ExpressionEngine.js';
+import { ExpressionEngine } from '../core/ExpressionEngine.js';
 import { clamp } from '../utils/math.js';
 
 // ── Trade Log (persisted per session) ──

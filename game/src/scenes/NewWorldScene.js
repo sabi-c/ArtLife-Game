@@ -9,7 +9,7 @@
  */
 import Phaser from 'phaser';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { VIEW } from '../constants/views.js';
+import { VIEW } from '../core/views.js';
 
 // Dev-only debug logging (silent in production)
 const _DEV = import.meta.env?.DEV ?? false;
