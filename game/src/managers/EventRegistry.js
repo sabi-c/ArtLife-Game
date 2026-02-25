@@ -224,7 +224,6 @@ export class EventRegistry {
                     totalSteps: storyline.steps?.length || 0,
                 });
 
-                console.log(`[EventRegistry] Activated storyline: "${storyline.title}" from ${eventId}/${nodeId}`);
             }
         });
     }

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { GameState } from '../managers/GameState.js';
-import { ProfileManager } from '../managers/ProfileManager.js';
-import { WebAudioService } from '../managers/WebAudioService.js';
-import { SettingsManager } from '../managers/SettingsManager.js';
-import { formatMoneyShort } from '../utils/format.js';
+import { GameState } from '../../managers/GameState.js';
+import { ProfileManager } from '../../managers/ProfileManager.js';
+import { WebAudioService } from '../../managers/WebAudioService.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
+import { formatMoneyShort } from '../../utils/format.js';
 
 // ─── Variable-speed typewriter hook ──────────────────────────────────────────
 const useTypewriter = (linesArray, active, onComplete) => {

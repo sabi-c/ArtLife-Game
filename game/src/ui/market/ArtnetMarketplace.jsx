@@ -9,12 +9,13 @@
  */
 
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { ARTWORKS } from '../data/artworks.js';
-import { resolveArtworkUrl } from '../utils/assets.js';
-import { useCmsStore } from '../stores/cmsStore.js';
-import { GameState } from '../managers/GameState.js';
-import { MarketManager } from '../managers/MarketManager.js';
-import { MarketSimulator } from '../managers/MarketSimulator.js';
+import { ARTWORKS } from '../../data/artworks.js';
+import { resolveArtworkUrl } from '../../utils/assets.js';
+import { useCmsStore } from '../../stores/cmsStore.js';
+import { GameState } from '../../managers/GameState.js';
+import { MarketManager } from '../../managers/MarketManager.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
+import { fmtMoney } from '../../utils/formatMoney.js';
 
 const font = "'Helvetica Neue', Helvetica, Arial, sans-serif";
 
@@ -34,8 +35,7 @@ function ArtnetLogo({ height = 24, color = '#231f20' }) {
 // ═══════════════════════════════════════════
 function fmtPrice(p) {
     if (!p || p <= 0) return 'Price on Request';
-    if (p >= 1_000_000) return `$${(p / 1_000_000).toFixed(2)}M`;
-    return `${p.toLocaleString('en-US')} USD`;
+    return `${fmtMoney(p)} USD`;
 }
 
 function getOwnerLabel(artwork) {
@@ -55,7 +55,7 @@ function getOwnerLabel(artwork) {
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
-export default function ArtnetMarketplace({ onClose }) {
+export default function ArtnetMarketplace({ onClose, onExplore }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('artworks');
     const [sortKey, setSortKey] = useState('recent');
@@ -187,7 +187,7 @@ export default function ArtnetMarketplace({ onClose }) {
         const title = work.title || 'Untitled';
         const owner = work._owner || 'Gallery';
         const price = work.currentVal || 0;
-        const fmtP = price >= 1_000_000 ? `$${(price / 1_000_000).toFixed(2)}M` : price >= 1_000 ? `$${(price / 1_000).toFixed(0)}k` : `$${price.toLocaleString()}`;
+        const fmtP = fmtMoney(price);
         window.dispatchEvent(new CustomEvent('openGmailCompose', {
             detail: {
                 to: `${owner.toLowerCase().replace(/\s+/g, '.')}@artnet.com`,
@@ -452,9 +452,19 @@ export default function ArtnetMarketplace({ onClose }) {
                         </nav>
                     </div>
                     <div style={S.navRight}>
+                        {onExplore && (
+                            <span
+                                style={{ ...S.navLink, fontWeight: 700, color: '#ff4b00', cursor: 'pointer' }}
+                                onClick={onExplore}
+                            >
+                                🗺️ Explore
+                            </span>
+                        )}
                         <span style={{ ...S.navLink, fontWeight: 700 }}>Buy</span>
                         <span style={{ ...S.navLink, fontWeight: 700 }}>Sell</span>
-                        <span style={{ color: '#999', cursor: 'pointer' }} onClick={onClose}>✕ Close</span>
+                        {onClose && typeof onClose === 'function' && (
+                            <span style={{ color: '#999', cursor: 'pointer' }} onClick={onClose}>✕ Close</span>
+                        )}
                     </div>
                 </div>
 

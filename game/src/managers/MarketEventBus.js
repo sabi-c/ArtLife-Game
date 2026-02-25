@@ -449,7 +449,6 @@ class _MarketEventBus {
             }
         }
 
-        console.log(`[MarketEventBus] ${eventType}`, data);
     }
 
     /**

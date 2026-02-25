@@ -14,39 +14,39 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { useBloombergFeed } from '../hooks/useBloombergFeed.js';
-import { GameState } from '../managers/GameState.js';
-import { MarketManager } from '../managers/MarketManager.js';
-import { MarketSimulator } from '../managers/MarketSimulator.js';
-import { HaggleManager } from '../managers/HaggleManager.js';
-import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { ARTWORKS } from '../data/artworks.js';
-import { VIEW } from '../core/views.js';
-import { TerminalAPI } from './terminal/TerminalAPI.js';
-import { SettingsManager } from '../managers/SettingsManager.js';
-import { useEventStore } from '../stores/eventStore.js';
-import BloombergTutorial from './BloombergTutorial.jsx';
-import HaggleOverlay from './email/haggle/HaggleOverlay.jsx';
+import { useBloombergFeed } from '../../hooks/useBloombergFeed.js';
+import { GameState } from '../../managers/GameState.js';
+import { MarketManager } from '../../managers/MarketManager.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
+import { HaggleManager } from '../../managers/HaggleManager.js';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { ARTWORKS } from '../../data/artworks.js';
+import { VIEW } from '../../core/views.js';
+import { TerminalAPI } from '../terminal/TerminalAPI.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
+import { useEventStore } from '../../stores/eventStore.js';
+import BloombergTutorial from '../game/BloombergTutorial.jsx';
+import HaggleOverlay from '../email/haggle/HaggleOverlay.jsx';
 import './BloombergTerminal.css';
 
 // Dashboard sub-modules (direct imports — barrel caused Vite HMR issues)
-import { fmtNum, maskPrice, getAP, hasAP, useAPAndCheckEvents } from './dashboard/dashboardUtils.jsx';
+import { fmtNum, maskPrice, getAP, hasAP, useAPAndCheckEvents } from '../dashboard/dashboardUtils.jsx';
 import {
     TickerBar, ArtistLeaderboard, OrderBook, MarketOverview,
     PriceChart, TradeFeed, Watchlist, PortfolioTracker,
     NotificationBar, ArtworkTearsheet,
     ArtistDetailPanel, ArtworkValuationPanel, CollectorProfilePanel,
-} from './dashboard/panels.jsx';
+} from '../dashboard/panels.jsx';
 import {
     GalleryView, TearsheetView, ArtnetView, SothebysView,
     DeitchView, ByformView, WaterworksView, PanelConfigDropdown,
-} from './dashboard/views.jsx';
-import { StyleGuideView, EventOverlay } from './dashboard/modals.jsx';
+} from '../dashboard/views.jsx';
+import { StyleGuideView, EventOverlay } from '../dashboard/modals.jsx';
 
 // ══════════════════════════════════════════════════════════════
 // Main Bloomberg Terminal
 // ══════════════════════════════════════════════════════════════
-export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
+export default function BloombergTerminal({ onClose, onBrowseMarketplace, onDrilldownArtist, onDrilldownGallery }) {
     const feed = useBloombergFeed();
 
     // State
@@ -211,7 +211,7 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
         const title = work.title || 'Untitled';
         const owner = ownerData?.sellerName || ownerData?.npc?.name || work._ownerData?.sellerName || 'Gallery';
         const price = ownerData?.askPrice || work.currentVal || 0;
-        const fmtPrice = price >= 1_000_000 ? `$${(price / 1_000_000).toFixed(2)}M` : price >= 1_000 ? `$${(price / 1_000).toFixed(0)}k` : `$${price.toLocaleString()}`;
+        const fmtPrice = fmtMoney(price);
         window.dispatchEvent(new CustomEvent('openGmailCompose', {
             detail: {
                 to: `${owner.toLowerCase().replace(/\s+/g, '.')}@artnet.com`,
@@ -311,23 +311,26 @@ export default function BloombergTerminal({ onClose, onBrowseMarketplace }) {
                     <span className="bb-nav-links" style={{ marginLeft: 24, display: 'flex', gap: 16, fontFamily: "'SF Mono', Courier, monospace", fontSize: 11, color: '#888' }}>
                         <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => {
                             const ui = window.TerminalUIInstance;
-                            import('./terminal/screens/index.js').then(screens => ui?.pushScreen(screens.cityScreen(ui)));
+                            import('../terminal/screens/index.js').then(screens => ui?.pushScreen(screens.cityScreen(ui)));
                             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                             if (onClose) onClose();
                         }} title="Access World Map & Locations">[ WORLD MAP ]</button>
                         <button style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }} onClick={() => {
                             const ui = window.TerminalUIInstance;
-                            import('./terminal/screens/index.js').then(screens => ui?.pushScreen(screens.phoneScreen(ui)));
+                            import('../terminal/screens/index.js').then(screens => ui?.pushScreen(screens.phoneScreen(ui)));
                             GameEventBus.emit(GameEvents.UI_ROUTE, 'TERMINAL');
                             if (onClose) onClose();
                         }} title="Check Messages & Contacts">[ PHONE ]</button>
                         {onBrowseMarketplace && (
                             <button style={{ background: 'none', border: 'none', color: '#ff4b00', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={onBrowseMarketplace} title="Search Artnet Marketplace">[ ARTNET SEARCH ]</button>
                         )}
+                        {onDrilldownArtist && selectedArtist && (
+                            <button style={{ background: 'none', border: 'none', color: '#4a90d9', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }} onClick={() => onDrilldownArtist(selectedArtist)} title="View full artist profile">[ ARTIST VIEW ]</button>
+                        )}
                     </span>
                 </div>
                 <div className="bb-header-right">
-                    <span className="bb-cash">${(s?.cash || 0).toLocaleString()}</span>
+                    <span className="bb-cash">{fmtMoney(s?.cash || 0)}</span>
                     <span className="bb-ap">{getAP()} AP</span>
                     <span className="bb-cycle-dot" style={{ background: feed.cycle.color }} />
                     <span className="bb-cycle-label">{feed.cycle.state.toUpperCase()}</span>

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { SceneEngine } from '../core/SceneEngine.js';
-import { WebAudioService } from '../managers/WebAudioService.js';
+import { SceneEngine } from '../../core/SceneEngine.js';
+import { WebAudioService } from '../../managers/WebAudioService.js';
 
 // ── Scene Library ──
-import boomRoomJson from '../data/scenes/boom_room.json';
-import galleryOpeningJson from '../data/scenes/gallery_opening.json';
-import studioVisitJson from '../data/scenes/studio_visit.json';
+import boomRoomJson from '../../data/scenes/boom_room.json';
+import galleryOpeningJson from '../../data/scenes/gallery_opening.json';
+import studioVisitJson from '../../data/scenes/studio_visit.json';
 
 const SCENE_LIBRARY = [
     {

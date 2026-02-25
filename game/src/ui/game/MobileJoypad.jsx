@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { navigate } from '../hooks/usePageRouter.js';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { navigate } from '../../hooks/usePageRouter.js';
 
 /**
  * Art Boy — Frosted-glass game controller for overworld scenes.

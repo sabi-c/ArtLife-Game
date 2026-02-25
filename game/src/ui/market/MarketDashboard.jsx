@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useMarketStore } from '../stores/marketStore.js';
-import { GameState } from '../managers/GameState.js';
+import { useMarketStore } from '../../stores/marketStore.js';
+import { GameState } from '../../managers/GameState.js';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 // ── Styles ──

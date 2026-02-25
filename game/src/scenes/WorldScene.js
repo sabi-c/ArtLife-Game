@@ -79,7 +79,7 @@ export default class WorldScene extends BaseScene {
     }
 
     preload() {
-        console.log('[WorldScene] preload() called');
+
 
         // Catch asset-load errors so we get diagnostics instead of silent black screens
         this.load.on('loaderror', (file) => {
@@ -87,18 +87,7 @@ export default class WorldScene extends BaseScene {
             window.ArtLife?.recordMissingAsset?.(file.key, file.url);
         });
 
-        // Log when preload completes
-        this.load.on('complete', () => {
-            console.log('[WorldScene] preload complete — all assets loaded');
-            console.log('[WorldScene] Texture check:', {
-                world: this.textures.exists('world'),
-                world2: this.textures.exists('world2'),
-                grounds: this.textures.exists('grounds'),
-                grounds2: this.textures.exists('grounds2'),
-                pallet_town: this.cache.tilemap.has('pallet_town'),
-                world_player: this.textures.exists('world_player'),
-            });
-        });
+
 
         // ── Tiled JSON map ──
         // Always queue — Phaser deduplicates internally via cache
@@ -112,7 +101,7 @@ export default class WorldScene extends BaseScene {
         this.load.image('world2', 'assets/tilesets/world2.png');
         this.load.image('grounds', 'assets/tilesets/grounds.png');
         this.load.image('grounds2', 'assets/tilesets/grounds2.png');
-        console.log('[WorldScene] Queued 4 tilesets for loading');
+
 
         // ── Player spritesheet — 216×384, 3 cols × 4 rows = 12 frames at 72×96 ──
         if (!this.textures.exists('world_player')) {
@@ -136,7 +125,7 @@ export default class WorldScene extends BaseScene {
                 this.load.spritesheet(key, `sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
             }
         }
-        console.log('[WorldScene] preload() finished queuing assets');
+
     }
 
     create(data) {
@@ -206,13 +195,11 @@ export default class WorldScene extends BaseScene {
 
     _buildScene(data) {
         // ── Build tilemap ──
-        console.log('[WorldScene] _buildScene: creating tilemap with key "pallet_town"');
-        console.log('[WorldScene] tilemap cache has pallet_town?', this.cache.tilemap.has('pallet_town'));
+
         this.map = this.make.tilemap({ key: 'pallet_town' });
         this.mapKey = 'pallet_town';
 
-        console.log('[WorldScene] Tilemap created. Tilesets in JSON:', this.map.tilesets.map(t => t.name).join(', '));
-        console.log('[WorldScene] Texture keys available:', this.textures.getTextureKeys().filter(k => ['world', 'world2', 'grounds', 'grounds2'].includes(k)).join(', '));
+
 
         const grounds = this.map.addTilesetImage('grounds', 'grounds');
         const world = this.map.addTilesetImage('world', 'world');
@@ -220,10 +207,7 @@ export default class WorldScene extends BaseScene {
         const grounds2 = this.map.addTilesetImage('grounds2', 'grounds2');
         const allSets = [grounds, world, world2, grounds2].filter(Boolean);
 
-        console.log('[WorldScene] addTilesetImage results:', {
-            grounds: !!grounds, world: !!world, world2: !!world2, grounds2: !!grounds2,
-            totalLoaded: allSets.length,
-        });
+
 
         if (allSets.length === 0) {
             console.error('[WorldScene] No tilesets loaded — check tileset names match Tiled export');
@@ -504,19 +488,6 @@ export default class WorldScene extends BaseScene {
         // Mark scene as ready — SCENE_READY event deferred to first update() frame
         // so React overlays have time to mount before we signal readiness
         this._sceneReady = true;
-        this._moveLogTimer = 0;
-        console.log('[WorldScene] Built successfully.',
-            'charLayer:', charLayer || '(implicit)',
-            'NPCs:', this.npcData.length,
-            'Items:', this.items.length,
-            'Grass tiles:', this.grassTiles.size,
-            'Doors:', this.doors.length,
-            'Dialogs:', this.dialogs.length,
-        );
-        // Log all door positions for debugging
-        for (const d of this.doors) {
-            console.log(`[WorldScene] Door at (${d.x},${d.y}) → ${d.nextMap || '(none)'}${d.label ? ' "' + d.label + '"' : ''}`);
-        }
     }
 
     // ════════════════════════════════════════════════════
@@ -650,20 +621,6 @@ export default class WorldScene extends BaseScene {
 
         // ── Stats HUD refresh (rate-limited) ──
         this._updateStatsHUD();
-
-        // ── Movement logger (every 2s) ──
-        this._moveLogTimer = (this._moveLogTimer || 0) + delta;
-        if (this._moveLogTimer > 2000) {
-            this._moveLogTimer = 0;
-            const p = this.gridEngine.getPosition('player');
-            const f = this.gridEngine.getFacingDirection('player');
-            const nearDoor = this.doors.find(d =>
-                Math.abs(d.x - p.x) <= 1 && Math.abs(d.y - p.y) <= 1
-            );
-            if (nearDoor) {
-                console.log(`[WorldScene] Player (${p.x},${p.y}) facing ${f} — NEAR DOOR at (${nearDoor.x},${nearDoor.y}) → ${nearDoor.nextMap}`);
-            }
-        }
 
         // Grass cooldown
         if (this.grassCooldown > 0) this.grassCooldown -= delta;
@@ -830,7 +787,7 @@ export default class WorldScene extends BaseScene {
         const facing = this.gridEngine.getFacingDirection('player');
         const target = this.gridEngine.getFacingPosition('player');
 
-        console.log(`[WorldScene] INTERACT pos=(${pos.x},${pos.y}) facing=${facing} target=(${target.x},${target.y}) doors=${this.doors.length}`);
+
 
         // ── Check NPC interaction ──
         const npcAtTarget = this.npcData.find(n => {
@@ -854,7 +811,7 @@ export default class WorldScene extends BaseScene {
 
             // If NPC has a linked event, launch full DialogueScene
             if (npcAtTarget.eventId) {
-                console.log(`[WorldScene] NPC ${npcAtTarget.label} → DialogueScene (${npcAtTarget.eventId})`);
+
                 GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'DialogueScene', {
                     eventId: npcAtTarget.eventId,
                     npcId: npcAtTarget.id,
@@ -883,7 +840,7 @@ export default class WorldScene extends BaseScene {
         const door = this.doors.find(d => d.x === target.x && d.y === target.y)
             || this.doors.find(d => d.x === pos.x && d.y === pos.y);
         if (door) {
-            console.log(`[WorldScene] DOOR FOUND at (${door.x},${door.y}) → ${door.nextMap}`);
+
             WebAudioService.doorEnter();
             this._enterDoor(door);
             return;
@@ -898,7 +855,7 @@ export default class WorldScene extends BaseScene {
             return;
         }
 
-        console.log(`[WorldScene] Nothing found at target (${target.x},${target.y}) or pos (${pos.x},${pos.y})`);
+
     }
 
     // ════════════════════════════════════════════════════
@@ -1019,7 +976,7 @@ export default class WorldScene extends BaseScene {
         if (this._doorTransitioning) return;
         this._doorTransitioning = true;
 
-        console.log(`[WorldScene] Entering door → ${door.nextMap} (room: ${door.nextMapRoom || 'default'})`);
+
 
         // Freeze player movement and save position immediately
         this.gridEngine.stopMovement('player');
@@ -1052,7 +1009,7 @@ export default class WorldScene extends BaseScene {
                 locationText.setAlpha(1);
                 // Brief hold to show location name, then transition
                 this.time.delayedCall(500, () => {
-                    console.log(`[WorldScene] Launching LocationScene with`, launchData);
+
                     GameEventBus.emit(GameEvents.SCENE_EXIT, 'WorldScene');
                     this.scene.stop();
                     GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'LocationScene', launchData);
@@ -1105,7 +1062,7 @@ export default class WorldScene extends BaseScene {
         if (pos.x === this.lastGrassCheck.x && pos.y === this.lastGrassCheck.y) return;
         this.lastGrassCheck = { x: pos.x, y: pos.y };
 
-        console.log(`[WorldScene] Stepped on Event Zone: ${eventId}`);
+
 
         // Emitting DEBUG_LAUNCH_SCENE temporarily routes us to the DialogueScene
         // with the requested event ID, suspending this scene automatically as it runs in parallel / modal

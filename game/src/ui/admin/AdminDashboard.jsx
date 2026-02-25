@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { GameState } from '../managers/GameState.js';
-import { ConsequenceScheduler } from '../managers/ConsequenceScheduler.js';
-import { HaggleManager } from '../managers/HaggleManager.js';
-import { VIEW, OVERLAY } from '../core/views.js';
-import { useNPCStore } from '../stores/npcStore.js';
-import { SettingsManager } from '../managers/SettingsManager.js';
-import HaggleOverlay from './email/haggle/HaggleOverlay.jsx';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { GameState } from '../../managers/GameState.js';
+import { ConsequenceScheduler } from '../../managers/ConsequenceScheduler.js';
+import { HaggleManager } from '../../managers/HaggleManager.js';
+import { VIEW, OVERLAY } from '../../core/views.js';
+import { useNPCStore } from '../../stores/npcStore.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
+import HaggleOverlay from '../email/haggle/HaggleOverlay.jsx';
 
 const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
@@ -136,9 +136,9 @@ export default function AdminDashboard({ onClose }) {
             window._artLifeState = GameState.state;
 
             // Dynamic imports for modules not used elsewhere in this file
-            const { generateInitialWorks } = await import('../data/artists.js');
-            const { MarketManager } = await import('../managers/MarketManager.js');
-            const { PhoneManager } = await import('../managers/PhoneManager.js');
+            const { generateInitialWorks } = await import('../../data/artists.js');
+            const { MarketManager } = await import('../../managers/MarketManager.js');
+            const { PhoneManager } = await import('../../managers/PhoneManager.js');
             MarketManager.init(generateInitialWorks());
             PhoneManager.init();
             ConsequenceScheduler.reset();
@@ -566,21 +566,21 @@ export default function AdminDashboard({ onClose }) {
                                     <div style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>Quick-jump artist heat to test price elasticity.</div>
 
                                     <button style={btnStyle} onClick={async () => {
-                                        const { MarketManager } = await import('../managers/MarketManager.js');
+                                        const { MarketManager } = await import('../../managers/MarketManager.js');
                                         MarketManager.boostRandomArtistHeat(50);
                                         forceUpdate();
                                         GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Boosted random artist heat by 50');
                                     }}>[ +50 Random Artist Heat ]</button>
 
                                     <button style={btnStyle} onClick={async () => {
-                                        const { MarketManager } = await import('../managers/MarketManager.js');
+                                        const { MarketManager } = await import('../../managers/MarketManager.js');
                                         MarketManager.artists.forEach(a => { a.heat = 100; });
                                         forceUpdate();
                                         GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Set ALL Artists to 100 Heat');
                                     }}>[ Max Heat (All Artists) ]</button>
 
                                     <button style={{ ...btnStyle, border: '1px solid #555', color: '#888' }} onClick={async () => {
-                                        const { MarketManager } = await import('../managers/MarketManager.js');
+                                        const { MarketManager } = await import('../../managers/MarketManager.js');
                                         MarketManager.artists.forEach(a => { a.heat = 0; });
                                         forceUpdate();
                                         GameEventBus.emit(GameEvents.UI_NOTIFICATION, 'Set ALL Artists to 0 Heat');

@@ -20,11 +20,11 @@
  */
 
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { MarketSimulator } from '../managers/MarketSimulator.js';
-import { GameState } from '../managers/GameState.js';
-import { ARTWORK_MAP } from '../data/artworks.js';
-import { CONTACTS } from '../data/contacts.js';
-import { formatMoneyShort } from '../utils/format.js';
+import { MarketSimulator } from '../../managers/MarketSimulator.js';
+import { GameState } from '../../managers/GameState.js';
+import { ARTWORK_MAP } from '../../data/artworks.js';
+import { CONTACTS } from '../../data/contacts.js';
+import { formatMoneyShort } from '../../utils/format.js';
 import './SalesGrid.css';
 
 /**

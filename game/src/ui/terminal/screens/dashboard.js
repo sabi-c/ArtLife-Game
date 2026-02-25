@@ -15,7 +15,7 @@
 
 import { TerminalAPI } from '../TerminalAPI.js';
 import { H, SUB, DIV, BLANK, DIM, GOLD, GREEN, RED, STAT, NEWS, WORLDMAP } from './shared.js';
-import { TickerSystem } from '../../TickerSystem.js';
+import { TickerSystem } from '../../shared/TickerSystem.js';
 import { GameEventBus, GameEvents } from '../../../managers/GameEventBus.js';
 import { VIEW, OVERLAY } from '../../../core/views.js';
 import { characterSelectScreen } from './character.js';

@@ -1,4 +1,4 @@
-import { TICKER_PHRASES } from '../data/ticker_phrases.js';
+import { TICKER_PHRASES } from '../../data/ticker_phrases.js';
 
 export class TickerSystem {
     /**

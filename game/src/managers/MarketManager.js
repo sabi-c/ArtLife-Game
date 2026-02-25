@@ -8,7 +8,7 @@ import { clamp } from '../utils/math.js';
 import { MarketHistoryEngine } from './MarketHistoryEngine.js';
 import { MarketSimulator } from './MarketSimulator.js';
 import { MarketEventBus } from './MarketEventBus.js';
-import { HISTORICAL_PRICES, getHistoricalData } from '../data/historicalPrices.js';
+import { getHistoricalData } from '../data/historicalPrices.js';
 
 /**
  * MarketManager.js — Pricing Engine & Artist Index Calculator
@@ -71,7 +71,7 @@ export class MarketManager {
                 yearsOfHistory: 5,
                 seed: 42, // Deterministic for consistent experience
             });
-            console.log(`[MarketManager] Generated ${MarketManager.historicalData.compositeHistory.length}-week market history with ${MarketManager.historicalData.trades.length} trades`);
+
 
             // Pre-populate marketStore with historical data
             try {
@@ -109,7 +109,7 @@ export class MarketManager {
                     }
                 }
                 MarketManager.realWorldData = fallback;
-                console.log(`[MarketManager] Loaded ${Object.keys(fallback).length} historical price anchors from static data`);
+
             });
     }
 
@@ -249,7 +249,7 @@ export class MarketManager {
     static ensureInitForSim() {
         if (MarketManager.artists.length === 0) {
             MarketManager.artists = ARTISTS.map(a => ({ ...a }));
-            console.log(`[MarketManager] Sim-init: loaded ${MarketManager.artists.length} artists`);
+
         }
         if (MarketManager.works.length === 0) {
             // Use artworks data for simulation
@@ -264,8 +264,8 @@ export class MarketManager {
                             artist.basePriceMin + Math.random() * (artist.basePriceMax - artist.basePriceMin)
                         );
                         MarketManager.works.push({
-                            id: `sim_${artist.id}_${i}`,
-                            title: `Work #${i + 1}`,
+                            id: `sim_${artist.id}_${i} `,
+                            title: `Work #${i + 1} `,
                             artistId: artist.id,
                             artist: artist.name,
                             medium: artist.medium,
@@ -277,7 +277,7 @@ export class MarketManager {
                     }
                 }
             }
-            console.log(`[MarketManager] Sim-init: loaded ${MarketManager.works.length} works`);
+
         }
     }
 
@@ -362,7 +362,7 @@ export class MarketManager {
         );
 
         const titles = ['New Work', 'Untitled', 'Study', 'Composition', 'Fragment', 'Series'];
-        const title = `${titles[Math.floor(Math.random() * titles.length)]} #${Math.floor(Math.random() * 999)}`;
+        const title = `${titles[Math.floor(Math.random() * titles.length)]} #${Math.floor(Math.random() * 999)} `;
 
         MarketManager.works.push({
             id: generateId('work_gen'),

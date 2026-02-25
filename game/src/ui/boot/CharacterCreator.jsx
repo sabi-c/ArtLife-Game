@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CHARACTERS, DRIP_OPTIONS, VICE_OPTIONS } from '../data/characters.js';
-import { GameState } from '../managers/GameState.js';
-import { WebAudioService } from '../managers/WebAudioService.js';
-import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
-import { SettingsManager } from '../managers/SettingsManager.js';
+import { CHARACTERS, DRIP_OPTIONS, VICE_OPTIONS } from '../../data/characters.js';
+import { GameState } from '../../managers/GameState.js';
+import { WebAudioService } from '../../managers/WebAudioService.js';
+import { GameEventBus, GameEvents } from '../../managers/GameEventBus.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
 
 const STEPS = {
     ARCHETYPE: 1,
@@ -105,7 +105,7 @@ export default function CharacterCreator({ ui }) {
             ui.container.style.display = '';
         }
 
-        import('./terminal/screens/index.js').then(({ dashboardScreen }) => {
+        import('../terminal/screens/index.js').then(({ dashboardScreen }) => {
             if (ui) ui.pushScreen(dashboardScreen(ui));
             const phaserCanvas = document.getElementById('phaser-game-container');
             if (phaserCanvas) phaserCanvas.style.display = 'none';

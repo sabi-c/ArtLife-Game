@@ -23,8 +23,15 @@ export default defineConfig({
         emptyOutDir: true,
         rollupOptions: {
             output: {
-                manualChunks: {
-                    phaser: ['phaser'],
+                manualChunks(id) {
+                    if (id.includes('node_modules/phaser')) return 'phaser';
+                    if (id.includes('node_modules/recharts') || id.includes('node_modules/d3')) return 'chart-vendor';
+                    if (id.includes('/src/data/artworks') ||
+                        id.includes('/src/data/dialogue_trees') ||
+                        id.includes('/src/data/contacts') ||
+                        id.includes('/src/data/rooms') ||
+                        id.includes('/src/data/haggle_config') ||
+                        id.includes('/src/data/events/')) return 'game-data';
                 },
             },
         },

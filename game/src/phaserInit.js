@@ -165,7 +165,7 @@ GameEventBus.on(GameEvents.OVERWORLD_EXIT, () => {
     if (container) container.style.display = 'block';
 });
 GameEventBus.on(GameEvents.UI_NOTIFICATION, (msg) => {
-    console.log(`[GameEventBus] ${msg}`);
+
     // Visible toast so users actually see feedback
     const toast = document.createElement('div');
     toast.textContent = msg;
@@ -238,7 +238,7 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
 
         // Sync React state FIRST so overlays mount before scene starts
         GameEventBus.emit(GameEvents.UI_ROUTE, 'PHASER');
-        console.log(`[DEBUG_LAUNCH_SCENE] Stopped scenes: [${activeScenes.join(', ')}], routing to PHASER, starting ${sceneKey} in ${activeScenes.length > 0 ? 100 : 50}ms`);
+
 
         // Delay scene start to let stopped scenes clean up and React overlays mount
         const startDelay = activeScenes.length > 0 ? 100 : 50;
@@ -258,7 +258,7 @@ GameEventBus.on(GameEvents.DEBUG_LAUNCH_SCENE, (sceneKey, data = {}) => {
             }
             window.phaserGame.scale.refresh();
 
-            console.log(`[DEBUG_LAUNCH_SCENE] Starting ${sceneKey}, scale: ${window.phaserGame.scale.width}x${window.phaserGame.scale.height}`, data);
+
             window.phaserGame.scene.start(sceneKey, { ui, ...data });
 
             // Give canvas keyboard focus so WASD/arrows work immediately

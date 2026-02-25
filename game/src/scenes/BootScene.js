@@ -93,7 +93,6 @@ export class BootScene extends Phaser.Scene {
         const eventsData = this.cache.json.get('events_json');
         if (eventsData && Array.isArray(eventsData)) {
             EventRegistry.jsonEvents = eventsData;
-            console.log(`[BootScene] ${eventsData.length} decoupled events loaded`);
         } else {
             console.warn('[BootScene] No events.json data found or failed to parse.');
         }
@@ -102,7 +101,6 @@ export class BootScene extends Phaser.Scene {
         const storylinesData = this.cache.json.get('storylines_json');
         if (storylinesData && Array.isArray(storylinesData)) {
             EventRegistry.jsonStorylines = storylinesData;
-            console.log(`[BootScene] ${storylinesData.length} storylines loaded`);
         } else {
             console.warn('[BootScene] No storylines.json data found or failed to parse.');
         }

@@ -9,6 +9,9 @@
  */
 import Phaser from 'phaser';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
+import { SettingsManager } from '../managers/SettingsManager.js';
+import { SpriteRegistry } from '../managers/SpriteRegistry.js';
+import { CONTACTS } from '../data/contacts.js';
 import { VIEW } from '../core/views.js';
 
 // Dev-only debug logging (silent in production)
@@ -36,6 +39,8 @@ const PLAYER_ANIMS = [
     { key: 'character-idle-right', prefix: 'idle-right/idle-right', start: 0, end: 0 },
 ];
 
+// ─── Alternative sprites now managed by SpriteRegistry ──────────────────────
+
 // ─── Asset base URL (captured at import time, before SPA routing changes location) ──
 // On localhost:     INITIAL_BASE = 'http://localhost:5175/'
 // On GitHub Pages:  INITIAL_BASE = 'https://sabi-c.github.io/ArtLife-Game/'
@@ -57,6 +62,8 @@ export default class NewWorldScene extends Phaser.Scene {
         this.warpZones = [];
         this.direction = 'down';
         this._createFailed = false;
+        this._activeSpriteKey = 'character'; // current sprite texture key
+        this._breathTween = null; // idle breathing tween reference
         this._assetErrors = [];
     }
 
@@ -88,6 +95,11 @@ export default class NewWorldScene extends Phaser.Scene {
         // Character sprite — Aseprite atlas format (textures[] wrapper, NOT flat frames{})
         this.load.aseprite('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
 
+        // ── All NPC + player spritesheets via SpriteRegistry ──
+        const selectedSprite = SettingsManager.get('playerSprite') || 'character';
+        this._activeSpriteKey = selectedSprite;
+        SpriteRegistry.preloadAll(this);
+
         // Warp particle
         this.load.image('particle_warp', 'assets/luminus/particle_warp.png');
 
@@ -117,6 +129,9 @@ export default class NewWorldScene extends Phaser.Scene {
         }
 
         try {
+            // Build contact lookup map for NPC sprite resolution
+            this._contactMap = Object.fromEntries(CONTACTS.map(c => [c.id, c]));
+
             this._createMap();
             this._createAnims();
             this._createPlayer();
@@ -218,7 +233,7 @@ export default class NewWorldScene extends Phaser.Scene {
                 });
                 if (frames.length === 0) {
                     console.warn(`[NewWorldScene] ⚠ 0 frames for "${anim.key}" (prefix: "${anim.prefix}")`);
-                    continue; // Skip — don't create empty animation (that causes the duration crash)
+                    continue;
                 }
                 this.anims.create({
                     key: anim.key,
@@ -228,6 +243,9 @@ export default class NewWorldScene extends Phaser.Scene {
                 });
             }
         }
+
+        // ── Register animations for all PixelLab spritesheets via SpriteRegistry ──
+        SpriteRegistry.createAnims(this);
 
         // Log all available animations for debugging
         const allAnims = [];
@@ -239,9 +257,14 @@ export default class NewWorldScene extends Phaser.Scene {
     // Player
     // ════════════════════════════════════════════════════
     _createPlayer() {
-        // Verify character texture loaded
-        if (!this.textures.exists('character')) {
-            throw new Error('Character texture not loaded — check assets/luminus/character.png + .json');
+        // Determine which sprite to use
+        const spriteKey = this._activeSpriteKey;
+        const useAlt = spriteKey !== 'character' && this.textures.exists(spriteKey);
+        const textureKey = useAlt ? spriteKey : 'character';
+
+        // Verify texture loaded
+        if (!this.textures.exists(textureKey)) {
+            throw new Error(`Player texture "${textureKey}" not loaded`);
         }
 
         // Find spawn point from Tiled object layer
@@ -249,24 +272,26 @@ export default class NewWorldScene extends Phaser.Scene {
         const x = spawnPoint ? spawnPoint.x : 400;
         const y = spawnPoint ? spawnPoint.y : 400;
 
-        this.player = this.physics.add.sprite(x, y, 'character');
+        this.player = this.physics.add.sprite(x, y, textureKey);
         this.player.setDepth(DEPTH.PLAYER);
-        this.player.body.setSize(12, 8);
-        this.player.body.offset.y = this.player.height / 1.8;
+
+        if (useAlt) {
+            // PixelLab sprites are 160×160 — scale down for overworld
+            SpriteRegistry.configureForOverworld(this.player, true);
+        } else {
+            this.player.body.setSize(12, 8);
+            this.player.body.offset.y = this.player.height / 1.8;
+        }
         this.player.setCollideWorldBounds(true);
 
-        // Play idle animation — use first available
-        const idleKey = 'character-idle-down';
+        // Play idle animation
+        const idleKey = useAlt ? `${spriteKey}-idle-down` : 'character-idle-down';
         if (this.anims.exists(idleKey)) {
             this.player.play(idleKey);
         } else {
-            // Fallback: play any available character animation
-            const allAnims = [];
-            this.anims.anims.each(a => allAnims.push(a.key));
-            const fallback = allAnims.find(k => k.includes('character') || k.includes('idle'));
-            if (fallback) {
-                this.player.play(fallback);
-                console.warn(`[NewWorldScene] Using fallback animation: ${fallback}`);
+            const walkKey = useAlt ? `${spriteKey}-walk-down` : 'character-walk-down';
+            if (this.anims.exists(walkKey)) {
+                this.player.play(walkKey);
             } else {
                 console.warn('[NewWorldScene] No animations available — player will be static');
             }
@@ -277,7 +302,47 @@ export default class NewWorldScene extends Phaser.Scene {
             this.physics.add.collider(this.player, this.collisionLayer);
         }
 
-        _log(`Player spawned at (${x}, ${y})`);
+        // Listen for sprite changes from admin settings
+        this._settingsHandler = () => this._onPlayerSpriteChanged();
+        document.addEventListener('settings-changed', this._settingsHandler);
+
+        _log(`Player spawned at (${x}, ${y}) with sprite: ${textureKey}`);
+    }
+
+    /**
+     * Hot-swap the player sprite when the admin changes the setting.
+     */
+    _onPlayerSpriteChanged() {
+        const newKey = SettingsManager.get('playerSprite') || 'character';
+        if (newKey === this._activeSpriteKey) return;
+
+        this._activeSpriteKey = newKey;
+        const useAlt = newKey !== 'character' && this.textures.exists(newKey);
+        const textureKey = useAlt ? newKey : 'character';
+
+        if (!this.textures.exists(textureKey)) return;
+
+        // Swap texture
+        this.player.setTexture(textureKey);
+
+        if (useAlt) {
+            SpriteRegistry.configureForOverworld(this.player, true);
+        } else {
+            this.player.setScale(1);
+            this.player.body.setSize(12, 8);
+            this.player.body.offset.y = this.player.height / 1.8;
+            this.player.body.offset.x = 0;
+        }
+
+        // Play idle in current direction
+        const idleKey = useAlt
+            ? `${newKey}-idle-${this.direction}`
+            : `character-idle-${this.direction}`;
+        if (this.anims.exists(idleKey)) {
+            this.player.play(idleKey);
+        }
+
+        _log(`Hot-swapped player sprite to: ${textureKey}`);
     }
 
     // ════════════════════════════════════════════════════
@@ -437,6 +502,11 @@ export default class NewWorldScene extends Phaser.Scene {
         const up = this.cursors.up.isDown || this.wasd.up.isDown || joypad === 'UP';
         const down = this.cursors.down.isDown || this.wasd.down.isDown || joypad === 'DOWN';
 
+        // Resolve animation prefix based on active sprite
+        const sk = this._activeSpriteKey;
+        const useAlt = sk !== 'character' && this.textures.exists(sk);
+        const prefix = useAlt ? sk : 'character';
+
         // Helper: safely play animation
         const tryPlay = (key) => {
             if (this.anims.exists(key)) {
@@ -444,28 +514,42 @@ export default class NewWorldScene extends Phaser.Scene {
             }
         };
 
+        // Cancel breathing tween when moving
+        const cancelBreathing = () => {
+            if (this._breathTween) {
+                this._breathTween.stop();
+                this._breathTween = null;
+                const baseScale = useAlt ? 0.35 : 1;
+                this.player.setScale(baseScale);
+            }
+        };
+
         // Horizontal
         if (left) {
+            cancelBreathing();
             body.setVelocityX(-speed);
-            tryPlay('character-walk-left');
+            tryPlay(`${prefix}-walk-left`);
             this.direction = 'left';
         } else if (right) {
+            cancelBreathing();
             body.setVelocityX(speed);
-            tryPlay('character-walk-right');
+            tryPlay(`${prefix}-walk-right`);
             this.direction = 'right';
         }
 
         // Vertical
         if (up) {
+            cancelBreathing();
             body.setVelocityY(-speed);
             if (!left && !right) {
-                tryPlay('character-walk-up');
+                tryPlay(`${prefix}-walk-up`);
                 this.direction = 'up';
             }
         } else if (down) {
+            cancelBreathing();
             body.setVelocityY(speed);
             if (!left && !right) {
-                tryPlay('character-walk-down');
+                tryPlay(`${prefix}-walk-down`);
                 this.direction = 'down';
             }
         }
@@ -473,15 +557,98 @@ export default class NewWorldScene extends Phaser.Scene {
         // Normalize diagonal speed
         body.velocity.normalize().scale(speed);
 
-        // Idle animation when not moving
+        // Idle animation + breathing tween when not moving
         if (body.velocity.x === 0 && body.velocity.y === 0) {
-            tryPlay(`character-idle-${this.direction}`);
+            // Play idle/breathing animation frames
+            const idleKey = `${prefix}-idle-${this.direction}`;
+            const walkIdleKey = `character-idle-${this.direction}`;
+            if (this.anims.exists(idleKey)) {
+                tryPlay(idleKey);
+            } else if (this.anims.exists(walkIdleKey)) {
+                tryPlay(walkIdleKey);
+            }
+
+            // Add subtle scale breathing tween if not already active
+            if (!this._breathTween) {
+                const baseScale = useAlt ? 0.35 : 1;
+                this._breathTween = this.tweens.add({
+                    targets: this.player,
+                    scaleY: baseScale * 1.02,
+                    duration: 1500,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
         }
 
         // Mobile action button (A)
         if (window.joypadAction) {
             window.joypadAction = false;
             this._handleAction();
+        }
+
+        // NPC patrol behavior
+        this._updateNPCPatrol(time);
+    }
+
+    /**
+     * Update NPC patrol — random walking with direction changes.
+     */
+    _updateNPCPatrol(time) {
+        const PATROL_SPEED = 30;
+        const DIRS = ['down', 'up', 'left', 'right'];
+        const VEL = {
+            down: { x: 0, y: PATROL_SPEED },
+            up: { x: 0, y: -PATROL_SPEED },
+            left: { x: -PATROL_SPEED, y: 0 },
+            right: { x: PATROL_SPEED, y: 0 },
+        };
+
+        for (const npc of (this.npcs || [])) {
+            const sk = npc.getData('_spriteKey');
+            if (!sk) continue; // skip question-mark placeholders
+
+            const timer = (npc.getData('_patrolTimer') || 0) + this.game.loop.delta;
+            const wait = npc.getData('_patrolWait') || 2500;
+
+            if (timer >= wait) {
+                // Choose: 60% chance walk new direction, 40% chance idle
+                const shouldWalk = Math.random() < 0.6;
+                if (shouldWalk) {
+                    const dir = Phaser.Utils.Array.GetRandom(DIRS);
+                    npc.setData('_patrolDir', dir);
+                    npc.setData('_isWalking', true);
+                    npc.body.setVelocity(VEL[dir].x, VEL[dir].y);
+
+                    const walkKey = SpriteRegistry.getWalkAnim(sk, dir);
+                    if (walkKey && this.anims.exists(walkKey)) {
+                        npc.play(walkKey, true);
+                    }
+                } else {
+                    // Idle
+                    npc.setData('_isWalking', false);
+                    npc.body.setVelocity(0, 0);
+                    const dir = npc.getData('_patrolDir') || 'down';
+                    const idleKey = SpriteRegistry.getIdleAnim(sk, dir);
+                    if (idleKey && this.anims.exists(idleKey)) {
+                        npc.play(idleKey, true);
+                    } else {
+                        npc.anims.stop();
+                    }
+                }
+
+                npc.setData('_patrolTimer', 0);
+                npc.setData('_patrolWait', Phaser.Math.Between(1500, 3500));
+            } else {
+                npc.setData('_patrolTimer', timer);
+            }
+
+            // Update name label position to follow NPC
+            const label = npc.getData('_label');
+            if (label) {
+                label.setPosition(npc.x, npc.y - 35);
+            }
         }
     }
 
@@ -519,33 +686,78 @@ export default class NewWorldScene extends Phaser.Scene {
             const npcX = obj.x + (obj.width / 2);
             const npcY = obj.y + (obj.height / 2);
 
-            // Use question_mark texture as placeholder NPC marker
-            const npc = this.physics.add.sprite(npcX, npcY, 'question_mark');
-            npc.setDepth(DEPTH.PLAYER - 1);
-            npc.body.immovable = true;
-            npc.setScale(0.8);
-
-            // Gentle floating animation
-            this.tweens.add({
-                targets: npc,
-                y: npcY - 4,
-                duration: 1200,
-                yoyo: true,
-                repeat: -1,
-                ease: 'Sine.easeInOut',
-            });
-
-            // Store NPC data
+            // Read Tiled properties (id, name, etc.)
             const props = {};
             for (const p of (obj.properties || [])) { props[p.name] = p.value; }
-            npc.setData('npcId', props.id || '?');
-            npc.setData('name', obj.name || 'NPC');
+            const npcId = props.id || obj.name || '?';
+            const npcName = obj.name || props.label || 'NPC';
+
+            // Resolve NPC sprite: look up contact's spriteKey, fall back to question_mark
+            const contact = this._contactMap?.[npcId];
+            const spriteKey = contact?.spriteKey || null;
+            const hasSprite = spriteKey && this.textures.exists(spriteKey);
+
+            let npc;
+            if (hasSprite) {
+                npc = this.physics.add.sprite(npcX, npcY, spriteKey);
+                SpriteRegistry.configureForOverworld(npc, true);
+                npc.setDepth(DEPTH.PLAYER - 1);
+                npc.body.immovable = true;
+
+                // Play idle animation facing down
+                const idleKey = SpriteRegistry.getIdleAnim(spriteKey, 'down');
+                if (idleKey && this.anims.exists(idleKey)) {
+                    npc.play(idleKey);
+                } else {
+                    // Try walk animation as fallback
+                    const walkKey = SpriteRegistry.getWalkAnim(spriteKey, 'down');
+                    if (walkKey && this.anims.exists(walkKey)) {
+                        npc.play(walkKey);
+                    }
+                }
+
+                // Random patrol — change direction every 2-4 seconds
+                npc.setData('_patrolDir', 'down');
+                npc.setData('_patrolTimer', 0);
+                npc.setData('_patrolWait', Phaser.Math.Between(1500, 3500));
+                npc.setData('_spriteKey', spriteKey);
+            } else {
+                // Fallback: question_mark placeholder with floating tween
+                npc = this.physics.add.sprite(npcX, npcY, 'question_mark');
+                npc.setDepth(DEPTH.PLAYER - 1);
+                npc.body.immovable = true;
+                npc.setScale(0.8);
+
+                this.tweens.add({
+                    targets: npc,
+                    y: npcY - 4,
+                    duration: 1200,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
+
+            // NPC name label
+            const label = this.add.text(npcX, npcY - (hasSprite ? 35 : 16), npcName, {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '6px',
+                color: '#ffddaa',
+                stroke: '#000000',
+                strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(DEPTH.HUD - 1);
+            npc.setData('_label', label);
+
+            // Store NPC data
+            npc.setData('npcId', npcId);
+            npc.setData('name', contact?.name || npcName);
+            npc.setData('contactId', contact?.id || null);
             this.npcs.push(npc);
 
             // Collision so player can't walk through
             this.physics.add.collider(this.player, npc);
         }
-        _log(`Created ${this.npcs.length} NPCs`);
+        _log(`Created ${this.npcs.length} NPCs (${this.npcs.filter(n => n.getData('_spriteKey')).length} with sprites)`);
     }
 
     // ════════════════════════════════════════════════════
@@ -679,6 +891,14 @@ export default class NewWorldScene extends Phaser.Scene {
         window.joypadSprint = false;
         const gc = document.getElementById('phaser-game-container');
         if (gc) gc.style.background = '#0a0a0f';
+        if (this._settingsHandler) {
+            document.removeEventListener('settings-changed', this._settingsHandler);
+            this._settingsHandler = null;
+        }
+        if (this._breathTween) {
+            this._breathTween.stop();
+            this._breathTween = null;
+        }
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
     }
 

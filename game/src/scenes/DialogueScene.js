@@ -325,7 +325,6 @@ export class DialogueScene extends BaseScene {
                 returnArgs: this.returnArgs || {},
             };
 
-            console.log(`[DialogueScene] Launching scene "${targetScene}" with:`, launchData);
             GameState.addNews(choice.outcome || `You decided to attend — traveling now...`);
 
             // Record the decision before transitioning

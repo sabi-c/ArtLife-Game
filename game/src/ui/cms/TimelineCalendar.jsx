@@ -443,7 +443,6 @@ export default function TimelineCalendar() {
         saveTimelineOverride(item.id, newWeek);
         markDirty('timeline');
 
-        console.log(`[Timeline] Moved "${item.title}" to Week ${newWeek}`);
     }, [allItems, saveTimelineOverride, markDirty]);
 
     // ── Handle timing change from detail panel ──
@@ -451,7 +450,6 @@ export default function TimelineCalendar() {
         const week = item.week;
         saveTimelineOverride(item.id, week, timing);
         markDirty('timeline');
-        console.log(`[Timeline] Set "${item.title}" timing to "${timing}" in Week ${week}`);
     }, [saveTimelineOverride, markDirty]);
 
     // ── Stats ──

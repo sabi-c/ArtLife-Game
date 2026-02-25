@@ -8324,3 +8324,579 @@
 }
 
 /* Email styles moved to src/ui/email/EmailOverlay.css */
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Drill-Down Panel Container                                    */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-drilldown {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 420px;
+    max-width: 90vw;
+    background: #0d0d14;
+    border-left: 1px solid #1a1a2e;
+    z-index: 1050;
+    overflow-y: auto;
+    animation: bb-drill-in 0.25s ease-out;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes bb-drill-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.bb-panel-close {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+    margin-left: 8px;
+}
+
+.bb-panel-close:hover {
+    color: #c94040;
+    border-color: #c94040;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 15. Artist Detail Panel                                       */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-artist-detail {
+    padding: 16px;
+}
+
+.bb-artist-detail .bb-panel-header {
+    color: #e0e0e8;
+    font-size: 13px;
+    letter-spacing: 3px;
+    border-bottom: 1px solid #c9a84c;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+/* Heat / Index / Tier / Medium row */
+.bb-ad-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.bb-ad-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-ad-metric-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 1px;
+}
+
+.bb-ad-metric-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e0e0e8;
+}
+
+.bb-ad-heat-bar {
+    height: 5px;
+    background: #1a1a2e;
+    border-radius: 3px;
+    overflow: hidden;
+    flex: 1;
+    margin-top: 2px;
+}
+
+.bb-ad-heat-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.bb-ad-flavor {
+    color: #8a8a9a;
+    font-size: 10px;
+    font-style: italic;
+    padding: 6px 0 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    line-height: 1.5;
+}
+
+/* Section grouping */
+.bb-ad-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-ad-section-label {
+    font-size: 9px;
+    color: #5a5a6a;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+/* Works table */
+.bb-ad-work-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 60px;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.15s;
+}
+
+.bb-ad-work-row:hover {
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.bb-ad-work-title {
+    color: #00e5ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-ad-work-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ad-work-status {
+    color: #5a5a6a;
+    text-align: right;
+    font-size: 9px;
+}
+
+/* Auction history */
+.bb-ad-auction-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 70px 80px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.bb-ad-auction-year {
+    color: #5a5a6a;
+}
+
+.bb-ad-auction-title {
+    color: #a0a0b0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-ad-auction-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ad-auction-house {
+    color: #5a5a6a;
+    text-align: right;
+}
+
+.bb-ad-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 9px;
+    color: #5a5a6a;
+    margin-top: 6px;
+    padding-top: 4px;
+}
+
+.bb-ad-stats span {
+    letter-spacing: 0.5px;
+}
+
+/* Events */
+.bb-ad-event-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 10px;
+}
+
+.bb-ad-event-type {
+    color: #c9a84c;
+    letter-spacing: 0.5px;
+}
+
+.bb-ad-event-remaining {
+    color: #5a5a6a;
+}
+
+/* Comparables */
+.bb-ad-comp-row {
+    display: grid;
+    grid-template-columns: 1fr 50px 40px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+}
+
+.bb-ad-comp-name {
+    color: #a0a0b0;
+}
+
+.bb-ad-comp-index {
+    color: #e0e0e8;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ad-comp-heat {
+    color: #5a5a6a;
+    text-align: right;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 16. Artwork Valuation Panel                                   */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-valuation {
+    padding: 16px;
+}
+
+.bb-valuation .bb-panel-header {
+    color: #e0e0e8;
+    font-size: 11px;
+    letter-spacing: 2px;
+    border-bottom: 1px solid #c9a84c;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.bb-val-artist {
+    color: #00e5ff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.bb-val-meta {
+    color: #5a5a6a;
+    font-size: 10px;
+    margin-bottom: 10px;
+}
+
+.bb-val-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-val-section-label {
+    font-size: 9px;
+    color: #5a5a6a;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+.bb-val-breakdown {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 2px;
+}
+
+.bb-val-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 10px;
+    color: #a0a0b0;
+}
+
+.bb-val-row span.up {
+    color: #4caf50;
+}
+
+.bb-val-row span.down {
+    color: #c94040;
+}
+
+.bb-val-row.bb-val-total {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 4px;
+    padding-top: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #e0e0e8;
+}
+
+.bb-val-row.bb-val-total span {
+    color: #c9a84c;
+}
+
+/* Confidence badge */
+.bb-val-confidence {
+    margin-top: 12px;
+    text-align: right;
+}
+
+.bb-val-conf-badge {
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+.bb-val-conf-high {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.bb-val-conf-medium {
+    background: rgba(201, 168, 76, 0.15);
+    color: #c9a84c;
+    border: 1px solid rgba(201, 168, 76, 0.3);
+}
+
+.bb-val-conf-low {
+    background: rgba(201, 64, 64, 0.15);
+    color: #c94040;
+    border: 1px solid rgba(201, 64, 64, 0.3);
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 17. Collector Profile Panel                                   */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-collector {
+    padding: 16px;
+}
+
+.bb-collector .bb-panel-header {
+    color: #e0e0e8;
+    font-size: 13px;
+    letter-spacing: 3px;
+    border-bottom: 1px solid #c9a84c;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.bb-collector-empty {
+    color: #5a5a6a;
+    font-size: 10px;
+    padding: 20px 0;
+    text-align: center;
+}
+
+.bb-coll-info {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.bb-coll-role {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.bb-coll-type {
+    font-size: 9px;
+    color: #5a5a6a;
+}
+
+/* Portfolio summary quad */
+.bb-coll-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin-bottom: 12px;
+}
+
+.bb-coll-sum-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-coll-sum-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 1px;
+}
+
+.bb-coll-sum-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e8;
+}
+
+.bb-coll-sum-value.up {
+    color: #4caf50;
+}
+
+.bb-coll-sum-value.down {
+    color: #c94040;
+}
+
+.bb-coll-pl-pct {
+    font-size: 10px;
+    font-weight: 400;
+}
+
+/* Section grouping */
+.bb-coll-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-coll-section-label {
+    font-size: 9px;
+    color: #5a5a6a;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+/* Holdings */
+.bb-coll-holding {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.15s;
+}
+
+.bb-coll-holding:hover {
+    background: rgba(0, 229, 255, 0.04);
+}
+
+.bb-coll-hold-title {
+    color: #00e5ff;
+    font-size: 10px;
+}
+
+.bb-coll-hold-meta {
+    color: #5a5a6a;
+    font-size: 9px;
+    margin-top: 1px;
+}
+
+.bb-coll-hold-vals {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: #a0a0b0;
+    margin-top: 3px;
+}
+
+.bb-coll-hold-vals .up {
+    color: #4caf50;
+    font-weight: 600;
+}
+
+.bb-coll-hold-vals .down {
+    color: #c94040;
+    font-weight: 600;
+}
+
+/* Concentration bars */
+.bb-coll-conc {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bb-coll-conc-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 40px;
+    gap: 8px;
+    align-items: center;
+    font-size: 10px;
+}
+
+.bb-coll-conc-label {
+    color: #5a5a6a;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.bb-coll-conc-bar {
+    height: 5px;
+    background: #1a1a2e;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.bb-coll-conc-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c9a84c, #00e5ff);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.bb-coll-conc-pct {
+    color: #a0a0b0;
+    text-align: right;
+    font-size: 9px;
+}
+
+/* Trade history */
+.bb-coll-trade-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 70px 30px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.bb-coll-trade-side {
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+.bb-coll-trade-side.buy {
+    color: #4caf50;
+}
+
+.bb-coll-trade-side.sell {
+    color: #c94040;
+}
+
+.bb-coll-trade-title {
+    color: #a0a0b0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-coll-trade-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-coll-trade-week {
+    color: #5a5a6a;
+    text-align: right;
+}

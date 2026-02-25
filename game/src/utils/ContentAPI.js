@@ -218,6 +218,8 @@ const ContentAPI = {
 };
 
 // Register globally for MCP/console access
-window.ContentAPI = ContentAPI;
+if (import.meta.env.DEV) {
+    window.ContentAPI = ContentAPI;
+}
 
 export { ContentAPI };

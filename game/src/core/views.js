@@ -6,6 +6,9 @@
  */
 
 export const VIEW = {
+    SPLASH: 'SPLASH',               // Animated sprite boot splash
+    NARRATIVE: 'NARRATIVE',         // Story text intro sequence
+    ARTNET_HUB: 'ARTNET_HUB',     // Artnet Marketplace as main game hub
     BOOT: 'BOOT',                   // The ArtnetLogin boot/login screen
     PHASER: 'PHASER',               // The raw game canvas (overworld, haggle, etc.)
     TERMINAL: 'TERMINAL',           // DOM terminal only (no React overlays, no canvas)

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { useMarketStore } from '../stores/marketStore.js';
-import { GameState } from '../managers/GameState.js';
+import { useMarketStore } from '../../stores/marketStore.js';
+import { GameState } from '../../managers/GameState.js';
 import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 // ── Inline Local Error Boundary for Graps ──

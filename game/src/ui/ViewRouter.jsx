@@ -8,24 +8,38 @@
  * Extracted from App.jsx to keep routing logic separate from app bootstrap.
  */
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { VIEW } from '../core/views.js';
 
 // ════════════════════════════════════════════════════════════
 // Lazy View Imports
 // ════════════════════════════════════════════════════════════
 
-const ArtnetLogin = lazy(() => import('./ArtnetLogin.jsx'));
-const CharacterCreator = lazy(() => import('./CharacterCreator.jsx'));
-const PlayerDashboard = lazy(() => import('./PlayerDashboard.jsx'));
-const ScenePlayer = lazy(() => import('./ScenePlayer.jsx'));
-const DialogueBox = lazy(() => import('./DialogueBox.jsx'));
+const ArtnetLogin = lazy(() => import('./boot/ArtnetLogin.jsx'));
+const BootSplash = lazy(() => import('./boot/BootSplash.jsx'));
+const NarrativeIntro = lazy(() => import('./boot/NarrativeIntro.jsx'));
+const CharacterCreator = lazy(() => import('./boot/CharacterCreator.jsx'));
+const PlayerDashboard = lazy(() => import('./player/PlayerDashboard.jsx'));
+const ScenePlayer = lazy(() => import('./game/ScenePlayer.jsx'));
+const DialogueBox = lazy(() => import('./game/DialogueBox.jsx'));
+const ArtnetMarketplace = lazy(() => import('./market/ArtnetMarketplace.jsx'));
 
 // ════════════════════════════════════════════════════════════
-// Loading Fallback
+// Deferred Loading Fallback
+// Only shows after 300ms and ONLY if PhaserLoadingScreen isn't
+// already visible — prevents multiple loading screens stacking.
 // ════════════════════════════════════════════════════════════
 
 function ViewLoadingFallback() {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!visible) return null;
+
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 100,
@@ -173,6 +187,24 @@ export default function ViewRouter({
             {/* ── Loading screen ONLY during initial Phaser boot ── */}
             {activeView === VIEW.PHASER && !phaserReady && (
                 <PhaserLoadingScreen />
+            )}
+
+            {/* ── Boot Splash (animated sprite) ── */}
+            {activeView === VIEW.SPLASH && (
+                <BootSplash onContinue={() => setActiveView(VIEW.NARRATIVE)} />
+            )}
+
+            {/* ── Narrative Intro (typewriter text) ── */}
+            {activeView === VIEW.NARRATIVE && (
+                <NarrativeIntro onContinue={() => setActiveView(VIEW.ARTNET_HUB)} />
+            )}
+
+            {/* ── Artnet Hub (main game interface) ── */}
+            {activeView === VIEW.ARTNET_HUB && (
+                <ArtnetMarketplace
+                    onClose={() => { }}
+                    onExplore={() => setActiveView(VIEW.PHASER)}
+                />
             )}
 
             {/* ── Boot / Login Screen (Artnet Login) ── */}

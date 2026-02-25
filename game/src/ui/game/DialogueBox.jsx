@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useUIStore } from '../stores/uiStore.js';
+import { useUIStore } from '../../stores/uiStore.js';
 
 /**
  * DialogueBox — React overlay for MacDialogueScene.

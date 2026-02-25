@@ -8,8 +8,8 @@
  * Extracted from App.jsx to keep routing logic separate from app bootstrap.
  */
 
-import React, { Suspense, lazy } from 'react';
-import { OverlayErrorBoundary } from './OverlayErrorBoundary.jsx';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { OverlayErrorBoundary } from './shared/OverlayErrorBoundary.jsx';
 import { OVERLAY } from '../core/views.js';
 import { WebAudioService } from '../managers/WebAudioService.js';
 
@@ -17,30 +17,41 @@ import { WebAudioService } from '../managers/WebAudioService.js';
 // Lazy Overlay Imports (code-split chunks)
 // ════════════════════════════════════════════════════════════
 
-const AdminDashboardModule = lazy(() => import('./AdminDashboard.jsx'));
+const AdminDashboardModule = lazy(() => import('./admin/AdminDashboard.jsx'));
 // AdminFAB is also exported from AdminDashboard — we need a wrapper for lazy named exports
-const LazyAdminFAB = lazy(() => import('./AdminDashboard.jsx').then(m => ({ default: m.AdminFAB })));
-const SettingsOverlay = lazy(() => import('./SettingsOverlay.jsx'));
-const InventoryDashboard = lazy(() => import('./InventoryDashboard.jsx'));
+const LazyAdminFAB = lazy(() => import('./admin/AdminDashboard.jsx').then(m => ({ default: m.AdminFAB })));
+const SettingsOverlay = lazy(() => import('./admin/SettingsOverlay.jsx'));
+const InventoryDashboard = lazy(() => import('./player/InventoryDashboard.jsx'));
 const ContentStudio = null; // DEPRECATED: superseded by MasterCMS - kept as null to avoid import breaks
 const MasterCMS = lazy(() => import('./MasterCMS.jsx'));
-const MarketDashboard = lazy(() => import('./MarketDashboard.jsx'));
-const ArtworkDashboard = lazy(() => import('./ArtworkDashboard.jsx'));
-const BloombergTerminal = lazy(() => import('./BloombergTerminal.jsx'));
-const SalesGrid = lazy(() => import('./SalesGrid.jsx'));
-const DiagnosticsOverlay = lazy(() => import('./DiagnosticsOverlay.jsx'));
+const MarketDashboard = lazy(() => import('./market/MarketDashboard.jsx'));
+const ArtworkDashboard = lazy(() => import('./player/ArtworkDashboard.jsx'));
+const BloombergTerminal = lazy(() => import('./market/BloombergTerminal.jsx'));
+const SalesGrid = lazy(() => import('./player/SalesGrid.jsx'));
+const DiagnosticsOverlay = lazy(() => import('./admin/DiagnosticsOverlay.jsx'));
 const EmailDesignGuide = lazy(() => import('./email/EmailDesignGuide.jsx'));
 const InboxShell = lazy(() => import('./email/inbox/InboxShell.jsx'));
-const ArtnetLogin = lazy(() => import('./ArtnetLogin.jsx'));
-const ArtnetMarketplace = lazy(() => import('./ArtnetMarketplace.jsx'));
-const ArtnetUI = lazy(() => import('./ArtnetUI.jsx'));
+const ArtnetLogin = lazy(() => import('./boot/ArtnetLogin.jsx'));
+const ArtnetMarketplace = lazy(() => import('./market/ArtnetMarketplace.jsx'));
+const ArtnetUI = lazy(() => import('./market/ArtnetUI.jsx'));
 const HaggleOverlay = lazy(() => import('./email/haggle/HaggleOverlay.jsx'));
 
 // ════════════════════════════════════════════════════════════
-// Loading Fallback
+// Deferred Loading Fallback
+// Only shows after 400ms — prevents flash during fast chunk loads
+// and avoids stacking with PhaserLoadingScreen or ViewLoadingFallback
 // ════════════════════════════════════════════════════════════
 
 function OverlayLoadingFallback() {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 400);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!visible) return null;
+
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9998,
@@ -48,6 +59,7 @@ function OverlayLoadingFallback() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: "'SF Mono', Courier, monospace",
             color: '#c9a84c', fontSize: 13, letterSpacing: '0.15em',
+            animation: 'fadeIn 0.2s ease-out',
         }}>
             LOADING ████████
         </div>

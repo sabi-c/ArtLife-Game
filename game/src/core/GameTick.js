@@ -43,7 +43,6 @@ export function executeWeekTick() {
                     useConsequenceStore.getState().removeConsequence(c.id);
                     // TODO: trigger actual consequence logic
                 });
-                console.log(`[GameTick] Fired ${consequences.length} consequences.`);
             }
         } catch (e) {
             console.error('[GameTick] Consequence execution failed:', e);

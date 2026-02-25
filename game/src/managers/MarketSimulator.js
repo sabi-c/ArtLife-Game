@@ -45,6 +45,30 @@ import { CONTACTS } from '../data/contacts.js';
 import { ARTWORKS } from '../data/artworks.js';
 import { ARTWORK_MAP } from '../data/artworks.js';
 import { MarketManager } from './MarketManager.js';
+import { fmtMoney } from '../utils/formatMoney.js';
+
+// ════════════════════════════════════════════
+// NPC Income Table — maps incomeSource → monthly income/expense ranges
+// Used by _ensureState() to bootstrap NPC economics
+// ════════════════════════════════════════════
+const INCOME_TABLE = {
+    'private_sales_commission': { incomeMin: 15000, incomeMax: 40000, expenseRatio: 0.55 },
+    'advisory_fees': { incomeMin: 8000, incomeMax: 20000, expenseRatio: 0.45 },
+    'gallery_sales': { incomeMin: 5000, incomeMax: 25000, expenseRatio: 0.70 },
+    'salary_commission': { incomeMin: 6000, incomeMax: 15000, expenseRatio: 0.50 },
+    'art_sales': { incomeMin: 2000, incomeMax: 12000, expenseRatio: 0.40 },
+    'tech_dividends': { incomeMin: 25000, incomeMax: 60000, expenseRatio: 0.30 },
+    'family_wealth': { incomeMin: 30000, incomeMax: 100000, expenseRatio: 0.25 },
+    'consulting_fees': { incomeMin: 10000, incomeMax: 30000, expenseRatio: 0.50 },
+    'gallery_empire': { incomeMin: 40000, incomeMax: 80000, expenseRatio: 0.60 },
+    'trading_profits': { incomeMin: 8000, incomeMax: 35000, expenseRatio: 0.35 },
+    'flipping': { incomeMin: 5000, incomeMax: 20000, expenseRatio: 0.30 },
+    'advisory_fees_kickbacks': { incomeMin: 12000, incomeMax: 40000, expenseRatio: 0.40 },
+    'endowment': { incomeMin: 15000, incomeMax: 50000, expenseRatio: 0.60 },
+    'auction_consignment': { incomeMin: 10000, incomeMax: 30000, expenseRatio: 0.45 },
+    'foundation_grants': { incomeMin: 5000, incomeMax: 15000, expenseRatio: 0.65 },
+};
+const DEFAULT_INCOME = { incomeMin: 5000, incomeMax: 15000, expenseRatio: 0.50 };
 import { MarketEventBus, EVENT_IMPACTS } from './MarketEventBus.js';
 import { GameState } from './GameState.js';
 import { ActivityLogger } from './ActivityLogger.js';
@@ -212,6 +236,27 @@ export class MarketSimulator {
                 totalSpent: stats.totalSpent ?? 0,
                 totalEarned: stats.totalEarned ?? 0,
                 strategy: stats.strategy ?? 'holder',
+
+                // ── Monthly Economics (P&L) ──
+                economics: stats.economics ?? (() => {
+                    const src = c.wealth?.incomeSource || 'unknown';
+                    const table = INCOME_TABLE[src] || DEFAULT_INCOME;
+                    const monthlyIncome = Math.round(
+                        table.incomeMin + Math.random() * (table.incomeMax - table.incomeMin)
+                    );
+                    const monthlyExpenses = Math.round(monthlyIncome * table.expenseRatio);
+                    return {
+                        incomeSource: src,
+                        monthlyIncome,
+                        monthlyExpenses,
+                        monthlyNetIncome: monthlyIncome - monthlyExpenses,
+                        budgetRemaining: c.wealth?.annualBudget ?? 200000,
+                        ytdRevenue: 0,
+                        ytdExpenses: 0,
+                        ytdProfit: 0,
+                        lastPayWeek: 0,
+                    };
+                })(),
             };
         }
     }
@@ -258,6 +303,24 @@ export class MarketSimulator {
         // Phase 1: Decision Making
         const sellOrders = [];
         const buyOrders = [];
+
+        // ── Monthly P&L: every 4 weeks, apply income/expenses ──
+        for (const npc of npcs) {
+            const econ = npc.economics;
+            if (econ && week > 0 && week % 4 === 0 && econ.lastPayWeek < week) {
+                econ.lastPayWeek = week;
+                npc.cash += econ.monthlyNetIncome;
+                econ.ytdRevenue += econ.monthlyIncome;
+                econ.ytdExpenses += econ.monthlyExpenses;
+                econ.ytdProfit = econ.ytdRevenue - econ.ytdExpenses;
+                // Reduce financial stress if net income is positive
+                if (econ.monthlyNetIncome > 0) {
+                    npc.financialStress = Math.max(0, npc.financialStress - 2);
+                } else {
+                    npc.financialStress = Math.min(100, npc.financialStress + 3);
+                }
+            }
+        }
 
         for (const npc of npcs) {
             const sells = MarketSimulator._decideSells(npc, week, marketCycle);
@@ -308,7 +371,29 @@ export class MarketSimulator {
 
         // ── Simulation Log Entry (structured data for debugging) ──
         let compositeIndex = 1000;
-        try { compositeIndex = MarketManager.getCompositeIndex(); } catch { /* ok */ }
+        let totalMarketCap = 0;
+        let sectorIndices = {};
+        let artistTickers = [];
+        try {
+            compositeIndex = MarketManager.getCompositeIndex();
+            sectorIndices = MarketManager.getSectorIndices();
+            const snap = MarketManager.getTickSnapshot();
+            totalMarketCap = snap.artists.reduce((s, a) => s + (a.avgPrice * a.worksCount), 0);
+            artistTickers = snap.artists.map(a => ({
+                id: a.id, name: a.name, heat: a.heat,
+                index: a.index, delta: a.delta, avgPrice: a.avgPrice,
+                onMarket: a.onMarket, worksCount: a.worksCount,
+            }));
+        } catch { /* ok */ }
+
+        // Aggregate NPC summary
+        const npcSummary = {
+            totalCash: npcs.reduce((s, n) => s + (n.cash || 0), 0),
+            avgStress: Math.round(npcs.reduce((s, n) => s + (n.financialStress || 0), 0) / npcs.length),
+            activeTraders: npcs.filter(n => (n.totalBought + n.totalSold) > 0).length,
+            totalBudgetRemaining: npcs.reduce((s, n) => s + (n.economics?.budgetRemaining || 0), 0),
+        };
+
         MarketSimulator.simulationLog.push({
             week,
             cycle: marketCycle,
@@ -319,6 +404,10 @@ export class MarketSimulator {
             volume: weekVolume,
             avgPrice: MarketSimulator.weeklyReport.avgPrice,
             compositeIndex,
+            totalMarketCap,
+            sectorIndices,
+            artistTickers,
+            npcSummary,
             topMover: trades.length > 0 ? trades[0].artwork?.title || '' : '',
         });
         // Cap log at 500 entries
@@ -416,6 +505,15 @@ export class MarketSimulator {
         if (npc.owned.length >= npc.maxCapacity) return []; // Collection full
 
         let buyProbability = 0.35; // Base 35% chance to be buying (was 15%)
+
+        // ── Budget gating: if budget nearly exhausted, reduce buying sharply ──
+        const econ = npc.economics;
+        if (econ) {
+            const budgetRatio = econ.budgetRemaining / (npc.annualBudget || 200000);
+            if (budgetRatio < 0.1) return []; // Budget depleted — stop buying for the year
+            if (budgetRatio < 0.3) buyProbability -= 0.15;
+            if (econ.monthlyNetIncome <= 0) buyProbability -= 0.10; // Losing money monthly
+        }
 
         // Bull market → more buying
         if (marketCycle === 'bull') buyProbability += 0.20;
@@ -656,6 +754,15 @@ export class MarketSimulator {
         seller.totalSold++;
         seller.totalEarned += trade.price;
 
+        // Update economics P&L tracking
+        if (buyer.economics) {
+            buyer.economics.budgetRemaining = Math.max(0, buyer.economics.budgetRemaining - trade.price);
+        }
+        if (seller.economics) {
+            seller.economics.ytdRevenue += trade.price;
+            seller.economics.ytdProfit = seller.economics.ytdRevenue - seller.economics.ytdExpenses;
+        }
+
         // Log to ActivityLogger
         ActivityLogger.logMarket('npc_trade', {
             buyer: buyer.name, buyerId: trade.buyerId,
@@ -688,7 +795,7 @@ export class MarketSimulator {
             const buyerName = buyer.name || buyer.id;
             const sellerName = seller.name || seller.id;
             const title = trade.artwork?.title || trade.artworkId;
-            const priceStr = `$${trade.price.toLocaleString()}`;
+            const priceStr = fmtMoney(trade.price);
             GameState.addNews(`[Market] ${buyerName} acquired "${title}" from ${sellerName} for ${priceStr}`);
         } catch { /* non-critical */ }
 
@@ -1363,7 +1470,6 @@ export class MarketSimulator {
             MarketSimulator.tradeLog = MarketSimulator.tradeLog.slice(-MAX_LOG_SIZE);
         }
 
-        console.log(`[MarketSimulator] Loaded ${formatted.length} historical trades (${MarketSimulator.tradeLog.length} total in log)`);
     }
 
     /** Reset all simulation state */

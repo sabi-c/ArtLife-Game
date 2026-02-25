@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useInventoryStore } from '../stores/inventoryStore.js';
+import { useInventoryStore } from '../../stores/inventoryStore.js';
 import './PlayerDashboard.css'; // Reusing for consistent neo-noir styles
 
 export default function InventoryDashboard({ onClose }) {

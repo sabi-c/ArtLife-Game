@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { GameState } from '../managers/GameState.js';
+import { GameState } from '../../managers/GameState.js';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Component

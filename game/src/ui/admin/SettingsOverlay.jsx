@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SettingsManager } from '../managers/SettingsManager.js';
-import { WebAudioService } from '../managers/WebAudioService.js';
+import { SettingsManager } from '../../managers/SettingsManager.js';
+import { WebAudioService } from '../../managers/WebAudioService.js';
 
 /**
  * SettingsOverlay — Auto-generated from SettingsManager.SCHEMA

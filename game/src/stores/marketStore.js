@@ -220,7 +220,6 @@ export const useMarketStore = create(
                 }
 
                 state.historicalDataLoaded = true;
-                console.log(`[marketStore] Loaded historical data: ${Object.keys(state.priceHistory).length} artists, ${state.compositeHistory.length} composite points, ${state.eventLog.length} events`);
             }),
 
             /**

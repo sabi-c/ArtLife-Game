@@ -15,7 +15,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 
 import { createPhaserGame } from './phaserInit.js';
-import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
+import { ErrorBoundary } from './ui/shared/ErrorBoundary.jsx';
 import { GameEventBus, GameEvents } from './managers/GameEventBus.js';
 import { VIEW, OVERLAY } from './core/views.js';
 import { GameState } from './managers/GameState.js';
@@ -29,8 +29,8 @@ import ViewRouter from './ui/ViewRouter.jsx';
 import OverlayRouter from './ui/OverlayRouter.jsx';
 
 // HUD components (small, always-mounted — not worth lazy-loading)
-import MobileJoypad from './ui/MobileJoypad.jsx';
-import CalendarHUD from './ui/CalendarHUD.jsx';
+import MobileJoypad from './ui/game/MobileJoypad.jsx';
+import CalendarHUD from './ui/game/CalendarHUD.jsx';
 
 // Make navigate() available globally (for Phaser scenes, terminal, etc.)
 window.navigate = navigate;
@@ -41,7 +41,7 @@ export default function App() {
     const [activeView, setActiveView] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('skipBoot')) return VIEW.PHASER;
-        return VIEW.PHASER;
+        return VIEW.SPLASH;
     });
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
@@ -184,7 +184,10 @@ export default function App() {
                                 phaserInstance.canvas.style.pointerEvents = 'none';
                             }
                             setActiveView(VIEW.TERMINAL);
-                            setActiveOverlay(OVERLAY.BLOOMBERG);
+                            // Defer overlay activation so PhaserLoadingScreen dismisses
+                            // before the overlay Suspense fallback can fire — prevents
+                            // stacking multiple loading screens simultaneously.
+                            setTimeout(() => setActiveOverlay(OVERLAY.BLOOMBERG), 500);
                         }
                     }
                 }
