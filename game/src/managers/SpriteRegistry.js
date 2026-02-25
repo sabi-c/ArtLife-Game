@@ -88,6 +88,11 @@ export class SpriteRegistry {
                 frameHeight: FRAME_HEIGHT,
             });
         }
+
+        // Gracefully handle missing sprite files — remove from queue instead of crashing
+        scene.load.on('loaderror', (fileObj) => {
+            console.warn(`[SpriteRegistry] Skipping missing asset: ${fileObj.key} (${fileObj.url})`);
+        });
     }
 
     /**
