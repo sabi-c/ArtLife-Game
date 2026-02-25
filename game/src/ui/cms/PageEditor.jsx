@@ -733,6 +733,15 @@ function PropertyPanel({ page, allPages, onUpdate }) {
                 </div>
             </div>
 
+            {/* ── Flow Breadcrumb ── */}
+            <FlowBreadcrumb page={page} allPages={allPages} />
+
+            {/* ── Data Sources ── */}
+            <DataSources page={page} />
+
+            {/* ── CMS Cross-links ── */}
+            <CMSLinks page={page} />
+
             {/* ── Description ── */}
             <div style={section}>
                 <span style={label}>Description</span>
@@ -869,3 +878,182 @@ function PropertyPanel({ page, allPages, onUpdate }) {
         </div>
     );
 }
+
+// ══════════════════════════════════════════════════════════════
+// Flow Breadcrumb — traces path from boot to selected page
+// ══════════════════════════════════════════════════════════════
+
+function FlowBreadcrumb({ page, allPages }) {
+    const path = useMemo(() => {
+        // BFS from boot_sequence to find shortest path to selected page
+        const visited = new Set();
+        const queue = [{ id: 'boot_sequence', path: ['boot_sequence'] }];
+        visited.add('boot_sequence');
+
+        while (queue.length > 0) {
+            const { id, path: currentPath } = queue.shift();
+            if (id === page.id) return currentPath;
+
+            const node = allPages.find(p => p.id === id);
+            if (!node) continue;
+
+            for (const t of node.transitions) {
+                if (t.to && !visited.has(t.to)) {
+                    visited.add(t.to);
+                    queue.push({ id: t.to, path: [...currentPath, t.to] });
+                }
+            }
+        }
+        // If no path from boot, just show the page itself
+        return [page.id];
+    }, [page.id, allPages]);
+
+    if (path.length <= 1) return null;
+
+    return (
+        <div style={{ padding: '8px 20px', borderBottom: '1px solid #141420', background: '#0a0a12' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                {path.map((id, i) => {
+                    const p = allPages.find(pg => pg.id === id);
+                    if (!p) return null;
+                    const isCurrent = id === page.id;
+                    return (
+                        <React.Fragment key={id}>
+                            {i > 0 && <span style={{ color: '#222', fontSize: 10 }}>→</span>}
+                            <span style={{
+                                fontSize: 9, padding: '2px 6px', borderRadius: 2,
+                                background: isCurrent ? '#c9a84c22' : '#111',
+                                color: isCurrent ? '#c9a84c' : '#555',
+                                border: `1px solid ${isCurrent ? '#c9a84c33' : '#1a1a25'}`,
+                                fontWeight: isCurrent ? 700 : 400,
+                            }}>
+                                {TYPE_ICONS[p.type]} {p.name}
+                            </span>
+                        </React.Fragment>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// Data Sources — which data files feed this page
+// ══════════════════════════════════════════════════════════════
+
+const DATA_SOURCES_MAP = {
+    boot_sequence: [{ file: 'data/scene-keys.js', label: 'Scene Keys', size: '0.6KB' }],
+    artnet_login: [{ file: 'core/views.js', label: 'View Constants', size: '~1KB' }],
+    character_creator: [{ file: 'data/characters.js', label: 'Character Classes', size: '10KB', detail: '4 classes, 5 stats each' }],
+    overworld: [{ file: 'content/maps/larus.json', label: 'Larus Map', size: '~50KB', detail: '9 warps, 14 signs, 9 NPCs' }],
+    terminal: [{ file: 'data/ticker_phrases.js', label: 'Ticker Phrases', size: '4.5KB', detail: '100+ phrases' },
+    { file: 'data/scenes.js', label: 'Narrative Scenes', size: '18KB' }],
+    city_hub: [{ file: 'data/rooms.js', label: 'Venue Data', size: '96KB', detail: 'All venues and rooms' },
+    { file: 'data/cities.js', label: 'City Config', size: '2.5KB' }],
+    venue_interior: [{ file: 'data/rooms.js', label: 'Venue Rooms', size: '96KB', detail: 'Items, NPCs, exits per room' },
+    { file: 'data/contacts.js', label: 'NPC Contacts', size: '52KB' }],
+    haggle_game: [{ file: 'data/haggle_config.js', label: 'Haggle Config', size: '60KB', detail: 'Round rules, price ranges' },
+    { file: 'data/artworks.js', label: 'Artwork Database', size: '264KB', detail: '561 real artworks' }],
+    dialogue: [{ file: 'data/dialogue_trees.js', label: 'Dialogue Trees', size: '123KB', detail: '5-tone system, branching nodes' },
+    { file: 'data/contacts.js', label: 'NPC Contacts', size: '52KB' }],
+    mac_dialogue: [{ file: 'data/dialogue_trees.js', label: 'Dialogue Trees', size: '123KB' },
+    { file: 'data/backgrounds.js', label: 'Backgrounds', size: '2.2KB' }],
+    scene_engine: [{ file: 'data/scenes.js', label: 'Scene Scripts', size: '18KB', detail: 'Branching VN scenes with choices' }],
+    fast_travel: [{ file: 'data/cities.js', label: 'City Config', size: '2.5KB' },
+    { file: 'data/world_locations.js', label: 'Locations', size: '6.5KB' }],
+    bloomberg: [{ file: 'data/artworks.js', label: 'Market Data', size: '264KB' },
+    { file: 'data/artists.js', label: 'Artist Prices', size: '5KB' }],
+    inventory: [{ file: 'data/artworks.js', label: 'Artwork Database', size: '264KB' }],
+    dashboard: [{ file: 'data/characters.js', label: 'Stats Config', size: '10KB' }],
+    cms: [{ file: 'data/DataTemplates.js', label: 'CMS Templates', size: '9.7KB' },
+    { file: 'data/storylines.js', label: 'Storylines', size: '18KB' }],
+    gmail: [{ file: 'data/calendar_events.js', label: 'Calendar Events', size: '12.6KB' }],
+};
+
+function DataSources({ page }) {
+    const sources = DATA_SOURCES_MAP[page.id];
+    if (!sources || sources.length === 0) return null;
+
+    const sectionStyle = { padding: '10px 20px', borderBottom: '1px solid #141420' };
+    const labelStyle = { color: '#555', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6, display: 'block' };
+
+    return (
+        <div style={sectionStyle}>
+            <span style={labelStyle}>Data Sources ({sources.length})</span>
+            {sources.map((s, i) => (
+                <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px',
+                    marginBottom: 2, borderRadius: 3, background: '#0a0a14',
+                    border: '1px solid #131325',
+                }}>
+                    <span style={{ fontSize: 12 }}>📂</span>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: '#6baed6' }}>{s.file}</div>
+                        <div style={{ fontSize: 9, color: '#444' }}>
+                            {s.label}
+                            {s.size && <span style={{ color: '#333', marginLeft: 6 }}>({s.size})</span>}
+                        </div>
+                        {s.detail && <div style={{ fontSize: 8, color: '#50c87866', marginTop: 1 }}>{s.detail}</div>}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// CMS Cross-links — jump to related editor tabs
+// ══════════════════════════════════════════════════════════════
+
+const CMS_LINKS_MAP = {
+    overworld: [{ tab: 'venues', label: 'Venues / Map' }],
+    city_hub: [{ tab: 'venues', label: 'Venues / Map' }, { tab: 'npcs', label: 'NPCs & Roles' }],
+    venue_interior: [{ tab: 'venues', label: 'Venues / Map' }, { tab: 'artworks', label: 'Artworks' }, { tab: 'npcs', label: 'NPCs' }],
+    haggle_game: [{ tab: 'haggle', label: 'Haggle Battles' }, { tab: 'artworks', label: 'Artworks' }, { tab: 'marketsim', label: 'Market Sim' }],
+    dialogue: [{ tab: 'events', label: 'Events / Dialogue' }, { tab: 'npcs', label: 'NPCs' }],
+    mac_dialogue: [{ tab: 'events', label: 'Events / Dialogue' }],
+    scene_engine: [{ tab: 'storylines', label: 'Storylines' }, { tab: 'events', label: 'Events' }],
+    terminal: [{ tab: 'board', label: 'Project Board' }],
+    bloomberg: [{ tab: 'marketsim', label: 'Market Sim' }, { tab: 'artworks', label: 'Artworks' }],
+    character_creator: [{ tab: 'npcs', label: 'NPCs & Roles' }],
+    cms: [{ tab: 'board', label: 'Project Board' }, { tab: 'engines', label: 'Engines' }],
+    inventory: [{ tab: 'artworks', label: 'Artworks / Market' }],
+    dashboard: [{ tab: 'marketsim', label: 'Market Sim' }],
+    gmail: [{ tab: 'events', label: 'Events / Dialogue' }],
+    fast_travel: [{ tab: 'venues', label: 'Venues / Map' }],
+};
+
+function CMSLinks({ page }) {
+    const links = CMS_LINKS_MAP[page.id];
+    if (!links || links.length === 0) return null;
+
+    const sectionStyle = { padding: '10px 20px', borderBottom: '1px solid #141420' };
+    const labelStyle = { color: '#555', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6, display: 'block' };
+
+    // Dispatch navigation event to MasterCMS
+    const jumpToTab = (tabId) => {
+        window.__cmsNavigateTo = { tab: tabId, ts: Date.now() };
+    };
+
+    return (
+        <div style={sectionStyle}>
+            <span style={labelStyle}>Related Editors</span>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {links.map((link, i) => (
+                    <button key={i} onClick={() => jumpToTab(link.tab)}
+                        style={{
+                            background: '#0d0d18', border: '1px solid #1a1a28', color: '#c9a84c',
+                            fontSize: 9, padding: '4px 10px', cursor: 'pointer',
+                            fontFamily: mono, borderRadius: 3, transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={e => { e.target.style.background = '#161630'; e.target.style.borderColor = '#c9a84c33'; }}
+                        onMouseLeave={e => { e.target.style.background = '#0d0d18'; e.target.style.borderColor = '#1a1a28'; }}
+                    >
+                        → {link.label}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
