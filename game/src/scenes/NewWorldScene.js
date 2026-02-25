@@ -174,7 +174,11 @@ export default class NewWorldScene extends Phaser.Scene {
             }
         }
 
-        console.log(`[NewWorldScene] Map: ${this.map.widthInPixels}x${this.map.heightInPixels}, ${layersCreated} layers`);
+        // Set physics world bounds to match the FULL map
+        // (default is canvas size which restricts movement to visible area)
+        this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+
+        console.log(`[NewWorldScene] Map: ${this.map.widthInPixels}x${this.map.heightInPixels}, ${layersCreated} layers, physics bounds set`);
     }
 
     // ════════════════════════════════════════════════════

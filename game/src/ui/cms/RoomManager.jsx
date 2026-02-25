@@ -71,7 +71,11 @@ async function fetchMapJSON(tiledMap) {
     if (!tiledMap) return null;
     if (mapCache[tiledMap]) return mapCache[tiledMap];
     try {
-        const resp = await fetch(`content/maps/${tiledMap}.json`);
+        // Overworld maps live in a different path
+        const path = tiledMap === 'larus'
+            ? 'assets/luminus/larus.json'
+            : `content/maps/${tiledMap}.json`;
+        const resp = await fetch(path);
         if (!resp.ok) return null;
         const json = await resp.json();
         mapCache[tiledMap] = json;
@@ -530,21 +534,21 @@ function RoomInspector({ venue, mapData }) {
                         : mapJSON.properties?.bgImage;
                     return !!bp;
                 })() && (
-                    <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a1a2e' }}>
-                        <div style={{ fontSize: 11, color: '#c9a84c', marginBottom: 8, fontFamily: mono }}>
-                            ROOM PREVIEW
-                            <span style={{ color: '#555', fontWeight: 'normal', marginLeft: 8, fontSize: 9 }}>
-                                {mapJSON.width}&times;{mapJSON.height} tiles &bull; tileset render
-                            </span>
+                        <div style={{ padding: '12px 14px', borderBottom: '1px solid #1a1a2e' }}>
+                            <div style={{ fontSize: 11, color: '#c9a84c', marginBottom: 8, fontFamily: mono }}>
+                                ROOM PREVIEW
+                                <span style={{ color: '#555', fontWeight: 'normal', marginLeft: 8, fontSize: 9 }}>
+                                    {mapJSON.width}&times;{mapJSON.height} tiles &bull; tileset render
+                                </span>
+                            </div>
+                            <div style={{
+                                background: '#0a0a14', border: '1px solid #1a1a2e',
+                                borderRadius: 2, padding: 4,
+                            }}>
+                                <TilesetPreview mapJSON={mapJSON} />
+                            </div>
                         </div>
-                        <div style={{
-                            background: '#0a0a14', border: '1px solid #1a1a2e',
-                            borderRadius: 2, padding: 4,
-                        }}>
-                            <TilesetPreview mapJSON={mapJSON} />
-                        </div>
-                    </div>
-                )}
+                    )}
 
                 {/* ASCII Mini-map */}
                 {ascii && (
@@ -1254,6 +1258,8 @@ export default function RoomManager({ onClose }) {
     // Fetch all Tiled map JSONs on mount, preferring cmsStore snapshots
     useEffect(() => {
         const tiledMaps = new Set();
+        // Always include the overworld map
+        tiledMaps.add('larus');
         for (const venue of VENUES) {
             for (const room of venue.rooms) {
                 if (room.tiledMap) tiledMaps.add(room.tiledMap);
@@ -1355,6 +1361,54 @@ export default function RoomManager({ onClose }) {
                         borderRadius: 4,
                     }}
                 >+ CREATE ROOM</button>
+
+                {/* Overworld section */}
+                <div style={{
+                    margin: '8px 0 0', padding: '10px',
+                    background: '#0a140a', border: '1px solid #2d6b30',
+                    borderRadius: 4,
+                }}>
+                    <div style={{ fontSize: 9, color: '#4ade80', fontFamily: mono, marginBottom: 6, letterSpacing: 1 }}>
+                        🌍 OVERWORLD
+                    </div>
+                    <div style={{ fontSize: 10, color: '#888', fontFamily: mono, marginBottom: 4 }}>
+                        Map: larus.json
+                        {mapData['larus'] && (
+                            <span style={{ color: '#4ade80' }}>
+                                {' '}({mapData['larus'].width}×{mapData['larus'].height} tiles)
+                            </span>
+                        )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                            onClick={() => {
+                                if (onClose) onClose();
+                                setTimeout(() => {
+                                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                                }, 100);
+                            }}
+                            style={{
+                                flex: 1, padding: '6px 8px',
+                                background: '#1a3a1a', border: '1px solid #3a8a5c',
+                                color: '#4ade80', cursor: 'pointer',
+                                fontFamily: mono, fontSize: 9, fontWeight: 'bold',
+                                borderRadius: 2,
+                            }}
+                        >▶ PLAY</button>
+                        {mapData['larus'] && (
+                            <button
+                                onClick={() => setEditingMapId('larus')}
+                                style={{
+                                    flex: 1, padding: '6px 8px',
+                                    background: '#1a1a0a', border: '1px solid #c9a84c',
+                                    color: '#c9a84c', cursor: 'pointer',
+                                    fontFamily: mono, fontSize: 9,
+                                    borderRadius: 2,
+                                }}
+                            >✎ EDIT MAP</button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Center: Room Inspector */}
