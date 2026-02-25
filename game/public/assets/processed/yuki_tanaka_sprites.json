@@ -1,0 +1,71 @@
+{
+  "frameWidth": 160,
+  "frameHeight": 160,
+  "cols": 4,
+  "totalRows": 12,
+  "actions": {
+    "walk": {
+      "startFrame": 0,
+      "directions": {
+        "down": {
+          "startFrame": 0,
+          "endFrame": 3
+        },
+        "left": {
+          "startFrame": 4,
+          "endFrame": 7
+        },
+        "right": {
+          "startFrame": 8,
+          "endFrame": 11
+        },
+        "up": {
+          "startFrame": 12,
+          "endFrame": 15
+        }
+      }
+    },
+    "idle": {
+      "startFrame": 16,
+      "directions": {
+        "down": {
+          "startFrame": 16,
+          "endFrame": 19
+        },
+        "left": {
+          "startFrame": 20,
+          "endFrame": 23
+        },
+        "right": {
+          "startFrame": 24,
+          "endFrame": 27
+        },
+        "up": {
+          "startFrame": 28,
+          "endFrame": 31
+        }
+      }
+    },
+    "sad_walk": {
+      "startFrame": 32,
+      "directions": {
+        "down": {
+          "startFrame": 32,
+          "endFrame": 35
+        },
+        "left": {
+          "startFrame": 36,
+          "endFrame": 39
+        },
+        "right": {
+          "startFrame": 40,
+          "endFrame": 43
+        },
+        "up": {
+          "startFrame": 44,
+          "endFrame": 47
+        }
+      }
+    }
+  }
+}
