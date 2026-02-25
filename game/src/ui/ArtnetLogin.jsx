@@ -21,6 +21,8 @@ import { GameState } from '../managers/GameState.js';
 // ═════════════════════════════════════════════════════════════════════════════
 export default function ArtnetLogin({ onClose, onLoginSuccess }) {
     const [mode, setMode] = useState('login'); // 'login', 'signup', 'forgot'
+    const [phase, setPhase] = useState('loading'); // 'loading' → 'login'
+    const [progress, setProgress] = useState(0);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPw, setConfirmPw] = useState('');
@@ -62,6 +64,23 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
         return () => window.removeEventListener('keydown', h);
     }, [onClose]);
 
+    // ── Artnet loading phase ──
+    useEffect(() => {
+        if (phase !== 'loading') return;
+        const duration = 3000;
+        const interval = 50;
+        let elapsed = 0;
+        const timer = setInterval(() => {
+            elapsed += interval;
+            setProgress(Math.min(100, (elapsed / duration) * 100));
+            if (elapsed >= duration) {
+                clearInterval(timer);
+                setPhase('login');
+            }
+        }, interval);
+        return () => clearInterval(timer);
+    }, [phase]);
+
     const validate = () => {
         const errs = {};
         const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -97,6 +116,66 @@ export default function ArtnetLogin({ onClose, onLoginSuccess }) {
     };
 
     const font = '"ArtnetGrotesk", Helvetica, Arial, sans-serif';
+
+    // ── Loading screen (matches deployed Artnet screen) ──
+    if (phase === 'loading') {
+        return (
+            <div style={{
+                position: 'fixed', inset: 0, zIndex: 9000,
+                background: '#1a1a2e', color: '#eaeaea',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                fontFamily: font,
+            }}>
+                {/* artnet logo */}
+                <div style={{
+                    fontSize: 42, fontWeight: 300, letterSpacing: 2,
+                    color: '#eaeaea', marginBottom: 40,
+                }}>artnet</div>
+
+                {/* CSS dot spinner */}
+                <div style={{ marginBottom: 24 }}>
+                    <style>{`
+                        @keyframes artnet-spin {
+                            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+                            40% { transform: scale(1); opacity: 1; }
+                        }
+                        .artnet-dot {
+                            width: 10px; height: 10px;
+                            border-radius: 50%;
+                            background: #ff4b00;
+                            display: inline-block;
+                            margin: 0 4px;
+                            animation: artnet-spin 1.4s infinite ease-in-out both;
+                        }
+                        .artnet-dot:nth-child(1) { animation-delay: -0.32s; }
+                        .artnet-dot:nth-child(2) { animation-delay: -0.16s; }
+                        .artnet-dot:nth-child(3) { animation-delay: 0s; }
+                    `}</style>
+                    <div className="artnet-dot" />
+                    <div className="artnet-dot" />
+                    <div className="artnet-dot" />
+                </div>
+
+                {/* Status text */}
+                <div style={{ fontSize: 13, color: '#888', marginBottom: 16, letterSpacing: 0.5 }}>
+                    Preparing interface...
+                </div>
+
+                {/* Orange progress bar */}
+                <div style={{
+                    width: 200, height: 3, background: '#333', borderRadius: 2, overflow: 'hidden',
+                }}>
+                    <div style={{
+                        width: `${progress}%`, height: '100%',
+                        background: '#ff4b00',
+                        transition: 'width 50ms linear',
+                        borderRadius: 2,
+                    }} />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{
