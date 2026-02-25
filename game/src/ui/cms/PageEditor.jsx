@@ -683,6 +683,170 @@ function EmptyState({ stats }) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// Page Preview — Visual schematic mockup of what the player sees
+// ══════════════════════════════════════════════════════════════
+
+const PREVIEW_ELEMENTS = {
+    // Map page IDs to their visual element descriptions
+    boot_sequence: { layout: 'centered', elements: ['🎮 ART LIFE', 'Loading bar', 'Asset preloader'] },
+    artnet_login: { layout: 'form', elements: ['artnet logo', 'Email input', 'Password input', 'Sign In button', 'Save slots'] },
+    character_creator: { layout: 'gallery', elements: ['6 archetype cards', 'Stat preview', 'Description', 'Confirm button'] },
+    title_screen: { layout: 'centered', elements: ['ART LIFE title', 'Press START prompt', 'Animated background'] },
+    intro_briefing: { layout: 'cinematic', elements: ['Typewriter text', 'Art market briefing', 'Background fade'] },
+    overworld: { layout: 'game', elements: ['Pixel map (40×30)', 'Player sprite', 'NPCs (9)', 'Signs (14)', 'Doors', 'HUD'] },
+    dashboard: { layout: 'hud', elements: ['Net Worth', 'Cash', 'Portfolio', 'Ledger', 'Stat bars', 'Ticker'] },
+    terminal: { layout: 'terminal', elements: ['Console output', 'Ticker tape', 'Week counter', 'Command input', 'Menu options'] },
+    scene_engine: { layout: 'cinematic', elements: ['Portrait left', 'Portrait right', 'Narrative text', 'Choice buttons'] },
+    city_hub: { layout: 'game', elements: ['City background', 'Venue list', 'Fast travel icon', 'NPC encounters'] },
+    venue_interior: { layout: 'game', elements: ['Gallery tilemap', 'Artworks on walls', 'NPCs', 'Exit doors', 'Info signs'] },
+    fast_travel: { layout: 'centered', elements: ['City selection', 'Travel animation', 'Destination preview'] },
+    dialogue: { layout: 'dialogue', elements: ['Speaker name', 'Dialog text', 'Choice options (2-4)', 'Stat effects'] },
+    mac_dialogue: { layout: 'cinematic', elements: ['Left sprite (you)', 'Right sprite (NPC)', 'Dialog bubble', 'Choice panel'] },
+    haggle_game: { layout: 'battle', elements: ['Your offer', 'Their counter', 'Round indicator', 'Art preview', 'Accept/Reject'] },
+    endgame: { layout: 'centered', elements: ['Final score', 'Portfolio value', 'Achievements', 'Play Again button'] },
+};
+
+function PagePreview({ page }) {
+    const [expanded, setExpanded] = React.useState(false);
+    const preview = PREVIEW_ELEMENTS[page.id] || { layout: page.type, elements: Object.keys(page.properties || {}) };
+    const propEntries = Object.entries(page.properties || {});
+    const typeColor = TYPE_COLORS[page.type] || '#888';
+
+    // Layout-specific colors
+    const layoutColors = {
+        game: { bg: '#0a1a0a', border: '#2a5a2a', accent: '#4ade80' },
+        terminal: { bg: '#0a0a14', border: '#2a2a4e', accent: '#c9a84c' },
+        form: { bg: '#12120d', border: '#3a3a2e', accent: '#c9a84c' },
+        centered: { bg: '#0d0d14', border: '#2a2a3e', accent: '#888' },
+        dialogue: { bg: '#1a0a0a', border: '#4a2a2a', accent: '#ef4444' },
+        cinematic: { bg: '#0d0a1a', border: '#3a2a5a', accent: '#a78bfa' },
+        battle: { bg: '#1a0d0a', border: '#4a3a2a', accent: '#f59e0b' },
+        hud: { bg: '#0a0a14', border: '#2a2a4e', accent: '#88bbdd' },
+        gallery: { bg: '#0d100d', border: '#2a3a2a', accent: '#4ade80' },
+        view: { bg: '#0a0a14', border: '#2a2a3e', accent: '#c9a84c' },
+        scene: { bg: '#0a1a0a', border: '#2a5a2a', accent: '#4ade80' },
+        overlay: { bg: '#0a1020', border: '#2a3a5e', accent: '#4488cc' },
+    };
+
+    const lc = layoutColors[preview.layout] || layoutColors.centered;
+
+    return (
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #141420' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 10, color: '#888', letterSpacing: '0.1em', fontWeight: 600 }}>
+                    👁️ PAGE PREVIEW
+                </span>
+                <button onClick={() => setExpanded(!expanded)} style={{
+                    background: 'none', border: '1px solid #222', color: '#555',
+                    fontSize: 8, padding: '2px 8px', cursor: 'pointer', fontFamily: mono, borderRadius: 2,
+                }}>{expanded ? '⊟ COLLAPSE' : '⊞ EXPAND'}</button>
+            </div>
+
+            {/* Preview frame */}
+            <div style={{
+                position: 'relative', overflow: 'hidden',
+                borderRadius: 8, border: `1px solid ${lc.border}`,
+                background: lc.bg, height: expanded ? 280 : 140,
+                transition: 'height 0.2s ease',
+            }}>
+                {/* Screen frame */}
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', flexDirection: 'column',
+                    padding: 10,
+                }}>
+                    {/* Title bar */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        marginBottom: 8, paddingBottom: 6,
+                        borderBottom: `1px solid ${lc.border}`,
+                    }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }} />
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80' }} />
+                        <span style={{
+                            marginLeft: 8, fontSize: 8, color: lc.accent + '88',
+                            letterSpacing: '0.05em',
+                        }}>{page.name}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 7, color: '#333' }}>
+                            {preview.layout.toUpperCase()}
+                        </span>
+                    </div>
+
+                    {/* Element blocks */}
+                    <div style={{
+                        flex: 1, display: 'flex', flexWrap: 'wrap',
+                        gap: 4, alignContent: 'flex-start',
+                    }}>
+                        {preview.elements.map((el, i) => {
+                            // Different sizes for different element types
+                            const isWide = el.includes('map') || el.includes('background') || el.includes('text') || el.includes('bar') || el.includes('Console') || el.includes('Ticker');
+                            const isSmall = el.includes('dot') || el.includes('icon') || el.includes('button');
+                            return (
+                                <div key={i} style={{
+                                    flex: isWide ? '1 0 100%' : isSmall ? '0 0 auto' : '1 0 calc(50% - 4px)',
+                                    padding: isSmall ? '3px 6px' : '6px 8px',
+                                    borderRadius: 4,
+                                    background: `${lc.accent}08`,
+                                    border: `1px solid ${lc.accent}22`,
+                                    fontSize: 8, color: lc.accent + 'bb',
+                                    textAlign: 'center',
+                                    minHeight: isWide ? 24 : 18,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                }}>
+                                    {el}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Transition arrows at bottom */}
+                    {page.transitions?.length > 0 && (
+                        <div style={{
+                            display: 'flex', gap: 6, marginTop: 6,
+                            paddingTop: 6, borderTop: `1px solid ${lc.border}`,
+                            overflowX: 'auto',
+                        }}>
+                            {page.transitions.slice(0, 4).map((t, i) => (
+                                <div key={i} style={{
+                                    fontSize: 7, padding: '2px 6px', borderRadius: 3,
+                                    background: typeColor + '10',
+                                    border: `1px solid ${typeColor}22`,
+                                    color: typeColor + 'aa',
+                                    whiteSpace: 'nowrap',
+                                }}>
+                                    → {t.label || t.to}
+                                </div>
+                            ))}
+                            {(page.transitions?.length || 0) > 4 && (
+                                <span style={{ fontSize: 7, color: '#444' }}>
+                                    +{page.transitions.length - 4} more
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Quick properties under preview */}
+            {propEntries.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8 }}>
+                    {propEntries.slice(0, 5).map(([key]) => (
+                        <span key={key} style={{
+                            fontSize: 7, padding: '2px 5px', borderRadius: 2,
+                            background: '#111', border: '1px solid #222', color: '#555',
+                        }}>{key}</span>
+                    ))}
+                    {propEntries.length > 5 && (
+                        <span style={{ fontSize: 7, color: '#333' }}>+{propEntries.length - 5}</span>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
 // Property Panel — GameMaker-inspired editable inspector
 // ══════════════════════════════════════════════════════════════
 
@@ -811,6 +975,9 @@ function PropertyPanel({ page, allPages, onUpdate }) {
                     {STATUS_DESC[page.status]}
                 </div>
             </div>
+
+            {/* ── Visual Page Preview ── */}
+            <PagePreview page={page} />
 
             {/* ── Flow Breadcrumb ── */}
             <FlowBreadcrumb page={page} allPages={allPages} />

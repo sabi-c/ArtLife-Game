@@ -172,6 +172,9 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
     const [hoveredNode, setHoveredNode] = useState(null);
     const [showAddNode, setShowAddNode] = useState(false);
     const [editingLabel, setEditingLabel] = useState(null);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchRef = useRef(null);
 
     // Auto-save to cmsStore on every change
     useEffect(() => {
@@ -270,18 +273,18 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
         ctx.translate(pan.x, pan.y);
         ctx.scale(zoom, zoom);
 
-        // Grid
-        ctx.strokeStyle = '#1a1a2e';
-        ctx.lineWidth = 0.5;
+        // Grid — dot pattern (Figma-style)
         const gx0 = Math.floor(-pan.x / zoom / GRID_SIZE) * GRID_SIZE;
         const gy0 = Math.floor(-pan.y / zoom / GRID_SIZE) * GRID_SIZE;
         const gx1 = gx0 + width / zoom + GRID_SIZE * 2;
         const gy1 = gy0 + height / zoom + GRID_SIZE * 2;
+        ctx.fillStyle = '#1e1e30';
         for (let x = gx0; x < gx1; x += GRID_SIZE) {
-            ctx.beginPath(); ctx.moveTo(x, gy0); ctx.lineTo(x, gy1); ctx.stroke();
-        }
-        for (let y = gy0; y < gy1; y += GRID_SIZE) {
-            ctx.beginPath(); ctx.moveTo(gx0, y); ctx.lineTo(gx1, y); ctx.stroke();
+            for (let y = gy0; y < gy1; y += GRID_SIZE) {
+                ctx.beginPath();
+                ctx.arc(x, y, 0.8, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Edges
@@ -548,6 +551,49 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
         setZoom(1);
     }, []);
 
+    // ── Keyboard shortcuts ──
+    useEffect(() => {
+        const handler = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+                e.preventDefault();
+                setShowSearch(true);
+                setTimeout(() => searchRef.current?.focus(), 50);
+            }
+            if (e.key === 'Escape' && showSearch) {
+                setShowSearch(false);
+                setSearchQuery('');
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [showSearch]);
+
+    // ── Search results ──
+    const searchResults = useMemo(() => {
+        if (!searchQuery.trim()) return [];
+        const q = searchQuery.toLowerCase();
+        return nodes.filter(n =>
+            n.label.toLowerCase().includes(q) ||
+            n.id.toLowerCase().includes(q) ||
+            (n.meta?.desc || '').toLowerCase().includes(q)
+        );
+    }, [searchQuery, nodes]);
+
+    // ── Fly camera to node ──
+    const flyToNode = useCallback((node) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const targetZoom = 1.2;
+        setZoom(targetZoom);
+        setPan({
+            x: canvas.width / 2 - (node.x + NODE_W / 2) * targetZoom,
+            y: canvas.height / 2 - (node.y + NODE_H / 2) * targetZoom,
+        });
+        setSelectedNode(node.id);
+        setShowSearch(false);
+        setSearchQuery('');
+    }, []);
+
     // ── Fit to view ──
     const fitToView = useCallback(() => {
         if (nodes.length === 0) return;
@@ -626,17 +672,18 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
         <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', minHeight: 500, background: '#0a0a0f' }}>
             {/* Toolbar */}
             <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 5, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button style={btnStyle} onClick={fitToView}>FIT</button>
-                <button style={btnStyle} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>100%</button>
+                <button style={btnStyle} onClick={fitToView} title="Zoom to fit all nodes">⊞ FIT</button>
+                <button style={btnStyle} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} title="Reset to 100% zoom">⊡ 100%</button>
                 <button style={{ ...btnStyle, color: '#50c878', borderColor: '#50c87866' }}
-                    onClick={() => setShowAddNode(!showAddNode)}>+ NODE</button>
-                <button style={{ ...btnStyle, borderColor: '#c94040', color: '#c94040' }} onClick={resetLayout}>RESET</button>
+                    onClick={() => setShowAddNode(!showAddNode)} title="Add a new node">+ NODE</button>
+                <button style={btnStyle} onClick={() => { setShowSearch(true); setTimeout(() => searchRef.current?.focus(), 50); }} title="Search nodes (⌘F)">🔍</button>
+                <button style={{ ...btnStyle, borderColor: '#c94040', color: '#c94040' }} onClick={resetLayout} title="Reset to default layout">↻ RESET</button>
                 {selectedNode && edges.some(e => e.from === selectedNode || e.to === selectedNode) && (
                     <button style={{ ...btnStyle, borderColor: '#c94040', color: '#f87171' }}
                         onClick={deleteSelectedEdge}>DEL EDGES ({selectedNode.split(':')[1]})</button>
                 )}
                 <span style={{ fontSize: 9, color: '#333', fontFamily: "'SF Mono', monospace", marginLeft: 8 }}>
-                    {nodes.length} nodes · {edges.length} edges
+                    {nodes.length} nodes · {edges.length} edges · {Math.round(zoom * 100)}%
                 </span>
             </div>
 
@@ -854,6 +901,117 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
                 onWheel={onWheel}
                 onContextMenu={e => e.preventDefault()}
             />
+
+            {/* ── Minimap ── */}
+            <div style={{
+                position: 'absolute', bottom: 12, left: 12,
+                width: 140, height: 90, background: 'rgba(10,10,18,0.92)',
+                border: '1px solid #333', borderRadius: 4, padding: 4, zIndex: 6,
+                pointerEvents: 'none',
+            }}>
+                {nodes.length > 0 && (() => {
+                    const minX = Math.min(...nodes.map(n => n.x)) - 20;
+                    const minY = Math.min(...nodes.map(n => n.y)) - 20;
+                    const maxX = Math.max(...nodes.map(n => n.x + NODE_W)) + 20;
+                    const maxY = Math.max(...nodes.map(n => n.y + NODE_H)) + 20;
+                    const gw = maxX - minX || 1;
+                    const gh = maxY - minY || 1;
+                    const scale = Math.min(132 / gw, 82 / gh);
+                    return (
+                        <svg width={132} height={82} viewBox={`${minX} ${minY} ${gw} ${gh}`} preserveAspectRatio="xMidYMid meet">
+                            {edges.map((e, i) => {
+                                const src = nodes.find(n => n.id === e.from);
+                                const dst = nodes.find(n => n.id === e.to);
+                                if (!src || !dst) return null;
+                                return (
+                                    <line key={i}
+                                        x1={src.x + NODE_W} y1={src.y + NODE_H / 2}
+                                        x2={dst.x} y2={dst.y + NODE_H / 2}
+                                        stroke="#333" strokeWidth={2 / scale}
+                                    />
+                                );
+                            })}
+                            {nodes.map(n => (
+                                <rect key={n.id}
+                                    x={n.x} y={n.y} width={NODE_W} height={NODE_H}
+                                    rx={2} fill={(TYPE_COLORS[n.type]?.border || '#888') + '44'}
+                                    stroke={(TYPE_COLORS[n.type]?.border || '#888') + '88'}
+                                    strokeWidth={selectedNode === n.id ? 3 / scale : 1 / scale}
+                                />
+                            ))}
+                        </svg>
+                    );
+                })()}
+                <div style={{ position: 'absolute', bottom: 2, right: 4, fontSize: 7, color: '#444' }}>MINIMAP</div>
+            </div>
+
+            {/* ── Search Overlay (Cmd+F) ── */}
+            {showSearch && (
+                <div style={{
+                    position: 'absolute', top: 50, left: '50%', transform: 'translateX(-50%)',
+                    width: 360, zIndex: 30, background: 'rgba(15,15,22,0.98)',
+                    border: '1px solid #c9a84c55', borderRadius: 8, padding: 12,
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontSize: 16 }}>🔍</span>
+                        <input
+                            ref={searchRef}
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search nodes..."
+                            style={{
+                                flex: 1, background: '#111', border: '1px solid #333',
+                                color: '#eee', fontSize: 13, padding: '8px 12px',
+                                fontFamily: "'SF Mono', monospace", borderRadius: 4, outline: 'none',
+                            }}
+                            onKeyDown={e => {
+                                if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); }
+                                if (e.key === 'Enter' && searchResults.length > 0) flyToNode(searchResults[0]);
+                            }}
+                        />
+                        <button onClick={() => { setShowSearch(false); setSearchQuery(''); }} style={{
+                            ...btnStyle, padding: '6px 10px', fontSize: 11,
+                        }}>✕</button>
+                    </div>
+                    <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                        {searchQuery && searchResults.length === 0 && (
+                            <div style={{ color: '#555', fontSize: 10, padding: '8px 0', textAlign: 'center' }}>No results</div>
+                        )}
+                        {searchResults.map(node => (
+                            <div key={node.id}
+                                onClick={() => flyToNode(node)}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    padding: '8px 10px', cursor: 'pointer', borderRadius: 4,
+                                    background: 'transparent',
+                                    borderBottom: '1px solid #1a1a25',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = '#1a1a2e'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <span style={{
+                                    width: 8, height: 8, borderRadius: '50%',
+                                    background: TYPE_COLORS[node.type]?.border || '#888',
+                                    flexShrink: 0,
+                                }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 11, color: TYPE_COLORS[node.type]?.text || '#ccc', fontWeight: 600 }}>
+                                        {node.label}
+                                    </div>
+                                    <div style={{ fontSize: 9, color: '#555' }}>
+                                        {node.type.toUpperCase()} · {node.meta?.desc?.substring(0, 50) || node.id}
+                                    </div>
+                                </div>
+                                <span style={{ fontSize: 8, color: '#444' }}>↵</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ fontSize: 8, color: '#333', marginTop: 6, textAlign: 'center' }}>
+                        ⌘F Search · Enter to fly · Esc to close
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
