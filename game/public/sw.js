@@ -71,7 +71,22 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets: cache-first
+    // JS/CSS bundles: network-first (they have content hashes in filenames,
+    // so stale cached chunks cause "Failed to fetch dynamically imported module" errors)
+    if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Other static assets (images, fonts, JSON): cache-first
     const isCacheable = CACHEABLE_EXTENSIONS.some((ext) => url.pathname.endsWith(ext));
     if (isCacheable) {
         event.respondWith(
