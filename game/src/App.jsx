@@ -163,52 +163,21 @@ export default function App() {
             }, 100);
             setActiveView(VIEW.PHASER);
         } else {
-            // Auto-resume from most recent save slot
-            try {
-                const slot = GameState.getMostRecentSlot();
-                if (slot !== null && !autoResumedRef.current) {
-                    const loaded = GameState.load(slot);
-                    if (loaded) {
-                        autoResumedRef.current = true;
-                        const ui = window.TerminalUIInstance;
-                        if (ui?.container) {
-                            ui.container.style.display = '';
-                            import('./ui/terminal/screens/index.js').then(({ dashboardScreen }) => {
-                                ui.pushScreen(dashboardScreen(ui));
-                            }).catch(err => {
-                                console.error('[App] Failed to load dashboard:', err);
-                                setActiveView(VIEW.BOOT);
-                            });
-                            if (phaserInstance?.canvas) {
-                                phaserInstance.canvas.style.visibility = 'hidden';
-                                phaserInstance.canvas.style.pointerEvents = 'none';
-                            }
-                            setActiveView(VIEW.TERMINAL);
-                            // Defer overlay activation so PhaserLoadingScreen dismisses
-                            // before the overlay Suspense fallback can fire — prevents
-                            // stacking multiple loading screens simultaneously.
-                            setTimeout(() => setActiveOverlay(OVERLAY.BLOOMBERG), 500);
-                        }
-                    }
+            // ── New boot flow: SPLASH → NARRATIVE → ARTNET_HUB ──
+            // Don't auto-resume old terminal/Bloomberg — the new flow handles everything.
+            // Phaser boots in background, ready when user clicks "Explore" from Artnet hub.
+            // Just start the Phaser game engine silently for when it's needed.
+            const introStart = Date.now();
+            const introPoll = setInterval(() => {
+                if (window.startPhaserGame) {
+                    clearInterval(introPoll);
+                    window.startPhaserGame('new');
+                } else if (Date.now() - introStart > 8000) {
+                    clearInterval(introPoll);
+                    console.warn('[App] startPhaserGame never registered — Phaser will init on demand');
                 }
-            } catch (err) {
-                console.error('[App] Auto-resume failed:', err);
-            }
-
-            if (!autoResumedRef.current) {
-                const introStart = Date.now();
-                const introPoll = setInterval(() => {
-                    if (window.startPhaserGame) {
-                        clearInterval(introPoll);
-                        window.startPhaserGame('new');
-                    } else if (Date.now() - introStart > 5000) {
-                        clearInterval(introPoll);
-                        console.error('[App] startPhaserGame never registered for intro');
-                        setActiveView(VIEW.BOOT);
-                    }
-                }, 100);
-                setActiveView(VIEW.PHASER);
-            }
+            }, 200);
+            // activeView is already VIEW.SPLASH (set in useState initializer)
         }
 
         return () => {

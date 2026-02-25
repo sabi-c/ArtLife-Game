@@ -24,6 +24,7 @@ import { ARTWORKS } from '../../data/artworks.js';
 import { VIEW } from '../../core/views.js';
 import { TerminalAPI } from '../terminal/TerminalAPI.js';
 import { SettingsManager } from '../../managers/SettingsManager.js';
+import { fmtMoney } from '../../utils/formatMoney.js';
 import { useEventStore } from '../../stores/eventStore.js';
 import BloombergTutorial from '../game/BloombergTutorial.jsx';
 import HaggleOverlay from '../email/haggle/HaggleOverlay.jsx';

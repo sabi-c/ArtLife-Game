@@ -1,11 +1,16 @@
 /**
- * BootSplash.jsx — Animated Sprite Boot Screen
+ * BootSplash.jsx — Animated Artlife Computer Boot Screen
  *
  * First thing the player sees on load:
- * - Dark background with centered animated sprite (idle breathing)
- * - Subtle glow behind character
+ * - Dark background with centered animated pixel art computer
+ *   showing "artlife" logo with sheen/sparkle effect
+ * - "ARTLIFE" title + subtitle below
  * - "Click to continue" / "Tap to continue" prompt
  * - On click → fires onContinue callback
+ *
+ * Spritesheet: splash_spritesheet.png
+ *   20 frames × 128×128, single row
+ *   Animation: key1 → tween1-2 → key2 → tween2-3 → key3 → tween3-4 → key4 → tween4-1 → loop
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -13,21 +18,35 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 const FONT = '"Press Start 2P", monospace';
 const FONT_BODY = '"ArtnetGrotesk", "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-// Victoria Sterling multi-action sheet: 160×160 frames, 4 cols × 12 rows
-// Idle animation = rows 4-7 (frames 16-31), south-facing idle = row 4 (frames 16-19)
-const SPRITE_SRC = 'assets/processed/victoria_sterling_sprites.png';
-const FRAME_W = 160;
-const FRAME_H = 160;
-const IDLE_FRAMES = [16, 17, 18, 19]; // south-facing idle
-const ANIM_FPS = 4;
-const DISPLAY_SCALE = 2.5; // 160 × 2.5 = 400px rendered
+const SPRITE_SRC = 'assets/processed/splash_spritesheet.png';
+const FRAME_W = 128;
+const FRAME_H = 128;
+const TOTAL_FRAMES = 20;
+const ANIM_FPS = 6; // 20 frames / 6fps ≈ 3.3s per loop — nice slow sparkle
+
+// Responsive scale: up to 384px on desktop, scales down on small screens
+function getDisplayScale() {
+    if (typeof window === 'undefined') return 3;
+    const vw = window.innerWidth;
+    if (vw < 400) return Math.max(vw * 0.6 / FRAME_W, 1.2);
+    if (vw < 768) return 2;
+    return 3;
+}
 
 export default function BootSplash({ onContinue }) {
     const canvasRef = useRef(null);
     const [ready, setReady] = useState(false);
     const [showPrompt, setShowPrompt] = useState(false);
+    const [displayScale, setDisplayScale] = useState(getDisplayScale);
     const imgRef = useRef(null);
     const frameRef = useRef(0);
+
+    // Handle resize
+    useEffect(() => {
+        const onResize = () => setDisplayScale(getDisplayScale());
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
 
     // Load spritesheet
     useEffect(() => {
@@ -36,11 +55,10 @@ export default function BootSplash({ onContinue }) {
         img.onload = () => {
             imgRef.current = img;
             setReady(true);
-            // Show prompt after a short delay for dramatic effect
             setTimeout(() => setShowPrompt(true), 800);
         };
         img.onerror = () => {
-            // If sprite fails to load, just show prompt immediately
+            console.warn('[BootSplash] Failed to load splash spritesheet');
             setShowPrompt(true);
         };
     }, []);
@@ -51,8 +69,8 @@ export default function BootSplash({ onContinue }) {
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-        const w = FRAME_W * DISPLAY_SCALE;
-        const h = FRAME_H * DISPLAY_SCALE;
+        const w = FRAME_W * displayScale;
+        const h = FRAME_H * displayScale;
         canvas.width = w;
         canvas.height = h;
 
@@ -62,27 +80,27 @@ export default function BootSplash({ onContinue }) {
 
         const draw = (timestamp) => {
             if (timestamp - lastTime >= frameDuration) {
-                frameRef.current = (frameRef.current + 1) % IDLE_FRAMES.length;
+                frameRef.current = (frameRef.current + 1) % TOTAL_FRAMES;
                 lastTime = timestamp;
             }
 
-            const frameIndex = IDLE_FRAMES[frameRef.current];
-            const cols = 4;
-            const sx = (frameIndex % cols) * FRAME_W;
-            const sy = Math.floor(frameIndex / cols) * FRAME_H;
+            const frameIndex = frameRef.current;
+            // Single row spritesheet: frame N starts at N * FRAME_W
+            const sx = frameIndex * FRAME_W;
+            const sy = 0;
 
             ctx.clearRect(0, 0, w, h);
 
-            // Subtle glow behind character
-            const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.45);
-            gradient.addColorStop(0, 'rgba(201, 168, 76, 0.12)');
-            gradient.addColorStop(0.6, 'rgba(201, 168, 76, 0.04)');
+            // Subtle warm glow behind the computer
+            const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.5);
+            gradient.addColorStop(0, 'rgba(201, 168, 76, 0.10)');
+            gradient.addColorStop(0.5, 'rgba(201, 168, 76, 0.03)');
             gradient.addColorStop(1, 'transparent');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, w, h);
 
-            // Draw sprite frame
-            ctx.imageSmoothingEnabled = false; // crisp pixel art
+            // Draw sprite frame — crisp pixel art
+            ctx.imageSmoothingEnabled = false;
             ctx.drawImage(imgRef.current, sx, sy, FRAME_W, FRAME_H, 0, 0, w, h);
 
             animId = requestAnimationFrame(draw);
@@ -90,10 +108,11 @@ export default function BootSplash({ onContinue }) {
 
         animId = requestAnimationFrame(draw);
         return () => cancelAnimationFrame(animId);
-    }, [ready]);
+    }, [ready, displayScale]);
 
     const isMobile = typeof window !== 'undefined' &&
         ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const isSmall = typeof window !== 'undefined' && window.innerWidth < 400;
 
     const handleClick = useCallback(() => {
         if (showPrompt && onContinue) onContinue();
@@ -112,32 +131,34 @@ export default function BootSplash({ onContinue }) {
                 animation: 'boot-fade-in 0.6s ease-out',
             }}
         >
-            {/* Ambient background particles */}
+            {/* Ambient background */}
             <div style={{
                 position: 'absolute', inset: 0,
                 background: 'radial-gradient(ellipse at 50% 40%, rgba(201,168,76,0.06) 0%, transparent 70%)',
                 pointerEvents: 'none',
             }} />
 
-            {/* Sprite canvas */}
+            {/* Animated sprite canvas */}
             <canvas
                 ref={canvasRef}
                 style={{
-                    width: FRAME_W * DISPLAY_SCALE,
-                    height: FRAME_H * DISPLAY_SCALE,
+                    width: FRAME_W * displayScale,
+                    height: FRAME_H * displayScale,
+                    maxWidth: '80vw',
+                    maxHeight: '40vh',
                     imageRendering: 'pixelated',
                     opacity: ready ? 1 : 0,
                     transition: 'opacity 0.8s ease-out',
-                    marginBottom: 48,
+                    marginBottom: isSmall ? 24 : 48,
                 }}
             />
 
             {/* "ArtLife" title */}
             <div style={{
                 fontFamily: FONT,
-                fontSize: 28,
+                fontSize: isSmall ? 18 : 28,
                 color: '#c9a84c',
-                letterSpacing: 6,
+                letterSpacing: isSmall ? 3 : 6,
                 textTransform: 'uppercase',
                 marginBottom: 8,
                 opacity: ready ? 1 : 0,
@@ -150,11 +171,11 @@ export default function BootSplash({ onContinue }) {
             {/* Subtitle */}
             <div style={{
                 fontFamily: FONT_BODY,
-                fontSize: 14,
+                fontSize: isSmall ? 11 : 14,
                 color: '#555',
-                letterSpacing: 3,
+                letterSpacing: isSmall ? 1.5 : 3,
                 textTransform: 'uppercase',
-                marginBottom: 60,
+                marginBottom: isSmall ? 32 : 60,
                 opacity: ready ? 1 : 0,
                 transition: 'opacity 1s ease-out 0.6s',
             }}>
@@ -165,7 +186,7 @@ export default function BootSplash({ onContinue }) {
             {showPrompt && (
                 <div style={{
                     fontFamily: FONT,
-                    fontSize: 11,
+                    fontSize: isSmall ? 9 : 11,
                     color: '#888',
                     letterSpacing: 2,
                     animation: 'boot-pulse 2s ease-in-out infinite',
