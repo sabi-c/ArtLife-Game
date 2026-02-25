@@ -121,6 +121,8 @@ export default class NewWorldScene extends Phaser.Scene {
             this._createAnims();
             this._createPlayer();
             this._createWarps();
+            this._createInfoMarkers();
+            this._createNPCs();
             this._createCamera();
             this._createControls();
             this._createHUD();
@@ -382,6 +384,10 @@ export default class NewWorldScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-ESC', () => {
             this.exitScene();
         });
+
+        // Action key — Space or Enter → interact with nearby markers/NPCs
+        this.input.keyboard.on('keydown-SPACE', () => this._handleAction());
+        this.input.keyboard.on('keydown-ENTER', () => this._handleAction());
     }
 
     // ════════════════════════════════════════════════════
@@ -406,6 +412,17 @@ export default class NewWorldScene extends Phaser.Scene {
     // ════════════════════════════════════════════════════
     update() {
         if (this._createFailed || !this.player || !this.player.body) return;
+
+        // Freeze movement during dialogue (still allow action key to dismiss)
+        if (this._dialogueActive) {
+            this.player.body.setVelocity(0);
+            // Still check mobile action to dismiss
+            if (window.joypadAction) {
+                window.joypadAction = false;
+                this._handleAction();
+            }
+            return;
+        }
 
         // Sprint: B button (mobile) doubles speed
         const baseSpeed = 80;
@@ -460,6 +477,178 @@ export default class NewWorldScene extends Phaser.Scene {
         if (body.velocity.x === 0 && body.velocity.y === 0) {
             tryPlay(`character-idle-${this.direction}`);
         }
+
+        // Mobile action button (A)
+        if (window.joypadAction) {
+            window.joypadAction = false;
+            this._handleAction();
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    // Info Markers (signs, objects with messages)
+    // ════════════════════════════════════════════════════
+    _createInfoMarkers() {
+        const infoLayer = this.map.getObjectLayer('info');
+        if (!infoLayer) { _log('No info layer'); return; }
+
+        this.infoZones = [];
+        for (const obj of infoLayer.objects) {
+            const props = {};
+            for (const p of (obj.properties || [])) { props[p.name] = p.value; }
+            if (!props.message && !props.messageID) continue;
+
+            const zone = this.add.zone(obj.x + (obj.width / 2), obj.y + (obj.height / 2), Math.max(obj.width, 24), Math.max(obj.height, 24));
+            this.physics.add.existing(zone, true); // static body
+            zone.setData('message', props.message || `Message #${props.messageID}`);
+            zone.setData('name', obj.name || 'Sign');
+            this.infoZones.push(zone);
+        }
+        _log(`Created ${this.infoZones.length} info markers`);
+    }
+
+    // ════════════════════════════════════════════════════
+    // NPCs (from enemies/markers object layers)
+    // ════════════════════════════════════════════════════
+    _createNPCs() {
+        const enemyLayer = this.map.getObjectLayer('enemies');
+        if (!enemyLayer) { _log('No enemies layer'); return; }
+
+        this.npcs = [];
+        for (const obj of enemyLayer.objects) {
+            const npcX = obj.x + (obj.width / 2);
+            const npcY = obj.y + (obj.height / 2);
+
+            // Use question_mark texture as placeholder NPC marker
+            const npc = this.physics.add.sprite(npcX, npcY, 'question_mark');
+            npc.setDepth(DEPTH.PLAYER - 1);
+            npc.body.immovable = true;
+            npc.setScale(0.8);
+
+            // Gentle floating animation
+            this.tweens.add({
+                targets: npc,
+                y: npcY - 4,
+                duration: 1200,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+
+            // Store NPC data
+            const props = {};
+            for (const p of (obj.properties || [])) { props[p.name] = p.value; }
+            npc.setData('npcId', props.id || '?');
+            npc.setData('name', obj.name || 'NPC');
+            this.npcs.push(npc);
+
+            // Collision so player can't walk through
+            this.physics.add.collider(this.player, npc);
+        }
+        _log(`Created ${this.npcs.length} NPCs`);
+    }
+
+    // ════════════════════════════════════════════════════
+    // Action Key — interact with nearest marker/NPC
+    // ════════════════════════════════════════════════════
+    _handleAction() {
+        if (this._dialogueActive) {
+            this._dismissDialogue();
+            return;
+        }
+
+        const px = this.player.x;
+        const py = this.player.y;
+        const RANGE = 40;
+
+        // Check info markers first
+        for (const zone of (this.infoZones || [])) {
+            const dist = Phaser.Math.Distance.Between(px, py, zone.x, zone.y);
+            if (dist < RANGE) {
+                this._showDialogue(zone.getData('name'), zone.getData('message'));
+                return;
+            }
+        }
+
+        // Check NPCs
+        for (const npc of (this.npcs || [])) {
+            const dist = Phaser.Math.Distance.Between(px, py, npc.x, npc.y);
+            if (dist < RANGE) {
+                this._showDialogue(npc.getData('name') || 'NPC', `NPC #${npc.getData('npcId')} noticed you.`);
+                return;
+            }
+        }
+    }
+
+    // ════════════════════════════════════════════════════
+    // Dialogue Popup (in-world message box)
+    // ════════════════════════════════════════════════════
+    _showDialogue(speaker, text) {
+        this._dismissDialogue(); // clear any existing
+
+        this._dialogueActive = true;
+        const cam = this.cameras.main;
+        const boxW = cam.width * 0.85;
+        const boxH = 70;
+        const boxX = cam.width * 0.075;
+        const boxY = cam.height - boxH - 16;
+
+        // Dark semi-transparent backdrop
+        this._dlgBg = this.add.rectangle(boxX + boxW / 2, boxY + boxH / 2, boxW, boxH, 0x0a0a14, 0.92)
+            .setScrollFactor(0)
+            .setDepth(DEPTH.HUD + 10)
+            .setStrokeStyle(1, 0xc9a84c);
+
+        // Speaker name
+        this._dlgName = this.add.text(boxX + 10, boxY + 8, speaker.toUpperCase(), {
+            fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#c9a84c',
+        }).setScrollFactor(0).setDepth(DEPTH.HUD + 11);
+
+        // Message text with typewriter effect
+        this._dlgText = this.add.text(boxX + 10, boxY + 26, '', {
+            fontFamily: 'monospace', fontSize: '11px', color: '#dddddd',
+            wordWrap: { width: boxW - 20 }, lineSpacing: 4,
+        }).setScrollFactor(0).setDepth(DEPTH.HUD + 11);
+
+        // Typewriter
+        let charIndex = 0;
+        const cleanText = text.replace(/^- /, ''); // strip leading "- "
+        this._dlgTimer = this.time.addEvent({
+            delay: 25,
+            repeat: cleanText.length - 1,
+            callback: () => {
+                charIndex++;
+                this._dlgText.setText(cleanText.substring(0, charIndex));
+            },
+        });
+
+        // Press indicator
+        this._dlgHint = this.add.text(boxX + boxW - 10, boxY + boxH - 12, '▼', {
+            fontFamily: 'monospace', fontSize: '10px', color: '#888',
+        }).setScrollFactor(0).setDepth(DEPTH.HUD + 11).setOrigin(1, 0);
+
+        // Blink the indicator
+        this.tweens.add({
+            targets: this._dlgHint,
+            alpha: 0.3,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+        });
+
+        // Stop player movement during dialogue
+        if (this.player?.body) {
+            this.player.body.setVelocity(0);
+        }
+    }
+
+    _dismissDialogue() {
+        this._dialogueActive = false;
+        if (this._dlgTimer) { this._dlgTimer.remove(); this._dlgTimer = null; }
+        if (this._dlgBg) { this._dlgBg.destroy(); this._dlgBg = null; }
+        if (this._dlgName) { this._dlgName.destroy(); this._dlgName = null; }
+        if (this._dlgText) { this._dlgText.destroy(); this._dlgText = null; }
+        if (this._dlgHint) { this._dlgHint.destroy(); this._dlgHint = null; }
     }
 
     // ════════════════════════════════════════════════════
