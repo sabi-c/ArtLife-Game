@@ -30,26 +30,87 @@ const TYPE_COLORS = {
 
 // All known Phaser scenes (from phaserInit.js)
 const PHASER_SCENES = [
-    'BootScene', 'TitleScene', 'IntroScene', 'HaggleScene', 'LocationScene',
-    'DialogueScene', 'MacDialogueScene', 'OverworldScene', 'CityScene',
-    'MenuScene', 'EndScene', 'FastTravelScene', 'WorldScene',
+    'BootScene', 'TitleScene', 'IntroScene', 'NewWorldScene',
+    'OverworldScene', 'CityScene', 'LocationScene', 'HaggleScene',
+    'DialogueScene', 'MacDialogueScene', 'FastTravelScene',
+    'WorldScene', 'MenuScene', 'EndScene',
 ];
 
-// Pre-detected transitions from codebase analysis
+// Transitions traced from the actual codebase (scene.start, scene.launch, GameEventBus)
 const DEFAULT_EDGES = [
-    { from: 'SCENE:BootScene', to: 'VIEW:CHARACTER_CREATOR', label: 'Select Character', action: 'UI_ROUTE' },
-    { from: 'SCENE:IntroScene', to: 'VIEW:BOOT', label: 'Finish Intro', action: 'UI_ROUTE' },
-    { from: 'SCENE:MacDialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'UI_ROUTE' },
-    { from: 'SCENE:DialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'UI_ROUTE' },
-    { from: 'SCENE:HaggleScene', to: 'VIEW:TERMINAL', label: 'Finish Haggle', action: 'UI_ROUTE' },
-    { from: 'SCENE:WorldScene', to: 'VIEW:TERMINAL', label: 'Exit World', action: 'UI_ROUTE' },
-    { from: 'SCENE:CityScene', to: 'VIEW:TERMINAL', label: 'Leave City', action: 'UI_ROUTE' },
-    { from: 'SCENE:LocationScene', to: 'VIEW:TERMINAL', label: 'Exit Location', action: 'UI_ROUTE' },
-    { from: 'SCENE:OverworldScene', to: 'VIEW:TERMINAL', label: 'Exit Overworld', action: 'UI_ROUTE' },
-    { from: 'VIEW:CHARACTER_CREATOR', to: 'VIEW:TERMINAL', label: 'Creator Done', action: 'UI_ROUTE' },
-    { from: 'VIEW:TERMINAL', to: 'VIEW:PHASER', label: 'Enter World', action: 'UI_ROUTE' },
-    { from: 'OVERLAY:BLOOMBERG', to: 'VIEW:TERMINAL', label: 'Close Terminal', action: 'UI_ROUTE' },
+    // Boot flow
+    { from: 'SCENE:BootScene', to: 'VIEW:CHARACTER_CREATOR', label: 'UI_ROUTE', action: 'GameEventBus' },
+    { from: 'VIEW:CHARACTER_CREATOR', to: 'VIEW:TERMINAL', label: 'Done', action: 'navigate' },
+    { from: 'SCENE:TitleScene', to: 'SCENE:NewWorldScene', label: 'Press Start', action: 'scene.stop → launch' },
+    // Overworld exits
+    { from: 'SCENE:NewWorldScene', to: 'VIEW:DASHBOARD', label: 'ESC / Exit', action: 'GameEventBus UI_ROUTE' },
+    { from: 'SCENE:NewWorldScene', to: 'SCENE:CityScene', label: 'Warp (dungeon)', action: 'GameEventBus LAUNCH_SCENE' },
+    // City flow
+    { from: 'SCENE:CityScene', to: 'SCENE:LocationScene', label: 'Enter Location', action: 'scene.start' },
+    { from: 'SCENE:CityScene', to: 'SCENE:FastTravelScene', label: 'Fast Travel', action: 'scene.launch' },
+    { from: 'SCENE:CityScene', to: 'VIEW:TERMINAL', label: 'Leave City', action: 'GameEventBus UI_ROUTE' },
+    // Location flow
+    { from: 'SCENE:LocationScene', to: 'SCENE:HaggleScene', label: 'Buy/Sell Art', action: 'scene.start' },
+    { from: 'SCENE:LocationScene', to: 'SCENE:DialogueScene', label: 'Talk to NPC', action: 'scene.launch' },
+    // Haggle / Dialogue exits
+    { from: 'SCENE:HaggleScene', to: 'VIEW:TERMINAL', label: 'Finish Haggle', action: 'GameEventBus UI_ROUTE' },
+    { from: 'SCENE:DialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
+    { from: 'SCENE:MacDialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
+    // World scenes
+    { from: 'SCENE:OverworldScene', to: 'SCENE:DialogueScene', label: 'NPC Talk', action: 'scene.start' },
+    { from: 'SCENE:WorldScene', to: 'VIEW:TERMINAL', label: 'Exit World', action: 'GameEventBus' },
+    { from: 'SCENE:FastTravelScene', to: 'SCENE:LocationScene', label: 'Arrive', action: 'scene.start' },
+    // End game
+    { from: 'SCENE:EndScene', to: 'SCENE:MenuScene', label: 'Restart', action: 'scene.start' },
+    // React view transitions
+    { from: 'VIEW:TERMINAL', to: 'VIEW:PHASER', label: 'Enter World', action: 'navigate' },
+    { from: 'VIEW:BOOT', to: 'VIEW:PHASER', label: 'Login Success', action: 'setActiveView' },
+    { from: 'OVERLAY:BLOOMBERG', to: 'VIEW:TERMINAL', label: 'Close', action: 'navigate' },
+    { from: 'OVERLAY:MASTER_CMS', to: 'VIEW:TERMINAL', label: 'Close', action: 'navigate' },
 ];
+
+// ══════════════════════════════════════════════════════════════
+// Node metadata — file paths, descriptions, and status
+// ══════════════════════════════════════════════════════════════
+const NODE_META = {
+    // Views
+    'VIEW:BOOT': { file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Artnet-style email login screen' },
+    'VIEW:PHASER': { file: 'phaserInit.js', status: 'active', desc: 'Raw Phaser canvas (game world)' },
+    'VIEW:TERMINAL': { file: 'ui/terminal/TerminalUI.js', status: 'active', desc: 'DOM terminal — text menus, dashboard, events' },
+    'VIEW:DASHBOARD': { file: 'ui/PlayerDashboard.jsx', status: 'active', desc: 'React stats & ledger overlay' },
+    'VIEW:SCENE_ENGINE': { file: 'ui/ScenePlayer.jsx', status: 'active', desc: 'Visual-novel cutscene player' },
+    'VIEW:CHARACTER_CREATOR': { file: 'ui/CharacterCreator.jsx', status: 'active', desc: 'React character creation flow' },
+    // Scenes
+    'SCENE:BootScene': { file: 'scenes/BootScene.js', status: 'active', desc: 'Asset preloader → routes to character select' },
+    'SCENE:TitleScene': { file: 'scenes/TitleScene.js', status: 'active', desc: 'Graphical title screen, Press Start' },
+    'SCENE:IntroScene': { file: 'scenes/IntroScene.js', status: 'active', desc: 'Story intro cutscene' },
+    'SCENE:NewWorldScene': { file: 'scenes/NewWorldScene.js', status: 'active', desc: 'Larus overworld — NPCs, warps, dialogue' },
+    'SCENE:OverworldScene': { file: 'scenes/OverworldScene.js', status: 'unused', desc: 'Legacy grid-engine overworld (replaced by NewWorld)' },
+    'SCENE:WorldScene': { file: 'scenes/WorldScene.js', status: 'unused', desc: 'Legacy infinite world (replaced by NewWorld)' },
+    'SCENE:CityScene': { file: 'scenes/CityScene.js', status: 'active', desc: 'City hub — venue list, fast travel' },
+    'SCENE:LocationScene': { file: 'scenes/LocationScene.js', status: 'active', desc: 'Venue interior — NPCs, artworks, haggle triggers' },
+    'SCENE:HaggleScene': { file: 'scenes/HaggleScene.js', status: 'active', desc: 'Art dealing mini-game (buy/sell negotiation)' },
+    'SCENE:DialogueScene': { file: 'scenes/DialogueScene.js', status: 'active', desc: 'Text-based dialogue with choices' },
+    'SCENE:MacDialogueScene': { file: 'scenes/MacDialogueScene.js', status: 'active', desc: 'Visual over-the-shoulder dialogue' },
+    'SCENE:FastTravelScene': { file: 'scenes/FastTravelScene.js', status: 'active', desc: 'City-to-city travel overlay' },
+    'SCENE:MenuScene': { file: 'scenes/MenuScene.js', status: 'active', desc: 'Pause/settings menu' },
+    'SCENE:EndScene': { file: 'scenes/EndScene.js', status: 'active', desc: 'Game over / final screen' },
+    // Overlays
+    'OVERLAY:ADMIN': { file: 'ui/AdminDashboard.jsx', status: 'active', desc: 'Admin panel — debug tools' },
+    'OVERLAY:SETTINGS': { file: 'ui/SettingsPanel.jsx', status: 'active', desc: 'Game settings (audio, display)' },
+    'OVERLAY:INVENTORY': { file: 'ui/InventoryPanel.jsx', status: 'active', desc: 'Player inventory grid' },
+    'OVERLAY:DEBUG_LOG': { file: 'ui/DebugLog.jsx', status: 'active', desc: 'Real-time debug event log' },
+    'OVERLAY:MASTER_CMS': { file: 'ui/cms/', status: 'active', desc: 'Content Management System' },
+    'OVERLAY:MARKET_DASHBOARD': { file: 'ui/dashboard/', status: 'active', desc: 'Market analytics dashboard' },
+    'OVERLAY:ARTWORK_DASHBOARD': { file: 'ui/ArtworkDashboard.jsx', status: 'planned', desc: 'Artwork detail viewer (planned)' },
+    'OVERLAY:BLOOMBERG': { file: 'ui/BloombergTerminal.jsx', status: 'active', desc: 'Bloomberg-style market terminal' },
+    'OVERLAY:SALES_GRID': { file: 'ui/SalesGrid.jsx', status: 'planned', desc: 'Sales history grid (planned)' },
+    'OVERLAY:DESIGN_GUIDE': { file: 'ui/DesignGuide.jsx', status: 'planned', desc: 'Visual design reference' },
+    'OVERLAY:GMAIL_GUIDE': { file: 'ui/email/', status: 'active', desc: 'In-game email client' },
+    'OVERLAY:ARTNET_LOGIN': { file: 'ui/ArtnetLogin.jsx', status: 'active', desc: 'Artnet login overlay variant' },
+    'OVERLAY:ARTNET_MARKETPLACE': { file: 'ui/ArtnetMarketplace.jsx', status: 'planned', desc: 'Artnet marketplace browser' },
+    'OVERLAY:ARTNET_UI': { file: 'ui/ArtnetUI.jsx', status: 'planned', desc: 'Artnet UI shell' },
+};
 
 // ══════════════════════════════════════════════════════════════
 // Generate default nodes from constants
@@ -60,14 +121,16 @@ function generateDefaultNodes() {
 
     // Views — left column (generous vertical spacing)
     Object.keys(VIEW).forEach((key, i) => {
-        nodes.push({ id: `VIEW:${key}`, type: 'view', label: key, x: 80, y: 60 + i * 100 });
+        const meta = NODE_META[`VIEW:${key}`] || {};
+        nodes.push({ id: `VIEW:${key}`, type: 'view', label: key, x: 80, y: 60 + i * 100, meta });
     });
 
     // Scenes — middle column (two sub-columns for readability)
     PHASER_SCENES.forEach((name, i) => {
         const col = i < 7 ? 0 : 1;
         const row = i < 7 ? i : i - 7;
-        nodes.push({ id: `SCENE:${name}`, type: 'scene', label: name.replace('Scene', ''), x: 480 + col * 200, y: 60 + row * 80 });
+        const meta = NODE_META[`SCENE:${name}`] || {};
+        nodes.push({ id: `SCENE:${name}`, type: 'scene', label: name.replace('Scene', ''), x: 480 + col * 200, y: 60 + row * 80, meta });
     });
 
     // Overlays — right column (two sub-columns)
@@ -75,7 +138,8 @@ function generateDefaultNodes() {
     overlayKeys.forEach((key, i) => {
         const col = i < 8 ? 0 : 1;
         const row = i < 8 ? i : i - 8;
-        nodes.push({ id: `OVERLAY:${key}`, type: 'overlay', label: key.replace(/_/g, ' '), x: 960 + col * 200, y: 60 + row * 72 });
+        const meta = NODE_META[`OVERLAY:${key}`] || {};
+        nodes.push({ id: `OVERLAY:${key}`, type: 'overlay', label: key.replace(/_/g, ' '), x: 960 + col * 200, y: 60 + row * 72, meta });
     });
 
     return nodes;
@@ -289,15 +353,31 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
             const colors = TYPE_COLORS[n.type] || TYPE_COLORS.view;
             const isSelected = selectedNode === n.id;
             const isHovered = hoveredNode === n.id;
+            const isUnused = n.meta?.status === 'unused';
+            const isPlanned = n.meta?.status === 'planned';
+
+            // Dim unused nodes
+            ctx.globalAlpha = isUnused ? 0.4 : isPlanned ? 0.6 : 1;
 
             // Node body
             ctx.fillStyle = isHovered ? '#1a1a2e' : colors.bg;
             ctx.strokeStyle = isSelected ? '#fff' : colors.border;
             ctx.lineWidth = isSelected ? 2 : 1;
+            if (isUnused) ctx.setLineDash([4, 3]);
             ctx.beginPath();
             ctx.roundRect(n.x, n.y, NODE_W, NODE_H, 4);
             ctx.fill();
             ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Status indicator
+            if (isUnused || isPlanned) {
+                const statusColor = isUnused ? '#c94040' : '#c9a84c';
+                ctx.fillStyle = statusColor;
+                ctx.beginPath();
+                ctx.arc(n.x + NODE_W - 10, n.y + 10, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
             // Type badge
             ctx.font = 'bold 8px "SF Mono", monospace';
@@ -324,6 +404,8 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
             ctx.arc(n.x, n.y + NODE_H / 2, PORT_R, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
+
+            ctx.globalAlpha = 1;
         });
 
         ctx.restore();
@@ -616,13 +698,61 @@ export default function FlowEditor({ flowGraph, onUpdate }) {
                         </button>
                     )}
 
-                    {/* Type badge */}
+                    {/* Type + Status */}
                     <div style={sectionStyle}>
                         <div style={labelStyle}>Type</div>
                         <span style={badgeStyle(TYPE_COLORS[selectedNodeData.type]?.text || '#888')}>
                             {selectedNodeData.type.toUpperCase()}
                         </span>
-                        <span style={{ color: '#555', fontSize: 9 }}> {selectedNodeData.id}</span>
+                        {selectedNodeData.meta?.status && (
+                            <span style={badgeStyle(
+                                selectedNodeData.meta.status === 'active' ? '#50c878' :
+                                    selectedNodeData.meta.status === 'unused' ? '#c94040' : '#c9a84c'
+                            )}>
+                                {selectedNodeData.meta.status.toUpperCase()}
+                            </span>
+                        )}
+                        <span style={{ color: '#555', fontSize: 9, display: 'block', marginTop: 4 }}>{selectedNodeData.id}</span>
+                    </div>
+
+                    {/* File path */}
+                    {selectedNodeData.meta?.file && (
+                        <div style={sectionStyle}>
+                            <div style={labelStyle}>Source File</div>
+                            <div style={{ color: '#88bbdd', fontSize: 10, wordBreak: 'break-all', cursor: 'default' }}>
+                                src/{selectedNodeData.meta.file}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Description */}
+                    {selectedNodeData.meta?.desc && (
+                        <div style={sectionStyle}>
+                            <div style={labelStyle}>Description</div>
+                            <div style={{ color: '#aaa', fontSize: 10, lineHeight: 1.5 }}>
+                                {selectedNodeData.meta.desc}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Status selector */}
+                    <div style={sectionStyle}>
+                        <div style={labelStyle}>Status</div>
+                        <select
+                            value={selectedNodeData.meta?.status || 'active'}
+                            onChange={(e) => {
+                                setNodes(prev => prev.map(n =>
+                                    n.id === selectedNodeData.id
+                                        ? { ...n, meta: { ...n.meta, status: e.target.value } }
+                                        : n
+                                ));
+                            }}
+                            style={{ background: '#111', color: '#aaa', border: '1px solid #333', fontSize: 10, padding: '4px 8px', width: '100%', fontFamily: "'SF Mono', monospace" }}
+                        >
+                            <option value="active">✅ Active — in use</option>
+                            <option value="unused">🔴 Unused — can be removed</option>
+                            <option value="planned">🟡 Planned — not yet built</option>
+                        </select>
                     </div>
 
                     {/* Incoming connections */}

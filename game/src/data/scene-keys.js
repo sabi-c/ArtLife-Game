@@ -8,6 +8,7 @@ export const SCENE_KEYS = Object.freeze({
     INTRO: 'IntroScene',
     OVERWORLD: 'OverworldScene',
     WORLD: 'WorldScene',
+    NEW_WORLD: 'NewWorldScene',
     CITY: 'CityScene',
     FAST_TRAVEL: 'FastTravelScene',
     LOCATION: 'LocationScene',
