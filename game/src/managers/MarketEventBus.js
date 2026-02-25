@@ -526,6 +526,67 @@ class _MarketEventBus {
     }
 
     /**
+     * Get aggregate NPC buy probability modifier from all active events.
+     * Considers artist-specific events (if artistId provided) and economy-wide events.
+     * @param {string} [artistId] — specific artist being considered for purchase
+     * @param {string} [tier] — artist tier for tier-targeted events
+     * @returns {number} modifier to add to base buy probability (e.g. -0.30 = -30%)
+     */
+    getNpcBuyModifier(artistId, tier) {
+        let mod = 0;
+        for (const effect of this._activeEffects) {
+            const impact = EVENT_IMPACTS[effect.type];
+            if (!impact?.npcBuyProbMod) continue;
+            const decay = effect.remaining / (impact.decayWeeks || 1);
+
+            // Direct artist match
+            if (effect.artistId && effect.artistId === artistId) {
+                mod += impact.npcBuyProbMod * decay;
+            }
+            // Economy-wide events (no specific artist)
+            else if (!effect.artistId) {
+                // Check tier targeting
+                if (impact.affectedTiers?.length > 0) {
+                    if (tier && impact.affectedTiers.includes(tier)) {
+                        mod += impact.npcBuyProbMod * decay;
+                    }
+                } else {
+                    mod += impact.npcBuyProbMod * decay * 0.5; // diluted for untargeted
+                }
+            }
+        }
+        return mod;
+    }
+
+    /**
+     * Get aggregate NPC sell probability modifier from all active events.
+     * @param {string} [artistId] — specific artist whose work is being considered for sale
+     * @param {string} [tier] — artist tier
+     * @returns {number} modifier to add to base sell probability
+     */
+    getNpcSellModifier(artistId, tier) {
+        let mod = 0;
+        for (const effect of this._activeEffects) {
+            const impact = EVENT_IMPACTS[effect.type];
+            if (!impact?.npcSellProbMod) continue;
+            const decay = effect.remaining / (impact.decayWeeks || 1);
+
+            if (effect.artistId && effect.artistId === artistId) {
+                mod += impact.npcSellProbMod * decay;
+            } else if (!effect.artistId) {
+                if (impact.affectedTiers?.length > 0) {
+                    if (tier && impact.affectedTiers.includes(tier)) {
+                        mod += impact.npcSellProbMod * decay;
+                    }
+                } else {
+                    mod += impact.npcSellProbMod * decay * 0.5;
+                }
+            }
+        }
+        return mod;
+    }
+
+    /**
      * Clear all state (for game reset).
      */
     reset() {

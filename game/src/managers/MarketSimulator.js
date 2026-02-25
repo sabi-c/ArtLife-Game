@@ -382,6 +382,13 @@ export class MarketSimulator {
                 if (npc.forSale.includes(work.id)) sellProbability += 0.20;
             }
 
+            // ── Event-driven sell modifier (per-artwork) ──
+            // Forgery discoveries cause panic selling, artist deaths reduce selling
+            const workArtistId = work.artistId || null;
+            const workTier = work.tier || 'mid_career';
+            const eventSellMod = MarketEventBus.getNpcSellModifier(workArtistId, workTier);
+            sellProbability += eventSellMod;
+
             if (Math.random() < sellProbability) {
                 // Ask price via formula or fallback
                 let flex;
@@ -427,6 +434,12 @@ export class MarketSimulator {
 
         // Bear market dampening (but still possible)
         if (marketCycle === 'bear') buyProbability -= 0.10;
+
+        // ── Event-driven NPC behavioral modifier ──
+        // Aggregate buy mod from all active events for this NPC's preferred tiers
+        const preferredTier = npc.preferredTiers?.[0] || 'mid-career';
+        const eventBuyMod = MarketEventBus.getNpcBuyModifier(null, preferredTier);
+        buyProbability += eventBuyMod;
 
         if (Math.random() > buyProbability) return [];
 
