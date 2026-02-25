@@ -1410,17 +1410,39 @@ export default function RoomManager({ onClose }) {
                         $ open -a Tiled larus.json
                     </div>
 
-                    {/* Map stats */}
-                    {mapData['larus'] && (
-                        <div style={{
-                            fontSize: 9, color: '#555', fontFamily: mono,
-                            marginBottom: 8, display: 'flex', gap: 10,
-                        }}>
-                            <span>{mapData['larus'].tilewidth}×{mapData['larus'].tileheight}px tiles</span>
-                            <span>{(mapData['larus'].tilesets || []).length} tilesets</span>
-                            <span>{(mapData['larus'].layers || []).length} layers</span>
-                        </div>
-                    )}
+                    {/* Map stats + layer breakdown */}
+                    {mapData['larus'] && (() => {
+                        const m = mapData['larus'];
+                        const tileLayers = (m.layers || []).filter(l => l.type === 'tilelayer');
+                        const objLayers = (m.layers || []).filter(l => l.type === 'objectgroup');
+                        return (
+                            <div style={{ fontSize: 9, color: '#777', fontFamily: mono, marginBottom: 8 }}>
+                                <div style={{ display: 'flex', gap: 10, marginBottom: 4 }}>
+                                    <span>{m.width}×{m.height} map</span>
+                                    <span>{m.tilewidth}×{m.tileheight}px tiles</span>
+                                    <span>{(m.tilesets || []).length} tilesets</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                    {tileLayers.map(l => (
+                                        <span key={l.name} style={{
+                                            padding: '1px 4px', borderRadius: 2,
+                                            background: l.visible !== false ? '#1a2a1a' : '#1a1a1a',
+                                            color: l.visible !== false ? '#4ade80' : '#555',
+                                            border: `1px solid ${l.visible !== false ? '#2a4a2a' : '#222'}`,
+                                        }}>{l.name}</span>
+                                    ))}
+                                    {objLayers.map(l => (
+                                        <span key={l.name} style={{
+                                            padding: '1px 4px', borderRadius: 2,
+                                            background: '#1a1a2a',
+                                            color: '#88bbdd',
+                                            border: '1px solid #2a2a4a',
+                                        }}>{l.name} ({(l.objects || []).length})</span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Action buttons */}
                     <div style={{ display: 'flex', gap: 4 }}>
