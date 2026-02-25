@@ -98,6 +98,28 @@ function countObjects(mapJSON) {
     };
 }
 
+/** Safely get flat tile data from a layer (handles both flat data and chunked infinite format) */
+function getLayerData(layer, mapWidth, mapHeight) {
+    if (!layer) return [];
+    if (layer.data) return layer.data;
+    if (layer.chunks) {
+        const flat = new Array(mapWidth * mapHeight).fill(0);
+        for (const chunk of layer.chunks) {
+            for (let row = 0; row < chunk.height; row++) {
+                for (let col = 0; col < chunk.width; col++) {
+                    const mx = chunk.x + col;
+                    const my = chunk.y + row;
+                    if (mx >= 0 && mx < mapWidth && my >= 0 && my < mapHeight) {
+                        flat[my * mapWidth + mx] = chunk.data[row * chunk.width + col];
+                    }
+                }
+            }
+        }
+        return flat;
+    }
+    return [];
+}
+
 /** Generate ASCII mini-map from Tiled layers */
 function generateAsciiMap(mapJSON) {
     if (!mapJSON) return 'No map data';
@@ -122,6 +144,9 @@ function generateAsciiMap(mapJSON) {
         }
     }
 
+    const belowData = getLayerData(below, w, h);
+    const worldData = getLayerData(world, w, h);
+
     const lines = [];
     for (let y = 0; y < h; y++) {
         let line = '';
@@ -129,9 +154,9 @@ function generateAsciiMap(mapJSON) {
             const key = `${x},${y}`;
             if (objMap[key]) {
                 line += objMap[key];
-            } else if (world?.data?.[y * w + x] > 0) {
+            } else if (worldData[y * w + x] > 0) {
                 line += '\u2588'; // Full block — furniture
-            } else if (below?.data?.[y * w + x] > 0) {
+            } else if (belowData[y * w + x] > 0) {
                 line += '\u00B7'; // Middle dot — floor
             } else {
                 line += ' ';
@@ -260,11 +285,13 @@ function TilesetPreview({ mapJSON }) {
         // Draw tile layers
         const tileLayers = (mapJSON.layers || []).filter(l => l.type === 'tilelayer');
         for (const layer of tileLayers) {
-            if (!layer.visible || layer.opacity === 0 || !layer.data) continue;
+            if (!layer.visible || layer.opacity === 0) continue;
+            const layerData = getLayerData(layer, mapJSON.width, mapJSON.height);
+            if (!layerData.length) continue;
             ctx.globalAlpha = layer.opacity ?? 1;
             for (let y = 0; y < mapJSON.height; y++) {
                 for (let x = 0; x < mapJSON.width; x++) {
-                    const gid = layer.data[y * mapJSON.width + x];
+                    const gid = layerData[y * mapJSON.width + x];
                     if (gid === 0) continue;
                     let tileset = null;
                     for (let i = mapJSON.tilesets.length - 1; i >= 0; i--) {
@@ -1388,7 +1415,8 @@ export default function RoomManager({ onClose }) {
                     {/* Open in Tiled CLI */}
                     <div
                         onClick={() => {
-                            navigator.clipboard.writeText('open -a Tiled game/public/assets/luminus/larus.json');
+                            const cmd = `open -a Tiled "/Users/seb/Downloads/Manual Library/Seb's Mind/Seb's Mind/Projects/Art-Market-Game/game/public/assets/luminus/larus.json"`;
+                            navigator.clipboard.writeText(cmd);
                         }}
                         title="Click to copy — paste in terminal to open in Tiled"
                         style={{
