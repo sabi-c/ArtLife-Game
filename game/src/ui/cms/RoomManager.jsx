@@ -260,7 +260,7 @@ function TilesetPreview({ mapJSON }) {
         // Draw tile layers
         const tileLayers = (mapJSON.layers || []).filter(l => l.type === 'tilelayer');
         for (const layer of tileLayers) {
-            if (!layer.visible || layer.opacity === 0) continue;
+            if (!layer.visible || layer.opacity === 0 || !layer.data) continue;
             ctx.globalAlpha = layer.opacity ?? 1;
             for (let y = 0; y < mapJSON.height; y++) {
                 for (let x = 0; x < mapJSON.width; x++) {

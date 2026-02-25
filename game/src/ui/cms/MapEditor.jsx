@@ -25,10 +25,10 @@ const TOOL = { SELECT: 'select', PENCIL: 'pencil', ERASER: 'eraser', EYEDROPPER:
 // Object type colors and icons for the map overlay
 const OBJ_STYLES = {
     painting: { color: '#c9a84c', label: 'P', bg: 'rgba(201,168,76,0.3)' },
-    npc:      { color: '#4ade80', label: 'N', bg: 'rgba(74,222,128,0.3)' },
-    door:     { color: '#88bbdd', label: 'D', bg: 'rgba(136,187,221,0.3)' },
-    spawn:    { color: '#ff6b6b', label: 'S', bg: 'rgba(255,107,107,0.3)' },
-    dialog:   { color: '#aa66cc', label: '?', bg: 'rgba(170,102,204,0.3)' },
+    npc: { color: '#4ade80', label: 'N', bg: 'rgba(74,222,128,0.3)' },
+    door: { color: '#88bbdd', label: 'D', bg: 'rgba(136,187,221,0.3)' },
+    spawn: { color: '#ff6b6b', label: 'S', bg: 'rgba(255,107,107,0.3)' },
+    dialog: { color: '#aa66cc', label: '?', bg: 'rgba(170,102,204,0.3)' },
 };
 
 /** Load an image and return a Promise */
@@ -944,7 +944,7 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
 
         if (bgProp) {
             promises.push(
-                loadImage(bgProp).then(img => { images._bgImage = img; }).catch(() => {})
+                loadImage(bgProp).then(img => { images._bgImage = img; }).catch(() => { })
             );
         }
 
@@ -1383,7 +1383,7 @@ function LayerPanel({ mapJSON, activeLayer, onSetLayer }) {
                 const isActive = layer.name === activeLayer;
                 const isTile = layer.type === 'tilelayer';
                 const isObj = layer.type === 'objectgroup';
-                const tileCount = isTile ? layer.data.filter(t => t > 0).length : 0;
+                const tileCount = isTile ? (layer.data || []).filter(t => t > 0).length : 0;
                 const objCount = isObj ? (layer.objects || []).length : 0;
 
                 return (
