@@ -11,6 +11,10 @@ import Phaser from 'phaser';
 import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 import { VIEW } from '../constants/views.js';
 
+// Dev-only debug logging (silent in production)
+const _DEV = import.meta.env?.DEV ?? false;
+function _log(...args) { if (_DEV) console.log('[NewWorldScene]', ...args); }
+
 // ─── Depth constants ────────────────────────────────────────────────────────
 const DEPTH = {
     WORLD: 0,
@@ -60,12 +64,12 @@ export default class NewWorldScene extends Phaser.Scene {
     // Preload
     // ════════════════════════════════════════════════════
     preload() {
-        console.log('[NewWorldScene] preload()');
+        _log('preload()');
         this._assetErrors = [];
 
         // Use URL captured at module import time (before SPA routing changed it)
         this.load.setBaseURL(INITIAL_BASE);
-        console.log('[NewWorldScene] Loader baseURL:', INITIAL_BASE);
+        _log('baseURL:', INITIAL_BASE);
 
         this.load.on('loaderror', (file) => {
             const msg = `Asset FAILED: ${file.key} (${file.url})`;
@@ -91,7 +95,7 @@ export default class NewWorldScene extends Phaser.Scene {
         this.load.image('question_mark', 'assets/luminus/question_mark.png');
 
         this.load.on('complete', () => {
-            console.log('[NewWorldScene] All assets loaded.');
+            _log('All assets loaded.');
             if (this._assetErrors.length) {
                 console.warn('[NewWorldScene] Failed assets:', this._assetErrors);
             }
@@ -102,7 +106,7 @@ export default class NewWorldScene extends Phaser.Scene {
     // Create
     // ════════════════════════════════════════════════════
     create() {
-        console.log('[NewWorldScene] create()');
+        _log('create()');
         this._createFailed = false;
 
         // Bail early if critical assets failed to load
@@ -120,7 +124,7 @@ export default class NewWorldScene extends Phaser.Scene {
             this._createCamera();
             this._createControls();
             this._createHUD();
-            console.log('[NewWorldScene] ✓ All systems initialized');
+            _log('✓ All systems initialized');
 
             // Tell App.jsx to show MobileJoypad on touch devices
             GameEventBus.emit(GameEvents.SCENE_READY, 'NewWorldScene');
@@ -178,7 +182,7 @@ export default class NewWorldScene extends Phaser.Scene {
         // (default is canvas size which restricts movement to visible area)
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
 
-        console.log(`[NewWorldScene] Map: ${this.map.widthInPixels}x${this.map.heightInPixels}, ${layersCreated} layers, physics bounds set`);
+        _log(`Map: ${this.map.widthInPixels}x${this.map.heightInPixels}, ${layersCreated} layers`);
     }
 
     // ════════════════════════════════════════════════════
@@ -188,7 +192,7 @@ export default class NewWorldScene extends Phaser.Scene {
         // Try Aseprite auto-parse first (reads frame tags from the JSON)
         try {
             const created = this.anims.createFromAseprite('character');
-            console.log(`[NewWorldScene] Aseprite auto-created ${created.length} animations`);
+            _log(`Aseprite auto-created ${created.length} animations`);
         } catch (e) {
             console.warn('[NewWorldScene] createFromAseprite failed:', e.message);
         }
@@ -201,7 +205,7 @@ export default class NewWorldScene extends Phaser.Scene {
         const missing = expected.filter(k => !this.anims.exists(k));
 
         if (missing.length > 0) {
-            console.log('[NewWorldScene] Missing anims:', missing, '— creating manually from frame names');
+            _log('Missing anims:', missing, '— creating manually');
             for (const anim of PLAYER_ANIMS) {
                 if (this.anims.exists(anim.key)) continue;
                 const frames = this.anims.generateFrameNames('character', {
@@ -226,7 +230,7 @@ export default class NewWorldScene extends Phaser.Scene {
         // Log all available animations for debugging
         const allAnims = [];
         this.anims.anims.each(a => allAnims.push(a.key));
-        console.log(`[NewWorldScene] Available animations (${allAnims.length}):`, allAnims.slice(0, 20));
+        _log(`${allAnims.length} animations available`);
     }
 
     // ════════════════════════════════════════════════════
@@ -271,7 +275,7 @@ export default class NewWorldScene extends Phaser.Scene {
             this.physics.add.collider(this.player, this.collisionLayer);
         }
 
-        console.log(`[NewWorldScene] Player spawned at (${x}, ${y})`);
+        _log(`Player spawned at (${x}, ${y})`);
     }
 
     // ════════════════════════════════════════════════════
@@ -280,7 +284,7 @@ export default class NewWorldScene extends Phaser.Scene {
     _createWarps() {
         const warpsLayer = this.map.getObjectLayer('warps');
         if (!warpsLayer) {
-            console.log('[NewWorldScene] No warps layer found');
+            _log('No warps layer found');
             return;
         }
 
@@ -306,7 +310,7 @@ export default class NewWorldScene extends Phaser.Scene {
                 const gotoId = props.goto;
 
                 if (sceneTarget) {
-                    console.log('[NewWorldScene] Warp to scene:', sceneTarget);
+                    _log('Warp to scene:', sceneTarget);
                     GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, sceneTarget);
                 } else if (gotoId) {
                     const dest = destinations.find(d => d.id === gotoId);
@@ -321,7 +325,7 @@ export default class NewWorldScene extends Phaser.Scene {
             });
         }
 
-        console.log(`[NewWorldScene] Created ${warpSources.length} warps, ${destinations.length} destinations`);
+        _log(`Created ${warpSources.length} warps, ${destinations.length} destinations`);
     }
 
     // ════════════════════════════════════════════════════
@@ -358,7 +362,7 @@ export default class NewWorldScene extends Phaser.Scene {
             const viewportH = this.scale.height / zoom;
             const offsetY = -(viewportH * 0.22); // shift player 22% UP from center
             this.cameras.main.setFollowOffset(0, offsetY);
-            console.log(`[NewWorldScene] Mobile camera: zoom=${zoom}, followOffset Y=${offsetY.toFixed(0)}`);
+            _log(`Mobile camera: zoom=${zoom}, offset Y=${offsetY.toFixed(0)}`);
         }
     }
 
@@ -462,7 +466,7 @@ export default class NewWorldScene extends Phaser.Scene {
     // Exit
     // ════════════════════════════════════════════════════
     exitScene() {
-        console.log('[NewWorldScene] exitScene()');
+        _log('exitScene()');
         // Hide MobileJoypad
         GameEventBus.emit(GameEvents.SCENE_EXIT, 'NewWorldScene');
         // Clean up joypad state

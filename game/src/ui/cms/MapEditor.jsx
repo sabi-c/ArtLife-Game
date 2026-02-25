@@ -41,31 +41,7 @@ function loadImage(src) {
         img.src = src;
     });
 }
-
-/** Safely get flat tile data from a layer (handles both flat data and chunked infinite format) */
-function getLayerData(layer, mapWidth, mapHeight) {
-    if (!layer) return [];
-    if (layer.data && Array.isArray(layer.data)) return layer.data;
-    if (layer.chunks) {
-        // Base64-encoded chunks can't be decoded in CMS
-        if (layer.chunks[0]?.data && typeof layer.chunks[0].data === 'string') return [];
-        const flat = new Array(mapWidth * mapHeight).fill(0);
-        for (const chunk of layer.chunks) {
-            if (!Array.isArray(chunk.data)) continue;
-            for (let row = 0; row < chunk.height; row++) {
-                for (let col = 0; col < chunk.width; col++) {
-                    const mx = chunk.x + col;
-                    const my = chunk.y + row;
-                    if (mx >= 0 && mx < mapWidth && my >= 0 && my < mapHeight) {
-                        flat[my * mapWidth + mx] = chunk.data[row * chunk.width + col];
-                    }
-                }
-            }
-        }
-        return flat;
-    }
-    return [];
-}
+import { getLayerData } from './mapUtils.js';
 
 /** Get a Tiled object's custom properties as a flat dict */
 function getProps(obj) {
