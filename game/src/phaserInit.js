@@ -281,5 +281,10 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
             .then((reg) => console.log('SW registered:', reg.scope))
             .catch((err) => console.log('SW registration failed:', err));
+
+        // Reload when a new SW takes control (clients.claim()) so fresh assets are served.
+        // This fixes the "Pages tab missing" issue where old cached bundles kept running
+        // after a new deployment updated the SW. One-time reload per SW update; no loop.
+        navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
     });
 }

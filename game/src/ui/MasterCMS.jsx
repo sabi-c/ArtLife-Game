@@ -25,6 +25,8 @@ import PageEditor from './cms/PageEditor.jsx';
 
 const TABS = [
     { id: 'board', icon: '📋', label: 'Project Board', dirtyDomain: 'kanban' },
+    { id: 'pages', icon: '📑', label: 'Pages' },
+    { id: 'flow', icon: '🔀', label: 'Flow Map', dirtyDomain: 'flow' },
     { id: 'timeline', icon: '📅', label: 'Timeline', dirtyDomain: 'timeline' },
     { id: 'storylines', icon: '⛓️', label: 'Storylines', dirtyDomain: 'storylines' },
     { id: 'events', icon: '🎭', label: 'Events / Dialogue', dirtyDomain: 'events' },
@@ -37,8 +39,6 @@ const TABS = [
     { id: 'actlog', icon: '📋', label: 'Activity Log' },
     { id: 'ingest', icon: '📦', label: 'Data Hub' },
     { id: 'engines', icon: '⚙️', label: 'Engines' },
-    { id: 'pages', icon: '📑', label: 'Pages' },
-    { id: 'flow', icon: '🔀', label: 'Flow Map', dirtyDomain: 'flow' },
 ];
 
 export default function MasterCMS({ onClose }) {

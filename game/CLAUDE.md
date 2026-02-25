@@ -4,9 +4,8 @@
 When given a plan or task list:
 1. Execute all steps without waiting for approval between them
 2. After completing implementation, always run `npx vite build` to verify
-3. Update `../07_Project/Roadmap.md` and `../07_Project/README.md` (relative to `game/` — these live at repo root `Art-Market-Game/07_Project/`) with any new features or status changes
-4. When all tasks are done, play a completion sound: `afplay /System/Library/Sounds/Glass.aiff`
-5. Provide a concise summary of what was done, files changed, and build status
+3. Update `../docs/project/Roadmap.md` and `../docs/project/README.md` (relative to `game/` — these live at `ArtLife-Game/docs/project/`) with any new features or status changes
+4. Provide a concise summary of what was done, files changed, and build status
 
 ## Iteration Protocol
 After completing a sprint or plan:
@@ -19,7 +18,7 @@ After completing a sprint or plan:
 - All git operations (add, commit, push) are pre-approved for this project
 - All build/test commands (vite, npm) are pre-approved
 - File edits within game/src/ are pre-approved
-- Doc updates to 07_Project/ are pre-approved
+- Doc updates to docs/project/ are pre-approved
 
 ## Build & Test
 - `npx vite build` — must pass clean before any commit
@@ -45,7 +44,7 @@ Every file should have a module-level JSDoc comment explaining:
 ### Architecture Decision Records
 When making architectural decisions (new patterns, data flow changes, system integrations):
 - Add a brief comment at the decision point
-- Update `07_Project/README.md` if it affects the overall architecture
+- Update `docs/project/README.md` if it affects the overall architecture
 - Note alternatives considered and why they were rejected
 
 ### State Shape Documentation

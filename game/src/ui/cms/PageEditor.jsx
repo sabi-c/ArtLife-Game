@@ -16,7 +16,7 @@
  *   - Export page registry as JSON
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { VIEW, OVERLAY } from '../../core/views.js';
 
 // ══════════════════════════════════════════════════════════════
@@ -432,6 +432,17 @@ export default function PageEditor() {
     const [filter, setFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [dirty, setDirty] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [showInspector, setShowInspector] = useState(false); // mobile: toggle tree vs inspector
+
+    // Responsive detection
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 768px)');
+        const handler = (e) => setIsMobile(e.matches);
+        handler(mq);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
 
     // Auto-save on changes
     useEffect(() => {
@@ -445,6 +456,11 @@ export default function PageEditor() {
         setPages(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p));
         setDirty(true);
     }, []);
+
+    const handleSelectPage = useCallback((id) => {
+        setSelectedId(id);
+        if (isMobile) setShowInspector(true); // auto-switch to inspector on mobile
+    }, [isMobile]);
 
     const filtered = useMemo(() => {
         let result = pages;
@@ -473,11 +489,22 @@ export default function PageEditor() {
         overlays: pages.filter(p => p.type === 'overlay').length,
     }), [pages]);
 
+    // On mobile: show only one panel at a time
+    const showTree = !isMobile || !showInspector;
+    const showPanel = !isMobile || showInspector;
+    const treeWidth = isMobile ? '100%' : 300;
+
     return (
-        <div style={{ display: 'flex', height: '100%', fontFamily: mono, fontSize: 11, color: '#ccc', background: '#08080d' }}>
+        <div style={{ display: 'flex', height: '100%', fontFamily: mono, fontSize: 11, color: '#ccc', background: '#08080d', position: 'relative' }}>
 
             {/* ═══ Left Panel: Page Tree ═══ */}
-            <div style={{ width: 340, borderRight: '1px solid #1a1a25', overflowY: 'auto', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{
+                width: treeWidth,
+                borderRight: isMobile ? 'none' : '1px solid #1a1a25',
+                overflowY: 'auto', flexShrink: 0,
+                display: showTree ? 'flex' : 'none',
+                flexDirection: 'column',
+            }}>
 
                 {/* Header + Search */}
                 <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid #1a1a25', flexShrink: 0 }}>
@@ -554,9 +581,10 @@ export default function PageEditor() {
                                     const isSelected = selectedId === page.id;
                                     return (
                                         <div key={page.id}
-                                            onClick={() => setSelectedId(page.id)}
+                                            onClick={() => handleSelectPage(page.id)}
                                             style={{
-                                                padding: '7px 14px 7px 20px', cursor: 'pointer',
+                                                padding: isMobile ? '12px 14px 12px 20px' : '7px 14px 7px 20px',
+                                                cursor: 'pointer',
                                                 borderBottom: '1px solid #0e0e16',
                                                 background: isSelected ? '#12122a' : 'transparent',
                                                 borderLeft: isSelected ? '3px solid #c9a84c' : '3px solid transparent',
@@ -609,7 +637,23 @@ export default function PageEditor() {
             </div>
 
             {/* ═══ Right Panel: Property Inspector ═══ */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ flex: 1, overflowY: 'auto', display: showPanel ? 'block' : 'none' }}>
+                {/* Mobile back button */}
+                {isMobile && (
+                    <button
+                        onClick={() => setShowInspector(false)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '10px 16px', width: '100%',
+                            background: '#0b0b12', border: 'none',
+                            borderBottom: '1px solid #1a1a25',
+                            color: '#c9a84c', fontSize: 12, fontFamily: mono,
+                            cursor: 'pointer', textAlign: 'left',
+                        }}
+                    >
+                        ← Back to Pages
+                    </button>
+                )}
                 {!selected ? (
                     <EmptyState stats={stats} />
                 ) : (
@@ -629,9 +673,9 @@ function EmptyState({ stats }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 40, textAlign: 'center' }}>
             <div>
                 <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.3 }}>📑</div>
-                <div style={{ fontSize: 13, color: '#555', letterSpacing: '0.08em', marginBottom: 8 }}>SELECT A PAGE TO EDIT</div>
+                <div style={{ fontSize: 13, color: '#555', letterSpacing: '0.08em', marginBottom: 8 }}>TAP A PAGE TO INSPECT</div>
                 <div style={{ fontSize: 10, color: '#333', lineHeight: 1.8 }}>
-                    {stats.total} total pages · {stats.active} active · {stats.scenes} scenes · {stats.views} views · {stats.overlays} overlays
+                    {stats.total} total · {stats.active} active · {stats.scenes} scenes · {stats.views} views · {stats.overlays} overlays
                 </div>
             </div>
         </div>

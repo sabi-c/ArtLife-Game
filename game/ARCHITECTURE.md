@@ -14,15 +14,18 @@ data/*.js  ──→  managers/*.js  ──→  stores/*.js  ──→  ui/*.jsx
 
 | Layer | Files | Purpose |
 |---|---|---|
-| `data/` | 29 | Static content: artworks, events, NPCs, storylines, maps |
-| `managers/` | 24 | Business logic: market sim, haggle, dialogue, save/load |
-| `stores/` | 12 | Zustand reactive state: subscribable by React components |
-| `ui/` | ~60 | React pages, overlays, CMS editors, dashboards |
-| `ui/cms/` | 17 | Content management editors (wired to `cmsStore`) |
-| `scenes/` | 13 | Phaser: overworld, battle, dialogue, title, travel |
-| `terminal/` | ~8 | Text-based CLI interface |
-| `engines/` | ~3 | Game tick, scene engine, calendar |
-| `constants/` | 1 | VIEW and OVERLAY route constants |
+| `data/` | 21+ | Static content: artworks, events, NPCs, storylines, maps, ink scenes |
+| `core/` | 5 | Route constants (`views.js`), game tick, scene engine, expression parser |
+| `managers/` | 24+ | Business logic: market sim, haggle, dialogue, save/load, NPC, events |
+| `stores/` | 11+ | Zustand reactive state: subscribable by React components |
+| `hooks/` | 2 | `usePageRouter` (URL ↔ VIEW/OVERLAY sync), `useBloombergFeed` |
+| `ui/` | 75+ | React pages, overlays, CMS editors, dashboards |
+| `ui/cms/` | 18+ | CMS editors — PageEditor v3, FlowEditor, MapEditor + 15 more |
+| `ui/email/` | 6+ | Unified email negotiation (EmailOverlay, inbox/, haggle/) |
+| `ui/terminal/` | 15+ | Text-based CLI screens (dashboard split into 4 sub-modules) |
+| `scenes/` | 14 | Phaser: overworld (NewWorldScene), battle, dialogue, title, travel |
+| `scenes/haggle/` | 3 | HaggleScene mixins: HaggleRenderer, HaggleTactics, HaggleDialogue |
+| `utils/` | 12+ | math, format, shuffle, id, ContentAPI, ContentExporter, safeScene |
 
 ## Key Stores
 
@@ -68,9 +71,9 @@ cmsStore (Zustand)
 JSON bundle (artlife_cms_export_YYYY-MM-DD.json)
 ```
 
-17 editors: Artwork, Event, Storyline, NPC, Room, Map, Venue, Haggle,
+18+ editors: Artwork, Event, Storyline, NPC, Room, Map, Venue, Haggle,
 Timeline, Kanban, MarketSim, DataHub, DataIngestion, EngineOverview,
-ArtTerminal, TearSheet, ActivityLog.
+ArtTerminal, TearSheet, ActivityLog, **PageEditor v3**, **FlowEditor**.
 
 ## Deprecated Files
 

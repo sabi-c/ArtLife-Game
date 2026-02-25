@@ -15,15 +15,22 @@ npx vite build       # Production build
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                     PHASER GAME LAYER                    │
-│  TitleScene, CharacterSelectScene, OverworldScene,       │
-│  MacDialogueScene, HaggleScene                           │
+│               REACT UI LAYER (App.jsx)                   │
+│  ViewRouter (full-page views, lazy-loaded)               │
+│  OverlayRouter (modals on top, lazy-loaded + boundaries) │
+│  email/ module (EmailOverlay — unified haggle + deals)   │
 └──────────────┬───────────────────────────────────────────┘
                │
 ┌──────────────▼───────────────────────────────────────────┐
-│                     MANAGER LAYER                        │
+│                     PHASER GAME LAYER                    │
+│  NewWorldScene, CityScene, LocationScene,                │
+│  HaggleScene (3-mixin), DialogueScene, MacDialogueScene  │
+└──────────────┬───────────────────────────────────────────┘
+               │
+┌──────────────▼───────────────────────────────────────────┐
+│                     MANAGER LAYER (24+)                  │
 │                                                          │
-│  GameState ──── WeekEngine ──── MarketManager             │
+│  GameState ──── WeekEngine ──── MarketManager            │
 │       │              │               │                   │
 │       ├── NPCManager │     MarketSimulator (NPC-NPC)     │
 │       ├── HaggleManager (player haggle battles)          │
@@ -36,19 +43,42 @@ npx vite build       # Production build
 │                      DATA LAYER                          │
 │  artists.js, artworks.js, contacts.js, rooms.js,         │
 │  dialogue_trees.js, haggle_config.js, calendar_events.js │
+│  storylines.js, world_locations.js, events/ (8 files)   │
 └──────────────┬───────────────────────────────────────────┘
                │
 ┌──────────────▼───────────────────────────────────────────┐
-│                    STORE LAYER (Zustand)                  │
+│                    STORE LAYER (Zustand, 11+)             │
 │  marketStore, cmsStore, npcStore, uiStore                │
+│  storylineStore, calendarStore, consequenceStore         │
+│  inventoryStore, contentStore, eventStore, gameStore     │
 └──────────────┬───────────────────────────────────────────┘
                │
 ┌──────────────▼───────────────────────────────────────────┐
 │                    CMS / ADMIN LAYER                     │
-│  MasterCMS.jsx → ArtworkEditor, NPCEditor, EventEditor,  │
-│  StorylineEditor, MarketSimDashboard, KanbanBoard        │
+│  MasterCMS.jsx (15 tabs) →                               │
+│    PageEditor v3, FlowEditor, MapEditor, VenueEditor,    │
+│    ArtworkEditor, NPCEditor, EventEditor, StorylineEditor│
+│    HaggleEditor, MarketSimDashboard, DataHub, KanbanBoard│
 └──────────────────────────────────────────────────────────┘
 ```
+
+### Routing System
+
+URL-based routing via `hooks/usePageRouter.js`. Pattern: `/{page}?overlay={overlay}`.
+
+| URL | View | Overlay |
+|-----|------|---------|
+| `/` | PHASER | Bloomberg/Artnet (user preference) |
+| `/boot` | BOOT | — |
+| `/terminal` | TERMINAL | — |
+| `/market` | PHASER | BLOOMBERG |
+| `/inbox` | PHASER | GMAIL_GUIDE |
+| `/artnet` | PHASER | ARTNET_MARKETPLACE |
+| `/cms` | PHASER | MASTER_CMS |
+| `/admin` | PHASER | ADMIN |
+| `/character` | CHARACTER_CREATOR | — |
+| `/debug` | PHASER | DEBUG_LOG |
+| `/sales` | PHASER | SALES_GRID |
 
 ## Market Economy System
 
@@ -102,13 +132,25 @@ Emotional > Aggressive > Financial > Logical > Emotional
 
 ## CMS (Director's Chair)
 
-Press `` ` `` in-game to open. Features:
-- **Artworks/Market** — Full artwork database with per-artwork market panel
-- **NPC Editor** — Edit contacts, relationships, haggle profiles
-- **Market Simulation** — 8-tab Bloomberg-terminal-style dashboard
-- **Storyline Editor** — Narrative arc manager with graph visualization
-- **Event Editor** — Game events with consequence chains
-- **Project Board** — Kanban-style task tracking
+Navigate to `/cms` or press `` ` `` to open AdminDashboard → switch to MasterCMS. 15 tabs:
+
+| Tab | Component | Purpose |
+|-----|-----------|---------|
+| Project Board | KanbanBoard | Task tracking (Kanban) |
+| Timeline | TimelineCalendar | Timeline event scheduling |
+| Storylines | StorylineEditor | Narrative arc manager with graph viz |
+| Events / Dialogue | EventEditor | Game events with consequence chains |
+| NPCs & Roles | NPCEditor | Edit contacts, relationships, haggle profiles |
+| Artworks / Market | ArtworkEditor | Full artwork database with market panel |
+| Haggle Battles | HaggleEditor | Negotiation battle configuration |
+| Market Sim | MarketSimDashboard | 8-view Bloomberg-style market analysis |
+| Live Terminal | ArtTerminal | Live CLI interface |
+| Venues / Map | VenueEditor | Room and venue management |
+| Activity Log | ActivityLogViewer | Change and event log |
+| Data Hub | DataHub | Content templates, import/export |
+| Engines | EngineOverview | Engine status dashboard |
+| **Pages** | **PageEditor v3** | **All game screens — hierarchical tree + property panel** |
+| Flow Map | FlowEditor | Node-based scene transition graph |
 
 ## Data Files
 
@@ -159,8 +201,13 @@ Look for `ARCHITECTURE CONTEXT (for other agents)` in file headers.
 
 ## Tech Stack
 
-- **Framework:** React + Phaser 3
-- **State:** Zustand (with immer + persist middleware)
-- **Build:** Vite
-- **Styling:** Inline styles (CMS dark theme)
-- **Charts:** Inline SVG (no chart libraries)
+- **Game Engine:** Phaser 3 (scenes, canvas, sprites, input)
+- **UI Framework:** React 19 (overlays, CMS, dashboards)
+- **State:** Zustand 5 (with immer + persist middleware)
+- **Narrative:** inkjs (compiled .ink story JSONs)
+- **Grid Movement:** GridEngine (tile-based overworld)
+- **Build:** Vite 5 (SW auto-versioning, manual Phaser chunk)
+- **Styling:** Inline styles + CSS (CMS dark theme, `--email-*` tokens)
+- **Node Editor:** @xyflow/react (FlowEditor tab)
+- **Drag & Drop:** @hello-pangea/dnd (Kanban board)
+- **Charts:** Recharts (market analytics)
