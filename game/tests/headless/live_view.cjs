@@ -18,6 +18,20 @@ if (!fs.existsSync(REPORT_DIR)) {
     const testPort = process.env.TEST_PORT || '5175';
 
     try {
+        page.on('console', msg => {
+            if (msg.type() === 'error' || msg.type() === 'warning') {
+                console.log(`[Browser ${msg.type()}] ${msg.text()}`);
+            }
+        });
+        page.on('pageerror', error => {
+            console.log(`[Browser Uncaught] ${error.message}`);
+        });
+        page.on('response', response => {
+            if (response.status() >= 400) {
+                console.log(`[Network Error] ${response.status()} ${response.url()}`);
+            }
+        });
+
         await page.goto(`http://127.0.0.1:${testPort}?skipBoot=true`, { waitUntil: 'networkidle' });
         console.log('Connected to dev server.');
 

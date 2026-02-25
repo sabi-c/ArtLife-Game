@@ -76,7 +76,12 @@ export default defineConfig({
 
                     // SPA History Fallback — serve index.html for all non-asset, non-API paths
                     // This enables URL-based routing (e.g. /admin, /market, /inbox)
-                    if (req.method === 'GET' && !req.url.startsWith('/api/') && !req.url.includes('.')) {
+                    if (req.method === 'GET' &&
+                        !req.url.startsWith('/api/') &&
+                        !req.url.startsWith('/@vite') &&
+                        !req.url.startsWith('/@react-refresh') &&
+                        !req.url.startsWith('/__vite_ping') &&
+                        !req.url.includes('.')) {
                         req.url = '/index.html';
                     }
 

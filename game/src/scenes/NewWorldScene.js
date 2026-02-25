@@ -92,12 +92,16 @@ export default class NewWorldScene extends Phaser.Scene {
         this.load.image('lum_inner', 'assets/luminus/inner.png');
         this.load.image('lum_collision', 'assets/luminus/collision.png');
 
-        // Character sprite — TexturePacker atlas format
-        this.load.atlas('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
-
+        // Preload configured character or fallback
+        const selectedSprite = window.game?.uiState()?.playerSprite || 'character';
+        if (selectedSprite === 'character') {
+            this.load.aseprite('character', 'assets/luminus/character.png', 'assets/luminus/character.json');
+        }
         // ── All NPC + player spritesheets via SpriteRegistry ──
-        const selectedSprite = SettingsManager.get('playerSprite') || 'character';
-        this._activeSpriteKey = selectedSprite;
+        // The following line is intentionally kept as it was in the original document
+        // and the provided snippet indicates it should remain.
+        const selectedSpriteFromSettings = SettingsManager.get('playerSprite') || 'character';
+        this._activeSpriteKey = selectedSpriteFromSettings;
         SpriteRegistry.preloadAll(this);
 
         // Warp particle
@@ -663,8 +667,25 @@ export default class NewWorldScene extends Phaser.Scene {
 
             // Update name label position to follow NPC
             const label = npc.getData('_label');
+            const hasSprite = !!npc.getData('_spriteKey');
             if (label) {
-                label.setPosition(npc.x, npc.y - 35);
+                label.setPosition(npc.x, npc.y - (hasSprite ? 35 : 16));
+            }
+
+            // Sync interaction marker and check distance
+            const marker = npc.getData('_interactMarker');
+            if (marker && this.player) {
+                marker.setX(npc.x); // keep centered above them
+
+                // Show if nearby and not already talking
+                const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, npc.x, npc.y);
+                const isNear = dist < 40;
+
+                if (isNear && !this._dialogueActive) {
+                    marker.setVisible(true);
+                } else {
+                    marker.setVisible(false);
+                }
             }
         }
     }
@@ -700,6 +721,15 @@ export default class NewWorldScene extends Phaser.Scene {
 
         this.npcs = [];
         this._npcColliders = [];
+
+        // Legacy map -> Contact map for placeholder maps like larus.json
+        const TILEMAP_OVERRIDE = {
+            '1': 'sasha_klein',
+            '2': 'elena_ross',
+            '3': 'marcus_price',
+            'rat': 'yuki_tanaka'
+        };
+
         for (const obj of enemyLayer.objects) {
             const npcX = obj.x + (obj.width / 2);
             const npcY = obj.y + (obj.height / 2);
@@ -707,12 +737,18 @@ export default class NewWorldScene extends Phaser.Scene {
             // Read Tiled properties (id, name, etc.)
             const props = {};
             for (const p of (obj.properties || [])) { props[p.name] = p.value; }
-            const npcId = props.id || obj.name || '?';
-            const npcName = obj.name || props.label || 'NPC';
 
-            // Resolve NPC sprite: look up contact's spriteKey, fall back to question_mark
+            let npcId = props.id || obj.name || '?';
+
+            // Map legacy generic tilemap IDs to actual ArtLife contacts
+            if (TILEMAP_OVERRIDE[npcId]) npcId = TILEMAP_OVERRIDE[npcId];
+            if (props.texture && TILEMAP_OVERRIDE[props.texture]) npcId = TILEMAP_OVERRIDE[props.texture];
+
+            // Resolve NPC sprite: look up contact's spriteKey
             const contact = this._contactMap?.[npcId];
             const spriteKey = contact?.spriteKey || null;
+            const npcName = contact?.name || props.label || obj.name || 'Unknown NPC';
+
             const hasSprite = spriteKey && this.textures.exists(spriteKey);
 
             let npc;
@@ -765,6 +801,25 @@ export default class NewWorldScene extends Phaser.Scene {
                 strokeThickness: 2,
             }).setOrigin(0.5).setDepth(DEPTH.HUD - 1);
             npc.setData('_label', label);
+
+            // Interaction marker (!) that appears when you get close
+            const interactMarker = this.add.text(npcX, npcY - (hasSprite ? 45 : 26), '!', {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '8px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(DEPTH.HUD).setVisible(false);
+
+            this.tweens.add({
+                targets: interactMarker,
+                y: interactMarker.y - 4,
+                duration: 500,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            npc.setData('_interactMarker', interactMarker);
 
             // Store NPC data
             npc.setData('npcId', npcId);
