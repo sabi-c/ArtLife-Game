@@ -687,10 +687,12 @@ function EmptyState({ stats }) {
 // ══════════════════════════════════════════════════════════════
 
 function PropertyPanel({ page, allPages, onUpdate }) {
+    const [editingProps, setEditingProps] = React.useState(false);
 
     // ── Styles ──
-    const section = { padding: '12px 20px', borderBottom: '1px solid #141420' };
-    const label = { color: '#555', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 5, display: 'block' };
+    const section = { padding: '16px 20px', borderBottom: '1px solid #141420' };
+    const sectionHeader = { color: '#888', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4, display: 'block', fontWeight: 600 };
+    const sectionHint = { color: '#444', fontSize: 10, marginBottom: 10, lineHeight: 1.5 };
     const inputStyle = {
         width: '100%', boxSizing: 'border-box', padding: '6px 10px',
         background: '#0c0c14', border: '1px solid #1a1a28', color: '#ccc',
@@ -734,46 +736,79 @@ function PropertyPanel({ page, allPages, onUpdate }) {
 
     // ── Incoming connections ──
     const incoming = allPages.filter(p => p.transitions.some(t => t.to === page.id));
+    const propEntries = Object.entries(page.properties || {});
+
+    // ── Status descriptions ──
+    const STATUS_DESC = {
+        active: 'This page is live and working in the game.',
+        unused: 'This page exists but is not currently used.',
+        planned: 'This page is planned but not yet built.',
+    };
+    const TYPE_DESC = {
+        view: 'A React screen that fills the entire viewport',
+        scene: 'A Phaser game scene (pixel graphics, sprites, interaction)',
+        overlay: 'A popup layer that sits on top of other content',
+    };
 
     return (
         <div>
-            {/* ── Header ── */}
+            {/* ── Hero Card ── */}
             <div style={{
-                padding: '16px 20px 14px', borderBottom: '1px solid #1a1a28',
-                background: 'linear-gradient(180deg, #0f0f18 0%, #08080d 100%)',
+                padding: '20px', borderBottom: '2px solid #1a1a28',
+                background: 'linear-gradient(180deg, #111118 0%, #08080d 100%)',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 20 }}>{TYPE_ICONS[page.type]}</span>
-                    <input
-                        value={page.name}
-                        onChange={e => onUpdate(page.id, { name: e.target.value })}
-                        style={{ ...inputStyle, fontSize: 16, fontWeight: 'bold', color: '#fff', background: 'transparent', border: '1px solid transparent', padding: '2px 4px', flex: 1 }}
-                        onFocus={e => e.target.style.borderColor = '#c9a84c44'}
-                        onBlur={e => e.target.style.borderColor = 'transparent'}
-                    />
+                {/* Name + Icon */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{
+                        width: 44, height: 44, borderRadius: 10,
+                        background: TYPE_COLORS[page.type] + '15',
+                        border: `1px solid ${TYPE_COLORS[page.type]}33`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 22,
+                    }}>
+                        {TYPE_ICONS[page.type]}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <input
+                            value={page.name}
+                            onChange={e => onUpdate(page.id, { name: e.target.value })}
+                            style={{ ...inputStyle, fontSize: 18, fontWeight: 700, color: '#fff', background: 'transparent', border: '1px solid transparent', padding: '2px 4px', width: '100%' }}
+                            onFocus={e => e.target.style.borderColor = '#c9a84c44'}
+                            onBlur={e => e.target.style.borderColor = 'transparent'}
+                        />
+                        <div style={{ fontSize: 10, color: '#555', paddingLeft: 6, marginTop: 2 }}>
+                            {TYPE_DESC[page.type] || 'Game page'}
+                        </div>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+
+                {/* Status + Type badges */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap', paddingLeft: 2 }}>
                     <select
                         value={page.status}
                         onChange={e => onUpdate(page.id, { status: e.target.value })}
                         style={{
                             background: STATUS_COLORS[page.status] + '15', border: `1px solid ${STATUS_COLORS[page.status]}44`,
-                            color: STATUS_COLORS[page.status], fontSize: 9, padding: '3px 10px', fontFamily: mono,
-                            borderRadius: 3, cursor: 'pointer', outline: 'none',
+                            color: STATUS_COLORS[page.status], fontSize: 10, padding: '4px 12px', fontFamily: mono,
+                            borderRadius: 20, cursor: 'pointer', outline: 'none', fontWeight: 600,
                         }}
                     >
-                        <option value="active">● ACTIVE</option>
-                        <option value="unused">○ UNUSED</option>
-                        <option value="planned">◐ PLANNED</option>
+                        <option value="active">● Active</option>
+                        <option value="unused">○ Unused</option>
+                        <option value="planned">◐ Planned</option>
                     </select>
-                    <span style={{ fontSize: 9, padding: '3px 10px', borderRadius: 3, background: TYPE_COLORS[page.type] + '18', color: TYPE_COLORS[page.type], border: `1px solid ${TYPE_COLORS[page.type]}33` }}>
-                        {page.type.toUpperCase()}
+                    <span style={{
+                        fontSize: 10, padding: '4px 12px', borderRadius: 20,
+                        background: TYPE_COLORS[page.type] + '18', color: TYPE_COLORS[page.type],
+                        border: `1px solid ${TYPE_COLORS[page.type]}33`, fontWeight: 600,
+                    }}>
+                        {page.type === 'view' ? '📱 React View' : page.type === 'scene' ? '🎮 Phaser Scene' : '📋 Overlay'}
                     </span>
-                    {page.key && (
-                        <span style={{ fontSize: 9, padding: '3px 10px', borderRadius: 3, background: '#111', color: '#555', border: '1px solid #222' }}>
-                            {page.key}
-                        </span>
-                    )}
+                </div>
+
+                {/* Status description */}
+                <div style={{ fontSize: 10, color: '#555', paddingLeft: 2, fontStyle: 'italic' }}>
+                    {STATUS_DESC[page.status]}
                 </div>
             </div>
 
@@ -786,127 +821,190 @@ function PropertyPanel({ page, allPages, onUpdate }) {
             {/* ── CMS Cross-links ── */}
             <CMSLinks page={page} />
 
-            {/* ── Description ── */}
+            {/* ── What This Page Does ── */}
             <div style={section}>
-                <span style={label}>Description</span>
+                <span style={sectionHeader}>📝 What This Page Does</span>
+                <div style={sectionHint}>Describe what the player sees and can do here.</div>
                 <textarea
                     value={page.desc}
                     onChange={e => onUpdate(page.id, { desc: e.target.value })}
-                    style={textareaStyle}
+                    style={{ ...textareaStyle, fontSize: 12, fontFamily: '-apple-system, sans-serif', lineHeight: 1.6 }}
+                    placeholder="Describe what happens on this page..."
                 />
+            </div>
+
+            {/* ── Page Details ── */}
+            <div style={section}>
+                <span style={sectionHeader}>⚙️ Page Details</span>
+                <div style={sectionHint}>Technical details and features of this page.</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, color: '#555' }}>{propEntries.length} properties</span>
+                    <button onClick={() => setEditingProps(!editingProps)} style={{
+                        background: editingProps ? '#c9a84c22' : 'none', border: `1px solid ${editingProps ? '#c9a84c44' : '#222'}`,
+                        color: editingProps ? '#c9a84c' : '#555', fontSize: 9, padding: '3px 10px',
+                        cursor: 'pointer', fontFamily: mono, borderRadius: 3,
+                    }}>
+                        {editingProps ? '✓ DONE' : '✏️ EDIT'}
+                    </button>
+                </div>
+
+                {/* Property cards (read-only by default) */}
+                <div style={{ display: 'grid', gridTemplateColumns: propEntries.length > 4 ? '1fr 1fr' : '1fr', gap: 6 }}>
+                    {propEntries.map(([key, value]) => (
+                        <div key={key} style={{
+                            padding: '8px 10px', borderRadius: 6,
+                            background: '#0b0b16', border: '1px solid #161625',
+                        }}>
+                            <div style={{ fontSize: 9, color: '#4ade80', marginBottom: 3, fontWeight: 600, letterSpacing: '0.04em' }}>{key}</div>
+                            {editingProps ? (
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    <input
+                                        value={value}
+                                        onChange={e => updateProperty(key, e.target.value)}
+                                        style={{ ...inputStyle, fontSize: 10, flex: 1 }}
+                                    />
+                                    <button onClick={() => removeProperty(key)} title="Remove"
+                                        style={{ background: 'none', border: 'none', color: '#c94040', cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1 }}>×</button>
+                                </div>
+                            ) : (
+                                <div style={{ fontSize: 10, color: '#999', lineHeight: 1.4 }}>{value || '—'}</div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+                {editingProps && (
+                    <button onClick={addProperty} style={{
+                        marginTop: 8, background: '#0b0b16', border: '1px dashed #222', color: '#555',
+                        fontSize: 10, padding: '6px 12px', cursor: 'pointer', fontFamily: mono,
+                        borderRadius: 4, width: '100%', textAlign: 'center',
+                    }}>
+                        + Add Property
+                    </button>
+                )}
+            </div>
+
+            {/* ── Where Can The Player Go From Here? ── */}
+            <div style={section}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={sectionHeader}>🔀 Player Exits</span>
+                    <button onClick={addTransition} style={{
+                        background: 'none', border: '1px solid #222', color: '#555',
+                        fontSize: 9, padding: '3px 10px', cursor: 'pointer', fontFamily: mono, borderRadius: 3,
+                    }}>
+                        + Add Exit
+                    </button>
+                </div>
+                <div style={sectionHint}>Where can the player go from this page?</div>
+
+                {page.transitions.length === 0 ? (
+                    <div style={{
+                        padding: '16px', textAlign: 'center', borderRadius: 6,
+                        background: '#0b0b16', border: '1px dashed #222', color: '#333', fontSize: 10,
+                    }}>
+                        🚫 Dead end — no exits from this page
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {page.transitions.map((t, i) => {
+                            const target = allPages.find(p => p.id === t.to);
+                            return (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    padding: '10px 12px', borderRadius: 8,
+                                    background: '#0b0b16', border: '1px solid #1a1a28',
+                                    transition: 'border-color 0.15s',
+                                }}>
+                                    {/* Arrow icon */}
+                                    <div style={{
+                                        width: 28, height: 28, borderRadius: 6,
+                                        background: '#c9a84c15', border: '1px solid #c9a84c33',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#c9a84c', fontSize: 14, flexShrink: 0,
+                                    }}>→</div>
+                                    {/* Target info */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <select
+                                            value={t.to}
+                                            onChange={e => updateTransition(i, 'to', e.target.value)}
+                                            style={{ ...inputStyle, fontSize: 11, fontWeight: 600, border: '1px solid transparent', background: 'transparent', color: '#ccc', padding: '2px 0', cursor: 'pointer' }}
+                                        >
+                                            <option value="">— Select target —</option>
+                                            {allPages.filter(p => p.id !== page.id).map(p => (
+                                                <option key={p.id} value={p.id}>{TYPE_ICONS[p.type]} {p.name}</option>
+                                            ))}
+                                        </select>
+                                        <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                                            <input
+                                                value={t.label} placeholder="When... (e.g. 'Player clicks Start')"
+                                                onChange={e => updateTransition(i, 'label', e.target.value)}
+                                                style={{ ...inputStyle, fontSize: 9, flex: 2, border: '1px solid transparent', background: 'transparent', color: '#666', padding: '2px 0' }}
+                                            />
+                                            <input
+                                                value={t.method} placeholder="How (technical)"
+                                                onChange={e => updateTransition(i, 'method', e.target.value)}
+                                                style={{ ...inputStyle, fontSize: 8, flex: 1, border: '1px solid transparent', background: 'transparent', color: '#333', padding: '2px 0' }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <button onClick={() => removeTransition(i)} title="Remove this exit"
+                                        style={{ background: 'none', border: 'none', color: '#c9404066', cursor: 'pointer', fontSize: 16, padding: '4px', lineHeight: 1 }}>×</button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* ── How Does The Player Get Here? ── */}
+            <div style={section}>
+                <span style={sectionHeader}>⬅️ Player Entrances</span>
+                <div style={sectionHint}>How does the player arrive at this page?</div>
+                {incoming.length === 0 ? (
+                    <div style={{
+                        padding: '12px', textAlign: 'center', borderRadius: 6,
+                        background: '#0b0b16', border: '1px dashed #222', color: '#333', fontSize: 10,
+                    }}>
+                        ⚠️ Unreachable — no pages lead here
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {incoming.map(p => {
+                            const transition = p.transitions.find(t => t.to === page.id);
+                            return (
+                                <div key={p.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    padding: '6px 10px', borderRadius: 6,
+                                    background: '#0d0d18', border: '1px solid #1a1a28',
+                                }}>
+                                    <span style={{ fontSize: 13 }}>{TYPE_ICONS[p.type]}</span>
+                                    <div>
+                                        <div style={{ fontSize: 10, color: '#aaa', fontWeight: 600 }}>{p.name}</div>
+                                        {transition?.label && (
+                                            <div style={{ fontSize: 8, color: '#555' }}>via "{transition.label}"</div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* ── Source File ── */}
             <div style={section}>
-                <span style={label}>Source File</span>
-                <div style={{ color: '#6baed6', fontSize: 11 }}>src/{page.file}</div>
-            </div>
-
-            {/* ── Properties (editable key-value pairs) ── */}
-            <div style={section}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={label}>Properties ({Object.keys(page.properties || {}).length})</span>
-                    <button onClick={addProperty} style={{ background: 'none', border: '1px solid #222', color: '#555', fontSize: 8, padding: '2px 8px', cursor: 'pointer', fontFamily: mono, borderRadius: 2 }}>
-                        + ADD
-                    </button>
+                <span style={sectionHeader}>📂 Source File</span>
+                <div style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: '#0b0b16', border: '1px solid #161625',
+                    color: '#6baed6', fontSize: 11, fontFamily: mono,
+                }}>
+                    src/{page.file}
                 </div>
-                {Object.entries(page.properties || {}).map(([key, value]) => (
-                    <div key={key} style={{ marginBottom: 6, display: 'flex', gap: 6, alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 9, color: '#4ade80', marginBottom: 2, fontWeight: 600 }}>{key}</div>
-                            <input
-                                value={value}
-                                onChange={e => updateProperty(key, e.target.value)}
-                                style={{ ...inputStyle, fontSize: 10 }}
-                            />
-                        </div>
-                        <button onClick={() => removeProperty(key)} title="Remove property"
-                            style={{ background: 'none', border: 'none', color: '#c9404033', cursor: 'pointer', fontSize: 12, padding: '12px 2px 0', lineHeight: 1 }}>
-                            ×
-                        </button>
-                    </div>
-                ))}
-            </div>
-
-            {/* ── Transitions (editable) ── */}
-            <div style={section}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={label}>Transitions → ({page.transitions.length})</span>
-                    <button onClick={addTransition} style={{ background: 'none', border: '1px solid #222', color: '#555', fontSize: 8, padding: '2px 8px', cursor: 'pointer', fontFamily: mono, borderRadius: 2 }}>
-                        + ADD
-                    </button>
-                </div>
-                {page.transitions.length === 0 ? (
-                    <div style={{ color: '#222', fontStyle: 'italic', fontSize: 10 }}>No outgoing transitions</div>
-                ) : (
-                    page.transitions.map((t, i) => {
-                        const target = allPages.find(p => p.id === t.to);
-                        return (
-                            <div key={i} style={{
-                                padding: '8px 10px', marginBottom: 4, borderRadius: 4,
-                                background: '#0b0b16', border: '1px solid #161625',
-                            }}>
-                                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
-                                    <span style={{ color: '#c9a84c', fontSize: 11, flexShrink: 0 }}>→</span>
-                                    <select
-                                        value={t.to}
-                                        onChange={e => updateTransition(i, 'to', e.target.value)}
-                                        style={{ ...inputStyle, fontSize: 10, flex: 1 }}
-                                    >
-                                        <option value="">— Select target —</option>
-                                        {allPages.filter(p => p.id !== page.id).map(p => (
-                                            <option key={p.id} value={p.id}>{TYPE_ICONS[p.type]} {p.name}</option>
-                                        ))}
-                                    </select>
-                                    <button onClick={() => removeTransition(i)} title="Remove"
-                                        style={{ background: 'none', border: 'none', color: '#c94040', cursor: 'pointer', fontSize: 12, padding: 0 }}>×</button>
-                                </div>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                    <input
-                                        value={t.label} placeholder="Label"
-                                        onChange={e => updateTransition(i, 'label', e.target.value)}
-                                        style={{ ...inputStyle, fontSize: 9, flex: 1 }}
-                                    />
-                                    <input
-                                        value={t.method} placeholder="Method"
-                                        onChange={e => updateTransition(i, 'method', e.target.value)}
-                                        style={{ ...inputStyle, fontSize: 9, flex: 1 }}
-                                    />
-                                </div>
-                                {target && (
-                                    <div style={{ fontSize: 8, color: '#444', marginTop: 3, paddingLeft: 16 }}>
-                                        {target.file}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
-                )}
-            </div>
-
-            {/* ── Incoming ── */}
-            <div style={section}>
-                <span style={label}>← Incoming ({incoming.length})</span>
-                {incoming.length === 0 ? (
-                    <div style={{ color: '#222', fontStyle: 'italic', fontSize: 10 }}>No incoming connections</div>
-                ) : (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                        {incoming.map(p => (
-                            <span key={p.id} style={{
-                                fontSize: 9, padding: '3px 8px', borderRadius: 3,
-                                background: '#0d0d18', color: '#777', border: '1px solid #1a1a28',
-                                cursor: 'default',
-                            }}>
-                                {TYPE_ICONS[p.type]} {p.name}
-                            </span>
-                        ))}
-                    </div>
-                )}
             </div>
 
             {/* ── ID + Reset ── */}
             <div style={{ ...section, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 9, color: '#222' }}>ID: {page.id}</span>
+                <span style={{ fontSize: 9, color: '#333' }}>Internal ID: {page.id}</span>
                 <button
                     onClick={() => {
                         if (confirm('Reset this page to defaults?')) {
@@ -914,9 +1012,9 @@ function PropertyPanel({ page, allPages, onUpdate }) {
                             if (def) onUpdate(page.id, { ...def });
                         }
                     }}
-                    style={{ background: 'none', border: '1px solid #222', color: '#c94040', fontSize: 8, padding: '2px 8px', cursor: 'pointer', fontFamily: mono, borderRadius: 2 }}
+                    style={{ background: 'none', border: '1px solid #222', color: '#c94040', fontSize: 9, padding: '4px 12px', cursor: 'pointer', fontFamily: mono, borderRadius: 3 }}
                 >
-                    RESET TO DEFAULT
+                    ↻ Reset to Default
                 </button>
             </div>
         </div>
