@@ -31,16 +31,21 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
+        caches.keys()
+            .then((cacheNames) => Promise.all(
                 cacheNames
                     .filter((name) => name !== CACHE_NAME)
                     .map((name) => caches.delete(name))
-            );
-        })
+            ))
+            .then(() => self.clients.claim())
+            .then(() => self.clients.matchAll({ type: 'window' }))
+            .then((clients) => {
+                // Force all open tabs to reload so they get the new JS bundle.
+                // This runs in the SW (not the page), so it works even if the
+                // old page code doesn't have a controllerchange listener.
+                clients.forEach((client) => client.navigate(client.url));
+            })
     );
-    // Take control of all pages immediately
-    self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {

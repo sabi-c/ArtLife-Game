@@ -31,7 +31,10 @@ jobs:
           cache-dependency-path: './game/package-lock.json'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --ignore-scripts
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
       - name: Build
         run: npm run build
