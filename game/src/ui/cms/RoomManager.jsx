@@ -1345,6 +1345,106 @@ export default function RoomManager({ onClose }) {
 
             {/* Left: Room List */}
             <div style={{ width: '25%', minWidth: 220, display: 'flex', flexDirection: 'column' }}>
+                {/* ═══ OVERWORLD — pinned at top ═══ */}
+                <div style={{
+                    padding: '12px', marginBottom: 4,
+                    background: 'linear-gradient(135deg, #0a140a 0%, #0a1a0d 100%)',
+                    border: '1px solid #2d6b30',
+                    borderRadius: 4,
+                }}>
+                    <div style={{
+                        fontSize: 11, color: '#4ade80', fontFamily: mono,
+                        marginBottom: 8, letterSpacing: 1, fontWeight: 'bold',
+                        display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                        🌍 OVERWORLD MAP
+                        {mapData['larus'] && (
+                            <span style={{ fontSize: 9, color: '#2d6b30', fontWeight: 'normal' }}>
+                                ({mapData['larus'].width}×{mapData['larus'].height})
+                            </span>
+                        )}
+                    </div>
+
+                    {/* File path — clickable to copy */}
+                    <div
+                        onClick={() => {
+                            const absPath = window.location.hostname === 'localhost'
+                                ? 'game/public/assets/luminus/larus.json'
+                                : 'assets/luminus/larus.json';
+                            navigator.clipboard.writeText(absPath).then(() => { });
+                        }}
+                        title="Click to copy file path"
+                        style={{
+                            fontSize: 9, color: '#555', fontFamily: mono,
+                            marginBottom: 6, cursor: 'pointer',
+                            padding: '4px 6px', background: '#0a0a14',
+                            border: '1px solid #1a1a2e', borderRadius: 2,
+                            wordBreak: 'break-all',
+                        }}
+                    >
+                        📁 game/public/assets/luminus/larus.json
+                    </div>
+
+                    {/* Open in Tiled CLI */}
+                    <div
+                        onClick={() => {
+                            navigator.clipboard.writeText('open -a Tiled game/public/assets/luminus/larus.json');
+                        }}
+                        title="Click to copy — paste in terminal to open in Tiled"
+                        style={{
+                            fontSize: 9, color: '#88bbdd', fontFamily: mono,
+                            marginBottom: 8, cursor: 'pointer',
+                            padding: '4px 6px', background: '#0a0a14',
+                            border: '1px solid #1a2a3e', borderRadius: 2,
+                        }}
+                    >
+                        $ open -a Tiled larus.json
+                    </div>
+
+                    {/* Map stats */}
+                    {mapData['larus'] && (
+                        <div style={{
+                            fontSize: 9, color: '#555', fontFamily: mono,
+                            marginBottom: 8, display: 'flex', gap: 10,
+                        }}>
+                            <span>{mapData['larus'].tilewidth}×{mapData['larus'].tileheight}px tiles</span>
+                            <span>{(mapData['larus'].tilesets || []).length} tilesets</span>
+                            <span>{(mapData['larus'].layers || []).length} layers</span>
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 4 }}>
+                        <button
+                            onClick={() => {
+                                if (onClose) onClose();
+                                setTimeout(() => {
+                                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                                }, 100);
+                            }}
+                            style={{
+                                flex: 1, padding: '8px 8px',
+                                background: '#1a3a1a', border: '1px solid #3a8a5c',
+                                color: '#4ade80', cursor: 'pointer',
+                                fontFamily: mono, fontSize: 10, fontWeight: 'bold',
+                                borderRadius: 2,
+                            }}
+                        >▶ PLAY</button>
+                        {mapData['larus'] && (
+                            <button
+                                onClick={() => setEditingMapId('larus')}
+                                style={{
+                                    flex: 1, padding: '8px 8px',
+                                    background: '#1a1a0a', border: '1px solid #c9a84c',
+                                    color: '#c9a84c', cursor: 'pointer',
+                                    fontFamily: mono, fontSize: 10,
+                                    borderRadius: 2,
+                                }}
+                            >✎ EDIT MAP</button>
+                        )}
+                    </div>
+                </div>
+
                 <RoomList
                     selectedVenueId={selectedVenueId}
                     onSelectVenue={setSelectedVenueId}
@@ -1361,54 +1461,6 @@ export default function RoomManager({ onClose }) {
                         borderRadius: 4,
                     }}
                 >+ CREATE ROOM</button>
-
-                {/* Overworld section */}
-                <div style={{
-                    margin: '8px 0 0', padding: '10px',
-                    background: '#0a140a', border: '1px solid #2d6b30',
-                    borderRadius: 4,
-                }}>
-                    <div style={{ fontSize: 9, color: '#4ade80', fontFamily: mono, marginBottom: 6, letterSpacing: 1 }}>
-                        🌍 OVERWORLD
-                    </div>
-                    <div style={{ fontSize: 10, color: '#888', fontFamily: mono, marginBottom: 4 }}>
-                        Map: larus.json
-                        {mapData['larus'] && (
-                            <span style={{ color: '#4ade80' }}>
-                                {' '}({mapData['larus'].width}×{mapData['larus'].height} tiles)
-                            </span>
-                        )}
-                    </div>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                        <button
-                            onClick={() => {
-                                if (onClose) onClose();
-                                setTimeout(() => {
-                                    GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
-                                }, 100);
-                            }}
-                            style={{
-                                flex: 1, padding: '6px 8px',
-                                background: '#1a3a1a', border: '1px solid #3a8a5c',
-                                color: '#4ade80', cursor: 'pointer',
-                                fontFamily: mono, fontSize: 9, fontWeight: 'bold',
-                                borderRadius: 2,
-                            }}
-                        >▶ PLAY</button>
-                        {mapData['larus'] && (
-                            <button
-                                onClick={() => setEditingMapId('larus')}
-                                style={{
-                                    flex: 1, padding: '6px 8px',
-                                    background: '#1a1a0a', border: '1px solid #c9a84c',
-                                    color: '#c9a84c', cursor: 'pointer',
-                                    fontFamily: mono, fontSize: 9,
-                                    borderRadius: 2,
-                                }}
-                            >✎ EDIT MAP</button>
-                        )}
-                    </div>
-                </div>
             </div>
 
             {/* Center: Room Inspector */}
