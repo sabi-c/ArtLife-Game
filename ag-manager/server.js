@@ -25,6 +25,7 @@ import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { createHmac, timingSafeEqual } from 'crypto';
 import dotenv from 'dotenv';
 import { CdpLogger, listSavedConversations, loadConversation } from './cdp-logger.js';
 
@@ -39,8 +40,9 @@ const API_KEY       = process.env.AG_MANAGER_KEY || '';
 const AG_PATH       = process.env.AG_PATH || 'antigravity';
 const AG_WORKSPACE  = process.env.AG_WORKSPACE || (process.env.HOME + '/ArtLife-Game');
 const AG_CDP_PORT   = parseInt(process.env.AG_CDP_PORT || '9000', 10);
-const PHONE_CHAT_DIR = process.env.PHONE_CHAT_DIR || '';
-const ALLOWED_PHONE  = process.env.ALLOWED_PHONE || '';
+const PHONE_CHAT_DIR      = process.env.PHONE_CHAT_DIR || '';
+const ALLOWED_PHONE       = process.env.ALLOWED_PHONE || '';
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN || '';
 
 // Startup timeout: how many seconds to wait for CDP before declaring failure
 const CDP_TIMEOUT_SECS = 45;
@@ -76,8 +78,12 @@ function startCdpLogger() {
   });
 
   cdpLogger.connect().catch((err) => {
-    emit('warn', 'CDP logger failed to connect — chat streaming unavailable', err.message);
+    emit('warn', 'CDP logger failed to connect — will retry in 5s', err.message);
     cdpLogger = null;
+    // Retry while Antigravity is still running (handles startup race condition)
+    setTimeout(() => {
+      if (state.antigravity === 'running') startCdpLogger();
+    }, 5000);
   });
 }
 
@@ -534,6 +540,28 @@ app.get('/api/conversations', requireKey, (req, res) => {
   res.json({ conversations: listSavedConversations() });
 });
 
+/**
+ * POST /api/send
+ * Injects a chat message into Antigravity's input via CDP Runtime.evaluate.
+ * Body: { text: string }
+ */
+app.post('/api/send', requireKey, rateLimit, async (req, res) => {
+  const text = (req.body.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'text is required' });
+  if (text.length > 4000) return res.status(400).json({ error: 'text too long (max 4000 chars)' });
+  if (!cdpLogger) {
+    return res.status(503).json({ error: 'CDP logger not connected — start Antigravity first' });
+  }
+  try {
+    const result = await cdpLogger.sendMessage(text);
+    if (!result.ok) return res.status(500).json({ error: result.error || 'send failed' });
+    emit('info', `Message sent via CDP (${result.method})`);
+    res.json({ ok: true, method: result.method });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Twilio SMS Webhook ───────────────────────────────────────────────────────
 // Point Twilio number webhook to: POST https://YOUR_SERVER/sms
 // Supported commands: start, stop, restart, status
@@ -542,6 +570,31 @@ app.post('/sms', (req, res) => {
   const body    = (req.body.Body || '').toLowerCase().trim();
   const rawFrom = (req.body.From || '');
   const from    = rawFrom.replace(/\D/g, ''); // strip non-digits for comparison
+
+  // Validate Twilio request signature if TWILIO_AUTH_TOKEN is configured.
+  // Twilio signs with HMAC-SHA1(authToken, webhookUrl + sortedParams).
+  // See: https://www.twilio.com/docs/usage/security#validating-signatures
+  if (TWILIO_AUTH_TOKEN) {
+    const sig = req.headers['x-twilio-signature'] || '';
+    // Trust X-Forwarded headers so this works behind ngrok / reverse proxies
+    const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+    const host  = req.get('x-forwarded-host')  || req.get('host') || '';
+    const webhookUrl = `${proto}://${host}/sms`;
+    const sortedParams = Object.keys(req.body).sort()
+      .reduce((s, k) => s + k + (req.body[k] ?? ''), webhookUrl);
+    const expected = createHmac('sha1', TWILIO_AUTH_TOKEN).update(sortedParams).digest('base64');
+    let valid = false;
+    try {
+      // timingSafeEqual requires same-length buffers
+      const sigBuf = Buffer.from(sig);
+      const expBuf = Buffer.from(expected);
+      valid = sig.length > 0 && sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
+    } catch {}
+    if (!valid) {
+      emit('warn', 'SMS rejected — invalid Twilio signature', sig ? 'sig mismatch' : 'no sig header');
+      return res.status(403).type('text/xml').send('<Response></Response>');
+    }
+  }
 
   // Validate sender if ALLOWED_PHONE is configured
   if (ALLOWED_PHONE) {

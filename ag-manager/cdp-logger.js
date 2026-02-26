@@ -110,6 +110,67 @@ const EXTRACT_MESSAGES_SCRIPT = `(() => {
 })()`;
 
 /**
+ * Inject a chat message into Antigravity's input field and submit it.
+ * Called as an IIFE: (SEND_MESSAGE_SCRIPT)(escapedText)
+ *
+ * Strategy:
+ *   1. Find the chat textarea using a selector chain
+ *   2. Set its value via React's native setter (triggers synthetic onChange)
+ *   3. Submit via a submit button if found, otherwise via Enter key
+ *
+ * Returns { ok: boolean, method: 'click'|'enter', error?: string }
+ */
+const SEND_MESSAGE_SCRIPT = `(text) => {
+  const SELECTORS = [
+    'textarea[data-testid*="chat"]',
+    'textarea[data-testid*="input"]',
+    'textarea[placeholder*="message"]',
+    'textarea[placeholder*="Message"]',
+    '[class*="chat-input"] textarea',
+    '[class*="input-area"] textarea',
+    '[class*="chat"] textarea',
+    'textarea',
+  ];
+
+  let input = null;
+  for (const sel of SELECTORS) {
+    try {
+      const el = document.querySelector(sel);
+      // Only target visible inputs
+      if (el && el.offsetParent !== null) { input = el; break; }
+    } catch {}
+  }
+  if (!input) return { ok: false, error: 'input not found' };
+
+  // React's native setter fires React synthetic onChange on controlled inputs
+  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+  setter.call(input, text);
+  input.dispatchEvent(new Event('input',  { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+
+  // Look for a submit button near the input; skip stop/cancel/attach buttons
+  const vicinity = input.closest('[class*="chat"]') || input.closest('form') || input.parentElement;
+  const allBtns  = [...(vicinity ? vicinity.querySelectorAll('button') : []),
+                    ...document.querySelectorAll('button[type="submit"]')];
+  const btn = allBtns.find(b => !b.disabled && b.offsetParent !== null &&
+    !/(stop|cancel|clear|attach|upload|file)/i.test(
+      (b.title || '') + (b.getAttribute('aria-label') || '') + (b.className || '')
+    ));
+
+  if (btn) { btn.click(); return { ok: true, method: 'click' }; }
+
+  // Fall back: dispatch Enter key events on the textarea
+  input.focus();
+  for (const type of ['keydown', 'keypress']) {
+    input.dispatchEvent(new KeyboardEvent(type, {
+      key: 'Enter', code: 'Enter', keyCode: 13, which: 13,
+      bubbles: true, cancelable: true,
+    }));
+  }
+  return { ok: true, method: 'enter' };
+}`;
+
+/**
  * Get the current conversation title from Antigravity's tab/header.
  */
 const GET_CONVERSATION_TITLE_SCRIPT = `(() => {
@@ -379,6 +440,22 @@ export class CdpLogger {
       const entry = this.lastMessages.find(m => m.id === this.streamingId);
       if (entry) appendToLog(this.conversationId, entry);
     }
+  }
+
+  // ── Send Message ──────────────────────────────────────────────────────────
+
+  /**
+   * Inject a chat message into Antigravity's input field and submit it via CDP.
+   * @param {string} text — the message to send
+   * @returns {{ ok: boolean, method: 'click'|'enter', error?: string }}
+   */
+  async sendMessage(text) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('CDP not connected');
+    }
+    // JSON.stringify safely embeds arbitrary text as a JS string literal
+    const result = await this._evaluate(`(${SEND_MESSAGE_SCRIPT})(${JSON.stringify(text)})`);
+    return result || { ok: false, error: 'no result returned' };
   }
 
   // ── Polling ───────────────────────────────────────────────────────────────
