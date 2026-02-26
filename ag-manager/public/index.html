@@ -145,6 +145,34 @@
     .log-msg.error   { color: var(--red); font-weight: 600; }
     .log-msg.stage   { color: var(--blue); font-weight: 600; }
 
+    /* ── Chat bubbles ── */
+    .chat-bubble {
+      max-width: 88%;
+      padding: 0.6rem 0.85rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--blue-dim);
+      border: 1px solid rgba(68,136,255,0.25);
+      color: var(--text);
+    }
+    .chat-bubble.assistant {
+      align-self: flex-start;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .chat-ts { font-size: 0.58rem; color: var(--muted); margin-top: 0.15rem; }
+    .chat-row { display: flex; flex-direction: column; }
+    .chat-row.user { align-items: flex-end; }
+    .chat-row.assistant { align-items: flex-start; }
+    .chat-role { font-size: 0.58rem; color: var(--muted); margin-bottom: 0.2rem; letter-spacing: 0.05em; text-transform: uppercase; }
+
     /* ── SMS commands ── */
     .sms-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem; width: 100%; margin-bottom: 0.65rem; }
     .sms-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; padding: 0.2rem 0; }
@@ -265,6 +293,33 @@
     <div id="log-feed"></div>
   </div>
 
+  <!-- Chat Panel -->
+  <div class="card" id="chat-panel" style="display:none">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Conversation</span>
+      <div style="display:flex;gap:0.4rem;align-items:center">
+        <span id="chat-conv-id" style="font-size:0.6rem;color:var(--muted)"></span>
+        <button class="ngrok-copy" id="btn-load-history" onclick="showHistoryPicker()" style="font-size:0.6rem">past chats</button>
+      </div>
+    </div>
+    <div id="chat-feed" style="max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:0.5rem;padding:0.25rem 0"></div>
+    <div id="chat-empty" style="font-size:0.72rem;color:var(--muted);text-align:center;padding:1.5rem 0">
+      Start Antigravity to see messages here
+    </div>
+  </div>
+
+  <!-- Past Conversations Picker -->
+  <div id="history-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:flex-end;justify-content:center">
+    <div style="background:var(--surface);border-radius:16px 16px 0 0;padding:1.25rem;width:100%;max-width:480px;max-height:70dvh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <span style="font-size:0.8rem;font-weight:700">Past Conversations</span>
+        <button onclick="hideHistoryPicker()" style="background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer">×</button>
+      </div>
+      <div id="history-list" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+      <div id="history-empty" style="font-size:0.72rem;color:var(--muted);text-align:center;padding:1rem">No saved conversations yet</div>
+    </div>
+  </div>
+
   <!-- SMS Reference -->
   <div class="sms-card">
     <div class="card-title">SMS Commands (via Twilio)</div>
@@ -372,6 +427,15 @@
       evtSource.onmessage = (e) => {
         try {
           const ev = JSON.parse(e.data);
+
+          if (ev.type === 'message') {
+            // New chat message from CDP logger — append to chat panel (no full refresh)
+            let meta = {};
+            try { meta = JSON.parse(ev.detail); } catch {}
+            appendChatMessage({ role: meta.role || 'assistant', text: ev.message, id: meta.id, timestamp: ev.timestamp });
+            return; // don't add to system log
+          }
+
           appendLog(ev.type, ev.message + (ev.detail ? ' — ' + ev.detail : ''), ev.timestamp);
 
           if (ev.type === 'stage') advanceStage(ev.message);
@@ -382,6 +446,11 @@
           if (ev.message === 'Antigravity is ready' || ev.message === 'All systems ready') {
             markAllDone();
             hideError();
+            loadChatHistory(); // load any messages already in the conversation log
+          }
+          if (ev.message.startsWith('Conversation switched')) {
+            clearChat();
+            loadChatHistory();
           }
         } catch {}
       };
@@ -523,6 +592,116 @@
     setInterval(() => {
       if (startedAt) document.getElementById('uptime').textContent = formatUptime(startedAt);
     }, 1000);
+
+    // ── Chat Panel ────────────────────────────────────────────────
+    const seenMessageIds = new Set();
+
+    function appendChatMessage(msg) {
+      const panel = document.getElementById('chat-panel');
+      const feed = document.getElementById('chat-feed');
+      const empty = document.getElementById('chat-empty');
+
+      // Deduplicate by id
+      if (msg.id && seenMessageIds.has(msg.id)) return;
+      if (msg.id) seenMessageIds.add(msg.id);
+
+      panel.style.display = 'block';
+      empty.style.display = 'none';
+
+      const role = msg.role || 'assistant';
+      const ts = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+
+      const row = document.createElement('div');
+      row.className = `chat-row ${role}`;
+      row.innerHTML =
+        `<div class="chat-role">${role === 'user' ? 'You' : 'Antigravity'}</div>` +
+        `<div class="chat-bubble ${role}">${escHtml(msg.text)}</div>` +
+        `<div class="chat-ts">${ts}</div>`;
+      feed.appendChild(row);
+
+      // Update conversation ID display
+      if (msg.conversationId) {
+        document.getElementById('chat-conv-id').textContent = msg.conversationId.slice(0, 8);
+      }
+
+      // Auto-scroll to bottom (only if user is near the bottom)
+      const NEAR_BOTTOM = 80;
+      const distFromBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight;
+      if (distFromBottom < NEAR_BOTTOM) {
+        feed.scrollTop = feed.scrollHeight;
+      }
+    }
+
+    function clearChat() {
+      document.getElementById('chat-feed').innerHTML = '';
+      seenMessageIds.clear();
+      document.getElementById('chat-empty').style.display = 'block';
+    }
+
+    async function loadChatHistory() {
+      try {
+        const res = await fetch(`/api/messages${apiKey}`);
+        if (!res.ok) return;
+        const { messages } = await res.json();
+        if (!messages || messages.length === 0) return;
+        document.getElementById('chat-panel').style.display = 'block';
+        document.getElementById('chat-empty').style.display = 'none';
+        messages.forEach(m => appendChatMessage(m));
+      } catch {}
+    }
+
+    // ── Past Conversations Picker ─────────────────────────────────
+    async function showHistoryPicker() {
+      const modal = document.getElementById('history-modal');
+      const list = document.getElementById('history-list');
+      const empty = document.getElementById('history-empty');
+      modal.style.display = 'flex';
+      list.innerHTML = '<div style="font-size:0.72rem;color:var(--muted);text-align:center;padding:0.5rem">Loading...</div>';
+
+      try {
+        const res = await fetch(`/api/conversations${apiKey}`);
+        const { conversations } = await res.json();
+
+        if (!conversations || conversations.length === 0) {
+          list.innerHTML = '';
+          empty.style.display = 'block';
+          return;
+        }
+
+        empty.style.display = 'none';
+        list.innerHTML = '';
+        conversations.forEach(c => {
+          const item = document.createElement('div');
+          item.style.cssText = 'background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.75rem;cursor:pointer';
+          item.innerHTML =
+            `<div style="font-size:0.75rem;font-weight:600;margin-bottom:0.2rem">${escHtml(c.date)} · ${c.messageCount} messages</div>` +
+            `<div style="font-size:0.68rem;color:var(--muted)">${escHtml(c.preview)}</div>`;
+          item.onclick = () => loadPastConversation(c.conversationId);
+          list.appendChild(item);
+        });
+      } catch {
+        list.innerHTML = '<div style="font-size:0.72rem;color:var(--red)">Failed to load</div>';
+      }
+    }
+
+    function hideHistoryPicker() {
+      document.getElementById('history-modal').style.display = 'none';
+    }
+
+    async function loadPastConversation(conversationId) {
+      hideHistoryPicker();
+      clearChat();
+      try {
+        const res = await fetch(`/api/messages${apiKey}&conversationId=${encodeURIComponent(conversationId)}`);
+        if (!res.ok) return;
+        const { messages } = await res.json();
+        document.getElementById('chat-panel').style.display = 'block';
+        document.getElementById('chat-empty').style.display = 'none';
+        messages.forEach(m => appendChatMessage(m));
+        // Scroll to top for past conversations
+        document.getElementById('chat-feed').scrollTop = 0;
+      } catch {}
+    }
 
     // Start everything
     connectSSE();

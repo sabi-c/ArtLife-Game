@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import { CdpLogger, listSavedConversations, loadConversation } from './cdp-logger.js';
 
 dotenv.config();
 
@@ -48,6 +49,33 @@ const CDP_TIMEOUT_SECS = 45;
 
 let agProcess = null;
 let phoneChatProcess = null;
+
+// ─── CDP Logger (message extractor) ──────────────────────────────────────────
+
+let cdpLogger = null;
+
+function startCdpLogger() {
+  if (cdpLogger) return;
+  cdpLogger = new CdpLogger({
+    cdpPort: AG_CDP_PORT,
+    onMessage: (msg) => {
+      // Stream new messages to all SSE clients
+      emit('message', msg.text, JSON.stringify({ role: msg.role, id: msg.id, conversationId: msg.conversationId }));
+    },
+    onStage:  (name, detail) => emit('stage', name, detail),
+    onError:  (err)          => emit('warn', err),
+    onConversationSwitch: (id) => emit('info', 'Conversation switched', id),
+  });
+
+  cdpLogger.connect().catch((err) => {
+    emit('warn', 'CDP logger failed to connect — chat streaming unavailable', err.message);
+    cdpLogger = null;
+  });
+}
+
+function stopCdpLogger() {
+  if (cdpLogger) { cdpLogger.disconnect(); cdpLogger = null; }
+}
 
 // Live state polled by /api/status
 const state = {
@@ -212,7 +240,10 @@ function startAntigravity() {
           emit('success', 'Antigravity is ready', `CDP active on port ${AG_CDP_PORT}`);
           state.stage = null;
 
-          // ── Stage 5: phone_chat ──
+          // ── Stage 5: Start CDP message logger ──
+          startCdpLogger();
+
+          // ── Stage 6: phone_chat ──
           if (PHONE_CHAT_DIR) {
             setTimeout(startPhoneChat, 500);
           }
@@ -348,6 +379,8 @@ function startPhoneChat() {
 function stopAll() {
   const wasRunning = !!(agProcess || phoneChatProcess);
 
+  stopCdpLogger();
+
   if (phoneChatProcess) {
     emit('info', 'Stopping phone_chat...');
     phoneChatProcess.kill('SIGTERM');
@@ -458,6 +491,35 @@ app.post('/api/restart', requireKey, rateLimit, (req, res) => {
 // Health check — no auth, useful for uptime monitors
 app.get('/health', (req, res) => {
   res.json({ ok: true, uptime: process.uptime(), antigravity: state.antigravity });
+});
+
+// ─── Chat Message API ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/messages
+ * Returns the current conversation's messages from the JSONL log.
+ * Query params:
+ *   ?conversationId=<id>  — load a specific past conversation (optional)
+ *   ?limit=<n>            — max messages to return (default 200)
+ */
+app.get('/api/messages', requireKey, (req, res) => {
+  const { conversationId, limit = '200' } = req.query;
+  const id = conversationId || cdpLogger?.conversationId;
+
+  if (!id) {
+    return res.json({ messages: [], note: 'No active conversation yet — start Antigravity first' });
+  }
+
+  const messages = loadConversation(id).slice(-parseInt(limit, 10));
+  res.json({ messages, conversationId: id, count: messages.length });
+});
+
+/**
+ * GET /api/conversations
+ * Lists all saved conversations from ~/.ag-manager/conversations/
+ */
+app.get('/api/conversations', requireKey, (req, res) => {
+  res.json({ conversations: listSavedConversations() });
 });
 
 // ─── Twilio SMS Webhook ───────────────────────────────────────────────────────
