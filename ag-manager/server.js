@@ -115,9 +115,13 @@ function emit(type, message, detail = '') {
   for (const res of sseClients) {
     try { res.write(`data: ${event}\n\n`); } catch { sseClients.delete(res); }
   }
-  // Also log to console with type prefix
+  // Also log to console with type prefix.
+  // Truncate message body for streaming events to avoid log pollution from long AI responses.
   const prefix = { info: '[INFO]', success: '[OK]', warn: '[WARN]', error: '[ERR]', stage: '[STAGE]' }[type] || '[LOG]';
-  console.log(prefix, message, detail ? `— ${detail}` : '');
+  const logMsg = (type === 'message_update' || type === 'message_done')
+    ? `[${type}] id=${JSON.parse(detail || '{}').id || '?'} len=${message.length}`
+    : message;
+  console.log(prefix, logMsg, (type !== 'message_update' && type !== 'message_done' && detail) ? `— ${detail}` : '');
 }
 
 /** Update named stage and emit a stage event */

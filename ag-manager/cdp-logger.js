@@ -32,9 +32,6 @@ import { WebSocket } from 'ws';
 import fs from 'fs';
 import path from 'path';
 import { createHash } from 'crypto';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── CDP Message Extraction Scripts ───────────────────────────────────────────
 // These are injected into Antigravity via Runtime.evaluate.
@@ -416,12 +413,19 @@ export class CdpLogger {
     if (!messages || messages.length === 0) return;
 
     // ── Conversation switch detection ──────────────────────────────────────
-    // Heuristic: message count dropped by >50% AND total text changed
+    // Heuristic: total text changed AND either:
+    //   (a) message count dropped by >50%  — user opened an existing chat
+    //   (b) exactly 1 message visible with different first-message text — user
+    //       opened a fresh new chat (which starts with just their first message)
+    const firstFpChanged = messages[0]?.fingerprint !== this.lastMessages[0]?.fingerprint;
     if (
       this.lastTotalText &&
       this.lastMessages.length > 0 &&
-      messages.length < this.lastMessages.length * 0.5 &&
-      totalText !== this.lastTotalText
+      totalText !== this.lastTotalText &&
+      (
+        messages.length < this.lastMessages.length * 0.5 ||
+        (messages.length === 1 && this.lastMessages.length > 1 && firstFpChanged)
+      )
     ) {
       // Flush any pending streaming message before switching
       if (this.streamingId !== null) {

@@ -753,7 +753,9 @@
       hideHistoryPicker();
       clearChat();
       try {
-        const res = await fetch(`/api/messages${apiKey}&conversationId=${encodeURIComponent(conversationId)}`);
+        // apiKey is either '?key=...' or '' — append conversationId with the right separator
+        const sep = apiKey ? '&' : '?';
+        const res = await fetch(`/api/messages${apiKey}${sep}conversationId=${encodeURIComponent(conversationId)}`);
         if (!res.ok) return;
         const { messages } = await res.json();
         document.getElementById('chat-panel').style.display = 'block';
