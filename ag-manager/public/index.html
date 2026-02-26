@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>AG Manager</title>
+  <style>
+    :root {
+      --bg: #080c10;
+      --surface: #111620;
+      --surface2: #1a2030;
+      --border: #1e2840;
+      --green: #00e87a;
+      --green-dim: rgba(0, 232, 122, 0.1);
+      --red: #ff3355;
+      --red-dim: rgba(255, 51, 85, 0.1);
+      --yellow: #ffcc00;
+      --yellow-dim: rgba(255, 204, 0, 0.1);
+      --blue: #4488ff;
+      --blue-dim: rgba(68, 136, 255, 0.1);
+      --text: #d0d8e8;
+      --muted: #4a5568;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, 'SF Pro Display', system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.25rem 1rem 2rem;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .header { text-align: center; margin-bottom: 1.25rem; width: 100%; }
+    .logo { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+    h1 {
+      font-size: 1.5rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .workspace { font-size: 0.6rem; color: var(--muted); margin-top: 0.3rem; word-break: break-all; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      width: 100%;
+      margin-bottom: 0.65rem;
+    }
+    .card-title { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.65rem; }
+
+    /* ── Status rows ── */
+    .status-row { display: flex; justify-content: space-between; align-items: center; padding: 0.35rem 0; }
+    .status-row + .status-row { border-top: 1px solid var(--border); }
+    .status-label { font-size: 0.78rem; color: var(--muted); }
+    .status-value { font-size: 0.75rem; font-family: 'SF Mono', monospace; color: var(--text); }
+
+    /* ── Badges ── */
+    .badge {
+      font-size: 0.65rem; font-weight: 700; padding: 0.18rem 0.6rem;
+      border-radius: 20px; letter-spacing: 0.07em; text-transform: uppercase; transition: all 0.25s;
+    }
+    .badge.running  { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green); }
+    .badge.stopped  { background: var(--red-dim);    color: var(--red);    border: 1px solid var(--red); }
+    .badge.starting { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+    .badge.error    { background: var(--red-dim);    color: var(--red);    border: 1px solid var(--red); }
+    .badge.ready    { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue); }
+
+    .badge.running::before,
+    .badge.starting::before {
+      content: '●'; margin-right: 4px; display: inline-block;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      width: 100%; margin-bottom: 0.65rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1rem 1.1rem;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-title { font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; }
+
+    .stage-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .stage-item {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 0.78rem; color: var(--muted); transition: all 0.3s;
+    }
+    .stage-item.done    { color: var(--green); }
+    .stage-item.active  { color: var(--text); font-weight: 600; }
+    .stage-item.error   { color: var(--red); }
+
+    .stage-icon { font-size: 0.85rem; width: 1.2rem; text-align: center; flex-shrink: 0; }
+    .stage-icon.spin { animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ngrok URL ── */
+    .ngrok-card {
+      background: var(--green-dim);
+      border: 1px solid rgba(0, 232, 122, 0.25);
+      border-radius: 12px; padding: 0.85rem 1rem;
+      width: 100%; margin-bottom: 0.65rem; display: none;
+    }
+    .ngrok-card.visible { display: block; }
+    .ngrok-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); margin-bottom: 0.35rem; }
+    .ngrok-url-text { font-size: 0.75rem; color: var(--text); word-break: break-all; font-family: 'SF Mono', monospace; }
+    .ngrok-copy { display: inline-block; margin-top: 0.4rem; font-size: 0.65rem; color: var(--green); cursor: pointer; background: none; border: 1px solid var(--green); padding: 0.18rem 0.55rem; border-radius: 5px; font-family: inherit; }
+
+    /* ── Buttons ── */
+    .controls { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; margin-bottom: 0.65rem; }
+    .btn { padding: 0.9rem; border-radius: 12px; border: none; font-size: 0.9rem; font-family: inherit; font-weight: 700; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+    .btn:active { transform: scale(0.94); }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .btn-icon { font-size: 1.3rem; line-height: 1; }
+    .btn-label { font-size: 0.65rem; letter-spacing: 0.07em; }
+    .btn-start   { background: var(--green); color: #000; }
+    .btn-stop    { background: var(--red);   color: #fff; }
+    .btn-restart { grid-column: span 2; background: var(--surface2); color: var(--yellow); border: 1px solid var(--border); flex-direction: row; padding: 0.7rem; justify-content: center; gap: 0.4rem; }
+    .btn-restart .btn-icon { font-size: 1rem; }
+
+    /* ── Live log feed ── */
+    .log-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem; width: 100%; margin-bottom: 0.65rem; }
+    .log-title { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; }
+    .log-clear { font-size: 0.6rem; color: var(--muted); cursor: pointer; background: none; border: none; font-family: inherit; }
+    #log-feed { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.2rem; }
+    .log-entry { font-size: 0.7rem; font-family: 'SF Mono', 'Fira Code', monospace; padding: 0.15rem 0; border-bottom: 1px solid var(--border); line-height: 1.4; display: flex; gap: 0.4rem; }
+    .log-entry:last-child { border: none; }
+    .log-ts { color: var(--muted); flex-shrink: 0; }
+    .log-msg.info    { color: var(--text); }
+    .log-msg.success { color: var(--green); }
+    .log-msg.warn    { color: var(--yellow); }
+    .log-msg.error   { color: var(--red); font-weight: 600; }
+    .log-msg.stage   { color: var(--blue); font-weight: 600; }
+
+    /* ── SMS commands ── */
+    .sms-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem; width: 100%; margin-bottom: 0.65rem; }
+    .sms-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; padding: 0.2rem 0; }
+    .sms-cmd { font-family: 'SF Mono', monospace; color: var(--yellow); background: var(--yellow-dim); padding: 0.1rem 0.45rem; border-radius: 4px; }
+    .sms-desc { color: var(--muted); }
+
+    .footer { font-size: 0.58rem; color: var(--muted); text-align: center; margin-top: auto; padding-top: 0.75rem; }
+
+    /* Error banner */
+    .error-banner { background: var(--red-dim); border: 1px solid var(--red); border-radius: 10px; padding: 0.75rem 1rem; width: 100%; margin-bottom: 0.65rem; display: none; }
+    .error-banner.visible { display: block; }
+    .error-title { font-size: 0.65rem; color: var(--red); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.3rem; }
+    .error-msg { font-size: 0.72rem; color: var(--text); font-family: 'SF Mono', monospace; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">Google Antigravity</div>
+    <h1>AG Manager</h1>
+    <div class="workspace" id="workspace-path">connecting...</div>
+  </div>
+
+  <!-- Error Banner -->
+  <div class="error-banner" id="error-banner">
+    <div class="error-title">⚠ Error</div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <!-- Status -->
+  <div class="card">
+    <div class="card-title">Status</div>
+    <div class="status-row">
+      <span class="status-label">Antigravity IDE</span>
+      <span class="badge stopped" id="ag-badge">stopped</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Phone Chat</span>
+      <span class="badge stopped" id="pc-badge">stopped</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">CDP Port</span>
+      <span class="badge stopped" id="cdp-badge">not ready</span>
+    </div>
+    <div class="status-row">
+      <span class="status-label">Uptime</span>
+      <span class="status-value" id="uptime">—</span>
+    </div>
+    <div class="status-row" id="stage-row" style="display:none">
+      <span class="status-label">Stage</span>
+      <span class="status-value" id="current-stage" style="color:var(--blue)">—</span>
+    </div>
+  </div>
+
+  <!-- Startup Progress -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-title">Startup Progress</div>
+    <ul class="stage-list" id="stage-list">
+      <li class="stage-item" data-step="launch">
+        <span class="stage-icon">○</span>
+        <span>Launching Antigravity</span>
+      </li>
+      <li class="stage-item" data-step="window">
+        <span class="stage-icon">○</span>
+        <span>Window opening</span>
+      </li>
+      <li class="stage-item" data-step="cdp">
+        <span class="stage-icon">○</span>
+        <span>Connecting to web (CDP)</span>
+      </li>
+      <li class="stage-item" data-step="history">
+        <span class="stage-icon">○</span>
+        <span>Loading previous conversations</span>
+      </li>
+      <li class="stage-item" data-step="ready">
+        <span class="stage-icon">○</span>
+        <span>Antigravity ready</span>
+      </li>
+      <li class="stage-item" data-step="phonechat">
+        <span class="stage-icon">○</span>
+        <span>Starting phone chat server</span>
+      </li>
+      <li class="stage-item" data-step="ngrok">
+        <span class="stage-icon">○</span>
+        <span>ngrok tunnel (phone URL)</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ngrok URL -->
+  <div class="ngrok-card" id="ngrok-card">
+    <div class="ngrok-label">📱 Open on your phone</div>
+    <div class="ngrok-url-text" id="ngrok-url-text">—</div>
+    <button class="ngrok-copy" onclick="copyNgrok()">Copy URL</button>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-start" id="btn-start" onclick="doAction('start')">
+      <span class="btn-icon">▶</span>
+      <span class="btn-label">START</span>
+    </button>
+    <button class="btn btn-stop" id="btn-stop" onclick="doAction('stop')">
+      <span class="btn-icon">■</span>
+      <span class="btn-label">STOP</span>
+    </button>
+    <button class="btn btn-restart" id="btn-restart" onclick="doAction('restart')">
+      <span class="btn-icon">↺</span>&nbsp;RESTART
+    </button>
+  </div>
+
+  <!-- Live Log Feed -->
+  <div class="log-card">
+    <div class="log-title">
+      Live Log
+      <button class="log-clear" onclick="clearLog()">clear</button>
+    </div>
+    <div id="log-feed"></div>
+  </div>
+
+  <!-- SMS Reference -->
+  <div class="sms-card">
+    <div class="card-title">SMS Commands (via Twilio)</div>
+    <div class="sms-row"><span class="sms-cmd">start</span><span class="sms-desc">Start Antigravity + phone chat</span></div>
+    <div class="sms-row"><span class="sms-cmd">stop</span><span class="sms-desc">Gracefully stop everything</span></div>
+    <div class="sms-row"><span class="sms-cmd">restart</span><span class="sms-desc">Full restart</span></div>
+    <div class="sms-row"><span class="sms-cmd">status</span><span class="sms-desc">Get current state as text reply</span></div>
+  </div>
+
+  <div class="footer" id="footer">Connecting to AG Manager...</div>
+
+  <script>
+    const KEY = new URLSearchParams(location.search).get('key') || '';
+    const apiKey = KEY ? `?key=${encodeURIComponent(KEY)}` : '';
+    let ngrokCurrent = null;
+    let startedAt = null;
+    let evtSource = null;
+
+    // ── Stage tracking for progress UI ──────────────────────────────
+    const STAGE_MAP = {
+      'Launching Antigravity':           'launch',
+      'Window opening':                  'window',
+      'Connecting to web':               'cdp',
+      'Loading previous conversations':  'history',
+      'Ready':                           'ready',
+      'Starting phone chat server':      'phonechat',
+      'Phone chat ready':                'ngrok',
+    };
+
+    let currentStepIdx = -1;
+    const stepOrder = ['launch', 'window', 'cdp', 'history', 'ready', 'phonechat', 'ngrok'];
+
+    function getStepIdx(step) { return stepOrder.indexOf(step); }
+
+    function advanceStage(stageName) {
+      const step = Object.entries(STAGE_MAP).find(([k]) => stageName.startsWith(k));
+      if (!step) return;
+      const stepId = step[1];
+      const idx = getStepIdx(stepId);
+
+      // Mark all previous steps as done
+      for (let i = 0; i < idx; i++) {
+        const el = document.querySelector(`[data-step="${stepOrder[i]}"]`);
+        if (el && !el.classList.contains('done')) markStep(el, 'done');
+      }
+
+      // Mark current as active
+      const el = document.querySelector(`[data-step="${stepId}"]`);
+      if (el) markStep(el, 'active');
+      currentStepIdx = idx;
+
+      // Show progress panel during startup
+      document.getElementById('progress-wrap').classList.add('visible');
+      const stageRow = document.getElementById('stage-row');
+      stageRow.style.display = 'flex';
+      document.getElementById('current-stage').textContent = stageName;
+    }
+
+    function markStep(el, status) {
+      el.className = `stage-item ${status}`;
+      const icon = el.querySelector('.stage-icon');
+      if (status === 'done')   { icon.textContent = '✓'; icon.className = 'stage-icon'; }
+      if (status === 'active') { icon.textContent = '◌'; icon.className = 'stage-icon spin'; }
+      if (status === 'error')  { icon.textContent = '✗'; icon.className = 'stage-icon'; }
+    }
+
+    function markAllDone() {
+      stepOrder.forEach(s => {
+        const el = document.querySelector(`[data-step="${s}"]`);
+        if (el) markStep(el, 'done');
+      });
+      document.getElementById('stage-row').style.display = 'none';
+      setTimeout(() => {
+        document.getElementById('progress-wrap').classList.remove('visible');
+      }, 4000);
+    }
+
+    function resetStages() {
+      stepOrder.forEach(s => {
+        const el = document.querySelector(`[data-step="${s}"]`);
+        if (el) {
+          el.className = 'stage-item';
+          const icon = el.querySelector('.stage-icon');
+          icon.textContent = '○';
+          icon.className = 'stage-icon';
+        }
+      });
+      currentStepIdx = -1;
+      document.getElementById('progress-wrap').classList.remove('visible');
+      document.getElementById('stage-row').style.display = 'none';
+    }
+
+    function markStageError(stageName) {
+      const step = Object.entries(STAGE_MAP).find(([k]) => stageName.startsWith(k));
+      if (!step) return;
+      const el = document.querySelector(`[data-step="${step[1]}"]`);
+      if (el) markStep(el, 'error');
+    }
+
+    // ── SSE Event Stream ─────────────────────────────────────────────
+    function connectSSE() {
+      if (evtSource) evtSource.close();
+      evtSource = new EventSource(`/api/events${apiKey}`);
+
+      evtSource.onmessage = (e) => {
+        try {
+          const ev = JSON.parse(e.data);
+          appendLog(ev.type, ev.message + (ev.detail ? ' — ' + ev.detail : ''), ev.timestamp);
+
+          if (ev.type === 'stage') advanceStage(ev.message);
+          if (ev.type === 'error') {
+            showError(ev.message + (ev.detail ? ': ' + ev.detail : ''));
+            markStageError(ev.message);
+          }
+          if (ev.message === 'Antigravity is ready' || ev.message === 'All systems ready') {
+            markAllDone();
+            hideError();
+          }
+        } catch {}
+      };
+
+      evtSource.onerror = () => {
+        appendLog('warn', 'Event stream disconnected — reconnecting...');
+        setTimeout(connectSSE, 3000);
+      };
+    }
+
+    // ── Status polling (fallback + initial state) ─────────────────────
+    async function poll() {
+      try {
+        const res = await fetch(`/api/status${apiKey}`);
+        if (res.status === 401) {
+          appendLog('error', 'Auth required — open with ?key=YOUR_KEY in the URL');
+          return;
+        }
+        const d = await res.json();
+        updateUI(d);
+      } catch (e) {
+        document.getElementById('footer').textContent = 'Offline — retrying...';
+      }
+    }
+
+    function updateUI(d) {
+      setBadge('ag-badge', d.antigravity);
+      setBadge('pc-badge', d.phoneChat);
+      document.getElementById('cdp-badge').textContent = d.cdpReady ? 'ready' : 'not ready';
+      document.getElementById('cdp-badge').className = 'badge ' + (d.cdpReady ? 'ready' : 'stopped');
+      if (d.workspace) document.getElementById('workspace-path').textContent = d.workspace;
+
+      startedAt = d.startedAt;
+      document.getElementById('uptime').textContent = startedAt ? formatUptime(startedAt) : '—';
+
+      ngrokCurrent = d.ngrokUrl;
+      const ngrokCard = document.getElementById('ngrok-card');
+      if (d.ngrokUrl) {
+        ngrokCard.classList.add('visible');
+        document.getElementById('ngrok-url-text').textContent = d.ngrokUrl;
+      } else {
+        ngrokCard.classList.remove('visible');
+      }
+
+      // Hide progress panel if stopped
+      if (d.antigravity === 'stopped' || d.antigravity === 'error') {
+        if (d.antigravity !== 'error') resetStages();
+      }
+      if (d.antigravity === 'running' && d.cdpReady && !d.stage) markAllDone();
+
+      if (d.lastError) showError(d.lastError); else hideError();
+
+      document.getElementById('footer').textContent =
+        'Updated ' + new Date().toLocaleTimeString();
+    }
+
+    function setBadge(id, status) {
+      const el = document.getElementById(id);
+      el.textContent = status || 'stopped';
+      el.className = 'badge ' + (status || 'stopped');
+    }
+
+    // ── Log Feed ─────────────────────────────────────────────────────
+    const MAX_LOG_ENTRIES = 80;
+
+    function appendLog(type, message, isoTs) {
+      const feed = document.getElementById('log-feed');
+      const ts = isoTs ? new Date(isoTs).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML =
+        `<span class="log-ts">${ts}</span>` +
+        `<span class="log-msg ${type}">${escHtml(message)}</span>`;
+
+      feed.appendChild(entry);
+
+      // Cap log entries
+      while (feed.children.length > MAX_LOG_ENTRIES) feed.removeChild(feed.firstChild);
+
+      // Auto-scroll to bottom
+      feed.scrollTop = feed.scrollHeight;
+    }
+
+    function clearLog() { document.getElementById('log-feed').innerHTML = ''; }
+
+    function escHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Error Banner ──────────────────────────────────────────────────
+    function showError(msg) {
+      document.getElementById('error-banner').classList.add('visible');
+      document.getElementById('error-msg').textContent = msg;
+    }
+    function hideError() {
+      document.getElementById('error-banner').classList.remove('visible');
+    }
+
+    // ── Actions ───────────────────────────────────────────────────────
+    async function doAction(action) {
+      if (action === 'start') resetStages();
+      if (action === 'stop') resetStages();
+      setButtons(true);
+      appendLog('info', `→ ${action}`);
+      try {
+        const res = await fetch(`/api/${action}${apiKey}`, { method: 'POST' });
+        const d = await res.json();
+        appendLog(d.ok ? 'success' : 'error', d.message);
+        setTimeout(poll, 1000);
+        setTimeout(poll, 5000);
+      } catch (e) {
+        appendLog('error', 'Request failed: ' + e.message);
+      } finally {
+        setTimeout(() => setButtons(false), 2000);
+      }
+    }
+
+    function setButtons(disabled) {
+      ['btn-start', 'btn-stop', 'btn-restart'].forEach(id => {
+        document.getElementById(id).disabled = disabled;
+      });
+    }
+
+    function copyNgrok() {
+      if (!ngrokCurrent) return;
+      navigator.clipboard.writeText(ngrokCurrent)
+        .then(() => appendLog('success', 'Copied: ' + ngrokCurrent));
+    }
+
+    function formatUptime(iso) {
+      const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (s < 60)   return s + 's';
+      if (s < 3600) return `${Math.floor(s/60)}m ${s%60}s`;
+      return `${Math.floor(s/3600)}h ${Math.floor((s%3600)/60)}m`;
+    }
+
+    // Update uptime every second
+    setInterval(() => {
+      if (startedAt) document.getElementById('uptime').textContent = formatUptime(startedAt);
+    }, 1000);
+
+    // Start everything
+    connectSSE();
+    poll();
+    setInterval(poll, 5000);
+  </script>
+</body>
+</html>
