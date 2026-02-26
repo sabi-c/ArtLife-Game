@@ -117,7 +117,9 @@
     .ngrok-card.visible { display: block; }
     .ngrok-label { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); margin-bottom: 0.35rem; }
     .ngrok-url-text { font-size: 0.75rem; color: var(--text); word-break: break-all; font-family: 'SF Mono', monospace; }
-    .ngrok-copy { display: inline-block; margin-top: 0.4rem; font-size: 0.65rem; color: var(--green); cursor: pointer; background: none; border: 1px solid var(--green); padding: 0.18rem 0.55rem; border-radius: 5px; font-family: inherit; }
+    .ngrok-actions { display: flex; gap: 0.5rem; margin-top: 0.4rem; align-items: center; }
+    .ngrok-open { font-size: 0.72rem; color: var(--green); text-decoration: none; font-weight: 700; border: 1px solid var(--green); padding: 0.18rem 0.55rem; border-radius: 5px; }
+    .ngrok-copy { font-size: 0.65rem; color: var(--green); cursor: pointer; background: none; border: 1px solid var(--green); padding: 0.18rem 0.55rem; border-radius: 5px; font-family: inherit; }
 
     /* ── Buttons ── */
     .controls { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; margin-bottom: 0.65rem; }
@@ -155,6 +157,15 @@
       white-space: pre-wrap;
       word-break: break-word;
     }
+    /* Streaming cursor — shown while the AI is still typing */
+    .chat-bubble.streaming::after {
+      content: '▋';
+      display: inline-block;
+      margin-left: 2px;
+      color: var(--blue);
+      animation: blink 0.7s step-end infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     .chat-bubble.user {
       align-self: flex-end;
       background: var(--blue-dim);
@@ -266,7 +277,10 @@
   <div class="ngrok-card" id="ngrok-card">
     <div class="ngrok-label">📱 Open on your phone</div>
     <div class="ngrok-url-text" id="ngrok-url-text">—</div>
-    <button class="ngrok-copy" onclick="copyNgrok()">Copy URL</button>
+    <div class="ngrok-actions">
+      <a class="ngrok-open" id="ngrok-open-link" href="#" target="_blank" rel="noopener">Open ↗</a>
+      <button class="ngrok-copy" onclick="copyNgrok()">Copy</button>
+    </div>
   </div>
 
   <!-- Controls -->
@@ -429,11 +443,28 @@
           const ev = JSON.parse(e.data);
 
           if (ev.type === 'message') {
-            // New chat message from CDP logger — append to chat panel (no full refresh)
+            // New (or first-seen) message — create a new bubble
             let meta = {};
             try { meta = JSON.parse(ev.detail); } catch {}
             appendChatMessage({ role: meta.role || 'assistant', text: ev.message, id: meta.id, timestamp: ev.timestamp });
-            return; // don't add to system log
+            return;
+          }
+
+          if (ev.type === 'message_update') {
+            // Streaming: update the existing bubble text in place
+            let meta = {};
+            try { meta = JSON.parse(ev.detail); } catch {}
+            updateChatMessage(meta.id, ev.message);
+            return;
+          }
+
+          if (ev.type === 'message_done') {
+            // Streaming finished — update to final text and remove the cursor
+            let meta = {};
+            try { meta = JSON.parse(ev.detail); } catch {}
+            updateChatMessage(meta.id, ev.message);
+            finalizeChatMessage(meta.id);
+            return;
           }
 
           appendLog(ev.type, ev.message + (ev.detail ? ' — ' + ev.detail : ''), ev.timestamp);
@@ -491,6 +522,7 @@
       if (d.ngrokUrl) {
         ngrokCard.classList.add('visible');
         document.getElementById('ngrok-url-text').textContent = d.ngrokUrl;
+        document.getElementById('ngrok-open-link').href = d.ngrokUrl;
       } else {
         ngrokCard.classList.remove('visible');
       }
@@ -613,6 +645,7 @@
 
       const row = document.createElement('div');
       row.className = `chat-row ${role}`;
+      if (msg.id) row.dataset.msgId = msg.id;
       row.innerHTML =
         `<div class="chat-role">${role === 'user' ? 'You' : 'Antigravity'}</div>` +
         `<div class="chat-bubble ${role}">${escHtml(msg.text)}</div>` +
@@ -630,6 +663,34 @@
       if (distFromBottom < NEAR_BOTTOM) {
         feed.scrollTop = feed.scrollHeight;
       }
+    }
+
+    /** Update an existing bubble's text in place (streaming). Adds cursor if not present. */
+    function updateChatMessage(id, text) {
+      if (!id) return;
+      const row = document.querySelector(`[data-msg-id="${CSS.escape(id)}"]`);
+      if (!row) {
+        // Not yet rendered — treat as a new message
+        appendChatMessage({ id, text, role: 'assistant', timestamp: new Date().toISOString() });
+        return;
+      }
+      const bubble = row.querySelector('.chat-bubble');
+      if (!bubble) return;
+      bubble.textContent = text;
+      bubble.classList.add('streaming');
+      // Auto-scroll to bottom if user is near it
+      const feed = document.getElementById('chat-feed');
+      if (feed.scrollHeight - feed.scrollTop - feed.clientHeight < 80) {
+        feed.scrollTop = feed.scrollHeight;
+      }
+    }
+
+    /** Remove the streaming cursor once the message is finalized. */
+    function finalizeChatMessage(id) {
+      if (!id) return;
+      const row = document.querySelector(`[data-msg-id="${CSS.escape(id)}"]`);
+      if (!row) return;
+      row.querySelector('.chat-bubble')?.classList.remove('streaming');
     }
 
     function clearChat() {

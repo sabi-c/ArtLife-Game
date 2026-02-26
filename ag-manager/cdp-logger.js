@@ -6,19 +6,26 @@
  *
  * How this differs from phone_chat / Antigravity-Shit-Chat:
  *   Those tools do: clone entire #conversation DOM → send 100KB HTML blob → phone replaces innerHTML
- *   This does:      extract message text via Runtime.evaluate → diff against previous → emit only NEW messages
+ *   This does:      extract message text via Runtime.evaluate → diff against previous → emit only NEW/CHANGED
  *
  * Result:
  *   - Phone receives < 1KB per update (just new message text, not the whole DOM)
  *   - No scroll sync needed — phone has the full message log independently
  *   - No DOM teardown/rebuild → no scroll jumps
+ *   - Streaming messages update in place (one bubble grows rather than duplicating)
  *   - Conversation persisted to JSONL files for full history across restarts
  *
  * Emitted events (via the callbacks passed to CdpLogger):
- *   onMessage(msg)        — new message object: { id, role, text, timestamp, conversationId }
- *   onStage(name, detail) — startup/status updates
- *   onError(msg)          — error strings
+ *   onMessage(msg)           — new (complete or first-seen) message: { id, role, text, timestamp, conversationId }
+ *   onMessageUpdate(msg)     — existing message text changed (streaming): same shape
+ *   onMessageDone(msg)       — streaming finished, text is final: same shape
+ *   onStage(name, detail)    — startup/status updates
+ *   onError(msg)             — error strings
  *   onConversationSwitch(id) — when Antigravity switches to a different chat
+ *
+ * Streaming state machine:
+ *   NEW (onMessage) → growing (onMessageUpdate × N) → stable × 2 polls (onMessageDone)
+ *   The UI keeps one bubble per message ID and updates its text in place.
  */
 
 import { WebSocket } from 'ws';
@@ -36,6 +43,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Injected into Antigravity to extract chat messages as structured text.
  * Returns { messages: [{text, isUser, fingerprint}], containerFound, totalText }
+ *
+ * Text cleanup: clones each element and removes action buttons (copy, thumbs,
+ * edit controls) before reading innerText — so we get message content only.
  */
 const EXTRACT_MESSAGES_SCRIPT = `(() => {
   // Strategy 1: known stable container IDs
@@ -83,12 +93,16 @@ const EXTRACT_MESSAGES_SCRIPT = `(() => {
       !!el.querySelector('[data-role="user"]') ||
       !!el.closest('[class*="user-message"]');
 
-    const text = el.innerText.trim();
-    // Fingerprint = hash of text content (for dedup across polls)
+    // Clone and strip UI chrome (copy buttons, action toolbars, etc.) before reading text
+    const clone = el.cloneNode(true);
+    for (const btn of clone.querySelectorAll('button, [role="button"]')) btn.remove();
+    const text = clone.innerText.trim();
+
+    // Fingerprint = polynomial hash of text (fast change detection)
     const fingerprint = text.split('').reduce((h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0, 0).toString(36);
 
     return { text, isUser, fingerprint };
-  });
+  }).filter(m => m.text.length > 0); // drop empty elements post-cleanup
 
   return {
     containerFound: true,
@@ -124,6 +138,9 @@ function nowIso() {
 // ─── Storage ──────────────────────────────────────────────────────────────────
 // Messages are saved as JSONL (one JSON object per line) in:
 //   ~/.ag-manager/conversations/<date>-<conversationId>.jsonl
+//
+// Streaming messages may be appended twice (partial then final). loadConversation
+// keeps the LAST entry per ID so the final text always wins.
 
 function getLogDir() {
   const dir = path.join(process.env.HOME || '~', '.ag-manager', 'conversations');
@@ -138,8 +155,9 @@ function getLogPath(conversationId) {
 
 function appendToLog(conversationId, message) {
   try {
-    const line = JSON.stringify(message) + '\n';
-    fs.appendFileSync(getLogPath(conversationId), line, 'utf8');
+    // Strip internal tracking fields before persisting
+    const { fingerprint, ...toSave } = message;
+    fs.appendFileSync(getLogPath(conversationId), JSON.stringify(toSave) + '\n', 'utf8');
   } catch (e) {
     // Non-fatal — log is best-effort
     console.error('[CDP-LOGGER] Failed to write log:', e.message);
@@ -188,23 +206,23 @@ export function loadConversation(conversationId) {
   if (!files.length) return [];
   // Load all matching files and merge (handles multi-day conversations)
   const allMessages = files.flatMap(f => loadLogFile(path.join(dir, f)));
-  // Deduplicate by message id
-  const seen = new Set();
-  return allMessages.filter(m => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  });
+  // Keep the LAST entry per ID — streaming messages may be appended twice
+  // (partial text on first emit, final text on done). Last write wins.
+  const byId = new Map();
+  for (const m of allMessages) byId.set(m.id, m);
+  return [...byId.values()];
 }
 
 // ─── CdpLogger ────────────────────────────────────────────────────────────────
 
 export class CdpLogger {
-  constructor({ cdpPort, onMessage, onStage, onError, onConversationSwitch }) {
+  constructor({ cdpPort, onMessage, onMessageUpdate, onMessageDone, onStage, onError, onConversationSwitch }) {
     this.cdpPort = cdpPort;
-    this.onMessage = onMessage || (() => {});
-    this.onStage = onStage || (() => {});
-    this.onError = onError || (() => {});
+    this.onMessage           = onMessage           || (() => {});
+    this.onMessageUpdate     = onMessageUpdate     || (() => {});
+    this.onMessageDone       = onMessageDone       || (() => {});
+    this.onStage             = onStage             || (() => {});
+    this.onError             = onError             || (() => {});
     this.onConversationSwitch = onConversationSwitch || (() => {});
 
     this.ws = null;
@@ -217,9 +235,17 @@ export class CdpLogger {
 
     // Conversation state
     this.conversationId = null;
-    this.seenFingerprints = new Set(); // prevents re-emitting the same message
+
+    // Position-based message tracking.
+    // Each entry: { id, role, text, fingerprint, timestamp, conversationId }
+    // Index = DOM position of the message in the visible conversation.
+    this.lastMessages = [];
+
+    // Streaming state: track the last assistant message that may still be growing.
+    this.streamingId    = null; // positionId of the currently-streaming assistant message
+    this.streamStable   = 0;   // consecutive polls with no change to the streaming message
+
     this.lastTotalText = '';
-    this.messageCount = 0;
   }
 
   // ── CDP Wire Protocol ──────────────────────────────────────────────────────
@@ -244,7 +270,6 @@ export class CdpLogger {
   }
 
   async _evaluate(expression) {
-    // Run in whatever context we've identified as the main chat frame
     const params = {
       expression,
       returnByValue: true,
@@ -264,7 +289,6 @@ export class CdpLogger {
   async connect() {
     this.onStage('Connecting CDP logger', `port ${this.cdpPort}`);
 
-    // Discover Antigravity's WebSocket debugger URL
     const targetUrl = await this._discoverTarget();
     if (!targetUrl) {
       throw new Error(`No Antigravity workbench target found on CDP port ${this.cdpPort}`);
@@ -288,7 +312,6 @@ export class CdpLogger {
         let msg;
         try { msg = JSON.parse(raw.toString()); } catch { return; }
 
-        // Route CDP responses to pending promises
         if (msg.id !== undefined && this.pending.has(msg.id)) {
           const { resolve, reject } = this.pending.get(msg.id);
           this.pending.delete(msg.id);
@@ -297,21 +320,19 @@ export class CdpLogger {
           return;
         }
 
-        // Track execution contexts to find the right frame for our JS injection
+        // Track execution contexts to find the right frame for JS injection
         if (msg.method === 'Runtime.executionContextCreated') {
           const ctx = msg.params?.context;
-          // Prefer context whose origin matches the workbench — heuristic: name contains 'workbench' or 'cascade'
           if (ctx && (ctx.name?.includes('workbench') || ctx.origin?.includes('workbench'))) {
             this.contextId = ctx.id;
           }
         }
         if (msg.method === 'Runtime.executionContextsCleared') {
-          this.contextId = null; // page navigated; re-detect on next poll
+          this.contextId = null;
         }
       });
     });
 
-    // Enable Runtime domain so we get context events
     await this._call('Runtime.enable');
 
     this.onStage('CDP logger connected');
@@ -320,13 +341,12 @@ export class CdpLogger {
   }
 
   async _discoverTarget() {
-    const PORTS = [this.cdpPort]; // can extend to [9000, 9001, 9002] if needed
+    const PORTS = [this.cdpPort];
     for (const port of PORTS) {
       try {
         const res = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(3000) });
         if (!res.ok) continue;
         const targets = await res.json();
-        // Find the Antigravity workbench target
         const target = targets.find(t =>
           t.url?.includes('workbench.html') ||
           t.title?.toLowerCase().includes('antigravity') ||
@@ -343,6 +363,7 @@ export class CdpLogger {
     if (!this.running) return;
     this.ws = null;
     this.contextId = null;
+    // Keep lastMessages across reconnect — position-based diff will pick up where we left off
     try {
       await this.connect();
     } catch (err) {
@@ -355,6 +376,12 @@ export class CdpLogger {
     this.running = false;
     if (this.pollTimer) clearTimeout(this.pollTimer);
     if (this.ws) { this.ws.close(); this.ws = null; }
+
+    // Flush any unfinalized streaming message to JSONL on clean disconnect
+    if (this.streamingId !== null && this.conversationId) {
+      const entry = this.lastMessages.find(m => m.id === this.streamingId);
+      if (entry) appendToLog(this.conversationId, entry);
+    }
   }
 
   // ── Polling ───────────────────────────────────────────────────────────────
@@ -365,17 +392,21 @@ export class CdpLogger {
       try {
         await this._extractAndDiff();
       } catch (err) {
-        // Don't surface eval errors constantly — only if they persist
         if (err.message.includes('not open') || err.message.includes('timed out')) {
           this.onError(`CDP poll error: ${err.message}`);
         }
       }
-      this.pollTimer = setTimeout(poll, 1500); // 1.5s — slightly longer than phone_chat's 1s to be gentler
+      this.pollTimer = setTimeout(poll, 1500);
     };
     poll();
   }
 
   // ── Message Extraction & Diffing ─────────────────────────────────────────
+  //
+  // Two paths:
+  //   First extract (lastMessages empty): emit all visible messages immediately,
+  //     persist all except the last assistant message (which might be mid-stream).
+  //   Subsequent extracts: position-based diff — new, update, or unchanged.
 
   async _extractAndDiff() {
     const result = await this._evaluate(EXTRACT_MESSAGES_SCRIPT);
@@ -384,47 +415,138 @@ export class CdpLogger {
     const { messages, totalText } = result;
     if (!messages || messages.length === 0) return;
 
-    // Detect conversation switch: if totalText changed drastically AND message count dropped
+    // ── Conversation switch detection ──────────────────────────────────────
+    // Heuristic: message count dropped by >50% AND total text changed
     if (
       this.lastTotalText &&
-      messages.length < this.messageCount * 0.5 &&
+      this.lastMessages.length > 0 &&
+      messages.length < this.lastMessages.length * 0.5 &&
       totalText !== this.lastTotalText
     ) {
-      // Conversation switched
+      // Flush any pending streaming message before switching
+      if (this.streamingId !== null) {
+        const entry = this.lastMessages.find(m => m.id === this.streamingId);
+        if (entry) {
+          appendToLog(this.conversationId, entry);
+          this._emitPayload(this.onMessageDone, entry);
+        }
+        this.streamingId = null;
+        this.streamStable = 0;
+      }
+
       const titleResult = await this._evaluate(GET_CONVERSATION_TITLE_SCRIPT).catch(() => null);
-      const newId = sha1(totalText.slice(0, 200));
+      // Content-only hash — stable regardless of when we connect
+      const seed = (messages[0]?.text || '').slice(0, 150) + (messages[1]?.text || '').slice(0, 50);
+      const newId = sha1(seed);
       this.conversationId = newId;
-      this.seenFingerprints.clear();
-      this.messageCount = 0;
+      this.lastMessages = [];
       this.onConversationSwitch(newId);
       this.onStage('Conversation switched', titleResult?.title || newId);
     }
 
-    // Initialize conversation ID on first messages
+    // ── Initialize conversation ID on first messages ───────────────────────
     if (!this.conversationId && messages.length > 0) {
-      this.conversationId = sha1(messages[0].text + nowIso().slice(0, 13)); // stable within same hour
+      const seed = (messages[0].text || '').slice(0, 150) + (messages[1]?.text || '').slice(0, 50);
+      this.conversationId = sha1(seed);
     }
 
-    // Diff: find messages we haven't seen yet
-    const newMessages = [];
-    for (const m of messages) {
-      if (this.seenFingerprints.has(m.fingerprint)) continue;
-      this.seenFingerprints.add(m.fingerprint);
+    // ── First extract: emit all visible messages as history ────────────────
+    if (this.lastMessages.length === 0) {
+      for (let i = 0; i < messages.length; i++) {
+        const m = messages[i];
+        const role = m.isUser ? 'user' : 'assistant';
+        const positionId = sha1(this.conversationId + ':' + i);
+        const entry = {
+          id: positionId, role, text: m.text, fingerprint: m.fingerprint,
+          timestamp: nowIso(), conversationId: this.conversationId,
+        };
+        this.lastMessages.push(entry);
+        this._emitPayload(this.onMessage, entry);
 
-      const msg = {
-        id: sha1(m.text + m.fingerprint),
-        role: m.isUser ? 'user' : 'assistant',
-        text: m.text,
-        timestamp: nowIso(),
-        conversationId: this.conversationId,
-      };
+        const isLastAndAssistant = (i === messages.length - 1) && role === 'assistant';
+        if (!isLastAndAssistant) {
+          // Definitely complete — persist immediately
+          appendToLog(this.conversationId, entry);
+        } else {
+          // Last assistant message might still be streaming — track it, persist when done
+          this.streamingId = positionId;
+          this.streamStable = 0;
+        }
+      }
+      this.lastTotalText = totalText;
+      return;
+    }
 
-      newMessages.push(msg);
-      appendToLog(this.conversationId, msg);
-      this.onMessage(msg);
+    // ── Subsequent extracts: position-based diff ───────────────────────────
+    let streamingPositionUpdated = false;
+
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+      const role = m.isUser ? 'user' : 'assistant';
+      const positionId = sha1(this.conversationId + ':' + i);
+
+      if (i >= this.lastMessages.length) {
+        // NEW message at a previously unseen position
+        const entry = {
+          id: positionId, role, text: m.text, fingerprint: m.fingerprint,
+          timestamp: nowIso(), conversationId: this.conversationId,
+        };
+        this.lastMessages.push(entry);
+        this._emitPayload(this.onMessage, entry);
+
+        if (role === 'user') {
+          appendToLog(this.conversationId, entry);
+        } else {
+          // Track new assistant message for streaming
+          this.streamingId = positionId;
+          this.streamStable = 0;
+          streamingPositionUpdated = true;
+        }
+
+      } else if (m.fingerprint !== this.lastMessages[i].fingerprint) {
+        // EXISTING position, text changed → streaming update
+        const prev = this.lastMessages[i];
+        const entry = { ...prev, text: m.text, fingerprint: m.fingerprint };
+        this.lastMessages[i] = entry;
+        this._emitPayload(this.onMessageUpdate, entry);
+
+        if (positionId === this.streamingId) {
+          this.streamStable = 0;
+          streamingPositionUpdated = true;
+        }
+      }
+      // else: unchanged — no event
+    }
+
+    // ── Streaming finalization ─────────────────────────────────────────────
+    // If the streaming message text was unchanged this poll, count up.
+    // After 2 consecutive stable polls, emit onMessageDone and persist final text.
+    if (this.streamingId !== null && !streamingPositionUpdated) {
+      this.streamStable++;
+      if (this.streamStable >= 2) {
+        const entry = this.lastMessages.find(m => m.id === this.streamingId);
+        if (entry) {
+          appendToLog(this.conversationId, entry);
+          this._emitPayload(this.onMessageDone, entry);
+        }
+        this.streamingId = null;
+        this.streamStable = 0;
+      }
     }
 
     this.lastTotalText = totalText;
-    this.messageCount = messages.length;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /** Emit a message payload, stripping internal tracking fields. */
+  _emitPayload(callback, entry) {
+    callback({
+      id:             entry.id,
+      role:           entry.role,
+      text:           entry.text,
+      timestamp:      entry.timestamp,
+      conversationId: entry.conversationId,
+    });
   }
 }

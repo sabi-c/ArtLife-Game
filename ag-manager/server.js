@@ -59,8 +59,16 @@ function startCdpLogger() {
   cdpLogger = new CdpLogger({
     cdpPort: AG_CDP_PORT,
     onMessage: (msg) => {
-      // Stream new messages to all SSE clients
+      // New (or first-seen) message — append a bubble on the phone
       emit('message', msg.text, JSON.stringify({ role: msg.role, id: msg.id, conversationId: msg.conversationId }));
+    },
+    onMessageUpdate: (msg) => {
+      // Streaming: existing bubble text grew — update in place
+      emit('message_update', msg.text, JSON.stringify({ role: msg.role, id: msg.id, conversationId: msg.conversationId }));
+    },
+    onMessageDone: (msg) => {
+      // Streaming finished — remove the typing cursor
+      emit('message_done', msg.text, JSON.stringify({ role: msg.role, id: msg.id, conversationId: msg.conversationId }));
     },
     onStage:  (name, detail) => emit('stage', name, detail),
     onError:  (err)          => emit('warn', err),
