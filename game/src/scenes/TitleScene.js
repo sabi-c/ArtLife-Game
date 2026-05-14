@@ -131,6 +131,15 @@ export class TitleScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5);
 
+        // ── Canvas focus — Phaser keyboard input only fires when the canvas (or document)
+        //   has DOM focus. The normal page-load flow leaves focus on document.body; on a
+        //   fresh visit nobody has clicked yet, so the first Enter press is dropped. Set
+        //   tabindex and focus here to make sure the first keystroke is heard.
+        if (this.sys.game.canvas) {
+            this.sys.game.canvas.setAttribute('tabindex', '0');
+            this.sys.game.canvas.focus();
+        }
+
         // ── Input ──
         this.upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
         this.downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
@@ -306,9 +315,12 @@ export class TitleScene extends Phaser.Scene {
         this.input.keyboard.removeAllKeys();
         this.input.removeAllListeners('pointerdown');
 
-        // Respect intro style setting — cinematic goes through IntroScene, skip goes straight to creator
+        // Entry flow (revised 2026-05-13): TitleScene → DocumentaryScene → EmailInbox → ...
+        // The 'skip' introStyle goes straight to character creator; 'cinematic' (default) plays
+        // the Troemel-register documentary first. The old IntroScene typed-narrator screen is
+        // still available via admin debug but is no longer in the default path.
         const introStyle = SettingsManager.get('introStyle') || 'cinematic';
-        const targetScene = introStyle === 'skip' ? SCENE_KEYS.CHARACTER_SELECT : SCENE_KEYS.INTRO;
+        const targetScene = introStyle === 'skip' ? SCENE_KEYS.CHARACTER_SELECT : 'DocumentaryScene';
         SceneTransition.irisWipeToScene(this, targetScene, { ui: this.ui }, 600);
     }
 

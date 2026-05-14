@@ -29,11 +29,12 @@ const TYPE_COLORS = {
 };
 
 // All known Phaser scenes (from phaserInit.js)
+// WorldScene + OverworldScene archived 2026-05-13. See src/scenes/_archived_2026_05_13/.
 const PHASER_SCENES = [
     'BootScene', 'TitleScene', 'IntroScene', 'NewWorldScene',
-    'OverworldScene', 'CityScene', 'LocationScene', 'HaggleScene',
+    'CityScene', 'LocationScene', 'HaggleScene',
     'DialogueScene', 'MacDialogueScene', 'FastTravelScene',
-    'WorldScene', 'MenuScene', 'EndScene',
+    'MenuScene', 'EndScene',
 ];
 
 const DEFAULT_EDGES = [
@@ -65,6 +66,7 @@ const DEFAULT_EDGES = [
     { from: 'SCENE:DialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
     { from: 'SCENE:MacDialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
     // ── World scenes ──
+    // OverworldScene + WorldScene edges removed 2026-05-13 (archived)
     { from: 'SCENE:FastTravelScene', to: 'SCENE:LocationScene', label: 'Arrive', action: 'scene.start' },
     // ── End game ──
     { from: 'SCENE:EndScene', to: 'SCENE:MenuScene', label: 'Restart', action: 'scene.start' },
@@ -87,13 +89,14 @@ const NODE_META = {
     'VIEW:DASHBOARD': { file: 'ui/player/PlayerDashboard.jsx', status: 'active', desc: 'React stats & ledger overlay' },
     'VIEW:SCENE_ENGINE': { file: 'ui/game/ScenePlayer.jsx', status: 'active', desc: 'Visual-novel cutscene player' },
     'VIEW:CHARACTER_CREATOR': { file: 'ui/boot/CharacterCreator.jsx', status: 'active', desc: 'React character creation flow' },
+    'VIEW:EMAIL_INBOX': { file: 'ui/EmailInbox.jsx', status: 'active', desc: 'Diegetic email inbox (post-documentary)' },
     // ── Phaser Scenes ──
     'SCENE:BootScene': { file: 'scenes/BootScene.js', status: 'active', desc: 'Asset preloader — defines startPhaserGame()' },
-    'SCENE:TitleScene': { file: 'scenes/TitleScene.js', status: 'unused', desc: 'Legacy graphical title screen (replaced by BootSplash)' },
-    'SCENE:IntroScene': { file: 'scenes/IntroScene.js', status: 'unused', desc: 'Legacy story intro (replaced by NarrativeIntro)' },
+    'SCENE:TitleScene': { file: 'scenes/TitleScene.js', status: 'active', desc: '2026-05-13 entry-flow title (revived as primary)' },
+    'SCENE:DocumentaryScene': { file: 'scenes/DocumentaryScene.js', status: 'active', desc: 'Troemel scavenged-screen documentary intro' },
+    'SCENE:IntroScene': { file: 'scenes/IntroScene.js', status: 'unused', desc: 'Legacy typewriter intro (held)' },
     'SCENE:NewWorldScene': { file: 'scenes/NewWorldScene.js', status: 'active', desc: 'Larus overworld — NPCs, warps, dialogue, tilemap' },
-    'SCENE:OverworldScene': { file: 'scenes/OverworldScene.js', status: 'unused', desc: 'Legacy grid-engine overworld (replaced by NewWorld)' },
-    'SCENE:WorldScene': { file: 'scenes/WorldScene.js', status: 'unused', desc: 'Legacy infinite world (replaced by NewWorld)' },
+    // OverworldScene + WorldScene archived 2026-05-13 to scenes/_archived_2026_05_13/.
     'SCENE:CityScene': { file: 'scenes/CityScene.js', status: 'active', desc: 'City hub — venue list, fast travel' },
     'SCENE:LocationScene': { file: 'scenes/LocationScene.js', status: 'active', desc: 'Venue interior — NPCs, artworks, haggle triggers' },
     'SCENE:HaggleScene': { file: 'scenes/HaggleScene.js', status: 'active', desc: 'Art dealing mini-game (buy/sell negotiation)' },

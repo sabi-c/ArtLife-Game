@@ -35,6 +35,35 @@ import CalendarHUD from './ui/game/CalendarHUD.jsx';
 // Make navigate() available globally (for Phaser scenes, terminal, etc.)
 window.navigate = navigate;
 
+// ?fresh=1 self-service kill switch:
+//   Unregisters service workers, clears all caches, wipes localStorage + sessionStorage,
+//   then reloads the page WITHOUT the param so a clean boot happens.
+// Use when the app gets stuck on a stale bundle or an auto-resumed bad save state.
+// Example: https://your-host/?fresh=1
+(function selfHealReset() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('fresh')) return;
+        params.delete('fresh');
+        const cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash;
+        Promise.all([
+            // Unregister all service workers
+            navigator.serviceWorker?.getRegistrations?.()
+                .then(regs => Promise.all(regs.map(r => r.unregister())))
+                .catch(() => {}),
+            // Clear all caches
+            (typeof caches !== 'undefined' && caches.keys)
+                ? caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+                : Promise.resolve(),
+        ]).finally(() => {
+            try { localStorage.clear(); sessionStorage.clear(); } catch {}
+            window.location.replace(cleanUrl);
+        });
+    } catch (e) {
+        console.warn('[fresh-reset] failed', e);
+    }
+})();
+
 export default function App() {
     const [game, setGame] = useState(null);
     const [phaserError, setPhaserError] = useState(null);
@@ -216,7 +245,8 @@ export default function App() {
             setActiveView(viewKey);
             setViewPayload(payload);
         };
-        const GRID_SCENES = ['WorldScene', 'NewWorldScene', 'LocationScene'];
+        // WorldScene archived 2026-05-13. NewWorldScene is canonical.
+        const GRID_SCENES = ['NewWorldScene', 'LocationScene'];
         const sceneReadyHandler = (sceneName) => {
             if (GRID_SCENES.includes(sceneName)) setIsGridSceneActive(true);
         };
@@ -231,7 +261,9 @@ export default function App() {
         const legacyHandler = (data) => {
             setActiveView(data?.state ? VIEW.DASHBOARD : VIEW.PHASER);
         };
-        const overlayHandler = (overlayKey) => {
+        // overlay toggle accepts an optional payload — used by SOCIAL_BATTLE to receive npc + stats.
+        const overlayHandler = (overlayKey, payload = null) => {
+            if (payload) setViewPayload(payload);
             setActiveOverlay(prev => prev === overlayKey ? OVERLAY.NONE : overlayKey);
         };
 

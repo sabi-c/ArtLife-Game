@@ -107,22 +107,28 @@ export class BootScene extends Phaser.Scene {
         }
 
         const ui = window.game?.ui;
-        // The React `ArtnetLogin` is now the true login screen.
-        // Expose a method so React can command Phaser to start the game loop when ready.
+        // ── Entry flow (revised 2026-05-13) ──
+        // Title screen is the first thing the player sees. Pressing Enter from TitleScene
+        // routes to DocumentaryScene, then EmailInbox view, then (held) ArtNet login →
+        // CharacterCreator → NewWorldScene. The React `ArtnetLogin` is the in-fiction
+        // ArtNet site signin, not the game's primary entry screen.
         window.startPhaserGame = (mode = 'new') => {
-            if (mode === 'overworld' || mode === 'load') {
+            if (mode === 'new') {
+                // Fresh visit (2026-05-13 entry flow):
+                // TitleScene → DocumentaryScene → EmailInbox → (held ArtNet) → world.
+                // scene.start() does a clean handoff; preloaded asset cache persists.
+                safeSceneStart(this, 'TitleScene', { ui });
+            } else if (mode === 'documentary') {
+                // Direct jump to the documentary intro — admin debug + TitleScene Enter.
+                safeSceneStart(this, 'DocumentaryScene', { ui });
+            } else if (mode === 'overworld' || mode === 'load') {
                 // User clicked "Explore World" — start the overworld
-                // scene.start() REPLACES this scene (clean handoff, no parallel scenes)
                 safeSceneStart(this, 'NewWorldScene', { ui });
             } else if (mode === 'charselect') {
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
                     GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.CHARACTER_CREATOR);
                 });
                 this.scene.stop();
-            } else if (mode === 'new') {
-                // React handles the intro flow — don't launch any scene yet.
-                // BootScene stays alive to keep preloaded assets available.
-                console.log('[BootScene] Ready — waiting for scene launch command');
             }
         };
     }

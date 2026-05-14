@@ -25,6 +25,7 @@ const ScenePlayer = lazy(() => import('./game/ScenePlayer.jsx'));
 const DialogueBox = lazy(() => import('./game/DialogueBox.jsx'));
 const ArtnetMarketplace = lazy(() => import('./market/ArtnetMarketplace.jsx'));
 const BloombergTerminal = lazy(() => import('./market/BloombergTerminal.jsx'));
+const EmailInbox = lazy(() => import('./EmailInbox.jsx'));
 
 // ════════════════════════════════════════════════════════════
 // Deferred Loading Fallback
@@ -239,6 +240,11 @@ export default function ViewRouter({
             {/* ── Character Creator ── */}
             {activeView === VIEW.CHARACTER_CREATOR && (
                 <CharacterCreator />
+            )}
+
+            {/* ── Email Inbox (entry flow post-documentary) ── */}
+            {activeView === VIEW.EMAIL_INBOX && (
+                <EmailInbox />
             )}
 
             {/* ── Player Dashboard (React overlay on terminal) ── */}
