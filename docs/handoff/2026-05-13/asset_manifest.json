@@ -1,0 +1,189 @@
+{
+    "$schema": "asset-manifest-v1",
+    "spec_version": "1.1",
+    "spec_date": "2026-05-13",
+    "asset_root": "game/public",
+    "spec_doc": "docs/handoff/2026-05-13/07_Asset_Import_Spec.md",
+    "prompt_pack": "docs/handoff/2026-05-13/04_Gemini_Prompt_Pack.md",
+    "status_legend": {
+        "tracked": "Asset is part of the game's expected inventory. Missing tracked assets fail the strict audit.",
+        "missing": "Known production todo — asset doesn't exist yet, generation prompt referenced.",
+        "optional": "Decorative or quality-of-life — never fails the audit."
+    },
+    "categories": [
+        {
+            "category": "portraits",
+            "description": "Character class portraits — five classes total. Three exist, two missing.",
+            "expected_dimensions": [256, 256],
+            "format": "PNG-24",
+            "naming_pattern": "portrait_<class>.png",
+            "assets": [
+                { "path": "portraits/portrait_rich_kid.png",   "status": "tracked" },
+                { "path": "portraits/portrait_hedge_fund.png", "status": "tracked", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-5", "notes": "Style anchor reference" },
+                { "path": "portraits/portrait_insider.png",    "status": "tracked" },
+                { "path": "portraits/portrait_speculator.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-6", "notes": "Speculator class portrait — Sprint 3 priority" },
+                { "path": "portraits/portrait_curator.png",    "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-7", "notes": "Curator class portrait — Sprint 3 priority" }
+            ]
+        },
+        {
+            "category": "backgrounds",
+            "description": "Full-scene environments. Mostly exist for category events; specific named scenes mostly TBD.",
+            "expected_dimensions": [1920, 1080],
+            "format": "PNG-24",
+            "naming_pattern": "bg_<location>.png",
+            "assets": [
+                { "path": "backgrounds/bg_title.png",                              "status": "tracked", "notes": "Title screen art" },
+                { "path": "backgrounds/bg_gallery.png",                            "status": "tracked" },
+                { "path": "backgrounds/bg_gallery_main.png",                       "status": "tracked" },
+                { "path": "backgrounds/bg_gallery_main_1bit_1771587911969.png",    "status": "tracked", "notes": "Legacy timestamped — used by HaggleEditor + AdminDashboard" },
+                { "path": "backgrounds/bg_gallery_backroom_1bit.png",              "status": "tracked" },
+                { "path": "backgrounds/bg_auction.png",                            "status": "tracked", "notes": "Auction house" },
+                { "path": "backgrounds/bg_market.png",                             "status": "tracked", "notes": "Category background — market events" },
+                { "path": "backgrounds/bg_drama.png",                              "status": "tracked", "notes": "Category background — drama events" },
+                { "path": "backgrounds/bg_fair.png",                               "status": "tracked", "notes": "Category background — art fair events" },
+                { "path": "backgrounds/bg_opportunity.png",                        "status": "tracked", "notes": "Category background — opportunity events" },
+                { "path": "backgrounds/bg_personal.png",                           "status": "tracked", "notes": "Category background — personal events" },
+                { "path": "backgrounds/bg_social.png",                             "status": "tracked", "notes": "Category background — social events" },
+                { "path": "backgrounds/bg_home_interior.png",                      "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-8", "notes": "Protagonist's apartment" },
+                { "path": "backgrounds/bg_studio_visit.png",                       "status": "missing", "prompt_ref": "Sprint 3 — prompt TBD", "notes": "Artist studio interior" },
+                { "path": "backgrounds/bg_freeport.png",                           "status": "missing", "prompt_ref": "Sprint 3 — prompt TBD", "notes": "Clinical-teal storage facility" },
+                { "path": "backgrounds/bg_cocktail_party.png",                     "status": "missing", "prompt_ref": "Sprint 3 — prompt TBD", "notes": "Rooftop lounge / opening party" }
+            ]
+        },
+        {
+            "category": "documentary",
+            "description": "Documentary intro frames played in DocumentaryScene. Procedural fallback renders when missing.",
+            "expected_dimensions": [1920, 1080],
+            "format": "PNG-24",
+            "naming_pattern": "frame_NN.png (zero-padded)",
+            "assets": [
+                { "path": "documentary/frame_01.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Inigo Philbrick — Vanuatu, DOJ filing" },
+                { "path": "documentary/frame_02.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Beeple Christie's $69M" },
+                { "path": "documentary/frame_03.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Salvator Mundi yacht" },
+                { "path": "documentary/frame_04.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Documenta 15 censorship" },
+                { "path": "documentary/frame_05.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Lisa Schiff $6.5M Ponzi" },
+                { "path": "documentary/frame_06.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Cattelan banana auction" },
+                { "path": "documentary/frame_07.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Christie's 2024 sales correction" },
+                { "path": "documentary/frame_08.png", "status": "missing", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-2", "notes": "Welcome to ArtLife — final frame" }
+            ]
+        },
+        {
+            "category": "artnet_ui",
+            "description": "In-fiction ArtNet UI assets. The React ArtnetLogin handles signin procedurally; PNG ambience is optional.",
+            "expected_dimensions": [1280, 720],
+            "format": "PNG-24",
+            "assets": [
+                { "path": "artnet/login_screen.png",   "status": "optional", "prompt_ref": "04_Gemini_Prompt_Pack.md#Prompt-3" },
+                { "path": "artnet/homepage_hero.png",  "status": "missing",  "prompt_ref": "Sprint 3 — prompt TBD", "notes": "ArtNet homepage hero banner" }
+            ]
+        },
+        {
+            "category": "artnet_article_thumbs",
+            "description": "Thumbnail images for ArtNet homepage articles. 400x240. Drop 8-12 to populate.",
+            "expected_dimensions": [400, 240],
+            "format": "PNG-24",
+            "naming_pattern": "artnet/article_thumbs/<slug>.png",
+            "assets": [
+                { "path": "artnet/article_thumbs/philbrick.png",       "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/beeple.png",          "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/salvator_mundi.png",  "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/documenta15.png",     "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/lisa_schiff.png",     "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/cattelan_banana.png", "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/christies_2024.png",  "status": "missing", "prompt_ref": "Sprint 3" },
+                { "path": "artnet/article_thumbs/zirpslop.png",        "status": "missing", "prompt_ref": "Troemel Report — ZIRPSLOP" }
+            ]
+        },
+        {
+            "category": "sprites_player",
+            "description": "Player character sprites.",
+            "format": "PNG-24 with transparency",
+            "assets": [
+                { "path": "sprites/player_walk.png", "status": "tracked", "notes": "160x160 frames × 4 dirs × 4 frames" },
+                { "path": "sprites/player_back.png", "status": "tracked", "notes": "Back-of-head dialogue frame" }
+            ]
+        },
+        {
+            "category": "sprites_dealers",
+            "description": "Eight dealer-archetype sprites used in HaggleScene.",
+            "format": "PNG-24 with transparency",
+            "assets": [
+                { "path": "sprites/dealer_shark.png",      "status": "tracked" },
+                { "path": "sprites/dealer_patron.png",     "status": "tracked" },
+                { "path": "sprites/dealer_calculator.png", "status": "tracked" },
+                { "path": "sprites/dealer_nervous.png",    "status": "tracked" },
+                { "path": "sprites/dealer_collector.png",  "status": "tracked" },
+                { "path": "sprites/dealer_hustler.png",    "status": "tracked" },
+                { "path": "sprites/dealer_artist.png",     "status": "tracked" },
+                { "path": "sprites/dealer_rival.png",      "status": "tracked" }
+            ]
+        },
+        {
+            "category": "sprites_gallery_npcs",
+            "description": "Gallery NPC spritesheets used in gallery scene + social-battle (Sprint 4).",
+            "expected_dimensions": [144, 384],
+            "format": "PNG-24 with transparency (48×96 per frame, 3×4 grid)",
+            "assets": [
+                { "path": "sprites/gallery/npc_curator.png",   "status": "tracked" },
+                { "path": "sprites/gallery/npc_collector.png", "status": "tracked" },
+                { "path": "sprites/gallery/npc_gallerist.png", "status": "tracked" },
+                { "path": "sprites/gallery/npc_artist.png",    "status": "tracked" },
+                { "path": "sprites/gallery/npc_patron.png",    "status": "tracked" },
+                { "path": "sprites/gallery/npc_critic.png",    "status": "tracked" },
+                { "path": "sprites/gallery/npc_assistant.png", "status": "tracked" },
+                { "path": "sprites/gallery/npc_handler.png",   "status": "tracked" },
+                { "path": "sprites/gallery/npc_guard.png",     "status": "tracked" },
+                { "path": "sprites/gallery/npc_visitor.png",   "status": "tracked" },
+                { "path": "sprites/gallery/npc_dealer.png",    "status": "tracked", "notes": "Bonus 11th NPC found on disk" }
+            ]
+        },
+        {
+            "category": "sprites_gallery_objects",
+            "description": "Gallery environmental objects used in proximity-based interaction (Sprint 4).",
+            "format": "PNG-24 with transparency",
+            "assets": [
+                { "path": "sprites/gallery/gallery_bench.png",        "status": "tracked" },
+                { "path": "sprites/gallery/gallery_decorations.png",  "status": "tracked" },
+                { "path": "sprites/gallery/gallery_desk.png",         "status": "tracked" },
+                { "path": "sprites/gallery/gallery_floor.png",        "status": "tracked" },
+                { "path": "sprites/gallery/gallery_pedestal.png",     "status": "tracked" },
+                { "path": "sprites/gallery/gallery_plant.png",        "status": "tracked" },
+                { "path": "sprites/gallery/gallery_rope.png",         "status": "tracked" },
+                { "path": "sprites/gallery/gallery_rope_end.png",     "status": "tracked" },
+                { "path": "sprites/gallery/gallery_sign.png",         "status": "tracked" },
+                { "path": "sprites/gallery/gallery_walls.png",        "status": "tracked" },
+                { "path": "sprites/gallery/gallery_wine_table.png",   "status": "tracked" },
+                { "path": "sprites/gallery/painting_empty_frame.png", "status": "tracked" },
+                { "path": "sprites/gallery/painting_large_modern.png","status": "tracked" },
+                { "path": "sprites/gallery/painting_large_portrait.png","status": "tracked" },
+                { "path": "sprites/gallery/painting_medium_landscape.png","status": "tracked" },
+                { "path": "sprites/gallery/painting_small_abstract.png","status": "tracked" },
+                { "path": "sprites/gallery/painting_small_photo.png", "status": "tracked" },
+                { "path": "sprites/gallery/price_list.png",           "status": "tracked" },
+                { "path": "sprites/gallery/red_dot.png",              "status": "tracked", "notes": "Sold-dot for paintings" },
+                { "path": "sprites/gallery/track_light.png",          "status": "tracked" }
+            ]
+        },
+        {
+            "category": "ui_chrome",
+            "description": "Diegetic UI fragments — small accent images.",
+            "format": "PNG-24 with transparency",
+            "assets": [
+                { "path": "ui/email_envelope_icon.png", "status": "optional", "prompt_ref": "Sprint 3 — minor", "notes": "Optional inbox notification glyph" },
+                { "path": "ui/phone_chrome.png",        "status": "missing",  "prompt_ref": "Sprint 3 — phone overlay" }
+            ]
+        }
+    ],
+    "validation_rules": {
+        "forbidden_colors": ["#ffffff"],
+        "required_palette": {
+            "noir_black": "#0a0a0f",
+            "chandelier_gold": "#c9a84c",
+            "burgundy": "#8b2252",
+            "teal": "#2a6b6b",
+            "ivory_warm": "#e8e4df"
+        },
+        "max_file_size_kb": 500,
+        "preferred_file_size_kb": 200
+    }
+}

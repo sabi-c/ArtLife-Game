@@ -108,12 +108,18 @@ export class BootScene extends Phaser.Scene {
         }
 
         const ui = window.game?.ui;
-        // The React `ArtnetLogin` is now the true login screen.
-        // Expose a method so React can command Phaser to start the game loop when ready.
+        // ── Entry flow (revised 2026-05-13) ──
+        // Title screen is the first thing the player sees. Pressing Enter from TitleScene
+        // routes to DocumentaryScene, then EmailInbox view, then (held) ArtNet login →
+        // CharacterCreator → NewWorldScene. The React `ArtnetLogin` is the in-fiction
+        // ArtNet site signin, not the game's primary entry screen.
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'new') {
-                // Fresh visit: play cinematic intro, then hand back to React ArtnetLogin
-                safeSceneLaunch(this, 'IntroScene', { ui });
+                // Fresh visit: TitleScene → DocumentaryScene → EmailInbox → (held ArtNet) → world
+                safeSceneLaunch(this, 'TitleScene', { ui });
+            } else if (mode === 'documentary') {
+                // Direct jump to the documentary intro — used by admin debug + TitleScene Enter.
+                safeSceneLaunch(this, 'DocumentaryScene', { ui });
             } else if (mode === 'charselect') {
                 // After login "New" selection: go straight to character builder
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {

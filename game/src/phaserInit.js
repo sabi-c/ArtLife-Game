@@ -17,17 +17,17 @@ import { BootScene } from './scenes/BootScene.js';
 // Scenes
 import { TitleScene } from './scenes/TitleScene.js';
 import { IntroScene } from './scenes/IntroScene.js';
+import { DocumentaryScene } from './scenes/DocumentaryScene.js';
 import { HaggleScene } from './scenes/HaggleScene.js';
 import { LocationScene } from './scenes/LocationScene.js';
 import { DialogueScene } from './scenes/DialogueScene.js';
 import { MacDialogueScene } from './scenes/MacDialogueScene.js';
-import { OverworldScene } from './scenes/OverworldScene.js';
 import { CityScene } from './scenes/CityScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { EndScene } from './scenes/EndScene.js';
 import { FastTravelScene } from './scenes/FastTravelScene.js';
-import WorldScene from './scenes/WorldScene.js';
 import NewWorldScene from './scenes/NewWorldScene.js';
+// WorldScene + OverworldScene archived 2026-05-13. See scenes/_archived_2026_05_13/README.md.
 
 // Managers & stores
 import { TerminalUI } from './ui/terminal/TerminalUI.js';
@@ -62,16 +62,15 @@ const sceneList = [
     BootScene,
     TitleScene,
     IntroScene,
+    DocumentaryScene,
     HaggleScene,
     LocationScene,
     DialogueScene,
     MacDialogueScene,
-    OverworldScene,
     CityScene,
     MenuScene,
     EndScene,
     FastTravelScene,
-    WorldScene,
     NewWorldScene,
 ];
 

@@ -15,7 +15,10 @@ export default defineConfig({
     server: {
         host: '0.0.0.0', // Listen on all network interfaces
         port: 5175,      // Fixed port for ArtLife dev server
-        open: false      // Don't auto-open browser (Playwright handles this)
+        open: false,     // Don't auto-open browser (Playwright handles this)
+        // Allow Cloudflare quick tunnels + localtunnel hosts so `npm run tunnel`
+        // and `npm run expose` actually serve the app to a public URL.
+        allowedHosts: ['.trycloudflare.com', '.loca.lt', 'localhost'],
     },
     build: {
         outDir: 'dist',
@@ -67,9 +70,18 @@ export default defineConfig({
                         return;
                     }
 
-                    // SPA History Fallback — serve index.html for all non-asset, non-API paths
-                    // This enables URL-based routing (e.g. /admin, /market, /inbox)
-                    if (req.method === 'GET' && !req.url.startsWith('/api/') && !req.url.includes('.')) {
+                    // SPA History Fallback — serve index.html for non-asset, non-API paths.
+                    // Enables URL-based routing (e.g. /admin, /market, /inbox).
+                    // Excludes Vite internals (/@vite/, /@react-refresh, /src/, /node_modules/)
+                    // — without this, dev-mode HMR breaks because /@vite/client gets rewritten
+                    // to HTML, the browser parses HTML as a JS module, and the page fails to load.
+                    const isViteInternal = req.url.startsWith('/@') ||
+                        req.url.startsWith('/src/') ||
+                        req.url.startsWith('/node_modules/');
+                    if (req.method === 'GET' &&
+                        !req.url.startsWith('/api/') &&
+                        !req.url.includes('.') &&
+                        !isViteInternal) {
                         req.url = '/index.html';
                     }
 

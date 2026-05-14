@@ -14,9 +14,9 @@ import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
  * LocationScene interior. Leaving an interior spawns you back outside the
  * door you entered.
  *
- * For now this is a menu-based hub (like Pokémon's town map) while Phase 40
- * builds the real walking overworld. Once OverworldScene has Tiled maps,
- * CityScene will consume them for the outdoor blocks.
+ * For now this is a menu-based hub (like Pokémon's town map) while NewWorldScene
+ * builds the real walking overworld. Once NewWorldScene has Tiled maps for outdoor
+ * blocks, CityScene will consume them.
  */
 
 // City locations map — each has a position on screen, a venueId, and a label

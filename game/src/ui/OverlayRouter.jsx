@@ -35,6 +35,7 @@ const ArtnetLogin = lazy(() => import('./ArtnetLogin.jsx'));
 const ArtnetMarketplace = lazy(() => import('./ArtnetMarketplace.jsx'));
 const ArtnetUI = lazy(() => import('./ArtnetUI.jsx'));
 const HaggleOverlay = lazy(() => import('./email/haggle/HaggleOverlay.jsx'));
+const SocialBattleOverlay = lazy(() => import('./SocialBattleOverlay.jsx'));
 
 // ════════════════════════════════════════════════════════════
 // Loading Fallback
@@ -177,6 +178,18 @@ export default function OverlayRouter({
             {activeOverlay === OVERLAY.ARTNET_UI && (
                 <OverlayErrorBoundary name="Artnet UI" onClose={closeOverlay}>
                     <ArtnetUI onClose={closeOverlay} />
+                </OverlayErrorBoundary>
+            )}
+
+            {/* ── Social Battle (gallery NPC interaction, Sprint 4) ── */}
+            {activeOverlay === OVERLAY.SOCIAL_BATTLE && (
+                <OverlayErrorBoundary name="Social Battle" onClose={closeOverlay}>
+                    <SocialBattleOverlay
+                        npc={viewPayload?.npc}
+                        stats={viewPayload?.stats}
+                        onResult={viewPayload?.onResult}
+                        onClose={closeOverlay}
+                    />
                 </OverlayErrorBoundary>
             )}
 

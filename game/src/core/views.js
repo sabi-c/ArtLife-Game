@@ -6,12 +6,13 @@
  */
 
 export const VIEW = {
-    BOOT: 'BOOT',                   // The ArtnetLogin boot/login screen
+    BOOT: 'BOOT',                   // The ArtnetLogin boot/login screen (in-fiction ArtNet signin)
     PHASER: 'PHASER',               // The raw game canvas (overworld, haggle, etc.)
     TERMINAL: 'TERMINAL',           // DOM terminal only (no React overlays, no canvas)
     DASHBOARD: 'DASHBOARD',         // The main Player Dashboard stats/ledger
     SCENE_ENGINE: 'SCENE_ENGINE',   // The text-based event visual novel engine
-    CHARACTER_CREATOR: 'CHARACTER_CREATOR' // React-based character creation flow
+    CHARACTER_CREATOR: 'CHARACTER_CREATOR', // React-based character creation flow
+    EMAIL_INBOX: 'EMAIL_INBOX'      // Diegetic email inbox view — entry-flow link after documentary
 };
 
 /**
@@ -33,6 +34,7 @@ export const OVERLAY = {
     ARTNET_LOGIN: 'ARTNET_LOGIN',
     ARTNET_MARKETPLACE: 'ARTNET_MARKETPLACE',
     ARTNET_UI: 'ARTNET_UI',
+    SOCIAL_BATTLE: 'SOCIAL_BATTLE',
 };
 
 /**

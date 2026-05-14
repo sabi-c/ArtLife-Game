@@ -5,7 +5,7 @@
  * Strategy: Cache-first for assets, network-first for HTML.
  */
 
-const CACHE_NAME = 'artlife-v5'; // Bumped to bust stale MasterCMS bundle (added PageEditor)
+const CACHE_NAME = 'artlife-v6-2026-05-13-entry-flow'; // Busts stale rebuild bundle (Sprint 2026-05-13)
 
 // Core assets to pre-cache on install
 // Use relative paths so the SW works on any deployment subpath (e.g. GitHub Pages /ArtLife-Game/)

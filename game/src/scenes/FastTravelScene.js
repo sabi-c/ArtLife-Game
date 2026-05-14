@@ -8,7 +8,7 @@ import { safeSceneStart, safeSceneLaunch } from "../utils/safeScene.js";
 /**
  * FastTravelScene — Phase 41 Taxi / Transit Overlay
  *
- * Launched as an overlay on top of CityScene (or OverworldScene).
+ * Launched as an overlay on top of CityScene (or NewWorldScene).
  * Shows a Pokémon-style menu of destinations the player can travel to.
  * Deducts taxi fare, updates playerLocation, and warps CityScene.
  */
@@ -18,7 +18,8 @@ export class FastTravelScene extends Phaser.Scene {
     }
 
     init(data) {
-        this.callerScene = data.callerScene || 'OverworldScene';
+        // Default to NewWorldScene (OverworldScene archived 2026-05-13)
+        this.callerScene = data.callerScene || 'NewWorldScene';
         this.currentCity = data.city || GameState.state?.currentCity || 'new-york';
         this.taxiCost = data.taxiCost || 50;
         this.ui = data.ui;

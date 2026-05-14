@@ -291,6 +291,27 @@ export default function AdminDashboard({ onClose }) {
                             <button style={{ ...btnStyle, borderColor: '#1a73e8', color: '#1a73e8' }} onClick={() => safeTriggerOverlay(OVERLAY.GMAIL_GUIDE, 'Gmail Guide')}>[ Gmail Design Guide ]</button>
                             <button style={{ ...btnStyle, borderColor: '#ff4b00', color: '#ff4b00' }} onClick={() => safeTriggerOverlay(OVERLAY.ARTNET_UI, 'Artnet UI')}>[ Artnet UI (Login → Dashboard → Marketplace) ]</button>
                             <button style={{ ...btnStyle, borderColor: '#231f20', color: '#999' }} onClick={() => safeTriggerOverlay(OVERLAY.ARTNET_MARKETPLACE, 'Artnet Marketplace')}>[ Artnet Marketplace ]</button>
+                            <button
+                                style={{ ...btnStyle, borderColor: '#c9a84c', color: '#c9a84c' }}
+                                onClick={() => {
+                                    // Sprint 4 — Social Battle scaffold. Launches with a sample collector
+                                    // NPC + neutral stats so the overlay is testable without NewWorldScene
+                                    // proximity wiring.
+                                    import('../managers/SocialBattle.js').then(({ profileForSpriteKey }) => {
+                                        const payload = {
+                                            npc: {
+                                                name: 'Hugo Mendoza',
+                                                spriteKey: 'npc_collector',
+                                                profile: profileForSpriteKey('npc_collector'),
+                                                mood: 0.5,
+                                                relationship: 0,
+                                            },
+                                            stats: { charm: 5, wit: 5, information: 5, taste: 5, capital: 5, reputation: 5 },
+                                        };
+                                        GameEventBus.emit(GameEvents.UI_TOGGLE_OVERLAY, OVERLAY.SOCIAL_BATTLE, payload);
+                                    });
+                                }}
+                            >[ 💬 Social Battle (Sprint 4 scaffold) ]</button>
 
                             <div style={{ color: '#888', marginBottom: 15, marginTop: 20, fontSize: 12 }}>DEV TOOLS</div>
                             <button style={{ ...btnStyle, border: '1px solid #555', color: '#888' }} onClick={() => safeTriggerOverlay(OVERLAY.DEBUG_LOG, 'Debug Log')}>[ Debug Log ]</button>
@@ -362,14 +383,7 @@ export default function AdminDashboard({ onClose }) {
                                 [ Fast Travel ]
                                 <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>City-to-city travel map</div>
                             </button>
-                            <button style={{ ...btnStyle, opacity: 0.6 }} onClick={() => safeTriggerScene('OverworldScene', {}, 'Legacy Overworld')}>
-                                [ Legacy Overworld (test) ]
-                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Old 160px sprites, hardcoded map</div>
-                            </button>
-                            <button style={{ ...btnStyle, opacity: 0.4 }} onClick={() => safeTriggerScene('WorldScene', {}, 'Legacy World Scene')}>
-                                [ Legacy WorldScene (deprecated) ]
-                                <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>Old GridEngine tileset — broken</div>
-                            </button>
+                            {/* WorldScene + OverworldScene buttons removed 2026-05-13. See src/scenes/_archived_2026_05_13/README.md. */}
                         </div>
                         <div>
                             <div style={{ color: '#888', marginBottom: 15, fontSize: 12 }}>DIALOGUE & CUTSCENES</div>

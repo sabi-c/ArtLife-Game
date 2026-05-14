@@ -368,24 +368,9 @@ const DEFAULT_REGISTRY = [
     },
 
     // ── Legacy ──
-    {
-        id: 'overworld_legacy', group: 'Legacy', type: 'scene',
-        name: 'Overworld (Grid)', key: 'OverworldScene',
-        file: 'scenes/OverworldScene.js',
-        desc: 'Legacy grid-engine overworld — replaced by NewWorldScene.',
-        status: 'unused',
-        transitions: [],
-        properties: { 'Replaced By': 'NewWorldScene' },
-    },
-    {
-        id: 'world_legacy', group: 'Legacy', type: 'scene',
-        name: 'World (Infinite)', key: 'WorldScene',
-        file: 'scenes/WorldScene.js',
-        desc: 'Legacy infinite scroll world — replaced by NewWorldScene.',
-        status: 'unused',
-        transitions: [],
-        properties: { 'Replaced By': 'NewWorldScene' },
-    },
+    // Overworld (Grid) and World (Infinite) entries archived 2026-05-13.
+    // Source files now live at src/scenes/_archived_2026_05_13/.
+    // See that directory's README.md for restoration instructions.
 ];
 
 // ══════════════════════════════════════════════════════════════

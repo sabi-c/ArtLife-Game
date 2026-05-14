@@ -20,6 +20,7 @@ const CharacterCreator = lazy(() => import('./CharacterCreator.jsx'));
 const PlayerDashboard = lazy(() => import('./PlayerDashboard.jsx'));
 const ScenePlayer = lazy(() => import('./ScenePlayer.jsx'));
 const DialogueBox = lazy(() => import('./DialogueBox.jsx'));
+const EmailInbox = lazy(() => import('./EmailInbox.jsx'));
 
 // ════════════════════════════════════════════════════════════
 // Loading Fallback
@@ -189,6 +190,11 @@ export default function ViewRouter({
             {/* ── Character Creator ── */}
             {activeView === VIEW.CHARACTER_CREATOR && (
                 <CharacterCreator />
+            )}
+
+            {/* ── Email Inbox (entry flow post-documentary) ── */}
+            {activeView === VIEW.EMAIL_INBOX && (
+                <EmailInbox />
             )}
 
             {/* ── Player Dashboard (React overlay on terminal) ── */}

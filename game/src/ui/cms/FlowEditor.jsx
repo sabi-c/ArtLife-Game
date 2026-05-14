@@ -29,11 +29,12 @@ const TYPE_COLORS = {
 };
 
 // All known Phaser scenes (from phaserInit.js)
+// WorldScene + OverworldScene archived 2026-05-13. See src/scenes/_archived_2026_05_13/.
 const PHASER_SCENES = [
     'BootScene', 'TitleScene', 'IntroScene', 'NewWorldScene',
-    'OverworldScene', 'CityScene', 'LocationScene', 'HaggleScene',
+    'CityScene', 'LocationScene', 'HaggleScene',
     'DialogueScene', 'MacDialogueScene', 'FastTravelScene',
-    'WorldScene', 'MenuScene', 'EndScene',
+    'MenuScene', 'EndScene',
 ];
 
 // Transitions traced from the actual codebase (scene.start, scene.launch, GameEventBus)
@@ -57,8 +58,7 @@ const DEFAULT_EDGES = [
     { from: 'SCENE:DialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
     { from: 'SCENE:MacDialogueScene', to: 'VIEW:TERMINAL', label: 'End Dialogue', action: 'GameEventBus UI_ROUTE' },
     // World scenes
-    { from: 'SCENE:OverworldScene', to: 'SCENE:DialogueScene', label: 'NPC Talk', action: 'scene.start' },
-    { from: 'SCENE:WorldScene', to: 'VIEW:TERMINAL', label: 'Exit World', action: 'GameEventBus' },
+    // OverworldScene + WorldScene edges removed 2026-05-13 (archived)
     { from: 'SCENE:FastTravelScene', to: 'SCENE:LocationScene', label: 'Arrive', action: 'scene.start' },
     // End game
     { from: 'SCENE:EndScene', to: 'SCENE:MenuScene', label: 'Restart', action: 'scene.start' },
@@ -85,8 +85,7 @@ const NODE_META = {
     'SCENE:TitleScene': { file: 'scenes/TitleScene.js', status: 'active', desc: 'Graphical title screen, Press Start' },
     'SCENE:IntroScene': { file: 'scenes/IntroScene.js', status: 'active', desc: 'Story intro cutscene' },
     'SCENE:NewWorldScene': { file: 'scenes/NewWorldScene.js', status: 'active', desc: 'Larus overworld — NPCs, warps, dialogue' },
-    'SCENE:OverworldScene': { file: 'scenes/OverworldScene.js', status: 'unused', desc: 'Legacy grid-engine overworld (replaced by NewWorld)' },
-    'SCENE:WorldScene': { file: 'scenes/WorldScene.js', status: 'unused', desc: 'Legacy infinite world (replaced by NewWorld)' },
+    // OverworldScene + WorldScene archived to scenes/_archived_2026_05_13/ — no node entries.
     'SCENE:CityScene': { file: 'scenes/CityScene.js', status: 'active', desc: 'City hub — venue list, fast travel' },
     'SCENE:LocationScene': { file: 'scenes/LocationScene.js', status: 'active', desc: 'Venue interior — NPCs, artworks, haggle triggers' },
     'SCENE:HaggleScene': { file: 'scenes/HaggleScene.js', status: 'active', desc: 'Art dealing mini-game (buy/sell negotiation)' },

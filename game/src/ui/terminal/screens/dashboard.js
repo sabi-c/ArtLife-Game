@@ -730,7 +730,8 @@ export function dashboardScreen(ui) {
             options.push({
                 label: walkLocked ? 'Walk the Neighborhood (Locked)' : 'Walk the Neighborhood',
                 disabled: walkLocked,
-                action: !walkLocked ? () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'WorldScene', { ui }) : undefined
+                // WorldScene archived 2026-05-13; NewWorldScene is canonical.
+                action: !walkLocked ? () => GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene', { ui }) : undefined
             });
 
             const travelLocked = phase === 'early';
