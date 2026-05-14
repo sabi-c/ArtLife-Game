@@ -108,6 +108,7 @@ export const PAGE_ROUTES = {
     '/market/data': { view: VIEW.PHASER, overlay: OVERLAY.MARKET_DASHBOARD, title: 'Market Data', icon: '📉' },
     '/design': { view: VIEW.PHASER, overlay: OVERLAY.DESIGN_GUIDE, title: 'Design Guide', icon: '🎨' },
     '/debug': { view: VIEW.PHASER, overlay: OVERLAY.DEBUG_LOG, title: 'Debug Log', icon: '🐛' },
+    '/overworld': { view: VIEW.PHASER, overlay: OVERLAY.NONE, title: 'Overworld', icon: '🗺️', launchScene: 'NewWorldScene' },
     '/character': { view: VIEW.CHARACTER_CREATOR, overlay: OVERLAY.NONE, title: 'Character Creator', icon: '👤' },
     '/scene': { view: VIEW.SCENE_ENGINE, overlay: OVERLAY.NONE, title: 'Scene Engine', icon: '🎭' },
 };
@@ -197,6 +198,10 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
             suppressUrlSync.current = true;
             setActiveView(route.view);
             setActiveOverlay(route.overlay || OVERLAY.NONE);
+            // Launch a Phaser scene if the route specifies one
+            if (route.launchScene) {
+                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, route.launchScene);
+            }
             requestAnimationFrame(() => { suppressUrlSync.current = false; });
         };
 
@@ -215,14 +220,17 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
             }
 
             // Safety: if going back to VIEW.PHASER without an overlay,
-            // always show the default landing so user doesn't see empty canvas
-            if (route.view === VIEW.PHASER && (!route.overlay || route.overlay === OVERLAY.NONE)) {
+            // show default landing UNLESS it's an explicit scene route (e.g. /overworld)
+            if (route.view === VIEW.PHASER && (!route.overlay || route.overlay === OVERLAY.NONE) && !route.launchScene) {
                 route = { ...route, overlay: getDefaultLandingOverlay() };
             }
 
             suppressUrlSync.current = true;
             setActiveView(route.view);
             setActiveOverlay(route.overlay || OVERLAY.NONE);
+            if (route.launchScene) {
+                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, route.launchScene);
+            }
             requestAnimationFrame(() => { suppressUrlSync.current = false; });
         };
 
@@ -264,6 +272,10 @@ export function usePageRouter(setActiveView, setActiveOverlay, setViewPayload) {
             suppressUrlSync.current = true;
             setActiveView(route.view);
             setActiveOverlay(route.overlay || OVERLAY.NONE);
+            // Deep-link scene launch (e.g. /overworld → start NewWorldScene)
+            if (route.launchScene) {
+                GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, route.launchScene);
+            }
             requestAnimationFrame(() => { suppressUrlSync.current = false; });
         }
     }, []);

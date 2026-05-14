@@ -62,6 +62,17 @@ export class SettingsManager {
             default: 'visual'
         },
         {
+            id: 'playerSprite',
+            label: 'Player Sprite',
+            type: 'cycle',
+            options: [
+                { value: 'character', display: 'Default (Luminus)' },
+                { value: 'victoria_sterling', display: 'Victoria Sterling' },
+                { value: 'yuki_tanaka', display: 'Yuki Tanaka' },
+            ],
+            default: 'character'
+        },
+        {
             id: 'tickerStyle',
             label: 'Ticker Style',
             type: 'cycle',

@@ -1,4 +1,5 @@
 import { ARTISTS } from '../data/artists.js';
+import { ARTWORKS } from '../data/artworks.js';
 import { GameState } from './GameState.js';
 import { shuffle } from '../utils/shuffle.js';
 import { generateId } from '../utils/id.js';
@@ -7,6 +8,7 @@ import { clamp } from '../utils/math.js';
 import { MarketHistoryEngine } from './MarketHistoryEngine.js';
 import { MarketSimulator } from './MarketSimulator.js';
 import { MarketEventBus } from './MarketEventBus.js';
+import { getHistoricalData } from '../data/historicalPrices.js';
 
 /**
  * MarketManager.js — Pricing Engine & Artist Index Calculator
@@ -69,7 +71,7 @@ export class MarketManager {
                 yearsOfHistory: 5,
                 seed: 42, // Deterministic for consistent experience
             });
-            console.log(`[MarketManager] Generated ${MarketManager.historicalData.compositeHistory.length}-week market history with ${MarketManager.historicalData.trades.length} trades`);
+
 
             // Pre-populate marketStore with historical data
             try {
@@ -91,7 +93,24 @@ export class MarketManager {
         fetch('content/real_world_data.json')
             .then(res => res.json())
             .then(data => { MarketManager.realWorldData = data; })
-            .catch(err => console.warn('No real_world_data.json found, skipping stochastic anchor data.', err));
+            .catch(() => {
+                // Fallback: use static historicalPrices.js data
+                const fallback = {};
+                for (const artist of MarketManager.artists) {
+                    const hist = getHistoricalData(artist.id) || getHistoricalData(artist.name);
+                    if (hist) {
+                        fallback[artist.id] = {
+                            realWorldAnchor: {
+                                auctionHistory: hist.auctionHistory.map(a => ({ year: a.year, price: a.price })),
+                                volatilityIndex: hist.volatilityIndex,
+                                cagr: hist.cagr,
+                            },
+                        };
+                    }
+                }
+                MarketManager.realWorldData = fallback;
+
+            });
     }
 
     static tick() {
@@ -146,6 +165,120 @@ export class MarketManager {
 
         // Tick event bus (decay active effects)
         MarketEventBus.tick();
+    }
+
+    /**
+     * Standalone tick for CMS simulation — doesn't require GameState.
+     * Evolves heat, recalculates prices, and updates artist indices
+     * using the provided market cycle parameter.
+     *
+     * @param {string} cycle — 'bull' | 'bear' | 'flat'
+     */
+    static tickForSim(cycle = 'flat') {
+        if (MarketManager.artists.length === 0) MarketManager.ensureInitForSim();
+
+        // Update each artist's heat
+        MarketManager.artists.forEach((artist) => {
+            const volatility = artist.heatVolatility || 10;
+            const change = (Math.random() - 0.45) * volatility * 2;
+            artist.heat = clamp(artist.heat + change, 0, 100);
+
+            if (cycle === 'bull') {
+                artist.heat = Math.min(100, artist.heat + 0.5);
+            } else if (cycle === 'bear') {
+                artist.heat = Math.max(0, artist.heat - 0.8);
+            }
+
+            // Gallery Buyback Simulation
+            if (artist.heat < 20 && !artist.buybackActive) {
+                if (Math.random() < 0.3) {
+                    artist.buybackActive = true;
+                    artist.buybackFloor = artist.heat;
+                }
+            }
+            if (artist.buybackActive) {
+                artist.heat = Math.max(artist.buybackFloor, artist.heat);
+                if (Math.random() < 0.10) {
+                    artist.buybackActive = false;
+                    artist.heat = Math.max(0, artist.heat - 15);
+                }
+            }
+
+            // Compute Artist Index
+            artist.artistIndex = MarketManager._computeArtistIndex(artist);
+        });
+
+        // Update work prices with O-U jitter (sim-safe: no GameState dependency)
+        MarketManager.works.forEach((work) => {
+            const artist = MarketManager.getArtist(work.artistId);
+            if (!artist) return;
+
+            const heatMultiplier = 0.5 + Math.pow(artist.heat / 32, 2);
+            const marketMultiplier = cycle === 'bull' ? 1.2 : cycle === 'bear' ? 0.8 : 1.0;
+            const hedonicMultiplier = MarketManager._hedonicScore(work);
+            const eventModifier = MarketEventBus.getPriceModifier(work.artistId, artist.tier);
+
+            const targetPrice = work.basePrice * heatMultiplier * marketMultiplier * hedonicMultiplier * eventModifier;
+
+            // O-U mean-reverting jitter
+            const prevPrice = work.price || targetPrice;
+            const theta = 0.2;
+            const vol = (artist.heatVolatility || 10) / 100;
+            let u = 0, v = 0;
+            while (u === 0) u = Math.random();
+            while (v === 0) v = Math.random();
+            const Z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+            const randomShock = vol * prevPrice * Z;
+            const meanReversion = theta * (targetPrice - prevPrice);
+            work.price = Math.max(10, Math.round(prevPrice + meanReversion + randomShock));
+        });
+
+        // Occasionally add new works to market
+        if (Math.random() < 0.15) {
+            MarketManager.addNewWorkToMarket();
+        }
+
+        // Tick event bus
+        MarketEventBus.tick();
+    }
+
+    /**
+     * Ensure MarketManager is initialized for standalone CMS simulation.
+     * If artists are empty, initialize from ARTISTS data.
+     */
+    static ensureInitForSim() {
+        if (MarketManager.artists.length === 0) {
+            MarketManager.artists = ARTISTS.map(a => ({ ...a }));
+
+        }
+        if (MarketManager.works.length === 0) {
+            // Use artworks data for simulation
+            if (ARTWORKS?.length > 0) {
+                MarketManager.works = ARTWORKS.map(w => ({ ...w, price: w.basePrice || w.price || 10000 }));
+            } else {
+                // Fallback: generate works from artists
+                for (const artist of MarketManager.artists) {
+                    const count = artist.tier === 'blue-chip' ? 8 : artist.tier === 'mid-career' ? 5 : 3;
+                    for (let i = 0; i < count; i++) {
+                        const price = Math.round(
+                            artist.basePriceMin + Math.random() * (artist.basePriceMax - artist.basePriceMin)
+                        );
+                        MarketManager.works.push({
+                            id: `sim_${artist.id}_${i} `,
+                            title: `Work #${i + 1} `,
+                            artistId: artist.id,
+                            artist: artist.name,
+                            medium: artist.medium,
+                            basePrice: price,
+                            price: price,
+                            yearCreated: 2020 + Math.floor(Math.random() * 5),
+                            onMarket: Math.random() < 0.6,
+                        });
+                    }
+                }
+            }
+
+        }
     }
 
     static calculatePrice(work, includeJitter = false) {
@@ -229,7 +362,7 @@ export class MarketManager {
         );
 
         const titles = ['New Work', 'Untitled', 'Study', 'Composition', 'Fragment', 'Series'];
-        const title = `${titles[Math.floor(Math.random() * titles.length)]} #${Math.floor(Math.random() * 999)}`;
+        const title = `${titles[Math.floor(Math.random() * titles.length)]} #${Math.floor(Math.random() * 999)} `;
 
         MarketManager.works.push({
             id: generateId('work_gen'),
@@ -499,6 +632,207 @@ export class MarketManager {
             sectors: MarketManager.getSectorIndices(),
             cycle: GameState.state?.marketState || 'flat',
             week: GameState.state?.week || 0,
+            timestamp: Date.now(),
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Valuation Engine — Per-Artwork & Per-Collector Analysis
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * Full appraisal for a single artwork — price breakdown, comparables,
+     * trade history, and confidence rating.
+     *
+     * @param {string} workId
+     * @returns {object|null} structured appraisal or null if not found
+     */
+    static getArtworkAppraisal(workId) {
+        const work = MarketManager.works.find(w => w.id === workId)
+            || ARTWORKS.find(a => a.id === workId);
+        if (!work) return null;
+
+        const artist = MarketManager.getArtist(work.artistId);
+        const currentPrice = MarketManager.calculatePrice(work);
+        const hedonicScore = MarketManager._hedonicScore(work);
+        const eventModifier = MarketEventBus.getPriceModifier(work.artistId, artist?.tier);
+        const eventHeatMod = MarketEventBus.getHeatModifier(work.artistId);
+
+        // Last trade price from simulation trade log
+        let lastTradePrice = null;
+        let lastTradeWeek = null;
+        try {
+            const log = MarketSimulator.getTradeLog();
+            const match = [...log].reverse().find(t => t.artworkId === workId);
+            if (match) {
+                lastTradePrice = match.price;
+                lastTradeWeek = match.week;
+            }
+        } catch { /* trade log may not exist yet */ }
+
+        // Comparables — same tier, similar price range
+        const tier = work.tier || artist?.tier || 'mid_career';
+        const comparables = MarketManager.works
+            .filter(w => w.id !== workId && (w.tier === tier || MarketManager.getArtist(w.artistId)?.tier === tier))
+            .map(w => ({
+                id: w.id,
+                title: w.title,
+                artist: w.artist,
+                price: MarketManager.calculatePrice(w),
+                basePrice: w.basePrice,
+            }))
+            .sort((a, b) => Math.abs(a.price - currentPrice) - Math.abs(b.price - currentPrice))
+            .slice(0, 5);
+
+        // Confidence rating based on data availability
+        let confidence = 'medium';
+        const dataPoints = [
+            !!work.provenanceChain?.length,
+            !!work.exhibitions?.length,
+            !!work.literature?.length,
+            !!lastTradePrice,
+            !!work.valuationHistory?.length,
+        ].filter(Boolean).length;
+        if (dataPoints >= 4) confidence = 'high';
+        else if (dataPoints <= 1) confidence = 'low';
+
+        // Price breakdown object
+        const state = GameState.state;
+        const heatMultiplier = artist ? 0.5 + Math.pow(artist.heat / 32, 2) : 1.0;
+        const marketMultiplier = state?.marketState === 'bull' ? 1.2 : state?.marketState === 'bear' ? 0.8 : 1.0;
+
+        return {
+            workId: work.id,
+            title: work.title,
+            artist: work.artist,
+            artistId: work.artistId,
+            tier,
+            medium: work.medium,
+            year: work.year,
+            ownerId: work.ownerId,
+
+            // Pricing
+            basePrice: work.basePrice || work.askingPrice,
+            currentPrice,
+            priceBreakdown: {
+                base: work.basePrice || work.askingPrice,
+                heatMultiplier: Math.round(heatMultiplier * 100) / 100,
+                marketMultiplier,
+                hedonicScore: Math.round(hedonicScore * 100) / 100,
+                eventModifier: Math.round(eventModifier * 100) / 100,
+                eventHeatMod: Math.round(eventHeatMod * 10) / 10,
+            },
+
+            // Market state
+            artistIndex: artist?.artistIndex || 500,
+            artistHeat: artist?.heat || 0,
+            marketCycle: state?.marketState || 'flat',
+
+            // Trade history
+            lastTradePrice,
+            lastTradeWeek,
+            valuationHistory: work.valuationHistory || [],
+
+            // Comparables
+            comparables,
+
+            // Provenance
+            provenance: work.provenance,
+            provenanceChain: work.provenanceChain || [],
+            exhibitions: work.exhibitions || [],
+            literature: work.literature || [],
+
+            // Meta
+            confidence,
+            timestamp: Date.now(),
+        };
+    }
+
+    /**
+     * Portfolio analysis for any owner (NPC or player).
+     * Returns NAV, cost basis, P&L, and per-work breakdown.
+     *
+     * @param {string} ownerId — NPC contact ID or 'player'
+     * @returns {object} portfolio summary
+     */
+    static getCollectorPortfolio(ownerId) {
+        // Find all works owned by this entity
+        const ownedWorks = MarketManager.works
+            .filter(w => w.ownerId === ownerId)
+            .concat(ARTWORKS.filter(a => a.ownerId === ownerId && !MarketManager.works.find(w => w.id === a.id)));
+
+        // Per-work analysis
+        const holdings = ownedWorks.map(w => {
+            const currentValue = MarketManager.calculatePrice(w);
+            const costBasis = w.purchasePrice || w.basePrice || w.askingPrice || currentValue;
+            const unrealizedPL = currentValue - costBasis;
+            const plPercent = costBasis > 0 ? ((unrealizedPL / costBasis) * 100) : 0;
+            const artist = MarketManager.getArtist(w.artistId);
+
+            return {
+                id: w.id,
+                title: w.title,
+                artist: w.artist,
+                artistId: w.artistId,
+                tier: w.tier || artist?.tier || 'unknown',
+                medium: w.medium,
+                year: w.year,
+                costBasis,
+                currentValue,
+                unrealizedPL,
+                plPercent: Math.round(plPercent * 10) / 10,
+                artistHeat: artist?.heat || 0,
+                artistIndex: artist?.artistIndex || 500,
+            };
+        });
+
+        // Aggregate totals
+        const totalNAV = holdings.reduce((s, h) => s + h.currentValue, 0);
+        const totalCost = holdings.reduce((s, h) => s + h.costBasis, 0);
+        const totalPL = totalNAV - totalCost;
+        const totalPLPercent = totalCost > 0 ? ((totalPL / totalCost) * 100) : 0;
+
+        // Concentration analysis
+        const tierConcentration = {};
+        const artistConcentration = {};
+        for (const h of holdings) {
+            tierConcentration[h.tier] = (tierConcentration[h.tier] || 0) + h.currentValue;
+            artistConcentration[h.artist] = (artistConcentration[h.artist] || 0) + h.currentValue;
+        }
+        // Convert to percentages
+        for (const key of Object.keys(tierConcentration)) {
+            tierConcentration[key] = totalNAV > 0 ? Math.round((tierConcentration[key] / totalNAV) * 1000) / 10 : 0;
+        }
+        for (const key of Object.keys(artistConcentration)) {
+            artistConcentration[key] = totalNAV > 0 ? Math.round((artistConcentration[key] / totalNAV) * 1000) / 10 : 0;
+        }
+
+        // Trade history for this owner
+        let tradeHistory = [];
+        try {
+            const log = MarketSimulator.getTradeLog();
+            tradeHistory = log.filter(t => t.buyer === ownerId || t.seller === ownerId)
+                .map(t => ({
+                    side: t.buyer === ownerId ? 'buy' : 'sell',
+                    artworkId: t.artworkId,
+                    title: t.title || t.artworkId,
+                    price: t.price,
+                    week: t.week,
+                    counterparty: t.buyer === ownerId ? t.seller : t.buyer,
+                }));
+        } catch { /* non-critical */ }
+
+        return {
+            ownerId,
+            holdingCount: holdings.length,
+            totalNAV,
+            totalCost,
+            totalPL,
+            totalPLPercent: Math.round(totalPLPercent * 10) / 10,
+            holdings,
+            tierConcentration,
+            artistConcentration,
+            tradeHistory,
             timestamp: Date.now(),
         };
     }

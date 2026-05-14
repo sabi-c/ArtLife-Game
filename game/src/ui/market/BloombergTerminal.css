@@ -1,0 +1,8902 @@
+/**
+ * BloombergTerminal.css — Dark Bloomberg-style art market terminal
+ *
+ * CSS prefix: bb- (bloomberg)
+ * Layout: fixed full-screen overlay with CSS Grid panels
+ *
+ * New in v2: 3-column grid, order book (bb-ob-*), tearsheet modal (bb-ts-*),
+ * notification bar (bb-notif-*), listing rows (bb-listing-*), status toast.
+ * Tearsheet uses Seventh House gallery aesthetic: white/cream bg, letter-spaced headers.
+ *
+ * Design tokens: --an-* (Artnet), --ts-* (Tearsheet), --bb-* (Bloomberg)
+ */
+
+/* ══ Design Tokens ══ */
+:root {
+    /* Artnet design tokens — white + red accent, tabular data */
+    --an-bg: #fff;
+    --an-fg: #111;
+    --an-accent: #cc0000;
+    --an-accent-light: #cc000015;
+    --an-border: #e5e5e5;
+    --an-font-body: 'Helvetica Neue', Arial, sans-serif;
+    --an-font-mono: 'IBM Plex Mono', Courier, monospace;
+    --an-radius: 2px;
+
+    /* Tearsheet design tokens — cream/white, serif typography */
+    --ts-bg: #fff;
+    --ts-fg: #1a1a1a;
+    --ts-accent: #1a1a1a;
+    --ts-border: #e8e5de;
+    --ts-font-serif: Georgia, 'Times New Roman', serif;
+    --ts-font-sans: 'Helvetica Neue', Arial, sans-serif;
+    --ts-brand-spacing: 0.35em;
+
+    /* Bloomberg design tokens — dark terminal */
+    --bb-bg: #0a0a0f;
+    --bb-fg: #c0c0c8;
+    --bb-accent: #ff8c00;
+    --bb-green: #00e676;
+    --bb-red: #ff1744;
+    --bb-border: #1a1a28;
+    --bb-font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+/* ── Overlay Container ── */
+.bb-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: #0a0a0f;
+    color: #c0c0c8;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 11px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Header Bar ── */
+.bb-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: #111118;
+    border-bottom: 1px solid #1a1a2e;
+    flex-shrink: 0;
+}
+
+.bb-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bb-logo {
+    color: #c9a84c;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.bb-title {
+    color: #e0e0e8;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+.bb-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bb-cash {
+    color: #4caf50;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.bb-ap {
+    color: #c9a84c;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.bb-cycle-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.bb-cycle-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.bb-header-meta {
+    color: #5a5a6a;
+}
+
+.bb-close {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.bb-close:hover {
+    color: #c94040;
+    border-color: #c94040;
+}
+
+/* ── Scrolling Ticker ── */
+.bb-ticker {
+    background: #0d0d14;
+    border-bottom: 1px solid #1a1a2e;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 4px 0;
+    flex-shrink: 0;
+}
+
+.bb-ticker-track {
+    display: inline-flex;
+    gap: 32px;
+    animation: bb-scroll 30s linear infinite;
+}
+
+.bb-ticker-item {
+    color: #00e5ff;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+@keyframes bb-scroll {
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+/* ── Intel Gate Warning ── */
+.bb-intel-gate {
+    background: rgba(201, 168, 76, 0.1);
+    border: 1px solid rgba(201, 168, 76, 0.3);
+    color: #c9a84c;
+    padding: 6px 16px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ── Status Toast ── */
+.bb-status-toast {
+    background: rgba(201, 168, 76, 0.15);
+    border: 1px solid rgba(201, 168, 76, 0.4);
+    color: #c9a84c;
+    padding: 8px 16px;
+    font-size: 11px;
+    text-align: center;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+    animation: bb-toast-in 0.3s ease-out;
+}
+
+@keyframes bb-toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Notification Bar ── */
+.bb-notif-bar {
+    display: flex;
+    gap: 16px;
+    padding: 6px 16px;
+    background: rgba(201, 168, 76, 0.08);
+    border-bottom: 1px solid rgba(201, 168, 76, 0.2);
+    flex-shrink: 0;
+    overflow-x: auto;
+    animation: bb-notif-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes bb-notif-glow {
+    from {
+        border-bottom-color: rgba(201, 168, 76, 0.2);
+    }
+
+    to {
+        border-bottom-color: rgba(201, 168, 76, 0.5);
+    }
+}
+
+.bb-notif-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+}
+
+.bb-notif-item:hover {
+    opacity: 0.8;
+}
+
+.bb-notif-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #c9a84c;
+    flex-shrink: 0;
+    animation: bb-notif-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes bb-notif-pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.bb-notif-text {
+    color: #c9a84c;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+/* ── Main Grid — 3-column layout ── */
+.bb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: #1a1a2e;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.bb-grid-3col {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.bb-col-left,
+.bb-col-right,
+.bb-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: #1a1a2e;
+    overflow-y: auto;
+}
+
+/* ── Bottom Row ── */
+.bb-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: #1a1a2e;
+    border-top: 1px solid #1a1a2e;
+    flex-shrink: 0;
+}
+
+/* ── Panel Base ── */
+.bb-panel {
+    background: #0d0d14;
+    padding: 10px 12px;
+}
+
+.bb-panel-header {
+    color: #5a5a6a;
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ── Leaderboard ── */
+.bb-leaderboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-lb-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 60px 44px 80px;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 2px;
+}
+
+.bb-lb-row:hover {
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.bb-lb-row.selected {
+    background: rgba(0, 229, 255, 0.1);
+    border-left: 2px solid #00e5ff;
+}
+
+.bb-lb-rank {
+    color: #5a5a6a;
+    text-align: right;
+}
+
+.bb-lb-name {
+    color: #e0e0e8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-lb-heat-bar {
+    height: 4px;
+    background: #1a1a2e;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.bb-lb-heat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c94040, #c9a84c, #4caf50);
+    transition: width 0.3s;
+}
+
+.bb-lb-index {
+    text-align: right;
+    font-weight: 600;
+    font-size: 10px;
+}
+
+.bb-lb-index.up {
+    color: #4caf50;
+}
+
+.bb-lb-index.down {
+    color: #c94040;
+}
+
+/* ── Sparkline ── */
+.bb-sparkline-svg {
+    vertical-align: middle;
+}
+
+.bb-no-data {
+    color: #333;
+    font-size: 9px;
+}
+
+/* ── Market Overview ── */
+.bb-overview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.bb-ov-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-ov-label {
+    color: #5a5a6a;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.bb-ov-value {
+    color: #e0e0e8;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ── Composite Index Sparkline ── */
+.bb-ov-composite {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-ov-comp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #5a5a6a;
+    margin-bottom: 4px;
+}
+
+.bb-ov-comp-delta {
+    font-weight: 700;
+    font-size: 10px;
+}
+
+.bb-ov-comp-delta.up {
+    color: #4caf50;
+}
+
+.bb-ov-comp-delta.down {
+    color: #c94040;
+}
+
+/* ── Sector Performance ── */
+.bb-ov-sectors {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-ov-sector-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+}
+
+.bb-ov-sector-label {
+    color: #5a5a6a;
+    width: 70px;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.bb-ov-sector-delta {
+    font-weight: 600;
+    font-size: 10px;
+    min-width: 40px;
+    text-align: right;
+}
+
+.bb-ov-sector-delta.up {
+    color: #4caf50;
+}
+
+.bb-ov-sector-delta.down {
+    color: #c94040;
+}
+
+/* ── Event Log ── */
+.bb-ov-events {
+    margin-top: 6px;
+}
+
+.bb-ov-event-row {
+    display: flex;
+    gap: 6px;
+    font-size: 10px;
+    padding: 2px 0;
+    color: #a0a0b0;
+}
+
+.bb-ov-event-week {
+    color: #5a5a6a;
+    min-width: 26px;
+    font-size: 9px;
+}
+
+.bb-ov-event-desc {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Portfolio Summary Bar ── */
+.bb-port-summary {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 6px;
+}
+
+.bb-port-sum-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.bb-port-sum-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.bb-port-sum-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e0e0e8;
+}
+
+.bb-port-sum-value.up {
+    color: #4caf50;
+}
+
+.bb-port-sum-value.down {
+    color: #c94040;
+}
+
+/* ── Portfolio Table Columns ── */
+.bb-port-table {
+    display: flex;
+    flex-direction: column;
+}
+
+.bb-port-header-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 3px;
+    margin-bottom: 2px;
+}
+
+.bb-port-header-row span {
+    font-size: 8px !important;
+    color: #5a5a6a !important;
+    letter-spacing: 0.5px;
+    font-weight: 400 !important;
+}
+
+.bb-port-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 0.7fr 0.5fr;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 0;
+    font-size: 11px;
+}
+
+.bb-port-col-title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+}
+
+.bb-port-col-cost,
+.bb-port-col-val {
+    color: #e0e0e8;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    text-align: right;
+}
+
+.bb-port-col-pl {
+    font-weight: 600;
+    font-size: 10px;
+    text-align: right;
+}
+
+.bb-port-col-pl.up {
+    color: #4caf50;
+}
+
+.bb-port-col-pl.down {
+    color: #c94040;
+}
+
+.bb-port-col-action {
+    text-align: right;
+}
+
+/* ── Realized Returns ── */
+.bb-port-realized {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-port-realized-row {
+    opacity: 0.7;
+}
+
+.bb-port-sold-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 0.5px;
+}
+
+/* ── Price Chart ── */
+.bb-chart-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.bb-chart-current {
+    color: #e0e0e8;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.bb-chart-delta {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.bb-chart-delta.up {
+    color: #4caf50;
+}
+
+.bb-chart-delta.down {
+    color: #c94040;
+}
+
+.bb-chart-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.bb-chart-empty {
+    color: #333;
+    font-size: 10px;
+    padding: 20px;
+    text-align: center;
+}
+
+.bb-chart-labels {
+    display: flex;
+    justify-content: space-between;
+    color: #3a3a4a;
+    font-size: 9px;
+    margin-top: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Order Book                                                    */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-ob-count {
+    color: #5a5a6a;
+    font-size: 9px;
+    font-weight: 400;
+}
+
+.bb-ob-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 8px;
+}
+
+.bb-ob-tab {
+    flex: 1;
+    background: #111118;
+    border: 1px solid #1a1a2e;
+    color: #5a5a6a;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bb-ob-tab:first-child {
+    border-right: none;
+}
+
+.bb-ob-tab.active {
+    background: #1a1a2e;
+    color: #00e5ff;
+    border-color: #00e5ff;
+}
+
+.bb-ob-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.bb-ob-row {
+    display: grid;
+    grid-template-columns: 1fr auto 70px 30px 28px;
+    gap: 6px;
+    padding: 5px 4px;
+    font-size: 10px;
+    border-bottom: 1px solid #111118;
+    cursor: pointer;
+    transition: background 0.15s;
+    align-items: center;
+}
+
+.bb-ob-row:hover {
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.bb-ob-sell {
+    border-left: 2px solid #c94040;
+}
+
+.bb-ob-buy {
+    border-left: 2px solid #4caf50;
+    cursor: default;
+}
+
+.bb-ob-title {
+    color: #00e5ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-ob-artist {
+    color: #5a5a6a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-ob-genres {
+    color: #5a5a6a;
+    font-size: 9px;
+}
+
+.bb-ob-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ob-urgency {
+    color: #c94040;
+    font-weight: 700;
+    font-size: 9px;
+    text-align: center;
+}
+
+.bb-ob-urgency:empty {
+    display: none;
+}
+
+.bb-ob-expires {
+    color: #5a5a6a;
+    text-align: right;
+    font-size: 9px;
+}
+
+.bb-ob-empty {
+    color: #3a3a4a;
+    font-size: 10px;
+    padding: 12px 0;
+    text-align: center;
+}
+
+/* Order book row fade-in animation */
+.bb-ob-row {
+    animation: bb-row-fade-in 0.3s ease-out;
+}
+
+@keyframes bb-row-fade-in {
+    from {
+        opacity: 0;
+        transform: translateX(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ── Trade Feed ── */
+.bb-trades-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.bb-trade-row {
+    display: grid;
+    grid-template-columns: 30px 1fr 1fr 70px;
+    gap: 6px;
+    padding: 3px 0;
+    border-bottom: 1px solid #111118;
+    font-size: 10px;
+}
+
+.bb-trade-week {
+    color: #5a5a6a;
+}
+
+.bb-trade-parties {
+    color: #c0c0c8;
+}
+
+.bb-trade-title {
+    color: #00e5ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-trade-price {
+    color: #c9a84c;
+    text-align: right;
+}
+
+.bb-trades-empty {
+    color: #333;
+    font-size: 10px;
+    padding: 10px 0;
+}
+
+/* ── Watchlist ── */
+.bb-watchlist-empty,
+.bb-locked {
+    color: #3a3a4a;
+    font-size: 10px;
+    padding: 8px 0;
+}
+
+.bb-watch-row {
+    display: grid;
+    grid-template-columns: 16px 1fr 80px 30px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+}
+
+.bb-watch-star {
+    color: #c9a84c;
+}
+
+.bb-watch-name {
+    color: #e0e0e8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-watch-price {
+    color: #c9a84c;
+    text-align: right;
+}
+
+.bb-watch-trend {
+    text-align: right;
+}
+
+.bb-watch-trend.up {
+    color: #4caf50;
+}
+
+.bb-watch-trend.down {
+    color: #c94040;
+}
+
+/* ── Portfolio Tracker ── */
+.bb-portfolio-total {
+    color: #c9a84c;
+    font-size: 11px;
+}
+
+.bb-portfolio-roi {
+    font-size: 10px;
+    margin-left: 6px;
+}
+
+.bb-portfolio-roi.up {
+    color: #4caf50;
+}
+
+.bb-portfolio-roi.down {
+    color: #c94040;
+}
+
+.bb-portfolio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-port-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 60px 40px 44px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+    border-bottom: 1px solid #111118;
+    align-items: center;
+}
+
+.bb-port-title {
+    color: #00e5ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+
+.bb-port-title:hover {
+    text-decoration: underline;
+}
+
+.bb-port-artist {
+    color: #5a5a6a;
+}
+
+.bb-port-price {
+    color: #c9a84c;
+    text-align: right;
+}
+
+.bb-port-roi {
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-port-roi.up {
+    color: #4caf50;
+}
+
+.bb-port-roi.down {
+    color: #c94040;
+}
+
+.bb-port-more {
+    color: #3a3a4a;
+    font-size: 9px;
+    padding: 4px 0;
+}
+
+.bb-port-list-btn {
+    background: none;
+    border: 1px solid #c9a84c;
+    color: #c9a84c;
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bb-port-list-btn:hover {
+    background: rgba(201, 168, 76, 0.15);
+    color: #e0c060;
+}
+
+/* ── Active Listings Section ── */
+.bb-listings-section {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #1a1a2e;
+}
+
+.bb-listing-row {
+    display: grid;
+    grid-template-columns: 1fr auto 70px 52px;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: 10px;
+    border-bottom: 1px solid #111118;
+    align-items: center;
+}
+
+.bb-listing-title {
+    color: #00e5ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-listing-tier {
+    color: #5a5a6a;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 1px 4px;
+    border: 1px solid #2a2a3e;
+    border-radius: 2px;
+}
+
+.bb-listing-price {
+    color: #c9a84c;
+    text-align: right;
+}
+
+.bb-listing-cancel {
+    background: none;
+    border: 1px solid #c94040;
+    color: #c94040;
+    font-family: inherit;
+    font-size: 9px;
+    padding: 2px 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bb-listing-cancel:hover {
+    background: rgba(201, 64, 64, 0.15);
+}
+
+/* Pulsing border on active listings */
+.bb-listing-row {
+    animation: bb-listing-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes bb-listing-pulse {
+    from {
+        border-left: 2px solid rgba(201, 168, 76, 0.3);
+    }
+
+    to {
+        border-left: 2px solid rgba(201, 168, 76, 0.8);
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* NPC Directory Panel — contacts, relationships, intel          */
+/* ══════════════════════════════════════════════════════════════ */
+
+.bb-dir-count {
+    float: right;
+    background: #1a1a2e;
+    color: #888;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 400;
+}
+
+.bb-dir-controls {
+    display: flex;
+    gap: 6px;
+    padding: 6px 0 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.bb-dir-filter {
+    background: #111118;
+    color: #c0c0c8;
+    border: 1px solid #2a2a3e;
+    font-family: inherit;
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.bb-dir-sort {
+    background: none;
+    border: 1px solid #2a2a3e;
+    color: #888;
+    font-family: inherit;
+    font-size: 9px;
+    padding: 3px 8px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+}
+
+.bb-dir-sort:hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
+}
+
+.bb-dir-empty {
+    color: #5a5a6a;
+    font-size: 10px;
+    padding: 16px 0;
+    text-align: center;
+}
+
+.bb-dir-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-dir-row {
+    padding: 8px 6px;
+    border-bottom: 1px solid #111118;
+    transition: background 0.15s;
+}
+
+.bb-dir-row:hover {
+    background: rgba(201, 168, 76, 0.04);
+}
+
+.bb-dir-row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bb-dir-emoji {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.bb-dir-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.bb-dir-name {
+    color: #e0e0e8;
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-dir-title {
+    color: #5a5a6a;
+    font-size: 9px;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-dir-role-badge {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 6px;
+    color: #fff;
+    border-radius: 2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.bb-dir-row-meta {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+    padding-left: 28px;
+    font-size: 9px;
+}
+
+.bb-dir-favor {
+    font-weight: 600;
+}
+
+.bb-dir-met {
+    color: #4caf50;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.bb-dir-wealth {
+    color: #5a5a6a;
+}
+
+.bb-dir-personality {
+    color: #6a6a7a;
+    font-size: 9px;
+    font-style: italic;
+    margin-top: 4px;
+    padding-left: 28px;
+    line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Artwork Tearsheet Modal — Gagosian / Seventh House Aesthetic  */
+/*                                                                */
+/* Matches real gallery PDF tearsheet layout with formal          */
+/* provenance chains, exhibition history, and literature refs.    */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Backdrop */
+.bb-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: bb-modal-fade-in 0.25s ease-out;
+}
+
+@keyframes bb-modal-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Tearsheet card — gallery white/cream against dark Bloomberg */
+.bb-tearsheet {
+    background: #f8f6f2;
+    color: #1a1a1a;
+    width: 90%;
+    max-width: 540px;
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 36px 40px;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    animation: bb-ts-slide-in 0.3s ease-out;
+    position: relative;
+}
+
+/* Scrollbar styling for tearsheet */
+.bb-tearsheet::-webkit-scrollbar {
+    width: 4px;
+}
+
+.bb-tearsheet::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.bb-tearsheet::-webkit-scrollbar-thumb {
+    background: #d5d0c9;
+    border-radius: 2px;
+}
+
+@keyframes bb-ts-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Gallery header — spaced letters like "S E V E N T H" */
+.bb-ts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.bb-ts-brand {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    text-transform: uppercase;
+}
+
+.bb-ts-star {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #c9a84c;
+    padding: 0;
+    line-height: 1;
+    transition: transform 0.2s;
+}
+
+.bb-ts-star:hover {
+    transform: scale(1.2);
+}
+
+/* "TEARSHEET" sub-label */
+.bb-ts-label {
+    font-size: 8px;
+    letter-spacing: 0.5em;
+    color: #9a9690;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+/* Thin horizontal rule — separates header from content */
+.bb-ts-rule {
+    height: 1px;
+    background: #1a1a1a;
+    margin-bottom: 24px;
+}
+
+/* ── Artwork photo ── */
+.bb-ts-photos {
+    margin-bottom: 28px;
+}
+
+.bb-ts-photo-placeholder {
+    background: #eceae5;
+    border: 1px solid #d5d0c9;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.bb-ts-photo-img {
+    width: 100%;
+    height: auto;
+    max-height: 320px;
+    object-fit: contain;
+    display: block;
+}
+
+.bb-ts-photo-text {
+    color: #999;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 16px;
+}
+
+/* ── Clickable artwork image ── */
+.bb-ts-photo-clickable {
+    cursor: zoom-in;
+    transition: opacity 0.2s;
+}
+
+.bb-ts-photo-clickable:hover {
+    opacity: 0.85;
+}
+
+/* ── Lightbox overlay ── */
+.bb-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    animation: bb-lightbox-in 0.25s ease;
+}
+
+@keyframes bb-lightbox-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.bb-lightbox-img {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    cursor: default;
+}
+
+.bb-lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.bb-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Metadata block — formal gallery layout ── */
+.bb-ts-meta-block {
+    margin-bottom: 24px;
+}
+
+/* Artist line — name + lifespan on same row */
+.bb-ts-artist-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.bb-ts-artist {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #1a1a1a;
+}
+
+.bb-ts-lifespan {
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    color: #6a6660;
+}
+
+/* Title line — italic, with year */
+.bb-ts-title {
+    font-size: 12px;
+    color: #2a2a2a;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+/* Individual metadata lines (medium, dimensions, edition) */
+.bb-ts-meta-line {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: #5a5a55;
+    line-height: 1.7;
+}
+
+.bb-ts-description {
+    font-size: 10px;
+    color: #6a6660;
+    line-height: 1.6;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* ── Price block — "NET PRICE $ X,XXX.00" ── */
+.bb-ts-price-block {
+    margin-bottom: 24px;
+    padding: 18px 0;
+    border-top: 1px solid #d0cbc4;
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.bb-ts-price-label {
+    font-size: 8px;
+    letter-spacing: 0.4em;
+    color: #9a9690;
+    margin-bottom: 6px;
+}
+
+.bb-ts-price {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 0.03em;
+}
+
+.bb-ts-available {
+    font-size: 8px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+    margin-top: 6px;
+    text-transform: uppercase;
+}
+
+/* ── Market data inset — dark Bloomberg stripe within gallery card ── */
+.bb-ts-market-inset {
+    background: #0d0d14;
+    color: #c0c0c8;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.bb-ts-market-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.bb-ts-market-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: #5a5a6a;
+}
+
+.bb-ts-market-val {
+    font-weight: 600;
+    color: #e0e0e8;
+    font-size: 11px;
+}
+
+.bb-ts-trend-rising {
+    color: #4caf50;
+}
+
+.bb-ts-trend-falling {
+    color: #c94040;
+}
+
+.bb-ts-trend-stable {
+    color: #c9a84c;
+}
+
+/* ── Sections: Provenance, Exhibitions, Literature ── */
+.bb-ts-section {
+    margin-bottom: 20px;
+}
+
+.bb-ts-section-label {
+    font-size: 8px;
+    letter-spacing: 0.45em;
+    color: #9a9690;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e0dbd4;
+    text-transform: uppercase;
+}
+
+/* Provenance chain items — indented with connecting feel */
+.bb-ts-prov-item {
+    font-size: 10px;
+    color: #3a3a3a;
+    line-height: 1.8;
+    padding-left: 0;
+    position: relative;
+}
+
+/* Exhibition items */
+.bb-ts-exhibit-item {
+    font-size: 10px;
+    color: #3a3a3a;
+    line-height: 1.8;
+}
+
+/* Literature items — slightly smaller, italic for publication names */
+.bb-ts-lit-item {
+    font-size: 9px;
+    color: #4a4a4a;
+    line-height: 1.9;
+}
+
+/* ── Action buttons ── */
+.bb-ts-actions {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #d0cbc4;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bb-ts-confirm-msg {
+    font-size: 11px;
+    color: #3a3a3a;
+    text-align: center;
+    margin-bottom: 4px;
+    line-height: 1.5;
+}
+
+.bb-ts-btn {
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    padding: 12px 16px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.bb-ts-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.bb-ts-btn-primary {
+    background: #1a1a1a;
+    color: #c9a84c;
+}
+
+.bb-ts-btn-primary:hover:not(:disabled) {
+    background: #2a2a2a;
+}
+
+.bb-ts-btn-secondary {
+    background: #e8e4de;
+    color: #3a3a3a;
+    border: 1px solid #d0cbc4;
+}
+
+.bb-ts-btn-secondary:hover:not(:disabled) {
+    background: #ddd8d0;
+}
+
+.bb-ts-ap {
+    color: #8a8680;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+}
+
+/* ── Gallery footer with brand + locations ── */
+.bb-ts-footer {
+    text-align: center;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid #d0cbc4;
+}
+
+.bb-ts-footer-brand {
+    font-size: 10px;
+    letter-spacing: 0.45em;
+    color: #b0aba4;
+    margin-bottom: 4px;
+}
+
+.bb-ts-footer-locations {
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    color: #c0bbb4;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Mobile Responsive                                             */
+/* ══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .bb-overlay {
+        font-size: 10px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bb-header {
+        padding: 10px 12px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .bb-title {
+        font-size: 10px;
+        letter-spacing: 1px;
+    }
+
+    .bb-close {
+        min-width: 44px;
+        min-height: 44px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Style toggle + config gear — touch-friendly on mobile */
+    .bb-style-toggle,
+    .bb-config-btn {
+        min-width: 40px;
+        min-height: 40px;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Config dropdown — wider on mobile for easier tapping */
+    .bb-config-dropdown {
+        min-width: 240px;
+        right: -8px;
+    }
+
+    .bb-config-item {
+        padding: 6px 0;
+        min-height: 36px;
+        display: flex;
+        align-items: center;
+    }
+
+    .bb-config-preset {
+        min-height: 36px;
+        padding: 8px 4px;
+    }
+
+    /* Collapse to single column */
+    .bb-grid,
+    .bb-grid-3col {
+        grid-template-columns: 1fr;
+        overflow: visible;
+        flex: none;
+    }
+
+    .bb-col-left,
+    .bb-col-right,
+    .bb-col {
+        overflow: visible;
+    }
+
+    .bb-bottom {
+        grid-template-columns: 1fr;
+    }
+
+    .bb-panel {
+        padding: 10px;
+    }
+
+    .bb-lb-row {
+        grid-template-columns: 20px 1fr 40px 36px 60px;
+        font-size: 10px;
+        min-height: 36px;
+        align-items: center;
+    }
+
+    .bb-trade-row {
+        grid-template-columns: 26px 1fr 60px;
+        min-height: 32px;
+    }
+
+    .bb-trade-title {
+        display: none;
+    }
+
+    .bb-chart-current {
+        font-size: 14px;
+    }
+
+    .bb-watch-row {
+        min-height: 36px;
+        align-items: center;
+    }
+
+    /* Portfolio row loses artist column on mobile */
+    .bb-port-row {
+        grid-template-columns: 1fr 60px 40px 44px;
+        min-height: 32px;
+    }
+
+    .bb-port-artist {
+        display: none;
+    }
+
+    .bb-overview-grid {
+        gap: 10px;
+    }
+
+    .bb-ov-value {
+        font-size: 12px;
+    }
+
+    .bb-trades-list {
+        max-height: 160px;
+    }
+
+    /* Order book mobile */
+    .bb-ob-row {
+        grid-template-columns: 1fr 60px 28px;
+        min-height: 36px;
+    }
+
+    .bb-ob-artist {
+        display: none;
+    }
+
+    .bb-ob-urgency {
+        display: none;
+    }
+
+    .bb-ob-tab {
+        padding: 8px;
+        min-height: 44px;
+    }
+
+    /* Tearsheet modal mobile */
+    .bb-tearsheet {
+        width: 100%;
+        max-width: 100%;
+        max-height: 100vh;
+        padding: 24px 18px;
+    }
+
+    .bb-ts-photo-placeholder {
+        height: 180px;
+    }
+
+    .bb-ts-photo-img {
+        max-height: 240px;
+    }
+
+    .bb-ts-artist {
+        font-size: 12px;
+    }
+
+    .bb-ts-price {
+        font-size: 20px;
+    }
+
+    .bb-ts-btn {
+        padding: 14px 16px;
+        min-height: 44px;
+    }
+
+    .bb-ts-market-inset {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .bb-ts-market-row {
+        min-width: 80px;
+    }
+
+    /* Listing rows mobile */
+    .bb-listing-row {
+        grid-template-columns: 1fr 60px 52px;
+    }
+
+    .bb-listing-tier {
+        display: none;
+    }
+
+    /* Notification bar: stack vertically */
+    .bb-notif-bar {
+        flex-direction: column;
+        gap: 4px;
+        padding: 6px 12px;
+    }
+}
+
+/* ── Very small screens (iPhone SE etc.) ── */
+@media (max-width: 380px) {
+    .bb-header-meta {
+        display: none;
+    }
+
+    .bb-ticker {
+        font-size: 9px;
+    }
+
+    .bb-cash {
+        font-size: 11px;
+    }
+
+    .bb-ap {
+        font-size: 10px;
+    }
+
+    .bb-lb-row {
+        grid-template-columns: 18px 1fr 34px 50px;
+    }
+
+    .bb-lb-heat-bar {
+        display: none;
+    }
+
+    .bb-tearsheet {
+        padding: 18px 14px;
+    }
+
+    .bb-ts-artist-line {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .bb-ts-price {
+        font-size: 18px;
+    }
+
+    .bb-ts-section-label {
+        font-size: 7px;
+    }
+}
+
+/* ── Style Toggle Button ── */
+.bb-style-toggle {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.bb-style-toggle:hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
+}
+
+.bb-style-label {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    margin-left: 6px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* Hide label on very small screens */
+@media (max-width: 600px) {
+    .bb-style-label {
+        display: none;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════ */
+/* GALLERY MODE — Seventh House tearsheet aesthetic                      */
+/*                                                                        */
+/* All styles scoped under .bb-gallery so the original dark theme stays  */
+/* untouched. Single-column scrollable document layout like a PDF.       */
+/*                                                                        */
+/* Palette:                                                               */
+/*   bg: #f8f6f2 (warm cream)    text: #1a1a1a (near-black)             */
+/*   secondary: #6a6660          labels: #9a9690                         */
+/*   borders: #d0cbc4            accent: #c9a84c (gold, interactive)     */
+/*   positive: #2a6e2a           negative: #8b2020                       */
+/* ══════════════════════════════════════════════════════════════════════ */
+
+.bb-gallery {
+    background: #f8f6f2;
+    color: #1a1a1a;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+/* ── Header ── */
+.bb-gallery .bb-header {
+    background: #f8f6f2;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.bb-gallery .bb-logo {
+    color: #1a1a1a;
+    font-size: 11px;
+    letter-spacing: 0.45em;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-title {
+    color: #1a1a1a;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+}
+
+.bb-gallery .bb-cash {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-ap {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.bb-gallery .bb-cycle-label {
+    color: #6a6660;
+}
+
+.bb-gallery .bb-header-meta {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-close {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-close:hover {
+    color: #8b2020;
+    border-color: #8b2020;
+}
+
+.bb-gallery .bb-style-toggle {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-style-toggle:hover {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+/* ── Ticker ── */
+.bb-gallery .bb-ticker {
+    background: #f8f6f2;
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-ticker-item {
+    color: #6a6660;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+/* ── Intel Gate ── */
+.bb-gallery .bb-intel-gate {
+    background: rgba(201, 168, 76, 0.06);
+    border-color: #d0cbc4;
+    color: #9a9690;
+}
+
+/* ── Status Toast ── */
+.bb-gallery .bb-status-toast {
+    background: rgba(201, 168, 76, 0.08);
+    border-color: #d0cbc4;
+    color: #1a1a1a;
+}
+
+/* ── Notifications ── */
+.bb-gallery .bb-notif-bar {
+    background: rgba(201, 168, 76, 0.04);
+    border-bottom-color: #d0cbc4;
+}
+
+.bb-gallery .bb-notif-text {
+    color: #6a6660;
+}
+
+.bb-gallery .bb-notif-dot {
+    background: #c9a84c;
+}
+
+/* ── Layout: single-column document flow ── */
+.bb-gallery .bb-grid,
+.bb-gallery .bb-grid-3col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: transparent;
+    overflow: visible;
+    flex: none;
+}
+
+.bb-gallery .bb-col {
+    background: transparent;
+    overflow: visible;
+}
+
+.bb-gallery .bb-bottom {
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    border-top: none;
+}
+
+/* ── Panel Base (gallery) — de-boxed: transparent, spacing-based flow ── */
+.bb-gallery .bb-panel {
+    background: transparent;
+    padding: 20px 24px;
+    border-top: none;
+}
+
+.bb-gallery .bb-panel+.bb-panel {
+    margin-top: 32px;
+}
+
+.bb-gallery .bb-panel-header {
+    font-size: 8px;
+    letter-spacing: 0.45em;
+    color: #6a6660;
+    font-weight: 600;
+    border-bottom: 1px solid #1a1a1a;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+}
+
+/* ── Leaderboard (gallery) ── */
+.bb-gallery .bb-lb-row {
+    border-radius: 0;
+    padding: 6px 4px;
+    border-bottom: 1px solid #e8e4de;
+}
+
+.bb-gallery .bb-lb-row:hover {
+    background: rgba(201, 168, 76, 0.06);
+}
+
+.bb-gallery .bb-lb-row.selected {
+    background: rgba(201, 168, 76, 0.08);
+    border-left: 2px solid #1a1a1a;
+}
+
+.bb-gallery .bb-lb-rank {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-lb-name {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.bb-gallery .bb-lb-heat-bar {
+    background: #e8e4de;
+    border-radius: 0;
+}
+
+.bb-gallery .bb-lb-heat-fill {
+    background: linear-gradient(90deg, #8b2020, #c9a84c, #2a6e2a);
+}
+
+.bb-gallery .bb-lb-index {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-lb-index.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-lb-index.down {
+    color: #8b2020;
+}
+
+/* ── Sparkline (gallery) ── */
+.bb-gallery .bb-sparkline-svg polyline {
+    stroke: #1a1a1a;
+}
+
+.bb-gallery .bb-no-data {
+    color: #d0cbc4;
+}
+
+/* ── Market Overview (gallery) ── */
+.bb-gallery .bb-ov-label {
+    color: #9a9690;
+    letter-spacing: 0.3em;
+    font-size: 8px;
+}
+
+.bb-gallery .bb-ov-value {
+    color: #1a1a1a;
+}
+
+/* ── Price Chart (gallery) ── */
+.bb-gallery .bb-chart-current {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-chart-delta.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-chart-delta.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-chart-svg line {
+    stroke: rgba(26, 26, 26, 0.08);
+}
+
+.bb-gallery .bb-chart-svg polyline {
+    stroke: #1a1a1a;
+}
+
+.bb-gallery .bb-chart-labels {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-chart-empty {
+    color: #d0cbc4;
+}
+
+/* ── Order Book (gallery) ── */
+.bb-gallery .bb-ob-count {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-tabs {
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-ob-tab {
+    background: #f8f6f2;
+    border-color: #d0cbc4;
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-tab.active {
+    background: #ffffff;
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.bb-gallery .bb-ob-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-ob-row:hover {
+    background: rgba(201, 168, 76, 0.06);
+}
+
+.bb-gallery .bb-ob-sell {
+    border-left-color: #8b2020;
+}
+
+.bb-gallery .bb-ob-buy {
+    border-left-color: #2a6e2a;
+}
+
+.bb-gallery .bb-ob-title {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.bb-gallery .bb-ob-artist {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-price {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.bb-gallery .bb-ob-urgency {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-ob-expires {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ob-empty {
+    color: #d0cbc4;
+}
+
+.bb-gallery .bb-ob-genres {
+    color: #9a9690;
+}
+
+/* ── Trade Feed (gallery) ── */
+.bb-gallery .bb-trade-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-trade-week {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-trade-parties {
+    color: #6a6660;
+}
+
+.bb-gallery .bb-trade-title {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-trade-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-trades-empty {
+    color: #d0cbc4;
+}
+
+/* ── Watchlist (gallery) ── */
+.bb-gallery .bb-watchlist-empty,
+.bb-gallery .bb-locked {
+    color: #d0cbc4;
+}
+
+.bb-gallery .bb-watch-star {
+    color: #c9a84c;
+}
+
+.bb-gallery .bb-watch-name {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-watch-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-watch-trend.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-watch-trend.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-watch-row {
+    border-bottom: 1px solid #e8e4de;
+    padding: 6px 0;
+}
+
+/* ── Portfolio (gallery) ── */
+.bb-gallery .bb-portfolio-total {
+    color: #1a1a1a;
+    font-weight: 700;
+}
+
+.bb-gallery .bb-portfolio-roi.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-portfolio-roi.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-port-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-port-title {
+    color: #1a1a1a;
+    font-weight: 500;
+}
+
+.bb-gallery .bb-port-title:hover {
+    color: #c9a84c;
+}
+
+.bb-gallery .bb-port-artist {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-port-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-port-roi.up {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-port-roi.down {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-port-more {
+    color: #9a9690;
+}
+
+/* Directory in gallery mode */
+.bb-gallery .bb-dir-count {
+    background: #e8e4de;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-dir-filter {
+    background: #fff;
+    color: #1a1a1a;
+    border-color: #d0cbc4;
+}
+
+.bb-gallery .bb-dir-sort {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-dir-sort:hover {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.bb-gallery .bb-dir-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-gallery .bb-dir-row:hover {
+    background: rgba(201, 168, 76, 0.06);
+}
+
+.bb-gallery .bb-dir-name {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-dir-title {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-dir-personality {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-port-list-btn {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+}
+
+.bb-gallery .bb-port-list-btn:hover {
+    background: #1a1a1a;
+    color: #f8f6f2;
+}
+
+/* ── Active Listings (gallery) ── */
+.bb-gallery .bb-listings-section {
+    border-top-color: #d0cbc4;
+}
+
+.bb-gallery .bb-listing-row {
+    border-bottom-color: #e8e4de;
+    animation: none;
+    border-left: 2px solid #c9a84c;
+}
+
+.bb-gallery .bb-listing-title {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-listing-tier {
+    color: #9a9690;
+    border-color: #d0cbc4;
+    border-radius: 0;
+}
+
+.bb-gallery .bb-listing-price {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.bb-gallery .bb-listing-cancel {
+    border-color: #8b2020;
+    color: #8b2020;
+}
+
+.bb-gallery .bb-listing-cancel:hover {
+    background: rgba(139, 32, 32, 0.08);
+}
+
+/* ── Tearsheet modal backdrop in gallery mode — lighter ── */
+.bb-gallery .bb-modal-backdrop {
+    background: rgba(248, 246, 242, 0.85);
+}
+
+/* ── Market inset in tearsheet — gallery variant ── */
+.bb-gallery .bb-ts-market-inset {
+    background: #f0ede8;
+    color: #1a1a1a;
+    border: 1px solid #d0cbc4;
+}
+
+.bb-gallery .bb-ts-market-label {
+    color: #9a9690;
+}
+
+.bb-gallery .bb-ts-market-val {
+    color: #1a1a1a;
+}
+
+.bb-gallery .bb-ts-trend-rising {
+    color: #2a6e2a;
+}
+
+.bb-gallery .bb-ts-trend-falling {
+    color: #8b2020;
+}
+
+.bb-gallery .bb-ts-trend-stable {
+    color: #c9a84c;
+}
+
+/* ── Gallery footer (full terminal, not modal) ── */
+.bb-gallery-footer {
+    text-align: center;
+    padding: 24px 16px;
+    border-top: 1px solid #1a1a1a;
+    background: #f8f6f2;
+    flex-shrink: 0;
+}
+
+.bb-gallery-footer-brand {
+    font-size: 10px;
+    letter-spacing: 0.45em;
+    color: #b0aba4;
+    margin-bottom: 4px;
+}
+
+.bb-gallery-footer-locations {
+    font-size: 8px;
+    letter-spacing: 0.15em;
+    color: #c0bbb4;
+}
+
+/* ── Gallery scrollbar ── */
+.bb-gallery::-webkit-scrollbar {
+    width: 4px;
+}
+
+.bb-gallery::-webkit-scrollbar-track {
+    background: #f8f6f2;
+}
+
+.bb-gallery::-webkit-scrollbar-thumb {
+    background: #d0cbc4;
+    border-radius: 0;
+}
+
+/* ── Gallery (Seventh House) — 2-column responsive dashboard ── */
+.gallery-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 24px 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gallery-hero {
+    max-width: 640px;
+    margin: 0 auto 32px;
+    padding-top: 24px;
+}
+
+.gallery-hero .bb-panel+.bb-panel {
+    margin-top: 24px;
+}
+
+.gallery-grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+    align-items: start;
+}
+
+.gallery-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Mobile: collapse to single column */
+@media (max-width: 768px) {
+    .gallery-body {
+        padding: 0 12px 16px;
+    }
+
+    .gallery-hero {
+        margin-bottom: 16px;
+        padding-top: 16px;
+    }
+
+    .gallery-grid-2col {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+/* ── Seventh House (sh-*) — staggered artwork grid ── */
+.sh-section {
+    margin-bottom: 48px;
+}
+
+.sh-section-header {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5em;
+    color: #9a9690;
+    border-bottom: 1px solid #1a1a1a;
+    padding-bottom: 8px;
+    margin-bottom: 32px;
+}
+
+.sh-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+}
+
+.sh-card {
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.sh-card:hover {
+    opacity: 0.8;
+}
+
+/* Stagger effect — odd cards shifted down */
+.sh-card-offset {
+    margin-top: 48px;
+}
+
+.sh-card-image {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    margin-bottom: 12px;
+    background: #ebe8e3;
+}
+
+.sh-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.sh-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: #b0aba4;
+    text-align: center;
+    padding: 20px;
+}
+
+.sh-card-info {
+    padding: 0;
+}
+
+.sh-card-artist {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.sh-card-title {
+    font-size: 11px;
+    color: #6a6660;
+    margin-bottom: 2px;
+}
+
+.sh-card-medium {
+    font-size: 9px;
+    color: #b0aba4;
+    letter-spacing: 0.1em;
+}
+
+.sh-card-price {
+    font-size: 10px;
+    color: #1a1a1a;
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+}
+
+.sh-card-tag {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #c9a84c;
+    margin-top: 4px;
+}
+
+/* Seventh House mobile */
+@media (max-width: 768px) {
+    .sh-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+    }
+
+    .sh-card-offset {
+        margin-top: 0;
+    }
+
+    .sh-section-header {
+        margin-bottom: 20px;
+    }
+}
+
+/* ── Gallery: remove all row borders (use spacing instead) ── */
+.bb-gallery .bb-lb-row {
+    border-bottom: none;
+    padding: 6px 4px;
+}
+
+.bb-gallery .bb-trade-row {
+    border-bottom: none;
+}
+
+.bb-gallery .bb-watch-row {
+    border-bottom: none;
+    padding: 6px 0;
+}
+
+.bb-gallery .bb-ob-row {
+    border-bottom: none;
+}
+
+.bb-gallery .bb-port-row {
+    border-bottom: none;
+}
+
+/* ── Gallery: remove tearsheet market inset border ── */
+.bb-gallery .bb-ts-market-inset {
+    border: none;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* NEW COMPONENTS — Gallery-scoped styles                        */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* ── Player Stats (bb-ps-*) — 5-column clean stat grid ── */
+.bb-ps-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    text-align: center;
+}
+
+.bb-ps-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bb-ps-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1;
+}
+
+.bb-ps-label {
+    font-size: 7px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+}
+
+/* ── Net Worth (bb-nw-*) — hero number + sparkline + stat grid ── */
+.bb-nw-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.bb-nw-big {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.02em;
+}
+
+.bb-nw-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px 24px;
+}
+
+.bb-nw-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-nw-stat-label {
+    font-size: 7px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+}
+
+.bb-nw-stat-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.bb-nw-stat-value.up {
+    color: #2a6e2a;
+}
+
+.bb-nw-stat-value.down {
+    color: #8b2020;
+}
+
+/* ── Collection (bb-coll-*) — gallery-catalogue style ── */
+.bb-coll-count {
+    font-size: 9px;
+    font-weight: 400;
+    color: #9a9690;
+}
+
+.bb-coll-empty {
+    color: #d0cbc4;
+    font-size: 10px;
+    padding: 12px 0;
+}
+
+.bb-coll-item {
+    padding: 16px 0;
+    border-bottom: 1px solid #e8e4de;
+    transition: background 0.15s;
+}
+
+.bb-coll-item:last-child {
+    border-bottom: none;
+}
+
+.bb-coll-item:hover {
+    background: rgba(201, 168, 76, 0.04);
+}
+
+.bb-coll-artist {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: #1a1a1a;
+    margin-bottom: 3px;
+}
+
+.bb-coll-title {
+    font-size: 11px;
+    color: #2a2a2a;
+    margin-bottom: 3px;
+}
+
+.bb-coll-medium {
+    font-size: 9px;
+    color: #9a9690;
+    margin-bottom: 6px;
+}
+
+.bb-coll-prices {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: #6a6660;
+}
+
+.bb-coll-arrow {
+    color: #d0cbc4;
+}
+
+.bb-coll-roi {
+    font-weight: 600;
+}
+
+.bb-coll-roi.up {
+    color: #2a6e2a;
+}
+
+.bb-coll-roi.down {
+    color: #8b2020;
+}
+
+/* ── Transaction History (bb-txh-*) — ledger with BUY/SELL badges ── */
+.bb-txh-summary {
+    font-size: 9px;
+    font-weight: 400;
+    color: #9a9690;
+}
+
+.bb-txh-summary .up {
+    color: #2a6e2a;
+}
+
+.bb-txh-summary .down {
+    color: #8b2020;
+}
+
+.bb-txh-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-txh-empty {
+    color: #d0cbc4;
+    font-size: 10px;
+    padding: 12px 0;
+}
+
+.bb-txh-row {
+    display: grid;
+    grid-template-columns: 36px 30px 1fr auto 70px auto;
+    gap: 6px;
+    padding: 6px 0;
+    font-size: 10px;
+    align-items: center;
+    border-bottom: 1px solid #f0ede8;
+}
+
+.bb-txh-row:last-child {
+    border-bottom: none;
+}
+
+.bb-txh-badge {
+    display: inline-block;
+    padding: 1px 4px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-align: center;
+}
+
+.bb-txh-badge.buy {
+    background: #f0ede8;
+    color: #6a6660;
+}
+
+.bb-txh-badge.sell {
+    background: #1a1a1a;
+    color: #f8f6f2;
+}
+
+.bb-txh-week {
+    color: #9a9690;
+    font-size: 9px;
+}
+
+.bb-txh-title {
+    color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-txh-artist {
+    color: #9a9690;
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-txh-price {
+    color: #1a1a1a;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-txh-pnl {
+    font-weight: 700;
+    font-size: 10px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.bb-txh-pnl.up {
+    color: #2a6e2a;
+}
+
+.bb-txh-pnl.down {
+    color: #8b2020;
+}
+
+.bb-txh-hold {
+    font-weight: 400;
+    color: #9a9690;
+    font-size: 9px;
+}
+
+/* ── Gallery mobile overrides ── */
+@media (max-width: 768px) {
+    .bb-gallery .bb-panel {
+        padding: 16px 14px;
+    }
+
+    .bb-gallery .bb-header {
+        padding: 12px 14px;
+    }
+
+    .bb-ps-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px 8px;
+    }
+
+    .bb-nw-big {
+        font-size: 24px;
+    }
+
+    .bb-nw-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px 16px;
+    }
+
+    .bb-txh-row {
+        grid-template-columns: 36px 26px 1fr 60px;
+    }
+
+    .bb-txh-artist {
+        display: none;
+    }
+
+    .bb-txh-pnl {
+        display: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .bb-gallery .bb-panel {
+        padding: 14px 10px;
+    }
+
+    .bb-gallery .bb-panel-header {
+        font-size: 7px;
+        letter-spacing: 0.35em;
+    }
+
+    .bb-ps-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .bb-ps-value {
+        font-size: 18px;
+    }
+
+    .bb-nw-big {
+        font-size: 20px;
+    }
+
+    .bb-nw-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Panel Config Dropdown (bb-config-*)                           */
+/* ══════════════════════════════════════════════════════════════ */
+
+.bb-config-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.bb-config-btn {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.bb-config-btn:hover {
+    color: #c9a84c;
+    border-color: #c9a84c;
+}
+
+.bb-gallery .bb-config-btn {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-gallery .bb-config-btn:hover {
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+}
+
+.bb-config-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1049;
+}
+
+.bb-config-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1050;
+    background: #111118;
+    border: 1px solid #333;
+    padding: 12px 14px;
+    min-width: 200px;
+    max-height: 420px;
+    overflow-y: auto;
+    animation: bb-config-open 0.15s ease-out;
+}
+
+.bb-config-dropdown.bb-config-gallery {
+    background: #f8f6f2;
+    border-color: #d0cbc4;
+    color: #1a1a1a;
+}
+
+@keyframes bb-config-open {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bb-config-title {
+    font-size: 8px;
+    letter-spacing: 0.4em;
+    color: #5a5a6a;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #2a2a3e;
+}
+
+.bb-config-gallery .bb-config-title {
+    color: #9a9690;
+    border-bottom-color: #d0cbc4;
+}
+
+.bb-config-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.bb-config-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #c0c0c8;
+    cursor: pointer;
+    padding: 3px 0;
+    transition: color 0.15s;
+}
+
+.bb-config-item:hover {
+    color: #e0e0e8;
+}
+
+.bb-config-gallery .bb-config-item {
+    color: #3a3a3a;
+}
+
+.bb-config-gallery .bb-config-item:hover {
+    color: #1a1a1a;
+}
+
+.bb-config-item input[type="checkbox"] {
+    accent-color: #c9a84c;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.bb-config-presets {
+    display: flex;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid #2a2a3e;
+}
+
+.bb-config-gallery .bb-config-presets {
+    border-top-color: #d0cbc4;
+}
+
+.bb-config-preset {
+    flex: 1;
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 5px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.bb-config-preset:hover {
+    border-color: #c9a84c;
+    color: #c9a84c;
+}
+
+.bb-config-gallery .bb-config-preset {
+    border-color: #d0cbc4;
+    color: #6a6660;
+}
+
+.bb-config-gallery .bb-config-preset:hover {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* TEARSHEET MODE (ts-*) — Gagosian Frieze LA 2026 exact replica */
+/*                                                                */
+/* Serif typography (Georgia / Times), white background,          */
+/* page-by-page layout matching Gagosian PDF tearsheet format.    */
+/* Print-ready: Cmd+P produces clean gallery tearsheets.          */
+/*                                                                */
+/* References:                                                    */
+/*   - Frieze Los Angeles 2026_Gagosian.pdf (page 4, 11, 14)     */
+/*   - art terminal reference.pdf (Seventh House format)          */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* ── Tearsheet mode overlay overrides ── */
+.bb-tearsheet-mode {
+    background: #ffffff;
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-header {
+    background: #ffffff;
+    border-bottom: none;
+    padding: 16px 40px;
+}
+
+.bb-tearsheet-mode .bb-logo {
+    color: #1a1a1a;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    letter-spacing: 0.45em;
+    font-weight: 400;
+}
+
+.bb-tearsheet-mode .bb-cash,
+.bb-tearsheet-mode .bb-ap,
+.bb-tearsheet-mode .bb-cycle-label,
+.bb-tearsheet-mode .bb-header-meta {
+    display: none;
+}
+
+.bb-tearsheet-mode .bb-cycle-dot {
+    display: none;
+}
+
+.bb-tearsheet-mode .bb-close {
+    border: none;
+    color: #999;
+    font-size: 16px;
+}
+
+.bb-tearsheet-mode .bb-close:hover {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-style-toggle {
+    border: none;
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-style-toggle:hover {
+    color: #1a1a1a;
+}
+
+/* Config gear visible but subtle in tearsheet mode */
+.bb-tearsheet-mode .bb-config-btn {
+    border: none;
+    color: #ccc;
+    font-size: 12px;
+}
+
+.bb-tearsheet-mode .bb-config-btn:hover {
+    color: #1a1a1a;
+}
+
+/* Config dropdown in tearsheet — match white bg */
+.bb-tearsheet-mode .bb-config-dropdown {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+.bb-tearsheet-mode .bb-config-title {
+    color: #999;
+    border-bottom-color: #e0e0e0;
+}
+
+.bb-tearsheet-mode .bb-config-item {
+    color: #3a3a3a;
+}
+
+.bb-tearsheet-mode .bb-config-item:hover {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-config-presets {
+    border-top-color: #e0e0e0;
+}
+
+.bb-tearsheet-mode .bb-config-preset {
+    border-color: #e0e0e0;
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-config-preset:hover {
+    border-color: #1a1a1a;
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-status-toast {
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid #e0e0e0;
+    color: #1a1a1a;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+/* ── Tearsheet container ── */
+.ts-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+/* ── Individual page — letter-size proportions ── */
+.ts-page {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 60px 64px;
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* No borders between pages — clean document flow like a real PDF */
+
+/* ── Cover page — Frieze event style ── */
+.ts-cover-page {
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+}
+
+.ts-cover-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.ts-cover-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #1a1a1a;
+    margin: 0 0 12px 0;
+    line-height: 1.2;
+}
+
+.ts-cover-dates {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 13px;
+    color: #666;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.ts-cover-booth {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 0.04em;
+}
+
+.ts-cover-brand {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    text-align: center;
+    padding-bottom: 40px;
+}
+
+/* ── Text/Intro page ── */
+.ts-text-page {
+    justify-content: flex-start;
+    padding-top: 100px;
+}
+
+.ts-text-body {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #2a2a2a;
+    max-width: 480px;
+}
+
+.ts-text-body p {
+    margin: 0 0 16px 0;
+    text-indent: 0;
+}
+
+/* ── Page brand footer (bottom of each page) ── */
+.ts-page-brand {
+    margin-top: auto;
+    padding-top: 40px;
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+}
+
+/* ── IMAGE PAGE ── */
+.ts-image-page {
+    padding: 40px 40px 32px 40px;
+    justify-content: center;
+}
+
+.ts-image-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.ts-artwork-img {
+    max-width: 100%;
+    max-height: 65vh;
+    object-fit: contain;
+    display: block;
+}
+
+.ts-artwork-placeholder {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: 55vh;
+    background: #f5f5f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e8e4de;
+}
+
+.ts-placeholder-inner {
+    text-align: center;
+    padding: 32px;
+}
+
+.ts-placeholder-title {
+    display: block;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    font-style: italic;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.ts-placeholder-artist {
+    display: block;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #bbb;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+/* Caption bar — bottom of image page */
+.ts-image-caption {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 20px;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    line-height: 1.5;
+    color: #1a1a1a;
+}
+
+.ts-caption-artist {
+    font-weight: 700;
+}
+
+.ts-caption-title em {
+    font-style: italic;
+}
+
+.ts-caption-medium,
+.ts-caption-dims,
+.ts-caption-edition {
+    color: #1a1a1a;
+    font-size: 10px;
+}
+
+.ts-caption-brand {
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+    white-space: nowrap;
+}
+
+/* ── INFO PAGE (the actual tearsheet) ── */
+.ts-info-page {
+    padding: 56px 64px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.ts-info-page:hover {
+    background: #fafaf8;
+}
+
+/* Centered small-caps header — matches Gagosian page top */
+.ts-info-header {
+    text-align: center;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: #1a1a1a;
+    font-variant: small-caps;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+    padding-bottom: 0;
+}
+
+.ts-info-header em {
+    font-style: italic;
+    text-transform: none;
+    font-variant: normal;
+}
+
+/* Body content */
+.ts-info-body {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #1a1a1a;
+}
+
+/* Artist name — bold, with lifespan */
+.ts-info-artist {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.ts-info-artist strong {
+    font-weight: 700;
+}
+
+/* Title — italic, with year */
+.ts-info-title-line {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.ts-info-title-line em {
+    font-style: italic;
+}
+
+/* Metadata lines (medium, dimensions, signed) */
+.ts-info-meta {
+    font-size: 12px;
+    color: #1a1a1a;
+    line-height: 1.5;
+}
+
+/* Price block */
+.ts-info-price-block {
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.ts-info-price {
+    font-size: 12px;
+    font-weight: 400;
+    color: #1a1a1a;
+}
+
+.ts-info-avail {
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+}
+
+.ts-info-acquired {
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.ts-info-price-label {
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+
+/* ── Sections: Provenance, Exhibited, Literature ── */
+.ts-info-section {
+    margin-top: 24px;
+}
+
+/* Bold underlined section header — exact Gagosian format */
+.ts-info-section-head {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+/* Section items — regular weight, indented for provenance chain feel */
+.ts-info-section-item {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #1a1a1a;
+    line-height: 1.7;
+    padding-left: 0;
+}
+
+/* ── Gallery address block (bottom-right of info page) ── */
+.ts-info-address {
+    margin-top: 40px;
+    text-align: right;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+.ts-address-brand {
+    font-size: 9px;
+    letter-spacing: 0.35em;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+
+.ts-address-line {
+    font-size: 10px;
+    color: #999;
+    line-height: 1.6;
+}
+
+/* ── Placeholder year ── */
+.ts-placeholder-year {
+    display: block;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #ccc;
+    margin-top: 4px;
+}
+
+/* ── Empty state sub-text ── */
+.ts-empty-sub {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #ccc;
+    margin-top: 4px;
+}
+
+/* ── Back/Final page ── */
+.ts-back-page {
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.ts-back-content {
+    text-align: center;
+}
+
+.ts-back-brand {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+}
+
+.ts-back-locations {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+
+.ts-back-url {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    color: #ccc;
+    letter-spacing: 0.08em;
+}
+
+.ts-back-contact {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #bbb;
+    line-height: 1.6;
+    margin-top: 16px;
+}
+
+/* ── Empty state ── */
+.ts-empty {
+    text-align: center;
+    padding: 80px 0;
+}
+
+.ts-empty-brand {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    letter-spacing: 0.45em;
+    color: #1a1a1a;
+    margin-bottom: 24px;
+}
+
+.ts-empty-text {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #999;
+    line-height: 1.8;
+}
+
+/* ── Tearsheet additional panels — Gagosian serif styling ── */
+.ts-panels {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 40px;
+}
+
+.ts-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+    align-items: start;
+}
+
+.ts-panels-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.bb-tearsheet-mode .bb-panel {
+    background: #ffffff;
+    border: none;
+    border-top: 1px solid #e0dcd6;
+    padding-top: 24px;
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-panel-header {
+    color: #999;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 9px;
+    font-weight: 400;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    border-bottom: none;
+    padding-bottom: 12px;
+}
+
+.bb-tearsheet-mode .bb-lb-row {
+    border-bottom-color: #f0ede8;
+}
+
+.bb-tearsheet-mode .bb-lb-row:hover {
+    background: #faf8f5;
+}
+
+.bb-tearsheet-mode .bb-lb-name {
+    color: #1a1a1a;
+    font-family: Georgia, serif;
+}
+
+.bb-tearsheet-mode .bb-lb-heat-fill {
+    background: #c9a84c;
+}
+
+.bb-tearsheet-mode .bb-nw-big {
+    color: #1a1a1a;
+    font-weight: 300;
+    font-size: 36px;
+    font-family: Georgia, serif;
+}
+
+.bb-tearsheet-mode .bb-nw-stat-label {
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-nw-stat-value {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-ps-value {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-ps-label {
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-trade-row {
+    border-bottom-color: #f0ede8;
+}
+
+.bb-tearsheet-mode .bb-trade-price {
+    color: #1a1a1a;
+}
+
+.bb-tearsheet-mode .bb-dir-count {
+    background: #e0dcd6;
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-dir-filter {
+    background: #fff;
+    color: #1a1a1a;
+    border-color: #e0dcd6;
+    font-family: Georgia, serif;
+}
+
+.bb-tearsheet-mode .bb-dir-sort {
+    border-color: #e0dcd6;
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-dir-row {
+    border-bottom-color: #f0ede8;
+}
+
+.bb-tearsheet-mode .bb-dir-row:hover {
+    background: #faf8f5;
+}
+
+.bb-tearsheet-mode .bb-dir-name {
+    color: #1a1a1a;
+    font-family: Georgia, serif;
+}
+
+.bb-tearsheet-mode .bb-dir-title {
+    color: #999;
+}
+
+.bb-tearsheet-mode .bb-dir-personality {
+    color: #999;
+    font-family: Georgia, serif;
+}
+
+.bb-tearsheet-mode .bb-port-list-btn {
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+}
+
+.bb-tearsheet-mode .bb-port-list-btn:hover {
+    background: #333;
+}
+
+/* ── Tearsheet mobile ── */
+@media (max-width: 768px) {
+    .ts-panels {
+        padding: 24px 20px;
+    }
+
+    .ts-panels-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ts-page {
+        padding: 32px 24px;
+        min-height: 80vh;
+    }
+
+    .ts-info-page {
+        padding: 36px 24px;
+    }
+
+    .ts-cover-title {
+        font-size: 22px;
+    }
+
+    .ts-info-header {
+        font-size: 8px;
+        margin-bottom: 32px;
+    }
+
+    .ts-image-caption {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .ts-caption-brand {
+        align-self: flex-end;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* PRINT STYLES — Cmd+P produces clean gallery tearsheets        */
+/*                                                                */
+/* Each ts-page gets its own printed page. Header bar hidden.     */
+/* White background, no decorative borders.                       */
+/* ══════════════════════════════════════════════════════════════ */
+@media print {
+
+    /* Hide Bloomberg header bar and all non-tearsheet UI */
+    .bb-header,
+    .bb-ticker,
+    .bb-notif-bar,
+    .bb-intel-gate,
+    .bb-status-toast,
+    .bb-grid,
+    .bb-bottom,
+    .bb-gallery-footer,
+    .bb-config-wrapper {
+        display: none !important;
+    }
+
+    /* Full-page white */
+    .bb-overlay,
+    .bb-tearsheet-mode {
+        position: static;
+        background: #fff;
+        overflow: visible;
+    }
+
+    .ts-view {
+        overflow: visible;
+    }
+
+    /* Each page = one printed page */
+    .ts-page {
+        page-break-after: always;
+        page-break-inside: avoid;
+        min-height: 0;
+        max-width: none;
+        padding: 48px 56px;
+        border-top: none;
+    }
+
+    .ts-page:last-child {
+        page-break-after: auto;
+    }
+
+    /* No hover effects in print */
+    .ts-info-page:hover {
+        background: transparent;
+    }
+
+    /* Ensure images print */
+    .ts-artwork-img {
+        max-height: 60vh;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .ts-artwork-placeholder {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    @page {
+        margin: 0.5in;
+        size: letter;
+    }
+
+    /* ── Artnet print: clean table on white ── */
+    .an-view {
+        overflow: visible;
+    }
+
+    .an-header-bar {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .an-row:hover {
+        background: transparent;
+    }
+
+    .an-badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .an-thumb-img {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Sotheby's print: lot per page ── */
+    .sb-view {
+        overflow: visible;
+    }
+
+    .sb-lot-nav {
+        display: none;
+    }
+
+    .sb-lot {
+        page-break-after: always;
+        page-break-inside: avoid;
+    }
+
+    .sb-lot:last-child {
+        page-break-after: auto;
+    }
+
+    .sb-lot:hover {
+        background: transparent;
+    }
+
+    .sb-lot-img {
+        max-height: 50vh;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sb-lot-placeholder {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── Deitch print: cards flow naturally ── */
+    .dp-view {
+        overflow: visible;
+        background: #fff;
+    }
+
+    .dp-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .dp-card-img {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .dp-sticker {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Gallery Visual Polish — refined spacing & typography          */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Page constraint — center column at readable width */
+.bb-gallery .bb-col {
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* Generous spacing between panels */
+.bb-gallery .bb-panel+.bb-panel {
+    margin-top: 48px;
+}
+
+/* ── PlayerStats as CV header ── */
+.bb-gallery .bb-player-stats .bb-panel-header {
+    text-align: center;
+    font-size: 14px;
+    letter-spacing: 0.35em;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 10px;
+    color: #1a1a1a;
+}
+
+.bb-ps-subtitle {
+    text-align: center;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: #9a9690;
+    margin-bottom: 16px;
+}
+
+.bb-gallery .bb-ps-value {
+    font-weight: 300;
+    font-size: 24px;
+}
+
+.bb-gallery .bb-ps-item {
+    border-right: 1px solid #e8e4de;
+}
+
+.bb-gallery .bb-ps-item:last-child {
+    border-right: none;
+}
+
+/* ── NetWorth hero — centered, thin number ── */
+.bb-gallery .bb-nw-hero {
+    justify-content: center;
+}
+
+.bb-gallery .bb-nw-big {
+    font-weight: 300;
+    font-size: 36px;
+}
+
+.bb-gallery .bb-nw-grid {
+    border-top: 1px solid #e8e4de;
+    padding-top: 16px;
+}
+
+/* ── Collection as catalogue raisonné ── */
+.bb-gallery .bb-coll-item {
+    padding: 20px 0;
+}
+
+.bb-gallery .bb-coll-artist {
+    letter-spacing: 0.25em;
+}
+
+.bb-coll-dimensions {
+    font-size: 9px;
+    color: #9a9690;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+/* ── Header — heavier border for gravitas ── */
+.bb-gallery .bb-header {
+    padding: 16px 32px;
+    border-bottom: 2px solid #1a1a1a;
+}
+
+/* ── Footer — generous padding + heavy border ── */
+.bb-gallery .bb-gallery-footer {
+    padding: 40px 16px;
+    border-top: 2px solid #1a1a1a;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* ARTNET AUCTION RESULTS (an-*) — artnet.com price database     */
+/*                                                                */
+/* Clean, data-dense, sans-serif. White bg, red accent header,   */
+/* tabular layout with lot numbers, estimate ranges, and ROI.    */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Overlay overrides */
+.bb-artnet {
+    background: #ffffff;
+    color: #333333;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+}
+
+.bb-artnet .bb-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.bb-artnet .bb-logo {
+    color: #cc0000;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.bb-artnet .bb-cash,
+.bb-artnet .bb-ap {
+    color: #333;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.bb-artnet .bb-cycle-label,
+.bb-artnet .bb-cycle-dot,
+.bb-artnet .bb-header-meta {
+    display: none;
+}
+
+.bb-artnet .bb-close {
+    border: none;
+    color: #999;
+}
+
+.bb-artnet .bb-close:hover {
+    color: #cc0000;
+}
+
+.bb-artnet .bb-style-toggle {
+    border: none;
+    color: #999;
+}
+
+.bb-artnet .bb-style-toggle:hover {
+    color: #cc0000;
+}
+
+.bb-artnet .bb-config-btn {
+    border: none;
+    color: #999;
+}
+
+.bb-artnet .bb-config-btn:hover {
+    color: #333;
+}
+
+.bb-artnet .bb-config-dropdown {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+}
+
+.bb-artnet .bb-config-title {
+    color: #999;
+    border-bottom-color: #e0e0e0;
+}
+
+.bb-artnet .bb-config-item {
+    color: #333;
+}
+
+.bb-artnet .bb-config-item:hover {
+    color: #000;
+}
+
+.bb-artnet .bb-config-presets {
+    border-top-color: #e0e0e0;
+}
+
+.bb-artnet .bb-config-preset {
+    border-color: #e0e0e0;
+    color: #666;
+}
+
+.bb-artnet .bb-config-preset:hover {
+    border-color: #cc0000;
+    color: #cc0000;
+}
+
+.bb-artnet .bb-status-toast {
+    background: #fff3f3;
+    border: 1px solid #e0e0e0;
+    color: #cc0000;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Artnet view container */
+.an-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    background: #ffffff;
+    font-family: 'Helvetica Neue', -apple-system, Arial, sans-serif;
+}
+
+/* Red header bar */
+.an-header-bar {
+    background: #cc0000;
+    color: #ffffff;
+    padding: 10px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.an-header-title {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.an-header-sub {
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+/* Summary strip */
+.an-summary {
+    display: flex;
+    gap: 24px;
+    padding: 10px 24px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 11px;
+    color: #666;
+}
+
+.an-gain {
+    color: #2a6e2a;
+    font-weight: 600;
+}
+
+.an-loss {
+    color: #cc0000;
+    font-weight: 600;
+}
+
+/* Search bar — artnet-style search-first interface */
+.an-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+}
+
+.an-search-input {
+    flex: 1;
+    max-width: 400px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.15s;
+    background: #fff;
+}
+
+.an-search-input::placeholder {
+    color: #aaa;
+}
+
+.an-search-input:focus {
+    border-color: #cc0000;
+}
+
+.an-result-count {
+    font-size: 11px;
+    color: #999;
+    white-space: nowrap;
+}
+
+/* Table */
+.an-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.an-th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid #333;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.an-th:hover {
+    color: #cc0000;
+}
+
+.an-th-img {
+    width: 50px;
+    cursor: default;
+}
+
+.an-row {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.1s;
+}
+
+.an-row:hover {
+    background: #fafafa;
+}
+
+.an-td {
+    padding: 10px 12px;
+    vertical-align: top;
+}
+
+/* Lot number — bold, small badge */
+.an-lot {
+    font-weight: 800;
+    color: #333;
+    font-size: 11px;
+    text-align: center;
+    width: 40px;
+}
+
+/* Thumbnail */
+.an-thumb {
+    width: 50px;
+    padding: 8px 6px;
+}
+
+.an-thumb-img {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    display: block;
+}
+
+.an-thumb-placeholder {
+    width: 44px;
+    height: 44px;
+    background: #f0f0f0;
+    border: 1px solid #e0e0e0;
+}
+
+/* Artist cell */
+.an-artist-cell {
+    min-width: 120px;
+}
+
+.an-artist-name {
+    font-weight: 700;
+    color: #0066cc;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+}
+
+.an-artist-meta {
+    color: #999;
+    font-size: 10px;
+    margin-top: 1px;
+}
+
+/* Title cell */
+.an-title-cell {
+    color: #333;
+    font-size: 12px;
+    min-width: 140px;
+}
+
+/* Medium */
+.an-medium {
+    color: #999;
+    font-size: 11px;
+    font-style: italic;
+}
+
+/* Estimate range */
+.an-estimate {
+    color: #666;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* Price */
+.an-price {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.an-price-main {
+    font-weight: 700;
+    color: #333;
+    font-size: 13px;
+}
+
+.an-price-sub {
+    color: #999;
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+/* Status badges */
+.an-status {
+    text-align: center;
+}
+
+.an-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border-radius: 2px;
+}
+
+.an-badge-sold {
+    background: #e8f5e9;
+    color: #2a6e2a;
+}
+
+.an-badge-loss {
+    background: #fce4ec;
+    color: #cc0000;
+}
+
+.an-badge-available {
+    background: #e3f2fd;
+    color: #0066cc;
+}
+
+.an-badge-held {
+    background: #f5f5f5;
+    color: #999;
+}
+
+/* Empty state */
+.an-empty {
+    text-align: center;
+    padding: 60px 24px;
+    color: #999;
+    font-size: 13px;
+}
+
+/* Footer */
+.an-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 10px;
+    color: #999;
+}
+
+/* ── Sale Statistics toggle + panel ── */
+.an-stats-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fff;
+}
+
+.an-stats-btn {
+    background: none;
+    border: 1px solid #ccc;
+    color: #333;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.an-stats-btn:hover {
+    border-color: #cc0000;
+    color: #cc0000;
+}
+
+.an-stats-summary {
+    font-size: 10px;
+    color: #999;
+}
+
+.an-sale-stats {
+    padding: 20px 24px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.an-ss-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.an-ss-card {
+    background: #fff;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+}
+
+.an-ss-card-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.an-ss-card-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.an-ss-artist-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #666;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #333;
+}
+
+.an-ss-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    background: #fff;
+}
+
+.an-ss-th {
+    text-align: left;
+    padding: 6px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    text-transform: uppercase;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.an-ss-td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+}
+
+.an-ss-row:hover {
+    background: #fafafa;
+}
+
+.an-ss-artist-name {
+    color: #0066cc;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .an-ss-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .an-stats-toggle {
+        padding: 8px 16px;
+    }
+
+    .an-sale-stats {
+        padding: 16px;
+    }
+
+    .an-ss-card-value {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .an-ss-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ── Artist name as clickable link ── */
+.an-artist-link {
+    cursor: pointer;
+}
+
+.an-artist-link:hover {
+    text-decoration: underline;
+    color: #cc0000;
+}
+
+/* ── Artist Detail Card — artnet artist page inline ── */
+.an-artist-detail {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px;
+    background: #fafafa;
+    border-top: 3px solid #cc0000;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.an-ad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.an-ad-name {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+
+.an-ad-close {
+    background: none;
+    border: 1px solid #ccc;
+    color: #999;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+}
+
+.an-ad-close:hover {
+    color: #cc0000;
+    border-color: #cc0000;
+}
+
+.an-ad-meta {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: #666;
+}
+
+.an-ad-medium {
+    font-weight: 600;
+    color: #333;
+}
+
+.an-ad-tier {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    background: #333;
+    color: #fff;
+    border-radius: 2px;
+}
+
+.an-ad-heat {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.an-ad-heat-bar {
+    display: inline-block;
+    width: 80px;
+    height: 6px;
+    background: #e0e0e0;
+    overflow: hidden;
+}
+
+.an-ad-heat-fill {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #cc0000, #ff6600);
+    transition: width 0.3s;
+}
+
+.an-ad-flavor {
+    color: #666;
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #fff;
+    border-left: 3px solid #cc0000;
+}
+
+.an-ad-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.an-ad-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.an-ad-stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    text-transform: uppercase;
+}
+
+.an-ad-stat-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.an-ad-stat-value.up {
+    color: #2a6e2a;
+}
+
+.an-ad-stat-value.down {
+    color: #cc0000;
+}
+
+.an-ad-chart {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.an-ad-chart-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+}
+
+/* Artist detail mobile */
+@media (max-width: 768px) {
+    .an-artist-detail {
+        padding: 16px;
+    }
+
+    .an-ad-name {
+        font-size: 16px;
+    }
+
+    .an-ad-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ── Active row highlight ── */
+.an-row-active {
+    background: #fef7f0 !important;
+    border-left: 3px solid #cc0000;
+}
+
+.an-detail-row td {
+    border-bottom: 3px solid #cc0000;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* ArtnetLotDetail — Inline artwork detail panel                */
+/* Clean artnet.com aesthetic: white bg, red accents, Helvetica */
+/* ══════════════════════════════════════════════════════════════ */
+
+.an-lot-detail {
+    background: #fff;
+    border-top: 1px solid #e0e0e0;
+    animation: an-ld-slideIn 0.2s ease-out;
+}
+
+@keyframes an-ld-slideIn {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+
+    to {
+        opacity: 1;
+        max-height: 800px;
+    }
+}
+
+.an-ld-accent {
+    height: 3px;
+    background: #cc0000;
+}
+
+.an-ld-content {
+    display: grid;
+    grid-template-columns: 200px 1fr 240px;
+    gap: 24px;
+    padding: 24px;
+    font-family: 'Helvetica Neue', -apple-system, Arial, sans-serif;
+}
+
+/* Left column: Image */
+.an-ld-left {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.an-ld-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border: 1px solid #eee;
+    display: block;
+}
+
+.an-ld-image-placeholder {
+    width: 100%;
+    height: 160px;
+    background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e0e0e0;
+}
+
+.an-ld-image-text {
+    font-size: 10px;
+    color: #bbb;
+    text-align: center;
+    padding: 12px;
+    font-style: italic;
+}
+
+.an-ld-quick-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.an-ld-watch {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 4px 10px;
+    font-size: 10px;
+    font-family: 'Helvetica Neue', sans-serif;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.15s;
+}
+
+.an-ld-watch:hover {
+    border-color: #cc0000;
+    color: #cc0000;
+}
+
+/* Center column: Metadata */
+.an-ld-center {
+    min-width: 0;
+}
+
+.an-ld-artist-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.an-ld-artist {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    letter-spacing: -0.01em;
+}
+
+.an-ld-lifespan {
+    font-size: 12px;
+    color: #999;
+    font-weight: 400;
+}
+
+.an-ld-title {
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 6px;
+    line-height: 1.4;
+}
+
+.an-ld-title em {
+    font-style: italic;
+}
+
+.an-ld-medium {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.an-ld-dimensions {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 2px;
+}
+
+.an-ld-genre {
+    font-size: 10px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+.an-ld-description {
+    font-size: 12px;
+    color: #555;
+    line-height: 1.6;
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    background: #fafafa;
+    border-left: 2px solid #cc0000;
+}
+
+/* Tags */
+.an-ld-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 10px 0 16px;
+}
+
+.an-ld-tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: #f5f5f5;
+    color: #666;
+}
+
+.an-ld-tag-tier {
+    background: #333;
+    color: #fff;
+}
+
+.an-ld-tag-owned {
+    background: #e8f5e9;
+    color: #2a6e2a;
+}
+
+.an-ld-tag-market {
+    background: #e3f2fd;
+    color: #0066cc;
+}
+
+/* Sections (provenance, transaction history) */
+.an-ld-section {
+    margin-bottom: 16px;
+}
+
+.an-ld-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #cc0000;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+    text-transform: uppercase;
+}
+
+.an-ld-prov-item {
+    font-size: 11px;
+    color: #555;
+    padding: 3px 0;
+    line-height: 1.4;
+}
+
+/* Auction results mini-table */
+.an-ld-trades-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.an-ld-trades-table th {
+    text-align: left;
+    padding: 4px 8px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    border-bottom: 1px solid #e0e0e0;
+    text-transform: uppercase;
+}
+
+.an-ld-trades-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #f5f5f5;
+    color: #333;
+}
+
+.an-ld-trades-table tr:hover {
+    background: #fafafa;
+}
+
+/* Right column: Price + Market + Actions */
+.an-ld-right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    border-left: 1px solid #e8e8e8;
+    padding-left: 24px;
+}
+
+.an-ld-price-block {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.an-ld-price-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.an-ld-price {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111;
+    letter-spacing: -0.02em;
+    font-family: 'Helvetica Neue', -apple-system, Arial, sans-serif;
+}
+
+.an-ld-price-detail {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.an-ld-estimate {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+/* Market data */
+.an-ld-market {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.an-ld-market-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.an-ld-market-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    min-width: 72px;
+}
+
+.an-ld-market-val {
+    font-weight: 600;
+    color: #333;
+}
+
+.an-ld-heat-bar {
+    flex: 1;
+    height: 4px;
+    background: #e8e8e8;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.an-ld-heat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #cc0000, #ff6600);
+    border-radius: 2px;
+    transition: width 0.3s;
+}
+
+/* Sparkline */
+.an-ld-sparkline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.an-ld-spark-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+}
+
+/* Action buttons */
+.an-ld-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.an-ld-btn {
+    padding: 8px 16px;
+    font-family: 'Helvetica Neue', -apple-system, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+}
+
+.an-ld-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.an-ld-btn-primary {
+    background: #cc0000;
+    color: #fff;
+}
+
+.an-ld-btn-primary:hover:not(:disabled) {
+    background: #a30000;
+}
+
+.an-ld-btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+.an-ld-btn-secondary:hover:not(:disabled) {
+    border-color: #cc0000;
+    color: #cc0000;
+}
+
+.an-ld-ap {
+    font-weight: 400;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.an-ld-close {
+    background: none;
+    border: 1px solid #ddd;
+    padding: 6px 12px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.an-ld-close:hover {
+    color: #cc0000;
+    border-color: #cc0000;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .an-ld-content {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .an-ld-left {
+        flex-direction: row;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .an-ld-image {
+        max-width: 120px;
+        max-height: 120px;
+    }
+
+    .an-ld-right {
+        border-left: none;
+        padding-left: 0;
+        border-top: 1px solid #e8e8e8;
+        padding-top: 16px;
+    }
+
+    .an-ld-price {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .an-ld-left {
+        flex-direction: column;
+    }
+
+    .an-ld-actions {
+        flex-direction: column;
+    }
+}
+
+/* ── Artnet additional panels — styled for white/data theme ── */
+.an-panels {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.an-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 24px;
+    align-items: start;
+}
+
+.an-panels-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bb-artnet .bb-panel {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    color: #333;
+}
+
+.bb-artnet .bb-panel-header {
+    color: #333;
+    border-bottom-color: #e0e0e0;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+.bb-artnet .bb-lb-row {
+    border-bottom-color: #f0f0f0;
+}
+
+.bb-artnet .bb-lb-row:hover {
+    background: #fafafa;
+}
+
+.bb-artnet .bb-lb-row.selected {
+    background: #fff3f3;
+}
+
+.bb-artnet .bb-lb-name {
+    color: #0066cc;
+}
+
+.bb-artnet .bb-lb-heat-fill {
+    background: #cc0000;
+}
+
+.bb-artnet .bb-lb-index {
+    color: #333;
+}
+
+.bb-artnet .bb-lb-index.up {
+    color: #2a6e2a;
+}
+
+.bb-artnet .bb-lb-index.down {
+    color: #cc0000;
+}
+
+.bb-artnet .bb-nw-big {
+    color: #333;
+}
+
+.bb-artnet .bb-nw-stat-label {
+    color: #999;
+}
+
+.bb-artnet .bb-nw-stat-value {
+    color: #333;
+}
+
+.bb-artnet .bb-nw-grid {
+    border-top-color: #e0e0e0;
+}
+
+.bb-artnet .bb-ps-grid {
+    border-color: #e0e0e0;
+}
+
+.bb-artnet .bb-ps-value {
+    color: #333;
+}
+
+.bb-artnet .bb-ps-label {
+    color: #999;
+}
+
+.bb-artnet .bb-ps-subtitle {
+    color: #999;
+}
+
+.bb-artnet .bb-ps-item {
+    border-right-color: #e0e0e0;
+}
+
+.bb-artnet .bb-trade-row {
+    border-bottom-color: #f0f0f0;
+}
+
+.bb-artnet .bb-trade-row:hover {
+    background: #fafafa;
+}
+
+.bb-artnet .bb-trade-price {
+    color: #333;
+}
+
+.bb-artnet .bb-port-row {
+    border-bottom-color: #f0f0f0;
+}
+
+.bb-artnet .bb-port-list-btn {
+    background: #cc0000;
+    color: #fff;
+    border: none;
+}
+
+.bb-artnet .bb-port-list-btn:hover {
+    background: #a00;
+}
+
+.bb-artnet .bb-dir-count {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.bb-artnet .bb-dir-filter {
+    background: #fff;
+    color: #333;
+    border-color: #ccc;
+}
+
+.bb-artnet .bb-dir-sort {
+    border-color: #ccc;
+    color: #666;
+}
+
+.bb-artnet .bb-dir-sort:hover {
+    color: #cc0000;
+    border-color: #cc0000;
+}
+
+.bb-artnet .bb-dir-row {
+    border-bottom-color: #f0f0f0;
+}
+
+.bb-artnet .bb-dir-row:hover {
+    background: #fafafa;
+}
+
+.bb-artnet .bb-dir-name {
+    color: #0066cc;
+}
+
+.bb-artnet .bb-dir-title {
+    color: #999;
+}
+
+.bb-artnet .bb-dir-personality {
+    color: #999;
+}
+
+.bb-artnet .bb-ob-tab.active {
+    border-bottom-color: #cc0000;
+    color: #cc0000;
+}
+
+.bb-artnet .bb-txh-badge.buy {
+    background: #e8f5e9;
+    color: #2a6e2a;
+}
+
+.bb-artnet .bb-txh-badge.sell {
+    background: #fff3f3;
+    color: #cc0000;
+}
+
+/* Artnet mobile */
+@media (max-width: 768px) {
+    .an-panels {
+        padding: 16px;
+    }
+
+    .an-panels-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .an-search-bar {
+        padding: 8px 16px;
+    }
+
+    .an-search-input {
+        max-width: none;
+    }
+
+    .an-table {
+        font-size: 11px;
+    }
+
+    .an-th,
+    .an-td {
+        padding: 8px 6px;
+    }
+
+    .an-thumb {
+        display: none;
+    }
+
+    .an-medium {
+        display: none;
+    }
+
+    .an-estimate {
+        display: none;
+    }
+
+    .an-summary {
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        padding: 10px 16px;
+    }
+
+    .an-header-bar {
+        padding: 10px 16px;
+    }
+
+    .an-row {
+        min-height: 44px;
+    }
+
+    .an-footer {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 380px) {
+    .an-header-title {
+        font-size: 11px;
+    }
+
+    .an-search-bar {
+        padding: 8px 14px;
+    }
+
+    .an-search-input {
+        font-size: 11px;
+        padding: 6px 8px;
+    }
+
+    .an-th {
+        font-size: 8px;
+    }
+
+    .an-td {
+        padding: 6px 4px;
+    }
+
+    .an-price-main {
+        font-size: 11px;
+    }
+
+    .an-artist-name {
+        font-size: 11px;
+    }
+
+    .an-title-cell {
+        font-size: 10px;
+    }
+
+    .an-status {
+        display: none;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* SOTHEBY'S CATALOGUE (sb-*) — luxury auction catalogue         */
+/*                                                                */
+/* Serif body, sans-serif headers, off-white bg, blue accents,   */
+/* centered single-column, generous margins, formal hierarchy.   */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Overlay overrides */
+.bb-sothebys {
+    background: #fafaf7;
+    color: #1c1c1c;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 13px;
+}
+
+.bb-sothebys .bb-header {
+    background: #fafaf7;
+    border-bottom: none;
+    padding: 14px 40px;
+}
+
+.bb-sothebys .bb-logo {
+    color: #003da5;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.35em;
+    font-weight: 700;
+}
+
+.bb-sothebys .bb-cash,
+.bb-sothebys .bb-ap {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #888;
+    font-weight: 400;
+}
+
+.bb-sothebys .bb-cycle-label,
+.bb-sothebys .bb-cycle-dot,
+.bb-sothebys .bb-header-meta {
+    display: none;
+}
+
+.bb-sothebys .bb-close {
+    border: none;
+    color: #999;
+}
+
+.bb-sothebys .bb-close:hover {
+    color: #003da5;
+}
+
+.bb-sothebys .bb-style-toggle {
+    border: none;
+    color: #999;
+}
+
+.bb-sothebys .bb-style-toggle:hover {
+    color: #003da5;
+}
+
+.bb-sothebys .bb-config-btn {
+    border: none;
+    color: #bbb;
+}
+
+.bb-sothebys .bb-config-btn:hover {
+    color: #1c1c1c;
+}
+
+.bb-sothebys .bb-config-dropdown {
+    background: #fafaf7;
+    border: 1px solid #e0ddd8;
+}
+
+.bb-sothebys .bb-config-title {
+    color: #999;
+    border-bottom-color: #e0ddd8;
+}
+
+.bb-sothebys .bb-config-item {
+    color: #3a3a3a;
+}
+
+.bb-sothebys .bb-config-presets {
+    border-top-color: #e0ddd8;
+}
+
+.bb-sothebys .bb-config-preset {
+    border-color: #e0ddd8;
+    color: #999;
+}
+
+.bb-sothebys .bb-config-preset:hover {
+    border-color: #003da5;
+    color: #003da5;
+}
+
+.bb-sothebys .bb-status-toast {
+    background: rgba(0, 61, 165, 0.05);
+    border: 1px solid #e0ddd8;
+    color: #003da5;
+}
+
+/* Sotheby's view container */
+.sb-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #fafaf7;
+}
+
+/* Sale header — clean, centered, formal */
+.sb-sale-header {
+    text-align: center;
+    padding: 48px 40px 32px;
+    border-bottom: 1px solid #d0cbc4;
+}
+
+.sb-sale-brand {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.5em;
+    color: #003da5;
+    font-weight: 700;
+    margin-bottom: 24px;
+    display: inline-block;
+    padding-bottom: 6px;
+    border-bottom: 3px solid #003da5;
+}
+
+.sb-sale-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: #1c1c1c;
+    margin-bottom: 8px;
+}
+
+.sb-sale-info {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+.sb-sale-estimate {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    color: #003da5;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+/* Lot navigation pills */
+.sb-lot-nav {
+    display: flex;
+    gap: 4px;
+    padding: 12px 40px;
+    border-bottom: 1px solid #e8e4de;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.sb-lot-pill {
+    background: none;
+    border: 1px solid #d0cbc4;
+    color: #888;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 28px;
+    text-align: center;
+}
+
+.sb-lot-pill:hover {
+    border-color: #003da5;
+    color: #003da5;
+}
+
+.sb-lot-pill.sb-lot-active {
+    background: #003da5;
+    border-color: #003da5;
+    color: #ffffff;
+}
+
+/* Individual lot page */
+.sb-lot {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 48px 40px;
+    border-bottom: 1px solid #e8e4de;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sb-lot:hover {
+    background: #f8f6f2;
+}
+
+.sb-lot:last-child {
+    border-bottom: none;
+}
+
+/* Blue lot number — oversized, Sotheby's signature */
+.sb-lot-number {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 32px;
+    font-weight: 300;
+    color: #003da5;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+
+/* "Property from..." */
+.sb-property {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: #999;
+    margin-bottom: 24px;
+}
+
+/* Lot image */
+.sb-lot-image {
+    margin-bottom: 24px;
+}
+
+.sb-lot-img {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    display: block;
+    border: 1px solid #f0ede8;
+}
+
+.sb-lot-placeholder {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    max-height: 300px;
+    background: #f0ede8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+    color: #bbb;
+    font-size: 14px;
+}
+
+/* Lot metadata */
+.sb-lot-meta {
+    margin-bottom: 20px;
+}
+
+.sb-lot-artist {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #1c1c1c;
+    margin-bottom: 4px;
+}
+
+.sb-lot-origin {
+    font-weight: 400;
+    font-size: 12px;
+    color: #888;
+    letter-spacing: 0.02em;
+}
+
+.sb-lot-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 14px;
+    color: #1c1c1c;
+    margin-bottom: 4px;
+}
+
+.sb-lot-medium {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #666;
+}
+
+.sb-lot-dims {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #888;
+}
+
+/* Estimate — blue, Sotheby's signature element */
+.sb-estimate {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #003da5;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    padding: 12px 0;
+    border-top: 1px solid #e8e4de;
+    border-bottom: 1px solid #e8e4de;
+}
+
+/* Sold / acquired info */
+.sb-sold {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #1c1c1c;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+
+.sb-available {
+    color: #003da5;
+}
+
+/* Condition */
+.sb-condition {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 16px;
+    font-style: italic;
+}
+
+/* Catalogue note */
+.sb-catalogue-note {
+    margin-bottom: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e8e4de;
+}
+
+.sb-note-label {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #999;
+    margin-bottom: 8px;
+}
+
+.sb-catalogue-note p {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #3a3a3a;
+    margin: 0;
+}
+
+/* Provenance / Exhibited / Literature sections */
+.sb-section {
+    margin-bottom: 16px;
+}
+
+.sb-section-label {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #999;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #e8e4de;
+}
+
+.sb-section-item {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 11px;
+    color: #3a3a3a;
+    line-height: 1.7;
+}
+
+/* Empty state */
+.sb-empty {
+    text-align: center;
+    padding: 80px 40px;
+    color: #bbb;
+    font-size: 14px;
+}
+
+/* Sale footer */
+.sb-sale-footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid #d0cbc4;
+}
+
+.sb-footer-brand {
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    color: #003da5;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.sb-footer-locations {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 10px;
+    color: #bbb;
+    letter-spacing: 0.06em;
+}
+
+/* Sotheby's lots container */
+.sb-lots {
+    padding: 0;
+}
+
+/* ── Sotheby's additional panels — luxury serif styling ── */
+.sb-panels {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 40px;
+}
+
+.sb-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+    align-items: start;
+}
+
+.sb-panels-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.bb-sothebys .bb-panel {
+    background: #fafaf7;
+    border: none;
+    border-top: 1px solid #d0cbc4;
+    padding-top: 24px;
+    color: #1c1c1c;
+}
+
+.bb-sothebys .bb-panel-header {
+    color: #999;
+    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    border-bottom: none;
+    padding-bottom: 12px;
+}
+
+.bb-sothebys .bb-lb-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-sothebys .bb-lb-row:hover {
+    background: #f8f6f2;
+}
+
+.bb-sothebys .bb-lb-row.selected {
+    background: #f0ede8;
+}
+
+.bb-sothebys .bb-lb-name {
+    color: #003da5;
+    font-family: Georgia, serif;
+}
+
+.bb-sothebys .bb-lb-heat-fill {
+    background: #003da5;
+}
+
+.bb-sothebys .bb-lb-index {
+    color: #1c1c1c;
+}
+
+.bb-sothebys .bb-lb-index.up {
+    color: #2a6e2a;
+}
+
+.bb-sothebys .bb-lb-index.down {
+    color: #cc0000;
+}
+
+.bb-sothebys .bb-nw-big {
+    color: #1c1c1c;
+    font-weight: 300;
+    font-size: 36px;
+    font-family: Georgia, serif;
+}
+
+.bb-sothebys .bb-nw-stat-label {
+    color: #999;
+    font-family: -apple-system, sans-serif;
+    font-size: 8px;
+    letter-spacing: 0.15em;
+}
+
+.bb-sothebys .bb-nw-stat-value {
+    color: #1c1c1c;
+    font-family: Georgia, serif;
+}
+
+.bb-sothebys .bb-nw-grid {
+    border-top-color: #e8e4de;
+}
+
+.bb-sothebys .bb-ps-grid {
+    border-color: #e8e4de;
+}
+
+.bb-sothebys .bb-ps-value {
+    color: #1c1c1c;
+    font-weight: 300;
+}
+
+.bb-sothebys .bb-ps-label {
+    color: #999;
+}
+
+.bb-sothebys .bb-ps-item {
+    border-right-color: #e8e4de;
+}
+
+.bb-sothebys .bb-trade-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-sothebys .bb-trade-row:hover {
+    background: #f8f6f2;
+}
+
+.bb-sothebys .bb-dir-count {
+    background: #e8e4de;
+    color: #999;
+}
+
+.bb-sothebys .bb-dir-filter {
+    background: #fafaf7;
+    color: #1c1c1c;
+    border-color: #d0cbc4;
+    font-family: Georgia, serif;
+}
+
+.bb-sothebys .bb-dir-sort {
+    border-color: #d0cbc4;
+    color: #999;
+}
+
+.bb-sothebys .bb-dir-sort:hover {
+    color: #003da5;
+    border-color: #003da5;
+}
+
+.bb-sothebys .bb-dir-row {
+    border-bottom-color: #e8e4de;
+}
+
+.bb-sothebys .bb-dir-row:hover {
+    background: #f8f6f2;
+}
+
+.bb-sothebys .bb-dir-name {
+    color: #003da5;
+    font-family: Georgia, serif;
+}
+
+.bb-sothebys .bb-dir-title {
+    color: #999;
+}
+
+.bb-sothebys .bb-dir-personality {
+    color: #999;
+    font-family: Georgia, serif;
+}
+
+.bb-sothebys .bb-port-list-btn {
+    background: #003da5;
+    color: #fff;
+    border: none;
+    font-family: -apple-system, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+}
+
+.bb-sothebys .bb-port-list-btn:hover {
+    background: #002a7a;
+}
+
+.bb-sothebys .bb-txh-badge.buy {
+    background: #f0f4fa;
+    color: #003da5;
+}
+
+.bb-sothebys .bb-txh-badge.sell {
+    background: #faf0f0;
+    color: #cc0000;
+}
+
+/* Sotheby's mobile */
+@media (max-width: 768px) {
+    .sb-panels {
+        padding: 24px 20px;
+    }
+
+    .sb-panels-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sb-lot {
+        padding: 32px 20px;
+    }
+
+    .sb-lot-number {
+        font-size: 24px;
+    }
+
+    .sb-sale-header {
+        padding: 32px 20px 24px;
+    }
+
+    .sb-sale-title {
+        font-size: 22px;
+    }
+
+    .sb-lot-nav {
+        padding: 10px 16px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+    }
+
+    .sb-lot-pill {
+        min-height: 36px;
+        min-width: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sb-lot-artist {
+        font-size: 12px;
+    }
+
+    .sb-lot-title {
+        font-size: 13px;
+    }
+
+    .sb-estimate {
+        font-size: 11px;
+    }
+
+    .sb-lot-img {
+        max-height: 280px;
+    }
+
+    .sb-sale-footer {
+        padding: 28px 20px;
+    }
+}
+
+@media (max-width: 380px) {
+    .sb-lot {
+        padding: 24px 14px;
+    }
+
+    .sb-lot-number {
+        font-size: 20px;
+    }
+
+    .sb-sale-header {
+        padding: 24px 14px 20px;
+    }
+
+    .sb-sale-title {
+        font-size: 18px;
+    }
+
+    .sb-sale-brand {
+        font-size: 9px;
+        letter-spacing: 0.35em;
+    }
+
+    .sb-lot-pill {
+        min-height: 32px;
+        min-width: 32px;
+        font-size: 9px;
+    }
+
+    .sb-catalogue-note p {
+        font-size: 11px;
+    }
+
+    .sb-section-item {
+        font-size: 10px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* DEITCH PROJECTS (dp-*) — underground gallery aesthetic        */
+/*                                                                */
+/* Bold sans-serif (Impact-like), industrial white/gray bg,      */
+/* fluorescent neon accents (CSS variable --dp-accent),          */
+/* masonry card grid, giant typography, zine/collage energy.      */
+/* Prices hidden by default — click to reveal (gallerist vibe).  */
+/* ══════════════════════════════════════════════════════════════ */
+
+/* Overlay overrides */
+.bb-deitch {
+    background: #e8e8e8;
+    color: #000000;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 13px;
+}
+
+.bb-deitch .bb-header {
+    background: #ffffff;
+    border-bottom: 3px solid #000000;
+    padding: 10px 20px;
+}
+
+.bb-deitch .bb-logo {
+    color: #000000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.bb-deitch .bb-cash,
+.bb-deitch .bb-ap {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #666;
+    font-weight: 600;
+}
+
+.bb-deitch .bb-cycle-label,
+.bb-deitch .bb-cycle-dot,
+.bb-deitch .bb-header-meta {
+    display: none;
+}
+
+.bb-deitch .bb-close {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-close:hover {
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-style-toggle {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-style-toggle:hover {
+    background: var(--dp-accent, #ff00ff);
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-config-btn {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-config-btn:hover {
+    background: var(--dp-accent, #ff00ff);
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-config-dropdown {
+    background: #ffffff;
+    border: 2px solid #000;
+}
+
+.bb-deitch .bb-config-title {
+    color: #000;
+    font-weight: 900;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0.1em;
+    border-bottom-color: #000;
+}
+
+.bb-deitch .bb-config-item {
+    color: #000;
+    font-weight: 600;
+}
+
+.bb-deitch .bb-config-presets {
+    border-top-color: #000;
+}
+
+.bb-deitch .bb-config-preset {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.bb-deitch .bb-config-preset:hover {
+    background: var(--dp-accent, #ff00ff);
+    border-color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-status-toast {
+    background: var(--dp-accent, #ff00ff);
+    border: none;
+    color: #000;
+    font-weight: 800;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    letter-spacing: 0.08em;
+}
+
+/* Deitch view container */
+.dp-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #e8e8e8;
+    padding: 0 0 40px 0;
+}
+
+/* Giant header */
+.dp-header {
+    background: #ffffff;
+    padding: 32px 24px 24px;
+    border-bottom: 4px solid #000;
+}
+
+.dp-header-title {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 64px;
+    font-weight: 900;
+    color: #000;
+    letter-spacing: -0.02em;
+    line-height: 0.9;
+    text-transform: uppercase;
+}
+
+.dp-header-show {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+    letter-spacing: 0.06em;
+}
+
+.dp-now-showing {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+}
+
+.dp-featured-name {
+    color: var(--dp-accent, #ff00ff);
+    font-weight: 700;
+}
+
+/* Masonry card grid */
+.dp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 3px;
+    padding: 3px;
+}
+
+/* Card */
+.dp-card {
+    background: #ffffff;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: dp-card-in 0.4s ease-out both;
+    position: relative;
+    overflow: hidden;
+}
+
+.dp-card:hover {
+    transform: translateY(-2px) rotate(-0.3deg);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.15);
+}
+
+/* Staggered card entrance — each card fades/slides in */
+.dp-card:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.dp-card:nth-child(2) {
+    animation-delay: 0.05s;
+}
+
+.dp-card:nth-child(3) {
+    animation-delay: 0.1s;
+}
+
+.dp-card:nth-child(4) {
+    animation-delay: 0.15s;
+}
+
+.dp-card:nth-child(5) {
+    animation-delay: 0.2s;
+}
+
+.dp-card:nth-child(6) {
+    animation-delay: 0.25s;
+}
+
+@keyframes dp-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dp-card-lg {
+    grid-column: span 2;
+}
+
+/* Card image */
+.dp-card-image {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #f0f0f0;
+}
+
+.dp-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s;
+}
+
+.dp-card:hover .dp-card-img {
+    transform: scale(1.03);
+}
+
+.dp-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f0;
+    padding: 24px;
+}
+
+.dp-card-ph-title {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #ccc;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* Giant artist name */
+.dp-card-artist {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: #000;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    padding: 12px 14px 2px;
+    text-transform: uppercase;
+}
+
+.dp-card-lg .dp-card-artist {
+    font-size: 40px;
+}
+
+/* Title — small, underneath */
+.dp-card-title {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-size: 12px;
+    color: #333;
+    padding: 0 14px;
+    line-height: 1.4;
+}
+
+/* Medium — typewriter */
+.dp-card-medium {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    color: #999;
+    padding: 2px 14px 0;
+}
+
+/* Price — hidden by default */
+.dp-card-price {
+    padding: 8px 14px 14px;
+    cursor: pointer;
+}
+
+.dp-price-hidden {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    color: #ccc;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-bottom: 1px dotted #ccc;
+    transition: color 0.2s;
+}
+
+.dp-price-hidden:hover {
+    color: var(--dp-accent, #ff00ff);
+    border-bottom-color: var(--dp-accent, #ff00ff);
+}
+
+.dp-price-revealed {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+}
+
+/* Status sticker — rotated badge in corner */
+.dp-sticker {
+    position: absolute;
+    top: 12px;
+    right: -28px;
+    transform: rotate(45deg);
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    padding: 4px 36px;
+    text-transform: uppercase;
+}
+
+.dp-sticker-owned {
+    background: #000;
+    color: #fff;
+}
+
+/* Empty state */
+.dp-empty {
+    text-align: center;
+    padding: 80px 24px;
+}
+
+.dp-empty-text {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 36px;
+    color: #000;
+    letter-spacing: -0.01em;
+}
+
+.dp-empty-sub {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #999;
+    margin-top: 8px;
+}
+
+/* Footer */
+.dp-footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: #ffffff;
+    border-top: 4px solid #000;
+}
+
+.dp-footer-brand {
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    color: #000;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+.dp-footer-info {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10px;
+    color: #999;
+    letter-spacing: 0.04em;
+}
+
+/* ── Deitch additional panels — bold underground styling ── */
+.dp-panels {
+    padding: 3px;
+}
+
+.dp-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    align-items: start;
+}
+
+.dp-panels-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-deitch .bb-panel {
+    background: #ffffff;
+    border: 3px solid #000;
+    color: #000;
+}
+
+.bb-deitch .bb-panel-header {
+    color: #000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 2px solid #000;
+}
+
+.bb-deitch .bb-lb-row {
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.bb-deitch .bb-lb-row:hover {
+    background: #f5f5f0;
+}
+
+.bb-deitch .bb-lb-row.selected {
+    background: color-mix(in srgb, var(--dp-accent, #ff00ff) 10%, white);
+}
+
+.bb-deitch .bb-lb-name {
+    color: #000;
+    font-weight: 700;
+}
+
+.bb-deitch .bb-lb-heat-fill {
+    background: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-lb-index {
+    color: #000;
+    font-weight: 700;
+}
+
+.bb-deitch .bb-lb-index.up {
+    color: #000;
+}
+
+.bb-deitch .bb-lb-index.down {
+    color: #cc0000;
+}
+
+.bb-deitch .bb-nw-big {
+    color: #000;
+    font-family: Impact, 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 40px;
+}
+
+.bb-deitch .bb-nw-stat-label {
+    color: #666;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+}
+
+.bb-deitch .bb-nw-stat-value {
+    color: #000;
+    font-weight: 700;
+}
+
+.bb-deitch .bb-nw-grid {
+    border-top: 2px solid #000;
+}
+
+.bb-deitch .bb-ps-grid {
+    border-color: #000;
+}
+
+.bb-deitch .bb-ps-value {
+    color: #000;
+    font-weight: 900;
+    font-family: Impact, sans-serif;
+    font-size: 28px;
+}
+
+.bb-deitch .bb-ps-label {
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.bb-deitch .bb-ps-item {
+    border-right: 2px solid #000;
+}
+
+.bb-deitch .bb-ps-subtitle {
+    color: #999;
+    font-family: 'Courier New', monospace;
+}
+
+.bb-deitch .bb-trade-row {
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.bb-deitch .bb-trade-row:hover {
+    background: #f5f5f0;
+}
+
+.bb-deitch .bb-dir-count {
+    background: #000;
+    color: var(--dp-accent, #ff00ff);
+    font-weight: 900;
+}
+
+.bb-deitch .bb-dir-filter {
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+    font-weight: 700;
+}
+
+.bb-deitch .bb-dir-sort {
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 700;
+}
+
+.bb-deitch .bb-dir-sort:hover {
+    background: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-dir-row {
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.bb-deitch .bb-dir-row:hover {
+    background: #f5f5f0;
+}
+
+.bb-deitch .bb-dir-name {
+    color: #000;
+    font-weight: 700;
+}
+
+.bb-deitch .bb-dir-title {
+    color: #666;
+}
+
+.bb-deitch .bb-port-list-btn {
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    border: 2px solid #000;
+    font-weight: 900;
+    font-family: Impact, sans-serif;
+    text-transform: uppercase;
+}
+
+.bb-deitch .bb-port-list-btn:hover {
+    background: #000;
+    color: var(--dp-accent, #ff00ff);
+}
+
+.bb-deitch .bb-txh-badge.buy {
+    background: #000;
+    color: var(--dp-accent, #ff00ff);
+    font-weight: 900;
+}
+
+.bb-deitch .bb-txh-badge.sell {
+    background: var(--dp-accent, #ff00ff);
+    color: #000;
+    font-weight: 900;
+}
+
+.bb-deitch .bb-ob-tab.active {
+    border-bottom-color: var(--dp-accent, #ff00ff);
+    color: #000;
+}
+
+/* Deitch mobile */
+@media (max-width: 768px) {
+    .dp-panels {
+        padding: 2px;
+    }
+
+    .dp-panels-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dp-header {
+        padding: 24px 16px 20px;
+    }
+
+    .dp-header-title {
+        font-size: 40px;
+    }
+
+    .dp-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 2px;
+        padding: 2px;
+    }
+
+    .dp-card-lg {
+        grid-column: span 1;
+    }
+
+    .dp-card-artist {
+        font-size: 20px;
+        padding: 10px 12px 2px;
+    }
+
+    .dp-card-lg .dp-card-artist {
+        font-size: 24px;
+    }
+
+    .dp-card-title {
+        padding: 0 12px;
+        font-size: 11px;
+    }
+
+    .dp-card-medium {
+        padding: 2px 12px 0;
+    }
+
+    .dp-card-price {
+        padding: 6px 12px 12px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    .dp-empty-text {
+        font-size: 24px;
+    }
+
+    .dp-footer {
+        padding: 24px 16px;
+    }
+
+    .dp-sticker {
+        font-size: 7px;
+        padding: 3px 28px;
+        top: 8px;
+        right: -24px;
+    }
+}
+
+@media (max-width: 380px) {
+    .dp-header-title {
+        font-size: 32px;
+    }
+
+    .dp-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dp-card-artist {
+        font-size: 16px;
+    }
+
+    .dp-card-lg .dp-card-artist {
+        font-size: 18px;
+    }
+
+    .dp-card-image {
+        aspect-ratio: 1;
+    }
+
+    .dp-footer-brand {
+        font-size: 14px;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Byform Portfolio View (bf-* prefix)
+   Reference: design.byform.co — Swiss modernist, serif + mono
+   ══════════════════════════════════════════════════════════════ */
+
+.bb-byform {
+    background: #fafaf8;
+    color: #111;
+}
+
+.bb-byform .bb-header {
+    background: #fafaf8;
+    border-bottom: 1px solid #e0e0dd;
+}
+
+.bb-byform .bb-logo {
+    color: #111;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 400;
+    letter-spacing: 3px;
+    font-size: 14px;
+    text-transform: lowercase;
+}
+
+.bb-byform .bb-cash {
+    color: #111;
+}
+
+.bb-byform .bb-ap {
+    color: #666;
+}
+
+.bb-byform .bb-header-meta {
+    color: #999;
+}
+
+.bb-byform .bb-close {
+    border-color: #ccc;
+    color: #666;
+}
+
+.bb-byform .bb-close:hover {
+    background: #111;
+    color: #fafaf8;
+}
+
+.bb-byform .bb-style-toggle {
+    color: #666;
+    border-color: #ccc;
+}
+
+.bb-byform .bb-style-toggle:hover {
+    background: #111;
+    color: #fafaf8;
+}
+
+.bb-byform .bb-config-btn {
+    color: #666;
+    border-color: #ccc;
+}
+
+/* Byform view container */
+.bf-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 48px;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 12px;
+    background: #fafaf8;
+    color: #111;
+}
+
+/* Bio header */
+.bf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 32px;
+    border-bottom: 2px solid #111;
+    margin-bottom: 24px;
+}
+
+.bf-header-left {
+    flex: 1;
+}
+
+.bf-name {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 48px;
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    color: #111;
+}
+
+.bf-meta {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+}
+
+/* Black circle graphic */
+.bf-header-right {
+    display: flex;
+    align-items: center;
+    padding-left: 32px;
+}
+
+.bf-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fafaf8;
+}
+
+.bf-circle-num {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.bf-circle-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    margin-top: 4px;
+    opacity: 0.7;
+}
+
+/* Filter pills */
+.bf-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.bf-pill {
+    padding: 6px 16px;
+    border: 1px solid #ccc;
+    background: transparent;
+    color: #666;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.bf-pill:hover {
+    border-color: #111;
+    color: #111;
+}
+
+.bf-pill-active {
+    background: #111;
+    color: #fafaf8;
+    border-color: #111;
+}
+
+/* Table wrapper — horizontal scroll on mobile */
+.bf-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 32px;
+}
+
+/* Transaction table */
+.bf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+}
+
+.bf-table thead {
+    border-bottom: 1px solid #111;
+}
+
+.bf-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    font-size: 10px;
+    color: #999;
+}
+
+.bf-th-right {
+    text-align: right;
+}
+
+.bf-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+}
+
+.bf-table tbody tr {
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.bf-table tbody tr:hover {
+    background: #f0f0ec;
+}
+
+.bf-row-player {
+    background: #f5f5f0;
+}
+
+.bf-row-player:hover {
+    background: #eeeee8;
+}
+
+.bf-td-title {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bf-empty {
+    text-align: center;
+    color: #999;
+    padding: 32px 12px;
+}
+
+/* Type badges */
+.bf-type {
+    padding: 2px 8px;
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.bf-type-buy {
+    color: #1a7a3a;
+}
+
+.bf-type-sell {
+    color: #c0392b;
+}
+
+.bf-type-trade {
+    color: #888;
+}
+
+/* Footer panels — stack below table */
+.bf-panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* Byform mobile */
+@media (max-width: 768px) {
+    .bf-view {
+        padding: 20px 16px;
+    }
+
+    .bf-header {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .bf-header-right {
+        padding-left: 0;
+    }
+
+    .bf-name {
+        font-size: 32px;
+    }
+
+    .bf-circle {
+        width: 80px;
+        height: 80px;
+    }
+
+    .bf-circle-num {
+        font-size: 22px;
+    }
+
+    .bf-table-wrap {
+        margin: 0 -16px;
+        padding: 0 16px;
+    }
+
+    .bf-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Waterworks Map View (ww-* prefix)
+   Reference: waterworksproject.nl — #3200ff electric blue, IBM Plex Mono 500,
+   glassmorphism buttons, hollow circle markers with leader-line labels,
+   bracket-animated buttons, sidebar slide-in, 1.75rem spacing unit
+   ══════════════════════════════════════════════════════════════ */
+
+/* Bloomberg header overrides for Waterworks mode */
+.bb-waterworks {
+    background: #3200ff;
+    color: #fff;
+}
+
+.bb-waterworks .bb-header {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-bottom: none;
+}
+
+.bb-waterworks .bb-logo {
+    color: #fff;
+    letter-spacing: 4px;
+    font-weight: 500;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+}
+
+.bb-waterworks .bb-cash {
+    color: #fff;
+}
+
+.bb-waterworks .bb-ap {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.bb-waterworks .bb-header-meta {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.bb-waterworks .bb-close {
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-radius: 0.25rem;
+}
+
+.bb-waterworks .bb-close:hover {
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+}
+
+.bb-waterworks .bb-style-toggle {
+    color: rgba(255, 255, 255, 0.7);
+    border-color: transparent;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-radius: 0.25rem;
+}
+
+.bb-waterworks .bb-style-toggle:hover {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.bb-waterworks .bb-config-btn {
+    color: rgba(255, 255, 255, 0.6);
+    border-color: transparent;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0.25rem;
+}
+
+/* Waterworks view container — full viewport, fixed layout */
+.ww-view {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    font-family: 'IBM Plex Mono', 'IB Plex Sans JP', monospace;
+    font-size: 0.625rem;
+    font-weight: 500;
+    line-height: 1.15;
+    background: #3200ff;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Top-left header overlay */
+.ww-header {
+    position: absolute;
+    top: 1.75rem;
+    left: 1.75rem;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.ww-header-title {
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+/* Map area — full viewport background */
+.ww-map-area {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.75rem;
+}
+
+.ww-svg {
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+}
+
+/* SVG marker styles */
+.ww-marker {
+    transition: opacity 0.25s cubic-bezier(.25, .46, .45, .94);
+}
+
+.ww-marker .ww-leader,
+.ww-marker .ww-label {
+    transition: opacity 0.25s cubic-bezier(.25, .46, .45, .94);
+}
+
+/* Labels hidden by default, shown on hover (Waterworks pattern) */
+@media (hover: hover) {
+    .ww-marker .ww-leader {
+        opacity: 0 !important;
+    }
+
+    .ww-marker .ww-label {
+        opacity: 0 !important;
+    }
+
+    .ww-marker:hover .ww-leader {
+        opacity: 0.8 !important;
+    }
+
+    .ww-marker:hover .ww-label {
+        opacity: 1 !important;
+    }
+}
+
+.ww-marker-active .ww-leader {
+    opacity: 0.8 !important;
+}
+
+.ww-marker-active .ww-label {
+    opacity: 1 !important;
+}
+
+/* Glassmorphism button — the core Waterworks UI element */
+.ww-glass-btn {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: none;
+    border-radius: 0.25rem;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    padding: 0.825rem 0.925rem;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    transition: background 0.25s cubic-bezier(.25, .46, .45, .94);
+}
+
+.ww-glass-btn:hover {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.ww-glass-btn-sm {
+    padding: 0.5rem 0.625rem;
+}
+
+/* Bracket animation (Waterworks signature hover effect) */
+.ww-bracket {
+    display: inline-block;
+    transition: opacity 0.1s cubic-bezier(.25, .46, .45, .94), transform 0.5s cubic-bezier(.19, 1, .22, 1);
+    opacity: 0;
+}
+
+.ww-glass-btn:hover .ww-bracket {
+    opacity: 1;
+    transform: translateZ(0);
+}
+
+/* Active pill style */
+.ww-pill-active {
+    background: rgba(255, 255, 255, 0.9);
+    color: #3200ff;
+}
+
+/* Sidebar — slides in from right (Waterworks pattern) */
+.ww-sidebar {
+    position: absolute;
+    top: 1.75rem;
+    right: 1.75rem;
+    bottom: 1.75rem;
+    z-index: 1;
+    width: calc(100% / 8 * 2);
+    /* 25vw on desktop, matching Waterworks */
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.475rem;
+    transform: translate3d(calc(100% + 1.75rem), 0, 0);
+    transition: transform 0.5s cubic-bezier(.19, 1, .22, 1);
+    will-change: transform;
+    pointer-events: none;
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.ww-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.ww-sidebar-open {
+    transform: translateZ(0);
+    pointer-events: all;
+}
+
+/* Sidebar header */
+.ww-sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Filter nav */
+.ww-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+/* City list */
+.ww-city-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    overflow-y: auto;
+    flex: 1;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.ww-city-list::-webkit-scrollbar {
+    display: none;
+}
+
+.ww-city-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.6rem 0.625rem;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    text-align: left;
+    text-transform: uppercase;
+    transition: background 0.25s cubic-bezier(.25, .46, .45, .94);
+    border-radius: 0.25rem;
+}
+
+.ww-city-btn:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.ww-city-selected {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.ww-city-dim {
+    opacity: 0.35;
+}
+
+.ww-current-badge {
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    padding: 0.2rem 0.4rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 0.2rem;
+}
+
+/* Detail panel — glass card */
+.ww-detail {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-radius: 0.25rem;
+    padding: 1.75rem;
+    animation: ww-slidein 0.5s cubic-bezier(.19, 1, .22, 1);
+}
+
+@keyframes ww-slidein {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 1rem, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateZ(0);
+    }
+}
+
+.ww-detail-name {
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+}
+
+.ww-detail-vibe {
+    font-size: inherit;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.4;
+    margin-bottom: 1rem;
+    font-style: italic;
+    text-transform: none;
+}
+
+.ww-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ww-detail-label {
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+}
+
+.ww-detail-section {
+    margin-top: 1rem;
+}
+
+.ww-detail-venue {
+    padding: 0.2rem 0;
+}
+
+.ww-detail-npc {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.ww-npc-emoji {
+    font-size: 1.1em;
+}
+
+.ww-npc-role {
+    color: rgba(255, 255, 255, 0.35);
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.ww-detail-loc {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.ww-loc-type {
+    color: rgba(255, 255, 255, 0.35);
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* Panel overrides in waterworks context */
+.bb-waterworks .bb-panel {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-color: transparent;
+    color: #fff;
+    border-radius: 0.25rem;
+}
+
+.bb-waterworks .bb-panel-title {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+/* Waterworks mobile — sidebar stacks below, full width */
+@media (max-width: 768px) {
+    .ww-sidebar {
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        width: calc(100% - 3.5rem);
+        max-width: none;
+        margin: 0 1.75rem 1.75rem;
+        transform: translateZ(0);
+        pointer-events: all;
+    }
+
+    .ww-map-area {
+        position: relative;
+        min-height: 50vh;
+        padding: 1.75rem;
+    }
+
+    .ww-view {
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ww-header {
+        position: relative;
+        top: auto;
+        left: auto;
+        padding: 1.75rem 1.75rem 0;
+    }
+
+    .ww-glass-btn {
+        backdrop-filter: blur(28px);
+        -webkit-backdrop-filter: blur(28px);
+    }
+}
+
+@media (max-width: 380px) {
+    .ww-detail {
+        padding: 1rem;
+    }
+
+    .ww-detail-name {
+        font-size: 0.85rem;
+    }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   Bloomberg Event Overlay — inline narrative/dialogue/choice player
+   Slides in from bottom like a Bloomberg alert panel.
+   ══════════════════════════════════════════════════════════════ */
+
+.bb-event-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: bb-event-fade-in 0.3s ease;
+}
+
+@keyframes bb-event-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.bb-event-panel {
+    width: 100%;
+    max-width: 700px;
+    max-height: 60vh;
+    margin: 0 auto 24px;
+    background: #0a0a14;
+    border: 1px solid #c9a84c44;
+    border-radius: 6px;
+    overflow-y: auto;
+    animation: bb-event-slide-up 0.35s ease;
+    box-shadow: 0 -4px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(201, 168, 76, 0.08);
+}
+
+@keyframes bb-event-slide-up {
+    from {
+        transform: translateY(40px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.bb-event-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a1a2e;
+    background: rgba(201, 168, 76, 0.04);
+}
+
+.bb-event-tag {
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #0a0a14;
+    background: #c9a84c;
+    padding: 2px 8px;
+    border-radius: 2px;
+}
+
+.bb-event-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #eaeaea;
+    flex: 1;
+}
+
+.bb-event-progress {
+    font-size: 10px;
+    color: #555;
+    font-family: 'SF Mono', Courier, monospace;
+}
+
+.bb-event-speaker {
+    padding: 8px 16px 0;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #c9a84c;
+}
+
+.bb-event-text {
+    padding: 12px 16px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #d4d4d4;
+    min-height: 48px;
+}
+
+.bb-event-cursor {
+    color: #c9a84c;
+    animation: bb-cursor-blink 0.8s infinite;
+}
+
+@keyframes bb-cursor-blink {
+
+    0%,
+    50% {
+        opacity: 1;
+    }
+
+    51%,
+    100% {
+        opacity: 0;
+    }
+}
+
+.bb-event-stats {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px 12px;
+    flex-wrap: wrap;
+}
+
+.bb-event-stat {
+    font-size: 11px;
+    font-family: 'SF Mono', Courier, monospace;
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid;
+}
+
+.bb-event-stat.positive {
+    color: #4ade80;
+    border-color: #4ade8044;
+    background: rgba(74, 222, 128, 0.06);
+}
+
+.bb-event-stat.negative {
+    color: #f87171;
+    border-color: #f8717144;
+    background: rgba(248, 113, 113, 0.06);
+}
+
+.bb-event-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px 16px;
+}
+
+.bb-event-choice-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    background: rgba(201, 168, 76, 0.05);
+    border: 1px solid #c9a84c33;
+    border-radius: 4px;
+    color: #eaeaea;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    line-height: 1.4;
+}
+
+.bb-event-choice-btn:hover {
+    background: rgba(201, 168, 76, 0.12);
+    border-color: #c9a84c;
+    color: #fff;
+}
+
+.bb-event-choice-effects {
+    display: block;
+    margin-top: 4px;
+    font-size: 10px;
+    color: #888;
+    font-family: 'SF Mono', Courier, monospace;
+}
+
+.bb-event-outcome {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #c9a84c;
+    font-style: italic;
+    line-height: 1.5;
+    border-top: 1px solid #1a1a2e;
+    background: rgba(201, 168, 76, 0.03);
+}
+
+.bb-event-hint {
+    padding: 8px 16px;
+    font-size: 10px;
+    color: #555;
+    text-align: center;
+    cursor: pointer;
+    border-top: 1px solid #111;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Style Guide View (sg-* prefix)
+   Design system reference showing Artnet + Tearsheet patterns
+   ══════════════════════════════════════════════════════════════ */
+
+.bb-styleguide {
+    background: #f5f5f5;
+}
+
+.sg-view {
+    padding: 40px 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+    font-family: var(--an-font-body);
+    color: #222;
+}
+
+.sg-header {
+    margin-bottom: 48px;
+    text-align: center;
+}
+
+.sg-title {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 0.06em;
+    margin: 0;
+}
+
+.sg-subtitle {
+    font-size: 14px;
+    color: #888;
+    margin-top: 8px;
+}
+
+.sg-section {
+    margin-bottom: 48px;
+}
+
+.sg-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 2px solid #222;
+    padding-bottom: 8px;
+    margin-bottom: 24px;
+}
+
+/* Swatches */
+.sg-swatches {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.sg-swatch-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.sg-swatch-label {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sg-swatch {
+    padding: 12px 16px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    font-family: var(--an-font-mono);
+    font-size: 11px;
+}
+
+/* Example blocks */
+.sg-example {
+    margin-bottom: 24px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sg-example-label {
+    padding: 8px 12px;
+    background: #eee;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #666;
+}
+
+/* Artnet pattern examples */
+.sg-an-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--an-font-body);
+    font-size: 12px;
+}
+
+.sg-an-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--an-accent);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: #666;
+}
+
+.sg-an-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--an-border);
+}
+
+.sg-an-table tr:hover {
+    background: var(--an-accent-light);
+}
+
+.sg-an-price {
+    color: var(--an-accent);
+    font-weight: 700;
+    font-family: var(--an-font-mono);
+}
+
+.sg-an-stat-card {
+    background: var(--an-bg);
+    border: 1px solid var(--an-border);
+    border-radius: var(--an-radius);
+    padding: 16px;
+    min-width: 120px;
+}
+
+.sg-an-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--an-fg);
+}
+
+.sg-an-stat-label {
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+}
+
+.sg-an-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 20px;
+}
+
+.sg-an-badge--hot {
+    background: var(--an-accent);
+    color: #fff;
+}
+
+.sg-an-badge--new {
+    background: #0066cc;
+    color: #fff;
+}
+
+.sg-an-badge--sold {
+    background: #333;
+    color: #fff;
+}
+
+.sg-an-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: var(--an-radius);
+    font-family: var(--an-font-body);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+
+.sg-an-btn:hover {
+    opacity: 0.85;
+}
+
+.sg-an-btn--primary {
+    background: var(--an-accent);
+    color: #fff;
+}
+
+.sg-an-btn--secondary {
+    background: #f0f0f0;
+    color: var(--an-fg);
+    border: 1px solid var(--an-border);
+}
+
+.sg-an-btn--danger {
+    background: #fff;
+    color: var(--an-accent);
+    border: 1px solid var(--an-accent);
+}
+
+/* Tearsheet pattern examples */
+.sg-ts-cover-demo {
+    background: var(--ts-bg);
+    padding: 60px 40px;
+    text-align: center;
+    border-bottom: 1px solid var(--ts-border);
+}
+
+.sg-ts-gallery-name {
+    font-family: var(--ts-font-sans);
+    font-size: 12px;
+    letter-spacing: var(--ts-brand-spacing);
+    font-weight: 600;
+    color: var(--ts-fg);
+}
+
+.sg-ts-cover-title {
+    font-family: var(--ts-font-serif);
+    font-size: 32px;
+    font-weight: 400;
+    margin-top: 24px;
+    color: var(--ts-fg);
+}
+
+.sg-ts-cover-subtitle {
+    font-family: var(--ts-font-serif);
+    font-size: 16px;
+    color: #888;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+.sg-ts-text-demo {
+    background: var(--ts-bg);
+    padding: 40px;
+}
+
+.sg-ts-info-demo {
+    background: var(--ts-bg);
+    padding: 24px;
+}
+
+.sg-ts-info-section {
+    margin-bottom: 16px;
+}
+
+.sg-ts-info-head {
+    font-family: var(--ts-font-sans);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.sg-ts-info-item {
+    font-family: var(--ts-font-serif);
+    font-size: 13px;
+    color: var(--ts-fg);
+    margin-top: 2px;
+}
+
+.sg-ts-price-block {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ts-border);
+}
+
+.sg-ts-price-label {
+    font-family: var(--ts-font-sans);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    color: #888;
+}
+
+.sg-ts-price-value {
+    font-family: var(--ts-font-serif);
+    font-size: 24px;
+    margin-top: 4px;
+    color: var(--ts-fg);
+}
+
+.sg-ts-address-demo {
+    background: var(--ts-bg);
+    padding: 24px;
+    text-align: center;
+    border-top: 1px solid var(--ts-border);
+}
+
+/* Typography scale */
+.sg-type-scale {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sg-type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.sg-type-label {
+    font-family: var(--an-font-mono);
+    font-size: 10px;
+    color: #888;
+    min-width: 150px;
+}
+
+/* Email preview */
+.sg-email-preview {
+    background: var(--an-bg);
+}
+
+.sg-email-header-demo {
+    background: var(--an-accent);
+    color: #fff;
+    padding: 10px 16px;
+    font-family: var(--an-font-body);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.sg-email-split-demo {
+    display: grid;
+    grid-template-columns: 35% 65%;
+    min-height: 200px;
+}
+
+.sg-email-thread-demo {
+    padding: 16px;
+    border-right: 1px solid var(--an-border);
+}
+
+.sg-email-current-demo {
+    padding: 16px;
+    font-family: var(--an-font-body);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.sg-email-msg-demo {
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+
+.sg-email-msg--in-demo {
+    background: #f5f5f5;
+}
+
+.sg-email-msg--out-demo {
+    background: #fff;
+    border-left: 3px solid var(--an-accent);
+}
+
+.sg-email-msg-from {
+    font-weight: 600;
+}
+
+.sg-email-msg-time {
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.sg-email-msg-preview {
+    margin-top: 4px;
+    color: #666;
+}
+
+.sg-email-actions-demo {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+/* Byform panels grid — 2-col layout to match SharedPanelGrid */
+.bf-panels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px 0;
+}
+
+.bf-panels-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Email styles moved to src/ui/email/EmailOverlay.css */
+
+/* ══════════════════════════════════════════════════════════════ */
+/* Drill-Down Panel Container                                    */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-drilldown {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 420px;
+    max-width: 90vw;
+    background: #0d0d14;
+    border-left: 1px solid #1a1a2e;
+    z-index: 1050;
+    overflow-y: auto;
+    animation: bb-drill-in 0.25s ease-out;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes bb-drill-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0.6;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.bb-panel-close {
+    background: none;
+    border: 1px solid #333;
+    color: #888;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-family: inherit;
+    transition: all 0.2s;
+    margin-left: 8px;
+}
+
+.bb-panel-close:hover {
+    color: #c94040;
+    border-color: #c94040;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 15. Artist Detail Panel                                       */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-artist-detail {
+    padding: 16px;
+}
+
+.bb-artist-detail .bb-panel-header {
+    color: #e0e0e8;
+    font-size: 13px;
+    letter-spacing: 3px;
+    border-bottom: 1px solid #c9a84c;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+/* Heat / Index / Tier / Medium row */
+.bb-ad-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.bb-ad-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bb-ad-metric-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 1px;
+}
+
+.bb-ad-metric-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e0e0e8;
+}
+
+.bb-ad-heat-bar {
+    height: 5px;
+    background: #1a1a2e;
+    border-radius: 3px;
+    overflow: hidden;
+    flex: 1;
+    margin-top: 2px;
+}
+
+.bb-ad-heat-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.bb-ad-flavor {
+    color: #8a8a9a;
+    font-size: 10px;
+    font-style: italic;
+    padding: 6px 0 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    line-height: 1.5;
+}
+
+/* Section grouping */
+.bb-ad-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-ad-section-label {
+    font-size: 9px;
+    color: #5a5a6a;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+/* Works table */
+.bb-ad-work-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 60px;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.15s;
+}
+
+.bb-ad-work-row:hover {
+    background: rgba(0, 229, 255, 0.05);
+}
+
+.bb-ad-work-title {
+    color: #00e5ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-ad-work-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ad-work-status {
+    color: #5a5a6a;
+    text-align: right;
+    font-size: 9px;
+}
+
+/* Auction history */
+.bb-ad-auction-row {
+    display: grid;
+    grid-template-columns: 40px 1fr 70px 80px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.bb-ad-auction-year {
+    color: #5a5a6a;
+}
+
+.bb-ad-auction-title {
+    color: #a0a0b0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-ad-auction-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ad-auction-house {
+    color: #5a5a6a;
+    text-align: right;
+}
+
+.bb-ad-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 9px;
+    color: #5a5a6a;
+    margin-top: 6px;
+    padding-top: 4px;
+}
+
+.bb-ad-stats span {
+    letter-spacing: 0.5px;
+}
+
+/* Events */
+.bb-ad-event-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 10px;
+}
+
+.bb-ad-event-type {
+    color: #c9a84c;
+    letter-spacing: 0.5px;
+}
+
+.bb-ad-event-remaining {
+    color: #5a5a6a;
+}
+
+/* Comparables */
+.bb-ad-comp-row {
+    display: grid;
+    grid-template-columns: 1fr 50px 40px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+}
+
+.bb-ad-comp-name {
+    color: #a0a0b0;
+}
+
+.bb-ad-comp-index {
+    color: #e0e0e8;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-ad-comp-heat {
+    color: #5a5a6a;
+    text-align: right;
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 16. Artwork Valuation Panel                                   */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-valuation {
+    padding: 16px;
+}
+
+.bb-valuation .bb-panel-header {
+    color: #e0e0e8;
+    font-size: 11px;
+    letter-spacing: 2px;
+    border-bottom: 1px solid #c9a84c;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.bb-val-artist {
+    color: #00e5ff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.bb-val-meta {
+    color: #5a5a6a;
+    font-size: 10px;
+    margin-bottom: 10px;
+}
+
+.bb-val-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-val-section-label {
+    font-size: 9px;
+    color: #5a5a6a;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+.bb-val-breakdown {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 2px;
+}
+
+.bb-val-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 10px;
+    color: #a0a0b0;
+}
+
+.bb-val-row span.up {
+    color: #4caf50;
+}
+
+.bb-val-row span.down {
+    color: #c94040;
+}
+
+.bb-val-row.bb-val-total {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 4px;
+    padding-top: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #e0e0e8;
+}
+
+.bb-val-row.bb-val-total span {
+    color: #c9a84c;
+}
+
+/* Confidence badge */
+.bb-val-confidence {
+    margin-top: 12px;
+    text-align: right;
+}
+
+.bb-val-conf-badge {
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+.bb-val-conf-high {
+    background: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.bb-val-conf-medium {
+    background: rgba(201, 168, 76, 0.15);
+    color: #c9a84c;
+    border: 1px solid rgba(201, 168, 76, 0.3);
+}
+
+.bb-val-conf-low {
+    background: rgba(201, 64, 64, 0.15);
+    color: #c94040;
+    border: 1px solid rgba(201, 64, 64, 0.3);
+}
+
+/* ══════════════════════════════════════════════════════════════ */
+/* 17. Collector Profile Panel                                   */
+/* ══════════════════════════════════════════════════════════════ */
+.bb-collector {
+    padding: 16px;
+}
+
+.bb-collector .bb-panel-header {
+    color: #e0e0e8;
+    font-size: 13px;
+    letter-spacing: 3px;
+    border-bottom: 1px solid #c9a84c;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+.bb-collector-empty {
+    color: #5a5a6a;
+    font-size: 10px;
+    padding: 20px 0;
+    text-align: center;
+}
+
+.bb-coll-info {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.bb-coll-role {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.bb-coll-type {
+    font-size: 9px;
+    color: #5a5a6a;
+}
+
+/* Portfolio summary quad */
+.bb-coll-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    margin-bottom: 12px;
+}
+
+.bb-coll-sum-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bb-coll-sum-label {
+    font-size: 8px;
+    color: #5a5a6a;
+    letter-spacing: 1px;
+}
+
+.bb-coll-sum-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e0e0e8;
+}
+
+.bb-coll-sum-value.up {
+    color: #4caf50;
+}
+
+.bb-coll-sum-value.down {
+    color: #c94040;
+}
+
+.bb-coll-pl-pct {
+    font-size: 10px;
+    font-weight: 400;
+}
+
+/* Section grouping */
+.bb-coll-section {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-coll-section-label {
+    font-size: 9px;
+    color: #5a5a6a;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+}
+
+/* Holdings */
+.bb-coll-holding {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    transition: background 0.15s;
+}
+
+.bb-coll-holding:hover {
+    background: rgba(0, 229, 255, 0.04);
+}
+
+.bb-coll-hold-title {
+    color: #00e5ff;
+    font-size: 10px;
+}
+
+.bb-coll-hold-meta {
+    color: #5a5a6a;
+    font-size: 9px;
+    margin-top: 1px;
+}
+
+.bb-coll-hold-vals {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: #a0a0b0;
+    margin-top: 3px;
+}
+
+.bb-coll-hold-vals .up {
+    color: #4caf50;
+    font-weight: 600;
+}
+
+.bb-coll-hold-vals .down {
+    color: #c94040;
+    font-weight: 600;
+}
+
+/* Concentration bars */
+.bb-coll-conc {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bb-coll-conc-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 40px;
+    gap: 8px;
+    align-items: center;
+    font-size: 10px;
+}
+
+.bb-coll-conc-label {
+    color: #5a5a6a;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+}
+
+.bb-coll-conc-bar {
+    height: 5px;
+    background: #1a1a2e;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.bb-coll-conc-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c9a84c, #00e5ff);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.bb-coll-conc-pct {
+    color: #a0a0b0;
+    text-align: right;
+    font-size: 9px;
+}
+
+/* Trade history */
+.bb-coll-trade-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 70px 30px;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.bb-coll-trade-side {
+    font-weight: 700;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+.bb-coll-trade-side.buy {
+    color: #4caf50;
+}
+
+.bb-coll-trade-side.sell {
+    color: #c94040;
+}
+
+.bb-coll-trade-title {
+    color: #a0a0b0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bb-coll-trade-price {
+    color: #c9a84c;
+    text-align: right;
+    font-weight: 600;
+}
+
+.bb-coll-trade-week {
+    color: #5a5a6a;
+    text-align: right;
+}

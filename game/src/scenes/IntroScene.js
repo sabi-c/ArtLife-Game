@@ -36,10 +36,10 @@ export class IntroScene extends Phaser.Scene {
         scanlines.setDepth(10);
 
         // ── Internal state ──
-        this.step       = 0;
-        this.isTyping   = false;
-        this.typeTimer  = null;
-        this._finished  = false; // prevents double-advance spam
+        this.step = 0;
+        this.isTyping = false;
+        this.typeTimer = null;
+        this._finished = false; // prevents double-advance spam
 
         this.dialogueLines = [
             "The art market moves $67 billion a year.",
@@ -90,7 +90,7 @@ export class IntroScene extends Phaser.Scene {
         this._keys = {
             space: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
             enter: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER),
-            esc:   this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
+            esc: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC),
         };
 
         // Pointer / touch support
@@ -175,28 +175,11 @@ export class IntroScene extends Phaser.Scene {
         this.input.keyboard.removeAllKeys();
         this.input.removeAllListeners();
 
-        // "ACCESS GRANTED" flash
-        const { width, height } = this.scale;
-        const flash = this.add.text(width / 2, height / 2, 'ACCESS GRANTED', {
-            fontFamily: '"Press Start 2P"',
-            fontSize: '18px',
-            color: '#ffffff',
-            align: 'center',
-        }).setOrigin(0.5).setAlpha(0).setDepth(20);
-
-        this.tweens.add({
-            targets: flash,
-            alpha: 1,
-            duration: 150,
-            yoyo: true,
-            hold: 300,
-            onComplete: () => {
-                this.cameras.main.fadeOut(500, 0, 0, 0);
-                this.cameras.main.once('camerafadeoutcomplete', () => {
-                    this.scene.stop();
-                    GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.BOOT);
-                });
-            }
+        // Clean fade to Artnet login — no "ACCESS GRANTED"
+        this.cameras.main.fadeOut(800, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.stop();
+            GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.BOOT);
         });
     }
 

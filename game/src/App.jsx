@@ -15,7 +15,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 
 import { createPhaserGame } from './phaserInit.js';
-import { ErrorBoundary } from './ui/ErrorBoundary.jsx';
+import { ErrorBoundary } from './ui/shared/ErrorBoundary.jsx';
 import { GameEventBus, GameEvents } from './managers/GameEventBus.js';
 import { VIEW, OVERLAY } from './core/views.js';
 import { GameState } from './managers/GameState.js';
@@ -29,8 +29,8 @@ import ViewRouter from './ui/ViewRouter.jsx';
 import OverlayRouter from './ui/OverlayRouter.jsx';
 
 // HUD components (small, always-mounted — not worth lazy-loading)
-import MobileJoypad from './ui/MobileJoypad.jsx';
-import CalendarHUD from './ui/CalendarHUD.jsx';
+import MobileJoypad from './ui/game/MobileJoypad.jsx';
+import CalendarHUD from './ui/game/CalendarHUD.jsx';
 
 // Make navigate() available globally (for Phaser scenes, terminal, etc.)
 window.navigate = navigate;
@@ -70,7 +70,7 @@ export default function App() {
     const [activeView, setActiveView] = useState(() => {
         const params = new URLSearchParams(window.location.search);
         if (params.get('skipBoot')) return VIEW.PHASER;
-        return VIEW.PHASER;
+        return VIEW.SPLASH;
     });
     const [viewPayload, setViewPayload] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(OVERLAY.NONE);
@@ -180,61 +180,26 @@ export default function App() {
 
         const params = new URLSearchParams(window.location.search);
         if (params.get('skipBoot')) {
+            // Dev shortcut: skip intro flow, launch overworld directly
             const pollStart = Date.now();
             const pollId = setInterval(() => {
-                if (window.startPhaserGame) {
+                if (window.phaserGame) {
                     clearInterval(pollId);
-                    window.startPhaserGame('new');
+                    // Use the proven DEBUG_LAUNCH_SCENE handler
+                    import('./managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
+                        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                    });
                 } else if (Date.now() - pollStart > 5000) {
                     clearInterval(pollId);
-                    console.error('[App] skipBoot: startPhaserGame never registered');
+                    console.error('[App] skipBoot: phaserGame never initialized');
                 }
             }, 100);
             setActiveView(VIEW.PHASER);
         } else {
-            // Auto-resume from most recent save slot
-            try {
-                const slot = GameState.getMostRecentSlot();
-                if (slot !== null && !autoResumedRef.current) {
-                    const loaded = GameState.load(slot);
-                    if (loaded) {
-                        autoResumedRef.current = true;
-                        const ui = window.TerminalUIInstance;
-                        if (ui?.container) {
-                            ui.container.style.display = '';
-                            import('./ui/terminal/screens/index.js').then(({ dashboardScreen }) => {
-                                ui.pushScreen(dashboardScreen(ui));
-                            }).catch(err => {
-                                console.error('[App] Failed to load dashboard:', err);
-                                setActiveView(VIEW.BOOT);
-                            });
-                            if (phaserInstance?.canvas) {
-                                phaserInstance.canvas.style.visibility = 'hidden';
-                                phaserInstance.canvas.style.pointerEvents = 'none';
-                            }
-                            setActiveView(VIEW.TERMINAL);
-                            setActiveOverlay(OVERLAY.BLOOMBERG);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('[App] Auto-resume failed:', err);
-            }
-
-            if (!autoResumedRef.current) {
-                const introStart = Date.now();
-                const introPoll = setInterval(() => {
-                    if (window.startPhaserGame) {
-                        clearInterval(introPoll);
-                        window.startPhaserGame('new');
-                    } else if (Date.now() - introStart > 5000) {
-                        clearInterval(introPoll);
-                        console.error('[App] startPhaserGame never registered for intro');
-                        setActiveView(VIEW.BOOT);
-                    }
-                }, 100);
-                setActiveView(VIEW.PHASER);
-            }
+            // ── New boot flow: SPLASH → NARRATIVE → LOGIN → BLOOMBERG ──
+            // Phaser engine boots (BootScene preloads shared assets) but
+            // NO game scene starts until user clicks "Explore World".
+            // activeView is already VIEW.SPLASH (set in useState initializer)
         }
 
         return () => {
@@ -267,9 +232,8 @@ export default function App() {
             setActiveView(VIEW.TERMINAL);
             setActiveOverlay(OVERLAY.MASTER_CMS);
         } else if (action === 'load') {
-            // Load from save slot (GameState.load already called by ArtnetLogin)
-            setActiveView(VIEW.PHASER);
-            setActiveOverlay(OVERLAY.BLOOMBERG);
+            // Load from save slot or fresh game — go to Bloomberg hub
+            setActiveView(VIEW.BLOOMBERG);
         }
     };
 
@@ -391,6 +355,7 @@ export default function App() {
             <ViewRouter
                 activeView={activeView}
                 setActiveView={setActiveView}
+                setActiveOverlay={setActiveOverlay}
                 viewPayload={viewPayload}
                 onLoginComplete={handleLoginComplete}
             />

@@ -28,6 +28,7 @@ import { useNPCStore } from '../stores/npcStore.js';
 import { useCmsStore } from '../stores/cmsStore.js';
 import { VIEW } from '../core/views.js';
 import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
+import { SpriteRegistry } from '../managers/SpriteRegistry.js';
 
 // ── Layer depth constants (matches WorldScene) ──
 const DEPTH = {
@@ -139,18 +140,8 @@ export class LocationScene extends BaseScene {
             }
         }
 
-        const npcKeys = [
-            'walk_legacy_gallerist_walk', 'walk_auction_house_type_walk', 'walk_elena_ross_walk',
-            'walk_old_money_gallerist_walk', 'walk_academic_curator_walk', 'walk_young_artist_walk',
-            'walk_art_flipper_walk', 'walk_tech_collector_f_walk', 'walk_power_collector_f_walk',
-            'walk_art_critic_walk', 'walk_young_power_dealer_walk', 'walk_underground_connector_walk',
-            'walk_it_girl_dealer_walk', 'walk_margaux_villiers_walk', 'walk_avant_garde_curator_walk',
-            'walk_julian_vance_walk'
-        ];
-
-        npcKeys.forEach(key => {
-            this.load.spritesheet(key, `sprites/${key}.png`, { frameWidth: 160, frameHeight: 160 });
-        });
+        // ── NPC walk spritesheets (all managed by SpriteRegistry) ──
+        SpriteRegistry.preloadAll(this);
 
         if (!this.textures.exists('placeholder_exit')) {
             const gfx = this.add.graphics();
@@ -190,7 +181,7 @@ export class LocationScene extends BaseScene {
         this.roomId = data?.roomId || (venue?.startRoom) || 'chelsea_main_floor';
         this.roomData = venue ? venue.rooms.find(r => r.id === this.roomId) : null;
 
-        console.log(`[LocationScene] venueId=${this.venueId} roomId=${this.roomId} venue=${!!venue} roomData=${!!this.roomData} tiledMap=${this.roomData?.tiledMap || 'none'}`);
+
 
         // Venue time budget
         if (data && data.venueTimeRemaining !== undefined) {
@@ -206,16 +197,8 @@ export class LocationScene extends BaseScene {
         const charId = GameState.state?.character?.id || 'julian_vance';
         this.playerSpriteKey = `walk_${charId}_walk`;
 
-        // Setup sprite animations (legacy walk_ spritesheets)
-        const npcKeys = Object.keys(this.textures.list).filter(k => k.startsWith('walk_'));
-        npcKeys.forEach(key => {
-            if (!this.anims.exists(`${key}_down`)) {
-                this.anims.create({ key: `${key}_down`, frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }), frameRate: 6, repeat: -1 });
-                this.anims.create({ key: `${key}_left`, frames: this.anims.generateFrameNumbers(key, { start: 4, end: 7 }), frameRate: 6, repeat: -1 });
-                this.anims.create({ key: `${key}_right`, frames: this.anims.generateFrameNumbers(key, { start: 8, end: 11 }), frameRate: 6, repeat: -1 });
-                this.anims.create({ key: `${key}_up`, frames: this.anims.generateFrameNumbers(key, { start: 12, end: 15 }), frameRate: 6, repeat: -1 });
-            }
-        });
+        // Setup sprite animations (all managed by SpriteRegistry)
+        SpriteRegistry.createAnims(this);
 
         // LimeZu character animations (16×32, 6 frames per direction: down/left/right/up)
         const lzChars = ['adam', 'alex', 'amelia', 'bob'];
@@ -271,7 +254,7 @@ export class LocationScene extends BaseScene {
         if (cmsMap) {
             try {
                 this.cache.tilemap.add(mapKey, { data: cmsMap, format: Phaser.Tilemaps.Formats.TILED_JSON });
-                console.log(`[LocationScene] Using CMS-edited map for: ${this.roomData.tiledMap}`);
+
             } catch (e) {
                 console.warn('[LocationScene] Failed to inject CMS map, using preloaded', e);
             }
@@ -298,7 +281,7 @@ export class LocationScene extends BaseScene {
             this._bgImage = this.add.image(0, 0, bgKey)
                 .setOrigin(0, 0)
                 .setDepth(DEPTH.BELOW_PLAYER);
-            console.log(`[LocationScene] Using background image: ${bgKey}`);
+
         }
 
         // Add all tilesets referenced in the map
@@ -475,9 +458,9 @@ export class LocationScene extends BaseScene {
             const displayName = contact?.name || npc.label || npc.id || 'NPC';
             this.add.text(npc.x * tileW + tileW / 2, npc.y * tileH - 12,
                 displayName, {
-                    fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#ffaaaa',
-                    stroke: '#000000', strokeThickness: 2,
-                }).setOrigin(0.5).setDepth(DEPTH.HUD);
+                fontFamily: '"Press Start 2P"', fontSize: '7px', color: '#ffaaaa',
+                stroke: '#000000', strokeThickness: 2,
+            }).setOrigin(0.5).setDepth(DEPTH.HUD);
 
             npcCharacters.push({
                 id: npcId,
@@ -1122,7 +1105,7 @@ export class LocationScene extends BaseScene {
                 const contact = useNPCStore.getState().getContact(npcId);
                 if (contact && !contact.met) {
                     useNPCStore.getState().meetContact(npcId);
-                    console.log(`[LocationScene] Met NPC: ${npcId}`);
+
                 }
             } catch (e) { /* npcStore not initialized */ }
         }
@@ -1193,7 +1176,7 @@ export class LocationScene extends BaseScene {
                 fontFamily: '"Press Start 2P"', fontSize: '8px',
                 color: i === 0 ? '#ffffff' : '#888888',
             }).setScrollFactor(0).setDepth(DEPTH.POPUP_TEXT)
-              .setInteractive({ useHandCursor: true });
+                .setInteractive({ useHandCursor: true });
 
             optText.on('pointerover', () => optText.setColor('#c9a84c'));
             optText.on('pointerout', () => optText.setColor(i === 0 ? '#ffffff' : '#888888'));

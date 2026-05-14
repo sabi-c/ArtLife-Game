@@ -9,6 +9,9 @@
  *   - Object editing: click-to-select, drag-to-move, property inspector
  *   - Undo/Redo via JSON snapshot history (Cmd+Z / Cmd+Shift+Z)
  *   - Export/download modified JSON
+ *   - NPC Schedule Panel: shows NPC positions from NPCManager with time filtering
+ *   - Door Connection Editor: visual map/venue picker for door targets
+ *   - Sign/Dialog Preview: live preview of sign text bubbles
  *
  * Used inside RoomManager.jsx as an edit mode for individual rooms.
  */
@@ -16,6 +19,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ARTWORKS } from '../../data/artworks.js';
 import { CONTACTS } from '../../data/contacts.js';
+import { NPCManager } from '../../managers/NPCManager.js';
 
 const mono = '"IBM Plex Mono", "Courier New", monospace';
 
@@ -688,6 +692,173 @@ function MapCanvas({ mapJSON, bgImageUrl, tilesetImages, selectedObjId, onSelect
 // Property Editor Panel (unchanged from original)
 // ════════════════════════════════════════════════════════════════
 
+// ════════════════════════════════════════════════════════════════
+// Known map/venue targets for door connections
+// ════════════════════════════════════════════════════════════════
+const DOOR_TARGETS = [
+    { id: 'worldscene', label: '🌍 Back to Overworld', group: 'core' },
+    { id: 'soho_gallery', label: '🎨 SoHo Gallery', group: 'venues' },
+    { id: 'soho_gallery_exhibition', label: '🖼️ SoHo Gallery — Exhibition', group: 'venues' },
+    { id: 'soho_gallery_backroom', label: '🔒 SoHo Gallery — Back Room', group: 'venues' },
+    { id: 'auction_house', label: '🔨 Auction House', group: 'venues' },
+    { id: 'auction_house_main_hall', label: '🏛️ Auction House — Main Hall', group: 'venues' },
+    { id: 'art_fair', label: '🎪 Art Fair', group: 'venues' },
+    { id: 'cocktail_lounge', label: '🍸 Cocktail Lounge', group: 'social' },
+    { id: 'studio_visit', label: '🎨 Studio Visit', group: 'social' },
+    { id: 'player_apartment', label: '🏠 Player Apartment', group: 'player' },
+    { id: 'bloomberg_terminal', label: '💻 Bloomberg Terminal', group: 'tools' },
+];
+
+// ════════════════════════════════════════════════════════════════
+// NPC Schedule Panel — shows NPCs from NPCManager for current map
+// ════════════════════════════════════════════════════════════════
+function NPCSchedulePanel({ mapJSON, roomData, onAddNPCToMap }) {
+    const [previewDay, setPreviewDay] = useState(1);
+    const [previewHour, setPreviewHour] = useState(12);
+
+    const mapId = roomData?.tiledMap || roomData?.id || 'pallet_town';
+
+    // Get all NPCs that have schedules on this map
+    const allNPCsOnMap = useMemo(() => {
+        return NPCManager.npcs.filter(npc =>
+            npc.schedule.some(s => s.map === mapId)
+        );
+    }, [mapId]);
+
+    // Get active NPCs at current time preview
+    const activeNPCs = useMemo(() => {
+        return NPCManager.getNPCsForMap(mapId, previewDay, previewHour);
+    }, [mapId, previewDay, previewHour]);
+
+    // Get existing NPC objects on the map
+    const mapNPCs = useMemo(() => {
+        const objLayer = mapJSON.layers?.find(l => l.type === 'objectgroup');
+        return (objLayer?.objects || []).filter(o => o.name === 'npc');
+    }, [mapJSON]);
+
+    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return (
+        <div style={{ padding: 12, fontSize: 11, fontFamily: mono }}>
+            {/* Time preview controls */}
+            <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: '#c9a84c', fontWeight: 'bold', letterSpacing: 1, marginBottom: 8 }}>
+                    🕐 TIME PREVIEW
+                </div>
+                <div style={{ fontSize: 9, color: '#666', marginBottom: 8 }}>
+                    See which NPCs appear at different times
+                </div>
+
+                <div style={{ display: 'flex', gap: 3, marginBottom: 8 }}>
+                    {dayLabels.map((d, i) => (
+                        <button key={i} onClick={() => setPreviewDay(i + 1)} style={{
+                            flex: 1, padding: '4px 2px', fontSize: 8, cursor: 'pointer',
+                            background: previewDay === i + 1 ? 'rgba(201,168,76,0.15)' : '#111',
+                            border: `1px solid ${previewDay === i + 1 ? '#c9a84c' : '#333'}`,
+                            color: previewDay === i + 1 ? '#c9a84c' : '#666',
+                            fontFamily: mono, borderRadius: 2,
+                        }}>{d}</button>
+                    ))}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 9, color: '#888' }}>Hour:</span>
+                    <input type="range" min={0} max={23} value={previewHour}
+                        onChange={e => setPreviewHour(parseInt(e.target.value))}
+                        style={{ flex: 1 }} />
+                    <span style={{ fontSize: 11, color: '#c9a84c', fontWeight: 'bold', width: 45, textAlign: 'right' }}>
+                        {previewHour.toString().padStart(2, '0')}:00
+                    </span>
+                </div>
+            </div>
+
+            {/* Active NPCs at this time */}
+            <div style={{ fontSize: 10, color: '#4ade80', fontWeight: 'bold', letterSpacing: 1, marginBottom: 8 }}>
+                👥 ACTIVE NOW ({activeNPCs.length})
+            </div>
+
+            {activeNPCs.length === 0 ? (
+                <div style={{ color: '#555', fontSize: 10, padding: '8px 0' }}>No NPCs on this map at this time.</div>
+            ) : (
+                activeNPCs.map(npc => {
+                    const contact = CONTACTS.find(c => c.id === npc.contactId);
+                    const onMap = mapNPCs.some(o => {
+                        const p = getProps(o);
+                        return p.id === npc.contactId;
+                    });
+                    return (
+                        <div key={npc.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                            marginBottom: 4, borderRadius: 4,
+                            background: onMap ? 'rgba(74,222,128,0.05)' : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${onMap ? '#2a5a3c' : '#222'}`,
+                        }}>
+                            <span style={{ fontSize: 16 }}>{contact?.emoji || '👤'}</span>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 11, fontWeight: 'bold', color: '#eaeaea', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {npc.label}
+                                </div>
+                                <div style={{ fontSize: 9, color: '#888' }}>
+                                    {contact?.role || 'unknown'} · ({npc.startPosition.x}, {npc.startPosition.y}) · {npc.behavior}
+                                </div>
+                            </div>
+                            {onMap ? (
+                                <span style={{ fontSize: 8, color: '#4ade80', padding: '2px 6px', border: '1px solid #2a5a3c', borderRadius: 3 }}>ON MAP</span>
+                            ) : (
+                                <button onClick={() => onAddNPCToMap(npc)} style={{
+                                    fontSize: 8, padding: '2px 6px', cursor: 'pointer',
+                                    background: 'transparent', border: '1px solid #c9a84c', color: '#c9a84c',
+                                    fontFamily: mono, borderRadius: 3,
+                                }}>+ ADD</button>
+                            )}
+                        </div>
+                    );
+                })
+            )}
+
+            {/* All NPCs assigned to this map */}
+            <div style={{ marginTop: 16, fontSize: 10, color: '#a78bfa', fontWeight: 'bold', letterSpacing: 1, marginBottom: 8 }}>
+                📅 ALL SCHEDULED ({allNPCsOnMap.length})
+            </div>
+            {allNPCsOnMap.map(npc => {
+                const contact = CONTACTS.find(c => c.id === npc.contactId);
+                return (
+                    <div key={npc.id} style={{ padding: '6px 10px', marginBottom: 3, borderBottom: '1px solid #1a1a2e' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13 }}>{contact?.emoji || '👤'}</span>
+                            <span style={{ fontSize: 10, color: '#ddd' }}>{npc.label}</span>
+                            <span style={{ fontSize: 9, color: '#666', flex: 1, textAlign: 'right' }}>
+                                {npc.dealerType || contact?.role}
+                            </span>
+                        </div>
+                        {/* Schedule blocks */}
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                            {npc.schedule.filter(s => s.map === mapId).map((s, i) => (
+                                <div key={i} style={{
+                                    fontSize: 8, padding: '2px 6px', borderRadius: 3,
+                                    background: 'rgba(167,139,250,0.1)', border: '1px solid #3a3a5e',
+                                    color: '#a78bfa',
+                                }}>
+                                    {s.days.map(d => dayLabels[d - 1]?.slice(0, 2)).join(',')}
+                                    {' '}{s.startHour}:00–{s.endHour}:00
+                                    {' '}({s.x},{s.y})
+                                    {' '}{s.behavior === 'wandering' ? '🚶' : '🧍'}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+
+            {allNPCsOnMap.length === 0 && (
+                <div style={{ color: '#555', fontSize: 10, padding: '8px 0' }}>
+                    No NPCs scheduled for map "{mapId}". NPCs are defined in NPCManager.js.
+                </div>
+            )}
+        </div>
+    );
+}
+
 function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject, onDeleteObject }) {
     const objLayer = mapJSON.layers?.find(l => l.type === 'objectgroup');
     const obj = objLayer?.objects?.find(o => o.id === selectedObjId);
@@ -760,6 +931,9 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
         onUpdateProperty(obj.id, 'canHaggle', contact.role === 'dealer' ? 'true' : 'false');
     };
 
+    // ── Door target description ──
+    const doorTarget = DOOR_TARGETS.find(t => t.id === props.nextMap);
+
     return (
         <div style={{ padding: 12, fontSize: 11, fontFamily: mono }}>
             <div style={{
@@ -829,6 +1003,140 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
                 </div>
             )}
 
+            {/* ── DOOR CONNECTION EDITOR — visual target picker ── */}
+            {obj.name === 'door' && (
+                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #1a1a2e' }}>
+                    <div style={{ fontSize: 9, color: '#88bbdd', marginBottom: 4, fontWeight: 'bold', letterSpacing: 1 }}>🚪 DOOR CONNECTION</div>
+                    <div style={{ fontSize: 9, color: '#555', marginBottom: 8 }}>Where does this door lead?</div>
+
+                    {/* Visual target picker */}
+                    <select
+                        value={props.nextMap || 'worldscene'}
+                        onChange={(e) => onUpdateProperty(obj.id, 'nextMap', e.target.value)}
+                        style={{ ...inputStyle, color: '#88bbdd', marginBottom: 6 }}
+                    >
+                        <optgroup label="🌍 Core">
+                            {DOOR_TARGETS.filter(t => t.group === 'core').map(t => (
+                                <option key={t.id} value={t.id}>{t.label}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="🏢 Venues">
+                            {DOOR_TARGETS.filter(t => t.group === 'venues').map(t => (
+                                <option key={t.id} value={t.id}>{t.label}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="🎉 Social">
+                            {DOOR_TARGETS.filter(t => t.group === 'social').map(t => (
+                                <option key={t.id} value={t.id}>{t.label}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="🏠 Player">
+                            {DOOR_TARGETS.filter(t => t.group === 'player').map(t => (
+                                <option key={t.id} value={t.id}>{t.label}</option>
+                            ))}
+                        </optgroup>
+                        <optgroup label="🔧 Tools">
+                            {DOOR_TARGETS.filter(t => t.group === 'tools').map(t => (
+                                <option key={t.id} value={t.id}>{t.label}</option>
+                            ))}
+                        </optgroup>
+                    </select>
+
+                    {/* Connection preview */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
+                        background: 'rgba(136,187,221,0.05)', border: '1px solid #2a3a4e',
+                        borderRadius: 4, marginBottom: 8,
+                    }}>
+                        <span style={{ fontSize: 18 }}>🚪</span>
+                        <span style={{ color: '#888', fontSize: 12 }}>→</span>
+                        <div>
+                            <div style={{ fontSize: 11, color: '#88bbdd', fontWeight: 'bold' }}>
+                                {doorTarget?.label || props.nextMap || 'No target'}
+                            </div>
+                            <div style={{ fontSize: 9, color: '#555' }}>
+                                Room: {props.nextMapRoom || 'default'}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Room ID within target */}
+                    <div style={{ fontSize: 9, color: '#888', marginBottom: 2 }}>Target Room ID (optional)</div>
+                    <input
+                        value={props.nextMapRoom || ''}
+                        onChange={(e) => onUpdateProperty(obj.id, 'nextMapRoom', e.target.value)}
+                        style={inputStyle}
+                        placeholder="default (first room)"
+                    />
+                    <div style={{ fontSize: 8, color: '#444', marginTop: 2 }}>
+                        Leave empty for default spawn. Set to a specific room ID for multi-room venues.
+                    </div>
+
+                    {/* Door label */}
+                    <div style={{ fontSize: 9, color: '#888', marginBottom: 2, marginTop: 8 }}>Door Label</div>
+                    <input
+                        value={props.label || ''}
+                        onChange={(e) => onUpdateProperty(obj.id, 'label', e.target.value)}
+                        style={inputStyle}
+                        placeholder="Exit"
+                    />
+                    <div style={{ fontSize: 8, color: '#444', marginTop: 2 }}>
+                        Shown as tooltip when player is near the door.
+                    </div>
+
+                    {/* Custom target input for unlisted maps */}
+                    {!doorTarget && props.nextMap && (
+                        <div style={{ marginTop: 8, padding: '6px 8px', background: 'rgba(251,146,60,0.05)', border: '1px solid #5a3a2e', borderRadius: 3 }}>
+                            <div style={{ fontSize: 8, color: '#fb923c' }}>⚠ Custom target (not in preset list)</div>
+                            <input
+                                value={props.nextMap}
+                                onChange={(e) => onUpdateProperty(obj.id, 'nextMap', e.target.value)}
+                                style={{ ...inputStyle, color: '#fb923c', marginTop: 4 }}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── SIGN/DIALOG TEXT EDITOR with preview ── */}
+            {obj.name === 'dialog' && (
+                <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #1a1a2e' }}>
+                    <div style={{ fontSize: 9, color: '#aa66cc', marginBottom: 4, fontWeight: 'bold', letterSpacing: 1 }}>📝 SIGN TEXT</div>
+                    <textarea
+                        value={props.content || ''}
+                        onChange={(e) => onUpdateProperty(obj.id, 'content', e.target.value)}
+                        style={{ ...inputStyle, minHeight: 80, resize: 'vertical', lineHeight: 1.5 }}
+                        placeholder="Enter the text shown when the player reads this sign..."
+                    />
+                    <div style={{ fontSize: 8, color: '#444', marginTop: 2 }}>
+                        This text appears in a dialog bubble when the player interacts with this object.
+                    </div>
+
+                    {/* Live preview bubble */}
+                    {props.content && (
+                        <div style={{ marginTop: 10 }}>
+                            <div style={{ fontSize: 8, color: '#666', marginBottom: 4 }}>PREVIEW</div>
+                            <div style={{
+                                position: 'relative', padding: '10px 14px',
+                                background: '#1a1a2e', border: '1px solid #3a3a5e',
+                                borderRadius: '8px 8px 8px 2px',
+                                color: '#eaeaea', fontSize: 11, lineHeight: 1.5,
+                                maxWidth: 220, wordWrap: 'break-word',
+                            }}>
+                                {props.content}
+                                <div style={{
+                                    position: 'absolute', bottom: -6, left: 8,
+                                    width: 0, height: 0,
+                                    borderLeft: '6px solid transparent',
+                                    borderRight: '6px solid transparent',
+                                    borderTop: '6px solid #1a1a2e',
+                                }} />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                 <div>
                     <div style={{ fontSize: 9, color: '#555', marginBottom: 2 }}>X (tile)</div>
@@ -850,7 +1158,12 @@ function PropertyEditor({ mapJSON, selectedObjId, onUpdateProperty, onAddObject,
                 </div>
             </div>
 
-            {currentFields.map(field => (
+            {/* Generic fields — skip fields already handled by special editors above */}
+            {currentFields.filter(field => {
+                if (obj.name === 'door' && ['nextMap', 'nextMapRoom', 'label'].includes(field)) return false;
+                if (obj.name === 'dialog' && field === 'content') return false;
+                return true;
+            }).map(field => (
                 <div key={field} style={{ marginBottom: 8 }}>
                     <div style={{ fontSize: 9, color: '#888', marginBottom: 2 }}>{field}</div>
                     {field === 'description' || field === 'dialogue' || field === 'content' ? (
@@ -1350,6 +1663,7 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
                     }}>
                         {[
                             { id: 'properties', label: 'OBJECTS' },
+                            { id: 'npcs', label: 'NPCs' },
                             { id: 'tileset', label: 'LAYERS' },
                         ].map(tab => (
                             <button
@@ -1373,6 +1687,43 @@ export default function MapEditor({ mapJSON: initialMapJSON, roomData, onClose, 
                             onUpdateProperty={handleUpdateProperty}
                             onAddObject={handleAddObject}
                             onDeleteObject={handleDeleteObject}
+                        />
+                    ) : rightPanel === 'npcs' ? (
+                        <NPCSchedulePanel
+                            mapJSON={mapJSON}
+                            roomData={roomData}
+                            onAddNPCToMap={(npc) => {
+                                const contact = CONTACTS.find(c => c.id === npc.contactId);
+                                if (!contact) return;
+                                // Create a new NPC object at the NPC's scheduled position
+                                const objLayer = mapJSON.layers?.find(l => l.type === 'objectgroup');
+                                const existingIds = objLayer?.objects?.map(o => o.id) || [];
+                                const newId = Math.max(0, ...existingIds) + 1;
+                                setMapJSON(prev => {
+                                    const next = JSON.parse(JSON.stringify(prev));
+                                    let oLayer = next.layers?.find(l => l.type === 'objectgroup');
+                                    if (!oLayer) {
+                                        oLayer = { draworder: 'topdown', id: next.nextlayerid++, name: 'objects', objects: [], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0, width: 0, height: 0 };
+                                        next.layers.push(oLayer);
+                                    }
+                                    next.nextobjectid = (next.nextobjectid || newId) + 1;
+                                    oLayer.objects.push({
+                                        id: next.nextobjectid - 1, name: 'npc', point: true,
+                                        x: npc.startPosition.x * next.tilewidth,
+                                        y: npc.startPosition.y * next.tileheight,
+                                        width: 0, height: 0, rotation: 0, type: '', visible: true,
+                                        properties: [
+                                            { name: 'id', type: 'string', value: contact.id },
+                                            { name: 'label', type: 'string', value: contact.name },
+                                            { name: 'dialogue', type: 'string', value: contact.greetings?.[0] || 'Hello.' },
+                                            { name: 'canHaggle', type: 'string', value: contact.role === 'dealer' ? 'true' : 'false' },
+                                        ],
+                                    });
+                                    return next;
+                                });
+                                setDirty(true);
+                                notify(`Added ${contact.name} to map`);
+                            }}
                         />
                     ) : (
                         <LayerPanel mapJSON={mapJSON} activeLayer={activeLayer} onSetLayer={setActiveLayer} />

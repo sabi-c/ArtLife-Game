@@ -46,7 +46,7 @@ import { HaggleManager } from '../../managers/HaggleManager.js';
 import { ConsequenceScheduler } from '../../managers/ConsequenceScheduler.js';
 import { DecisionLog } from '../../managers/DecisionLog.js';
 import { DialogueTreeManager } from '../../managers/DialogueTreeManager.js';
-import { TickerSystem } from '../TickerSystem.js';
+import { TickerSystem } from '../shared/TickerSystem.js';
 import { useUIStore } from '../../stores/uiStore.js';
 import { ARTWORKS } from '../../data/artworks.js';
 import { VENUES } from '../../data/rooms.js';

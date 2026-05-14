@@ -35,14 +35,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const PORT          = parseInt(process.env.AG_MANAGER_PORT || '3737', 10);
-const API_KEY       = process.env.AG_MANAGER_KEY || '';
-const AG_PATH       = process.env.AG_PATH || 'antigravity';
-const AG_WORKSPACE  = process.env.AG_WORKSPACE || (process.env.HOME + '/ArtLife-Game');
-const AG_CDP_PORT   = parseInt(process.env.AG_CDP_PORT || '9000', 10);
-const PHONE_CHAT_DIR      = process.env.PHONE_CHAT_DIR || '';
-const ALLOWED_PHONE       = process.env.ALLOWED_PHONE || '';
-const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN || '';
+const PORT = parseInt(process.env.AG_MANAGER_PORT || '3737', 10);
+const API_KEY = process.env.AG_MANAGER_KEY || '';
+const AG_PATH = process.env.AG_PATH || 'antigravity';
+const AG_WORKSPACE = process.env.AG_WORKSPACE || (process.env.HOME + '/ArtLife-Game');
+const AG_CDP_PORT = parseInt(process.env.AG_CDP_PORT || '9000', 10);
+const PHONE_CHAT_DIR = process.env.PHONE_CHAT_DIR || '';
+const ALLOWED_PHONE = process.env.ALLOWED_PHONE || '';
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 
 // Startup timeout: how many seconds to wait for CDP before declaring failure
 const CDP_TIMEOUT_SECS = 45;
@@ -72,8 +72,8 @@ function startCdpLogger() {
       // Streaming finished — remove the typing cursor
       emit('message_done', msg.text, JSON.stringify({ role: msg.role, id: msg.id, conversationId: msg.conversationId }));
     },
-    onStage:  (name, detail) => emit('stage', name, detail),
-    onError:  (err)          => emit('warn', err),
+    onStage: (name, detail) => emit('stage', name, detail),
+    onError: (err) => emit('warn', err),
     onConversationSwitch: (id) => emit('info', 'Conversation switched', id),
   });
 
@@ -94,14 +94,14 @@ function stopCdpLogger() {
 // Live state polled by /api/status
 const state = {
   antigravity: 'stopped',   // stopped | starting | running | error
-  phoneChat:   'stopped',   // stopped | starting | running | error
-  stage:       null,        // current named startup stage (for progress display)
-  startedAt:   null,
-  ngrokUrl:    null,
-  cdpReady:    false,
-  lastError:   null,
-  workspace:   AG_WORKSPACE,
-  cdpPort:     AG_CDP_PORT,
+  phoneChat: 'stopped',   // stopped | starting | running | error
+  stage: null,        // current named startup stage (for progress display)
+  startedAt: null,
+  ngrokUrl: null,
+  cdpReady: false,
+  lastError: null,
+  workspace: AG_WORKSPACE,
+  cdpPort: AG_CDP_PORT,
 };
 
 // ─── Server-Sent Events ───────────────────────────────────────────────────────
@@ -567,9 +567,9 @@ app.post('/api/send', requireKey, rateLimit, async (req, res) => {
 // Supported commands: start, stop, restart, status
 
 app.post('/sms', (req, res) => {
-  const body    = (req.body.Body || '').toLowerCase().trim();
+  const body = (req.body.Body || '').toLowerCase().trim();
   const rawFrom = (req.body.From || '');
-  const from    = rawFrom.replace(/\D/g, ''); // strip non-digits for comparison
+  const from = rawFrom.replace(/\D/g, ''); // strip non-digits for comparison
 
   // Validate Twilio request signature if TWILIO_AUTH_TOKEN is configured.
   // Twilio signs with HMAC-SHA1(authToken, webhookUrl + sortedParams).
@@ -578,7 +578,7 @@ app.post('/sms', (req, res) => {
     const sig = req.headers['x-twilio-signature'] || '';
     // Trust X-Forwarded headers so this works behind ngrok / reverse proxies
     const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
-    const host  = req.get('x-forwarded-host')  || req.get('host') || '';
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
     const webhookUrl = `${proto}://${host}/sms`;
     const sortedParams = Object.keys(req.body).sort()
       .reduce((s, k) => s + k + (req.body[k] ?? ''), webhookUrl);
@@ -589,7 +589,7 @@ app.post('/sms', (req, res) => {
       const sigBuf = Buffer.from(sig);
       const expBuf = Buffer.from(expected);
       valid = sig.length > 0 && sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
-    } catch {}
+    } catch { }
     if (!valid) {
       emit('warn', 'SMS rejected — invalid Twilio signature', sig ? 'sig mismatch' : 'no sig header');
       return res.status(403).type('text/xml').send('<Response></Response>');
@@ -637,17 +637,36 @@ app.post('/sms', (req, res) => {
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log('');
   console.log('╔══════════════════════════════════════╗');
   console.log('║        AG Manager is running         ║');
   console.log(`║  http://localhost:${PORT}               ║`);
   console.log('╚══════════════════════════════════════╝');
-  if (!API_KEY)       console.warn('\n⚠️  AG_MANAGER_KEY not set — API is unprotected');
+  if (!API_KEY) console.warn('\n⚠️  AG_MANAGER_KEY not set — API is unprotected');
   if (!PHONE_CHAT_DIR) console.log('ℹ️  PHONE_CHAT_DIR not set — phone_chat auto-start disabled');
   console.log(`\nWorkspace : ${AG_WORKSPACE}`);
   console.log(`CDP port  : ${AG_CDP_PORT}`);
   console.log('');
+
+  // ── Auto-detect externally-launched Antigravity ──────────────────────────
+  // If someone already started Antigravity (e.g. the v1 phone_chat system),
+  // connect the CDP logger immediately without requiring /api/start.
+  try {
+    const ready = await checkCdpReady();
+    if (ready) {
+      console.log('🔗 Antigravity already running on CDP port — auto-connecting logger...');
+      state.antigravity = 'running';
+      state.cdpReady = true;
+      state.startedAt = new Date().toISOString();
+      startCdpLogger();
+      emit('success', 'Auto-connected to running Antigravity instance');
+    } else {
+      console.log('ℹ️  Antigravity not detected on CDP port — use /api/start or launch it externally');
+    }
+  } catch (err) {
+    console.log('ℹ️  CDP probe failed:', err.message);
+  }
 });
 
 // Graceful shutdown
@@ -658,7 +677,7 @@ function shutdown() {
 }
 
 process.on('SIGTERM', shutdown);
-process.on('SIGINT',  shutdown);
+process.on('SIGINT', shutdown);
 process.on('uncaughtException', (err) => {
   emit('error', 'Uncaught exception — see server logs', err.message);
   console.error('[FATAL]', err);

@@ -5,15 +5,37 @@
 
 ---
 
-## Current State (2026-02-23)
+## Current State (2026-02-25)
 
-**Version:** v0.4.4
+**Version:** v0.4.5
 **Tests:** 53/53 flow, 5/5 unit — all green
 **Build:** Clean
 **Branch:** `main`
 **Deployed:** GitHub Pages (sabi-c.github.io/ArtLife-Game/) — LIVE
 **CI:** Build & Validate ✅ | Playwright Tests informational (continue-on-error)
-**Phase 3:** Complete. Phase 4 active.
+**Phase 4:** Active. Phase 5 planned — see [Gameplay_Loop.md](../overview/Gameplay_Loop.md).
+
+### Market Simulation Sprint & Vision Documentation (2026-02-25 Session 30)
+
+**NPC Monthly P&L Economics:**
+- `INCOME_TABLE` maps 15 income sources to monthly income/expense ranges
+- `_ensureState()` auto-generates `economics` block per NPC (monthlyIncome, monthlyExpenses, budgetRemaining, YTD tracking)
+- `simulate()` applies monthly income/expenses every 4 game-weeks, adjusts financial stress
+- `_decideBuys()` budget gating: stops buying at <10% remaining, reduces at <30%
+- `_settle()` decrements buyer `budgetRemaining`, tracks seller YTD revenue
+
+**Simulation Log Enrichment:**
+- Each weekly `simulationLog` entry now includes: `totalMarketCap`, `sectorIndices`, per-artist `artistTickers` (heat, index, delta, avgPrice), `npcSummary` (totalCash, avgStress, activeTraders, totalBudgetRemaining)
+
+**Centralized Number Formatting:**
+- New `formatMoney.js` utility (`fmtMoney`, `fmtDelta`, `fmtCompact`) replaces ad-hoc formatting across 5 files (Bloomberg, Artnet, ArtnetUI, MarketSimulator news)
+
+**Gameplay Vision Documentation:**
+- New `Gameplay_Loop.md` — full spatial experience design (home→computer→city→systems)
+- Updated `Game_Concept.md` — expanded elevator pitch, core loop, 7 design pillars, genre DNA
+- Roadmap Phase 5 restructured around gameplay loop integration (apartment, Win95 OS, art fairs, auctions, leaderboard)
+
+**Files changed:** MarketSimulator.js (economics + enriched log), formatMoney.js (new), BloombergTerminal.jsx (+fmtMoney), ArtnetMarketplace.jsx (+fmtMoney), ArtnetUI.jsx (+fmtMoney), Gameplay_Loop.md (new), Game_Concept.md (rewritten), _index.md, Roadmap.md
 
 ### Email Haggle Game-Wide Integration (2026-02-23 Session 29)
 
@@ -853,27 +875,113 @@
 
 ---
 
-## Phase 5 — The Content Factory & Procedural Ecosystems
-## Phase 5 — Systemic Expansion & Content Ecosystems (Planned)
+## Phase 5 — Gameplay Loop Integration (NEXT HORIZON)
 
-### Sprint 5A: The Narrative 24-Hour Clock & Day/Night System
+> **Goal:** Wire the full spatial gameplay loop described in [Gameplay_Loop.md](../overview/Gameplay_Loop.md). The player's daily routine: wake up → use the computer → walk the city → return home → advance time.
+>
+> **See also:** [Game Concept](../overview/Game_Concept.md) for design pillars.
+
+### 5A. Home Base — The Player's Apartment
+| Task | Status | Notes |
+|---|---|---|
+| Create apartment Tiled map (desk, bed, door) | TODO | Small interior room with computer interaction object |
+| Boot flow: TitleScene → Apartment (instead of dashboard) | TODO | Player spawns in apartment, walks to desk |
+| Computer object SPACE interaction → launches OS overlay | TODO | Replaces direct terminal push |
+| Exit apartment door → WorldScene (city) | TODO | Door warp to overworld |
+
+### 5B. Retro Computer OS (Win95 / Classic Mac Desktop)
+| Task | Status | Notes |
+|---|---|---|
+| `DesktopOS.jsx` — retro OS shell component | TODO | Desktop wallpaper, taskbar, 3 clickable icons |
+| Icon 1: **Art Terminal** → Bloomberg/Artnet UI | TODO | Opens existing `BloombergTerminal.jsx` / `ArtnetUI.jsx` |
+| Icon 2: **Email Client** → email overlay | TODO | Opens existing `EmailOverlay` for deals/negotiations |
+| Icon 3: **Instant Messenger** → IM chat | TODO | New component: NPC quick-chat, gossip, tips, group chats |
+| Desktop boot animation (POST screen / startup chime) | TODO | Retro feel, skippable |
+| Minimize/close windows, taskbar state | TODO | Window management within OS shell |
+| ESC → close OS → return to apartment scene | TODO | Clean exit back to Phaser |
+
+### 5C. Art Fair Venues (Frieze, Basel Booth Walk)
+| Task | Status | Notes |
+|---|---|---|
+| Art fair Tiled map template — large venue with booth stalls | TODO | Grid of gallery booths, each with own artwork set |
+| Booth interaction: walk inside → browse gallery's selection | TODO | Per-booth artwork subset from ARTWORKS |
+| Calendar-triggered art fair events (specific weeks) | TODO | Time-limited, high-density browsing |
+| Fair-specific NPC spawns (collectors, dealers, press) | TODO | Networking opportunities, eavesdrops |
+| Frieze content pack (booth data, NPC schedules) | TODO | First art fair implementation |
+
+### 5D. Auction House + Leaderboard + Minigames
+| Task | Status | Notes |
+|---|---|---|
+| Auction house bidding UI | TODO | Live auction sequence: lots presented, player bids vs NPCs |
+| Auction price escalation mechanics | TODO | NPC bidding AI, hammer price resolution |
+| Leaderboard system (Art Terminal integration) | TODO | Rankings by portfolio value, collection quality, trade volume |
+| Party minigames | TODO | Social challenges at events (networking, schmoozing) |
+| Appraisal challenge minigame | TODO | Identify fakes, estimate values (intel-gated) |
+
+### 5E. Travel & Multi-City System
+| Task | Status | Notes |
+|---|---|---|
+| Airport location on overworld map | TODO | Walk to airport → select destination |
+| Flight booking UI (destination picker) | TODO | City list with level/net worth requirements |
+| 6 city overworld maps (NY, London, Basel, HK, Venice, Miami) | TODO | Each with unique galleries, NPCs, art scene |
+| Hotel room Tiled map (foreign city apartment) | TODO | Smaller home base with computer access |
+| Taxi fast-travel within city | TODO | Phone → call taxi → pick destination |
+| Limo unlock (net worth $500K+) | TODO | Prestige bonus, NPC reactions |
+| Private jet unlock (net worth $5M+) | TODO | Any city, no wait, VIP access |
+| Travel cost / time budget system | TODO | Flights cost money + AP |
+
+### 5F. Progression & Leveling System
+| Task | Status | Notes |
+|---|---|---|
+| `LevelManager.js` — XP tracking + level thresholds | TODO | 10 tiers: Nobody→Titan |
+| Net worth gate checks on feature access | TODO | Gate galleries, flights, auctions by $$ |
+| Level-based unlock UI (notification toasts) | TODO | "Level Up! You are now: Established" |
+| Progressive contact unlock (2-3 at start → full rolodex) | TODO | New NPCs available as you level |
+| Feature access gates (Artnet account, auction bidding, etc.) | TODO | Early game: no Artnet, phone calls only |
+| Social tree favor → access unlocks | TODO | Favor 3: tips / 5: deals / 7: intros / 10: alliance |
+| Level display in HUD and Art Terminal profile | TODO | Show current tier + XP progress |
+
+### 5G. Artwork Database Scaling
+| Task | Status | Notes |
+|---|---|---|
+| Tier-gate artworks by player level | TODO | Starter ($500-10K), Mid ($10K-250K), High ($250K-5M), Blue-chip ($5M+) |
+| Expand ARTWORKS to 200+ handcrafted entries | TODO | More variety per tier |
+| WikiArt API research + integration plan | TODO | Pull real artwork data (title, artist, medium, image) |
+| Procedural artwork generation layer | TODO | Random provenance, condition, price variation |
+| Backend database design (future) | TODO | Server-side catalogue for scale |
+
+### 5H. Inventory & Assets UI
+| Task | Status | Notes |
+|---|---|---|
+| Full inventory view (computer terminal + phone) | TODO | Art collection, vehicles, properties, relationships, documents |
+| Art collection detail view | TODO | Purchase price, current value, ROI, provenance, condition per piece |
+| Vehicle/transport upgrade UI | TODO | Taxi account → Limo → Private Jet progression |
+| Property management panel | TODO | View owned properties, decoration level, storage capacity |
+| Relationship cards | TODO | NPC contact cards with favor, trade history, alliance status |
+| Freeport storage interface | TODO | Store/retrieve art, insurance, tax benefits |
+
+### 5I. Home & Living (Sims-Lite Customization)
+| Task | Status | Notes |
+|---|---|---|
+| Art hanging system — place art on apartment walls | TODO | Select from collection, tile-based wall placement |
+| Gallery curation — hang art in owned/rented gallery | TODO | Curate exhibitions, NPC visitors react |
+| Decoration shopping — buy furniture, rugs, plants, lighting | TODO | In-game shops or online catalogue |
+| Drag-and-place furniture system | TODO | Tile-based placement in apartment |
+| Furniture tiers (IKEA → designer → bespoke) | TODO | Home prestige stat affects NPC respect |
+| Property upgrade path (apartment → loft → penthouse) | TODO | Bigger space, more walls, guest rooms |
+| Object interaction system | TODO | SPACE on any home object: bookshelf (intel), couch (rest), wine cabinet (host dinner) |
+| Multi-city properties | TODO | Own apartments in different cities as home bases |
+
+### 5J. The Narrative 24-Hour Clock & Day/Night System
 - Refactor `GameState.js` to track `hour` and `dayOfWeek` alongside `week`.
 - Map FastTravel / GridEngine tile movement to minute drains.
 - Build `CalendarHUD.jsx` to render military time constantly onscreen over GridEngine.
 - Implement Phaser `postFX` vignette/tinting at 19:00, forcing players home at 24:00 (burnout penalty).
 
-### Sprint 5B: Spatial-Temporal Event Registry
+### 5K. Spatial-Temporal Event Registry
 - Refactor `events.js` JSON format to support `{ location: "pallett", day: 5, hourMin: 22 }` bindings.
 - Build continuous Coordinate/Time listener into `WorldScene.js` capable of locking input and triggering a narrative React overlay dynamically during a walk.
 - Convert NPC schedules into coordinate matrices (e.g. Gallery Owner unspawns at 18:00).
-
-### Sprint 5C: The Admin Sequencer
-- Add [ SEQ ] Sequence Trigger Builder to `AdminDashboard.jsx`.
-- Visual timeline visualizer allowing dev injection of time/grid coordinates directly to the consequence queue.
-
-### Sprint 5D: The Object Interaction Loop
-- Connect `GridEngine.positionChangeFinished` observable to `GameState`.
-- Emit interaction actions via GameEventBus mapping coordinates to specific Event Nodes.
 
 ---
 

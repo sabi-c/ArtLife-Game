@@ -8,25 +8,41 @@
  * Extracted from App.jsx to keep routing logic separate from app bootstrap.
  */
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { VIEW } from '../core/views.js';
+import { GameEventBus, GameEvents } from '../managers/GameEventBus.js';
 
 // ════════════════════════════════════════════════════════════
 // Lazy View Imports
 // ════════════════════════════════════════════════════════════
 
-const ArtnetLogin = lazy(() => import('./ArtnetLogin.jsx'));
-const CharacterCreator = lazy(() => import('./CharacterCreator.jsx'));
-const PlayerDashboard = lazy(() => import('./PlayerDashboard.jsx'));
-const ScenePlayer = lazy(() => import('./ScenePlayer.jsx'));
-const DialogueBox = lazy(() => import('./DialogueBox.jsx'));
+const ArtnetLogin = lazy(() => import('./boot/ArtnetLogin.jsx'));
+const BootSplash = lazy(() => import('./boot/BootSplash.jsx'));
+const NarrativeIntro = lazy(() => import('./boot/NarrativeIntro.jsx'));
+const CharacterCreator = lazy(() => import('./boot/CharacterCreator.jsx'));
+const PlayerDashboard = lazy(() => import('./player/PlayerDashboard.jsx'));
+const ScenePlayer = lazy(() => import('./game/ScenePlayer.jsx'));
+const DialogueBox = lazy(() => import('./game/DialogueBox.jsx'));
+const ArtnetMarketplace = lazy(() => import('./market/ArtnetMarketplace.jsx'));
+const BloombergTerminal = lazy(() => import('./market/BloombergTerminal.jsx'));
 const EmailInbox = lazy(() => import('./EmailInbox.jsx'));
 
 // ════════════════════════════════════════════════════════════
-// Loading Fallback
+// Deferred Loading Fallback
+// Only shows after 300ms and ONLY if PhaserLoadingScreen isn't
+// already visible — prevents multiple loading screens stacking.
 // ════════════════════════════════════════════════════════════
 
 function ViewLoadingFallback() {
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!visible) return null;
+
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 100,
@@ -61,7 +77,6 @@ function PhaserLoadingScreen() {
                 if (activeScene) {
                     const key = activeScene.sys.settings.key;
                     if (key === 'BootScene') setStatus('Loading assets...');
-                    else if (key === 'IntroScene') setStatus('Starting...');
                     else setStatus(`Scene: ${key}`);
                 }
             }
@@ -125,6 +140,7 @@ function PhaserLoadingScreen() {
 export default function ViewRouter({
     activeView,
     setActiveView,
+    setActiveOverlay,
     viewPayload,
     onLoginComplete,
 }) {
@@ -143,9 +159,9 @@ export default function ViewRouter({
                     try { return s.sys?.isActive?.() && s.sys.settings.key !== 'BootScene'; }
                     catch { return false; }
                 });
-                // Also check if any scene has ever had create() called (even if stopped now)
+                // Also check if any non-boot scene has ever had create() called
                 const hasCreatedScene = scenes.some(s => {
-                    try { return s.sys?.settings?.status >= 5; } // RUNNING = 5
+                    try { return s.sys?.settings?.status >= 5 && s.sys.settings.key !== 'BootScene'; }
                     catch { return false; }
                 });
                 if (hasActiveScene || hasCreatedScene) {
@@ -176,13 +192,47 @@ export default function ViewRouter({
                 <PhaserLoadingScreen />
             )}
 
-            {/* ── Boot / Login Screen (Artnet Login) ── */}
+            {/* ── Boot Splash (animated sprite) ── */}
+            {activeView === VIEW.SPLASH && (
+                <BootSplash onContinue={() => setActiveView(VIEW.NARRATIVE)} />
+            )}
+
+            {/* ── Narrative Intro (typewriter text) ── */}
+            {activeView === VIEW.NARRATIVE && (
+                <NarrativeIntro onContinue={() => setActiveView(VIEW.BOOT)} />
+            )}
+
+            {/* ── Artnet Login ── */}
             {activeView === VIEW.BOOT && (
                 <ArtnetLogin
-                    onClose={() => setActiveView(VIEW.PHASER)}
+                    onClose={() => setActiveView(VIEW.SPLASH)}
                     onLoginSuccess={({ email }) => {
-                        // Wire ArtnetLogin success into the game flow
-                        onLoginComplete({ action: 'new', email });
+                        onLoginComplete({ action: 'load', email });
+                        setActiveView(VIEW.BLOOMBERG);
+                    }}
+                />
+            )}
+
+            {/* ── Bloomberg Terminal (full-page view, main hub) ── */}
+            {activeView === VIEW.BLOOMBERG && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#0a0a0f' }}>
+                    <BloombergTerminal
+                        onBrowseMarketplace={() => setActiveView(VIEW.ARTNET_HUB)}
+                        onExploreWorld={() => {
+                            GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                            setActiveView(VIEW.PHASER);
+                        }}
+                    />
+                </div>
+            )}
+
+            {/* ── Artnet Marketplace (accessible from Bloomberg) ── */}
+            {activeView === VIEW.ARTNET_HUB && (
+                <ArtnetMarketplace
+                    onClose={() => setActiveView(VIEW.BLOOMBERG)}
+                    onExplore={() => {
+                        GameEventBus.emit(GameEvents.DEBUG_LAUNCH_SCENE, 'NewWorldScene');
+                        setActiveView(VIEW.PHASER);
                     }}
                 />
             )}

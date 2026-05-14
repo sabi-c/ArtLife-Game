@@ -12,9 +12,11 @@ import React, { useState, useMemo } from 'react';
 import { GameState } from '../../managers/GameState.js';
 import { MarketManager } from '../../managers/MarketManager.js';
 import { MarketSimulator } from '../../managers/MarketSimulator.js';
+import { MarketEventBus } from '../../managers/MarketEventBus.js';
 import { TerminalAPI } from '../terminal/TerminalAPI.js';
 import { CONTACTS } from '../../data/contacts.js';
 import { ARTWORKS } from '../../data/artworks.js';
+import { getHistoricalData } from '../../data/historicalPrices.js';
 import { useNPCStore } from '../../stores/npcStore.js';
 import { useCmsStore } from '../../stores/cmsStore.js';
 import { clamp } from '../../utils/math.js';
@@ -1185,5 +1187,350 @@ function TransactionHistoryPanel({ intel }) {
     );
 }
 
+// ══════════════════════════════════════════════════════════════
+// 15. Artist Detail Panel (drill-down from leaderboard)
+// ══════════════════════════════════════════════════════════════
+function ArtistDetailPanel({ artistId, intel, onSelectWork, onClose }) {
+    const artist = MarketManager.artists?.find(a => a.id === artistId);
+    if (!artist) return null;
+
+    const works = (MarketManager.works || []).filter(w => w.artistId === artistId);
+    const historical = getHistoricalData(artistId) || getHistoricalData(artist.name);
+    const activeEffects = MarketEventBus.getActiveEffects().filter(e => e.artistId === artistId || !e.artistId);
+    const index = artist.artistIndex || MarketManager._computeArtistIndex?.(artist) || 500;
+    const heatPct = clamp(artist.heat || 0, 0, 100);
+
+    // Comparable artists in same tier
+    const comparables = (MarketManager.artists || [])
+        .filter(a => a.id !== artistId && a.tier === artist.tier)
+        .sort((a, b) => (b.artistIndex || 0) - (a.artistIndex || 0))
+        .slice(0, 4);
+
+    return (
+        <div className="bb-panel bb-artist-detail">
+            <div className="bb-panel-header">
+                {artist.name.toUpperCase()}
+                {onClose && <button className="bb-panel-close" onClick={onClose}>×</button>}
+            </div>
+
+            {/* Heat gauge */}
+            <div className="bb-ad-metrics">
+                <div className="bb-ad-metric">
+                    <span className="bb-ad-metric-label">HEAT</span>
+                    <div className="bb-ad-heat-bar">
+                        <div className="bb-ad-heat-fill" style={{ width: `${heatPct}%`, background: heatPct > 60 ? '#4caf50' : heatPct < 30 ? '#c94040' : '#c9a84c' }} />
+                    </div>
+                    <span className="bb-ad-metric-val">{Math.round(heatPct)}</span>
+                </div>
+                <div className="bb-ad-metric">
+                    <span className="bb-ad-metric-label">INDEX</span>
+                    <span className="bb-ad-metric-val">{mask(index, intel, 20)}</span>
+                </div>
+                <div className="bb-ad-metric">
+                    <span className="bb-ad-metric-label">TIER</span>
+                    <span className="bb-ad-metric-val">{(artist.tier || '').replace(/[-_]/g, ' ').toUpperCase()}</span>
+                </div>
+                <div className="bb-ad-metric">
+                    <span className="bb-ad-metric-label">MEDIUM</span>
+                    <span className="bb-ad-metric-val">{artist.medium || '—'}</span>
+                </div>
+            </div>
+
+            {/* Flavor text */}
+            {artist.flavor && intel >= 40 && (
+                <div className="bb-ad-flavor">{artist.flavor}</div>
+            )}
+
+            {/* Works by this artist */}
+            <div className="bb-ad-section">
+                <div className="bb-ad-section-label">WORKS ({works.length})</div>
+                {works.slice(0, 8).map(w => {
+                    let price = 0;
+                    try { price = MarketManager.calculatePrice(w); } catch { price = w.basePrice || w.askingPrice || 0; }
+                    return (
+                        <div key={w.id} className="bb-ad-work-row" onClick={() => onSelectWork?.(w)} style={{ cursor: 'pointer' }}>
+                            <span className="bb-ad-work-title">"{w.title}"</span>
+                            <span className="bb-ad-work-price">{maskPrice(price, intel)}</span>
+                            <span className="bb-ad-work-status">{w.onMarket ? 'MARKET' : w.ownerId || 'HELD'}</span>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Historical auction data */}
+            {historical && intel >= 50 && (
+                <div className="bb-ad-section">
+                    <div className="bb-ad-section-label">AUCTION HISTORY</div>
+                    {historical.auctionHistory.slice(-6).map((a, i) => (
+                        <div key={i} className="bb-ad-auction-row">
+                            <span className="bb-ad-auction-year">{a.year}</span>
+                            <span className="bb-ad-auction-title">"{a.title}"</span>
+                            <span className="bb-ad-auction-price">${fmtNum(a.price)}</span>
+                            <span className="bb-ad-auction-house">{a.house}</span>
+                        </div>
+                    ))}
+                    <div className="bb-ad-stats">
+                        <span>CAGR: {(historical.cagr * 100).toFixed(1)}%</span>
+                        <span>Vol: {(historical.volatilityIndex * 100).toFixed(0)}%</span>
+                        <span>Market Cap: ${fmtNum(historical.marketCap)}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Active market events affecting this artist */}
+            {activeEffects.length > 0 && intel >= 30 && (
+                <div className="bb-ad-section">
+                    <div className="bb-ad-section-label">ACTIVE EVENTS</div>
+                    {activeEffects.slice(0, 3).map((e, i) => (
+                        <div key={i} className="bb-ad-event-row">
+                            <span className="bb-ad-event-type">{e.type.replace(/_/g, ' ').toUpperCase()}</span>
+                            <span className="bb-ad-event-remaining">{e.remaining}w left</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Comparable artists */}
+            {comparables.length > 0 && intel >= 40 && (
+                <div className="bb-ad-section">
+                    <div className="bb-ad-section-label">COMPARABLES</div>
+                    {comparables.map(c => (
+                        <div key={c.id} className="bb-ad-comp-row">
+                            <span className="bb-ad-comp-name">{mask(c.name, intel, 30)}</span>
+                            <span className="bb-ad-comp-index">{c.artistIndex || 500}</span>
+                            <span className="bb-ad-comp-heat">{Math.round(c.heat || 0)}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 16. Artwork Valuation Panel (price breakdown + history)
+// ══════════════════════════════════════════════════════════════
+function ArtworkValuationPanel({ workId, intel, onClose }) {
+    const appraisal = useMemo(() => MarketManager.getArtworkAppraisal(workId), [workId]);
+    if (!appraisal) return null;
+
+    const { priceBreakdown: pb } = appraisal;
+
+    return (
+        <div className="bb-panel bb-valuation">
+            <div className="bb-panel-header">
+                VALUATION: "{appraisal.title}"
+                {onClose && <button className="bb-panel-close" onClick={onClose}>×</button>}
+            </div>
+
+            {/* Artist + meta */}
+            <div className="bb-val-artist">{appraisal.artist}</div>
+            <div className="bb-val-meta">{appraisal.medium} · {appraisal.year}</div>
+
+            {/* Price breakdown */}
+            <div className="bb-val-section">
+                <div className="bb-val-section-label">PRICE BREAKDOWN</div>
+                <div className="bb-val-breakdown">
+                    <div className="bb-val-row">
+                        <span>Base Price</span>
+                        <span>{maskPrice(pb.base, intel)}</span>
+                    </div>
+                    <div className="bb-val-row">
+                        <span>Heat Multiplier</span>
+                        <span className={pb.heatMultiplier > 1.5 ? 'up' : pb.heatMultiplier < 0.8 ? 'down' : ''}>
+                            ×{pb.heatMultiplier}
+                        </span>
+                    </div>
+                    <div className="bb-val-row">
+                        <span>Market Cycle</span>
+                        <span className={pb.marketMultiplier > 1 ? 'up' : pb.marketMultiplier < 1 ? 'down' : ''}>
+                            ×{pb.marketMultiplier}
+                        </span>
+                    </div>
+                    <div className="bb-val-row">
+                        <span>Hedonic Score</span>
+                        <span>×{pb.hedonicScore}</span>
+                    </div>
+                    {pb.eventModifier !== 1 && (
+                        <div className="bb-val-row">
+                            <span>Event Modifier</span>
+                            <span className={pb.eventModifier > 1 ? 'up' : 'down'}>
+                                ×{pb.eventModifier}
+                            </span>
+                        </div>
+                    )}
+                    <div className="bb-val-row bb-val-total">
+                        <span>Appraised Value</span>
+                        <span>{maskPrice(appraisal.currentPrice, intel)}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Last trade */}
+            {appraisal.lastTradePrice && intel >= 40 && (
+                <div className="bb-val-section">
+                    <div className="bb-val-section-label">LAST TRANSACTION</div>
+                    <div className="bb-val-row">
+                        <span>Week {appraisal.lastTradeWeek}</span>
+                        <span>{maskPrice(appraisal.lastTradePrice, intel)}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Valuation history (if embedded in artwork data) */}
+            {appraisal.valuationHistory.length > 0 && intel >= 50 && (
+                <div className="bb-val-section">
+                    <div className="bb-val-section-label">VALUATION HISTORY</div>
+                    {appraisal.valuationHistory.map((v, i) => (
+                        <div key={i} className="bb-val-row">
+                            <span>{v.date} — {v.source}</span>
+                            <span>{maskPrice(v.appraisal, intel)}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Comparables */}
+            {appraisal.comparables.length > 0 && intel >= 40 && (
+                <div className="bb-val-section">
+                    <div className="bb-val-section-label">COMPARABLE WORKS</div>
+                    {appraisal.comparables.map(c => (
+                        <div key={c.id} className="bb-val-row">
+                            <span>"{c.title}" — {c.artist}</span>
+                            <span>{maskPrice(c.price, intel)}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Confidence indicator */}
+            <div className="bb-val-confidence">
+                <span className={`bb-val-conf-badge bb-val-conf-${appraisal.confidence}`}>
+                    {appraisal.confidence.toUpperCase()} CONFIDENCE
+                </span>
+            </div>
+        </div>
+    );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 17. Collector Profile Panel (portfolio NAV + P&L)
+// ══════════════════════════════════════════════════════════════
+function CollectorProfilePanel({ ownerId, intel, onSelectWork, onClose }) {
+    const portfolio = useMemo(() => MarketManager.getCollectorPortfolio(ownerId), [ownerId]);
+    const contact = CONTACTS.find(c => c.id === ownerId);
+
+    if (!portfolio || portfolio.holdingCount === 0) {
+        return (
+            <div className="bb-panel bb-collector">
+                <div className="bb-panel-header">
+                    {contact?.name || ownerId}
+                    {onClose && <button className="bb-panel-close" onClick={onClose}>×</button>}
+                </div>
+                <div className="bb-collector-empty">No holdings found</div>
+            </div>
+        );
+    }
+
+    const plClass = portfolio.totalPL >= 0 ? 'up' : 'down';
+
+    return (
+        <div className="bb-panel bb-collector">
+            <div className="bb-panel-header">
+                {mask(contact?.name || ownerId, intel, 60).toUpperCase()}
+                {onClose && <button className="bb-panel-close" onClick={onClose}>×</button>}
+            </div>
+
+            {/* Contact info */}
+            {contact && intel >= 40 && (
+                <div className="bb-coll-info">
+                    {contact.role && <span className="bb-coll-role" style={{ color: ROLE_COLORS[contact.role] || '#888' }}>{contact.role.toUpperCase()}</span>}
+                    {contact.dealerType && <span className="bb-coll-type">{contact.dealerType}</span>}
+                </div>
+            )}
+
+            {/* Portfolio summary */}
+            <div className="bb-coll-summary">
+                <div className="bb-coll-sum-item">
+                    <span className="bb-coll-sum-label">NAV</span>
+                    <span className="bb-coll-sum-value">{maskPrice(portfolio.totalNAV, intel)}</span>
+                </div>
+                <div className="bb-coll-sum-item">
+                    <span className="bb-coll-sum-label">COST</span>
+                    <span className="bb-coll-sum-value">{maskPrice(portfolio.totalCost, intel)}</span>
+                </div>
+                <div className="bb-coll-sum-item">
+                    <span className="bb-coll-sum-label">P&L</span>
+                    <span className={`bb-coll-sum-value ${plClass}`}>
+                        {portfolio.totalPL >= 0 ? '+' : ''}${fmtNum(Math.abs(portfolio.totalPL))}
+                        <span className="bb-coll-pl-pct"> ({portfolio.totalPLPercent > 0 ? '+' : ''}{portfolio.totalPLPercent}%)</span>
+                    </span>
+                </div>
+                <div className="bb-coll-sum-item">
+                    <span className="bb-coll-sum-label">WORKS</span>
+                    <span className="bb-coll-sum-value">{portfolio.holdingCount}</span>
+                </div>
+            </div>
+
+            {/* Holdings table */}
+            <div className="bb-coll-section">
+                <div className="bb-coll-section-label">HOLDINGS</div>
+                {portfolio.holdings.slice(0, 10).map(h => (
+                    <div key={h.id} className="bb-coll-holding" onClick={() => onSelectWork?.({ id: h.id, title: h.title, artist: h.artist })} style={{ cursor: 'pointer' }}>
+                        <div className="bb-coll-hold-title">"{h.title}"</div>
+                        <div className="bb-coll-hold-meta">{h.artist} · {h.tier?.replace(/[-_]/g, ' ')}</div>
+                        <div className="bb-coll-hold-vals">
+                            <span>Cost: {maskPrice(h.costBasis, intel)}</span>
+                            <span>Val: {maskPrice(h.currentValue, intel)}</span>
+                            <span className={h.unrealizedPL >= 0 ? 'up' : 'down'}>
+                                {h.plPercent > 0 ? '+' : ''}{h.plPercent}%
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Concentration analysis */}
+            {intel >= 50 && (
+                <div className="bb-coll-section">
+                    <div className="bb-coll-section-label">CONCENTRATION</div>
+                    <div className="bb-coll-conc">
+                        {Object.entries(portfolio.tierConcentration).map(([tier, pct]) => (
+                            <div key={tier} className="bb-coll-conc-row">
+                                <span className="bb-coll-conc-label">{tier.replace(/[-_]/g, ' ').toUpperCase()}</span>
+                                <div className="bb-coll-conc-bar">
+                                    <div className="bb-coll-conc-fill" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="bb-coll-conc-pct">{pct}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Trade history */}
+            {portfolio.tradeHistory.length > 0 && intel >= 60 && (
+                <div className="bb-coll-section">
+                    <div className="bb-coll-section-label">TRADE HISTORY</div>
+                    {portfolio.tradeHistory.slice(-5).reverse().map((t, i) => (
+                        <div key={i} className="bb-coll-trade-row">
+                            <span className={`bb-coll-trade-side ${t.side}`}>{t.side.toUpperCase()}</span>
+                            <span className="bb-coll-trade-title">"{t.title}"</span>
+                            <span className="bb-coll-trade-price">{maskPrice(t.price, intel)}</span>
+                            <span className="bb-coll-trade-week">W{t.week}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ═══ Exports ═══
-export { TickerBar, ArtistLeaderboard, OrderBook, MarketOverview, PriceChart, TradeFeed, Watchlist, PortfolioTracker, NotificationBar, ArtworkTearsheet, PlayerStatsPanel, NetWorthPanel, NPCDirectoryPanel, CollectionPanel, TransactionHistoryPanel };
+export {
+    TickerBar, ArtistLeaderboard, OrderBook, MarketOverview, PriceChart,
+    TradeFeed, Watchlist, PortfolioTracker, NotificationBar, ArtworkTearsheet,
+    PlayerStatsPanel, NetWorthPanel, NPCDirectoryPanel, CollectionPanel,
+    TransactionHistoryPanel, ArtistDetailPanel, ArtworkValuationPanel,
+    CollectorProfilePanel,
+};

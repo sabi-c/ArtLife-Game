@@ -47,7 +47,6 @@ export const useStorylineStore = create(
                     stalled: false,
                 });
 
-                console.log(`[StorylineStore] Activated storyline: "${storylineDef.title}" (fires week ${currentWeek + (firstStep.delayWeeks || 1)})`);
             }),
 
             /**
@@ -99,7 +98,6 @@ export const useStorylineStore = create(
                             s.activeStorylines = s.activeStorylines.filter(a => a.id !== active.id);
                             s.completedStorylines.push(active.id);
                         });
-                        console.log(`[StorylineStore] Completed storyline: "${def.title}"`);
                     } else {
                         const nextStep = def.steps[nextStepIndex];
                         set((s) => {

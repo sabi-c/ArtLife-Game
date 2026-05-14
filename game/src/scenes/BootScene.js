@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { EventRegistry } from '../managers/EventRegistry.js';
 import { VIEW } from '../core/views.js';
-import { safeSceneStart, safeSceneLaunch } from '../utils/safeScene.js';
+import { safeSceneStart } from '../utils/safeScene.js';
 import { autoLoadTiledMaps, preloadAllTilesets, getAllMapIds } from '../utils/tiledAutoLoader.js';
 
 /**
- * BootScene — Preloads shared assets, then launches TitleScene
- * Extracted from phaserInit.js during architectural refactor.
+ * BootScene — Preloads shared assets, stays alive until scene launch command.
+ * React handles the intro flow (SPLASH → NARRATIVE → LOGIN → Bloomberg).
+ * NewWorldScene starts only when user clicks "Explore World".
  */
 export class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
@@ -93,7 +94,6 @@ export class BootScene extends Phaser.Scene {
         const eventsData = this.cache.json.get('events_json');
         if (eventsData && Array.isArray(eventsData)) {
             EventRegistry.jsonEvents = eventsData;
-            console.log(`[BootScene] ${eventsData.length} decoupled events loaded`);
         } else {
             console.warn('[BootScene] No events.json data found or failed to parse.');
         }
@@ -102,7 +102,6 @@ export class BootScene extends Phaser.Scene {
         const storylinesData = this.cache.json.get('storylines_json');
         if (storylinesData && Array.isArray(storylinesData)) {
             EventRegistry.jsonStorylines = storylinesData;
-            console.log(`[BootScene] ${storylinesData.length} storylines loaded`);
         } else {
             console.warn('[BootScene] No storylines.json data found or failed to parse.');
         }
@@ -115,22 +114,22 @@ export class BootScene extends Phaser.Scene {
         // ArtNet site signin, not the game's primary entry screen.
         window.startPhaserGame = (mode = 'new') => {
             if (mode === 'new') {
-                // Fresh visit: TitleScene → DocumentaryScene → EmailInbox → (held ArtNet) → world
-                safeSceneLaunch(this, 'TitleScene', { ui });
+                // Fresh visit (2026-05-13 entry flow):
+                // TitleScene → DocumentaryScene → EmailInbox → (held ArtNet) → world.
+                // scene.start() does a clean handoff; preloaded asset cache persists.
+                safeSceneStart(this, 'TitleScene', { ui });
             } else if (mode === 'documentary') {
-                // Direct jump to the documentary intro — used by admin debug + TitleScene Enter.
-                safeSceneLaunch(this, 'DocumentaryScene', { ui });
+                // Direct jump to the documentary intro — admin debug + TitleScene Enter.
+                safeSceneStart(this, 'DocumentaryScene', { ui });
+            } else if (mode === 'overworld' || mode === 'load') {
+                // User clicked "Explore World" — start the overworld
+                safeSceneStart(this, 'NewWorldScene', { ui });
             } else if (mode === 'charselect') {
-                // After login "New" selection: go straight to character builder
                 import('../managers/GameEventBus.js').then(({ GameEventBus, GameEvents }) => {
                     GameEventBus.emit(GameEvents.UI_ROUTE, VIEW.CHARACTER_CREATOR);
                 });
-            } else {
-                // If loading a save, skip straight to Overworld/Menu.
-                safeSceneLaunch(this, 'NewWorldScene', { ui });
+                this.scene.stop();
             }
-            // Hide the boot scene
-            this.scene.stop();
         };
     }
 }

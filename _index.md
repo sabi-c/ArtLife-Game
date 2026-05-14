@@ -21,6 +21,7 @@ npm run dev       # → http://localhost:5175
 | Document | Description |
 |----------|-------------|
 | [Game Concept](docs/overview/Game_Concept.md) | Core vision, pillars, and elevator pitch |
+| [Gameplay Loop](docs/overview/Gameplay_Loop.md) | Full experience design: home → computer terminal → city exploration → systems |
 | [Vision Statement](docs/overview/Vision_Statement.md) | Tone, audience, and goals |
 | [Fundamentals of Play](docs/project/Fundamentals_of_Play.md) | Design philosophy grounded in game theory (Caillois, Blatner) |
 

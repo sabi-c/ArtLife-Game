@@ -1,3 +1,4 @@
+const _DEV = import.meta.env.DEV;
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
@@ -236,7 +237,7 @@ export const useCmsStore = create(
                         });
                     });
 
-                    console.log(`[CmsStore] 💾 All data saved: ${parts.join(', ')}`);
+                    _DEV && console.log(`[CmsStore] 💾 All data saved: ${parts.join(', ')}`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Save failed:', err);
@@ -256,38 +257,38 @@ export const useCmsStore = create(
                     if (state.snapshots.events?.length) {
                         EventRegistry.jsonEvents = JSON.parse(JSON.stringify(state.snapshots.events));
                         loaded++;
-                        console.log(`[CmsStore] ♻️ Restored ${state.snapshots.events.length} events`);
+                        _DEV && console.log(`[CmsStore] ♻️ Restored ${state.snapshots.events.length} events`);
                     }
 
                     if (state.snapshots.storylines?.length) {
                         EventRegistry.jsonStorylines = JSON.parse(JSON.stringify(state.snapshots.storylines));
                         loaded++;
-                        console.log(`[CmsStore] ♻️ Restored ${state.snapshots.storylines.length} storylines`);
+                        _DEV && console.log(`[CmsStore] ♻️ Restored ${state.snapshots.storylines.length} storylines`);
                     }
 
                     if (state.snapshots.npcs?.length) {
                         useNPCStore.setState({ contacts: JSON.parse(JSON.stringify(state.snapshots.npcs)) });
                         loaded++;
-                        console.log(`[CmsStore] ♻️ Restored ${state.snapshots.npcs.length} NPCs`);
+                        _DEV && console.log(`[CmsStore] ♻️ Restored ${state.snapshots.npcs.length} NPCs`);
                     }
 
                     if (state.snapshots.artists?.length) {
                         try {
                             MarketManager.artists = JSON.parse(JSON.stringify(state.snapshots.artists));
                             loaded++;
-                            console.log(`[CmsStore] ♻️ Restored ${state.snapshots.artists.length} artists`);
+                            _DEV && console.log(`[CmsStore] ♻️ Restored ${state.snapshots.artists.length} artists`);
                         } catch (_) { /* MarketManager may not be initialized yet */ }
                     }
 
                     // Maps, timeline overrides, haggle_config are restored automatically
                     // by zustand persist — they live in state.snapshots and are read
                     // directly by their respective editors on mount.
-                    if (state.snapshots.maps) { loaded++; console.log(`[CmsStore] ♻️ ${Object.keys(state.snapshots.maps).length} maps available`); }
-                    if (state.snapshots.timelineOverrides) { loaded++; console.log(`[CmsStore] ♻️ ${Object.keys(state.snapshots.timelineOverrides).length} timeline overrides available`); }
-                    if (state.snapshots.haggle_config) { loaded++; console.log('[CmsStore] ♻️ Haggle config available'); }
+                    if (state.snapshots.maps) { loaded++; _DEV && console.log(`[CmsStore] ♻️ ${Object.keys(state.snapshots.maps).length} maps available`); }
+                    if (state.snapshots.timelineOverrides) { loaded++; _DEV && console.log(`[CmsStore] ♻️ ${Object.keys(state.snapshots.timelineOverrides).length} timeline overrides available`); }
+                    if (state.snapshots.haggle_config) { loaded++; _DEV && console.log('[CmsStore] ♻️ Haggle config available'); }
 
                     if (loaded > 0) {
-                        console.log(`[CmsStore] ✅ Rehydrated ${loaded} domain(s) from saved CMS state`);
+                        _DEV && console.log(`[CmsStore] ✅ Rehydrated ${loaded} domain(s) from saved CMS state`);
                     }
                     return loaded;
                 } catch (err) {
@@ -343,7 +344,7 @@ export const useCmsStore = create(
                         });
                     });
 
-                    console.log(`[CmsStore] 📦 Bundle exported: ${parts.join(', ')}`);
+                    _DEV && console.log(`[CmsStore] 📦 Bundle exported: ${parts.join(', ')}`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Export failed:', err);
@@ -396,7 +397,7 @@ export const useCmsStore = create(
                         parts.push('haggle config');
                     }
 
-                    console.log(`[CmsStore] 📥 Imported: ${parts.join(', ')}`);
+                    _DEV && console.log(`[CmsStore] 📥 Imported: ${parts.join(', ')}`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Import failed:', err);
@@ -459,13 +460,13 @@ export const useCmsStore = create(
 
                 const timerId = setInterval(() => {
                     if (get().hasUnsavedChanges()) {
-                        console.log('[CmsStore] ⏰ Auto-saving...');
+                        _DEV && console.log('[CmsStore] ⏰ Auto-saving...');
                         get().saveAll();
                     }
                 }, AUTOSAVE_INTERVAL);
 
                 set((state) => { state._autoSaveTimer = timerId; });
-                console.log('[CmsStore] Auto-save started (every 60s)');
+                _DEV && console.log('[CmsStore] Auto-save started (every 60s)');
             },
 
             stopAutoSave: () => {
@@ -598,7 +599,7 @@ export const useCmsStore = create(
                         state.activePreset = name;
                         state.changeLog.push({ timestamp: Date.now(), domain: 'presets', action: 'save', details: `Saved preset: "${name}"` });
                     });
-                    console.log(`[CmsStore] 💾 Preset saved: "${name}"`);
+                    _DEV && console.log(`[CmsStore] 💾 Preset saved: "${name}"`);
                     return true;
                 } catch (err) {
                     console.error('[CmsStore] Preset save failed:', err);
@@ -616,7 +617,7 @@ export const useCmsStore = create(
                         state.activePreset = name;
                         state.changeLog.push({ timestamp: Date.now(), domain: 'presets', action: 'load', details: `Loaded preset: "${name}"` });
                     });
-                    console.log(`[CmsStore] 📥 Preset loaded: "${name}"`);
+                    _DEV && console.log(`[CmsStore] 📥 Preset loaded: "${name}"`);
                 }
                 return ok;
             },

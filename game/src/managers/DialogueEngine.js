@@ -3,13 +3,16 @@
  * Full dialogue engine with tone tracking, condition evaluation,
  * effect application, and branching navigation.
  *
- * Replaces the original 75-line stub. Works with both JSON dialogue trees
- * (from dialogue_trees.js) and registered scene definitions.
+ * Replaces the original 75-line stub. Works with:
+ *   1. JSON dialogue trees (from dialogue_trees.js)
+ *   2. Registered scene definitions (legacy scenes.js)
+ *   3. Parameterized templates (sceneTemplates.js) via loadTemplate()
  */
 
 import { GameState } from './GameState.js';
 import { QualityGate } from './QualityGate.js';
 import { DIALOGUE_TREES, TONES, TONE_SPECIALIZATIONS } from '../data/dialogue_trees.js';
+import { resolveTemplate, getTemplateList } from '../data/sceneTemplates.js';
 import { useNPCStore } from '../stores/npcStore.js';
 import { useInventoryStore } from '../stores/inventoryStore.js';
 
@@ -54,6 +57,45 @@ class DialogueEngineManager {
         this._legacyScene = this.scenes[sceneId];
         this.ended = false;
         return true;
+    }
+
+    // ── Template-Based Dialogue ──────────────────────────────────────────────
+
+    /**
+     * Load a scene from a reusable template.
+     * Resolves the template with the given parameters and starts it
+     * via the legacy scene path (which handles choices, effects, navigation).
+     *
+     * @param {string} templateId - key from SCENE_TEMPLATES
+     * @param {Object} params - parameters for the template
+     * @returns {boolean} true if template loaded and started
+     *
+     * @example
+     *   DialogueEngine.loadTemplate('npc_conversation', {
+     *       npcId: 'sasha_klein', mood: 'friendly'
+     *   });
+     */
+    loadTemplate(templateId, params = {}) {
+        const scene = resolveTemplate(templateId, params);
+        if (!scene) {
+            console.warn(`[DialogueEngine] Template '${templateId}' could not be resolved.`);
+            return false;
+        }
+
+        // Register and start the resolved scene
+        this.scenes[scene.id] = scene;
+        return this.startScene(scene.id);
+    }
+
+    /**
+     * Get available templates, optionally filtered.
+     * Useful for CMS editors and debug tools.
+     *
+     * @param {Object} [filter] - { tag, category, type }
+     * @returns {Array}
+     */
+    static getTemplates(filter) {
+        return getTemplateList(filter);
     }
 
     // ── Tree-Based Dialogue ─────────────────────────────────────────────────
@@ -394,10 +436,10 @@ class DialogueEngineManager {
                 : 'nothing',
             npc_relationship: !npc ? 'stranger'
                 : (npc.favor || 0) >= 20 ? 'friend'
-                : (npc.favor || 0) >= 5 ? 'acquaintance'
-                : (npc.favor || 0) <= -10 ? 'enemy'
-                : (npc.favor || 0) < 0 ? 'suspicious'
-                : 'neutral',
+                    : (npc.favor || 0) >= 5 ? 'acquaintance'
+                        : (npc.favor || 0) <= -10 ? 'enemy'
+                            : (npc.favor || 0) < 0 ? 'suspicious'
+                                : 'neutral',
         };
 
         return text.replace(/\{(\w+)\}/g, (match, key) => {

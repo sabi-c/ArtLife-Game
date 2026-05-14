@@ -147,7 +147,6 @@ export class WeekEngine {
         // ── Systemic Lattice Triggers (fail state arcs) ──
         try {
             const arcs = checkSystemicTriggers();
-            if (arcs) console.log('[WeekEngine] Systemic arcs triggered:', arcs);
         }
         catch (e) { console.error('[WeekEngine] Systemic triggers failed:', e); }
 

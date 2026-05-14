@@ -45,6 +45,31 @@ import { CONTACTS } from '../data/contacts.js';
 import { ARTWORKS } from '../data/artworks.js';
 import { ARTWORK_MAP } from '../data/artworks.js';
 import { MarketManager } from './MarketManager.js';
+import { fmtMoney } from '../utils/formatMoney.js';
+
+// ════════════════════════════════════════════
+// NPC Income Table — maps incomeSource → monthly income/expense ranges
+// Used by _ensureState() to bootstrap NPC economics
+// ════════════════════════════════════════════
+const INCOME_TABLE = {
+    'private_sales_commission': { incomeMin: 15000, incomeMax: 40000, expenseRatio: 0.55 },
+    'advisory_fees': { incomeMin: 8000, incomeMax: 20000, expenseRatio: 0.45 },
+    'gallery_sales': { incomeMin: 5000, incomeMax: 25000, expenseRatio: 0.70 },
+    'salary_commission': { incomeMin: 6000, incomeMax: 15000, expenseRatio: 0.50 },
+    'art_sales': { incomeMin: 2000, incomeMax: 12000, expenseRatio: 0.40 },
+    'tech_dividends': { incomeMin: 25000, incomeMax: 60000, expenseRatio: 0.30 },
+    'family_wealth': { incomeMin: 30000, incomeMax: 100000, expenseRatio: 0.25 },
+    'consulting_fees': { incomeMin: 10000, incomeMax: 30000, expenseRatio: 0.50 },
+    'gallery_empire': { incomeMin: 40000, incomeMax: 80000, expenseRatio: 0.60 },
+    'trading_profits': { incomeMin: 8000, incomeMax: 35000, expenseRatio: 0.35 },
+    'flipping': { incomeMin: 5000, incomeMax: 20000, expenseRatio: 0.30 },
+    'advisory_fees_kickbacks': { incomeMin: 12000, incomeMax: 40000, expenseRatio: 0.40 },
+    'endowment': { incomeMin: 15000, incomeMax: 50000, expenseRatio: 0.60 },
+    'auction_consignment': { incomeMin: 10000, incomeMax: 30000, expenseRatio: 0.45 },
+    'foundation_grants': { incomeMin: 5000, incomeMax: 15000, expenseRatio: 0.65 },
+};
+const DEFAULT_INCOME = { incomeMin: 5000, incomeMax: 15000, expenseRatio: 0.50 };
+import { MarketEventBus, EVENT_IMPACTS } from './MarketEventBus.js';
 import { GameState } from './GameState.js';
 import { ActivityLogger } from './ActivityLogger.js';
 import { useNPCStore } from '../stores/npcStore.js';
@@ -151,6 +176,9 @@ export class MarketSimulator {
     /** Monotonically increasing order ID counter */
     static _nextOrderId = 1;
 
+    // ── Simulation Log (structured per-week data for debugging) ──
+    static simulationLog = [];
+
     // ══════════════════════════════════════════════════════════════
     // Initialization
     // ══════════════════════════════════════════════════════════════
@@ -208,6 +236,27 @@ export class MarketSimulator {
                 totalSpent: stats.totalSpent ?? 0,
                 totalEarned: stats.totalEarned ?? 0,
                 strategy: stats.strategy ?? 'holder',
+
+                // ── Monthly Economics (P&L) ──
+                economics: stats.economics ?? (() => {
+                    const src = c.wealth?.incomeSource || 'unknown';
+                    const table = INCOME_TABLE[src] || DEFAULT_INCOME;
+                    const monthlyIncome = Math.round(
+                        table.incomeMin + Math.random() * (table.incomeMax - table.incomeMin)
+                    );
+                    const monthlyExpenses = Math.round(monthlyIncome * table.expenseRatio);
+                    return {
+                        incomeSource: src,
+                        monthlyIncome,
+                        monthlyExpenses,
+                        monthlyNetIncome: monthlyIncome - monthlyExpenses,
+                        budgetRemaining: c.wealth?.annualBudget ?? 200000,
+                        ytdRevenue: 0,
+                        ytdExpenses: 0,
+                        ytdProfit: 0,
+                        lastPayWeek: 0,
+                    };
+                })(),
             };
         }
     }
@@ -255,6 +304,24 @@ export class MarketSimulator {
         const sellOrders = [];
         const buyOrders = [];
 
+        // ── Monthly P&L: every 4 weeks, apply income/expenses ──
+        for (const npc of npcs) {
+            const econ = npc.economics;
+            if (econ && week > 0 && week % 4 === 0 && econ.lastPayWeek < week) {
+                econ.lastPayWeek = week;
+                npc.cash += econ.monthlyNetIncome;
+                econ.ytdRevenue += econ.monthlyIncome;
+                econ.ytdExpenses += econ.monthlyExpenses;
+                econ.ytdProfit = econ.ytdRevenue - econ.ytdExpenses;
+                // Reduce financial stress if net income is positive
+                if (econ.monthlyNetIncome > 0) {
+                    npc.financialStress = Math.max(0, npc.financialStress - 2);
+                } else {
+                    npc.financialStress = Math.min(100, npc.financialStress + 3);
+                }
+            }
+        }
+
         for (const npc of npcs) {
             const sells = MarketSimulator._decideSells(npc, week, marketCycle);
             const buys = MarketSimulator._decideBuys(npc, week, marketCycle);
@@ -281,11 +348,12 @@ export class MarketSimulator {
         }
 
         // Build weekly report
+        const weekVolume = trades.reduce((s, t) => s + t.price, 0);
         MarketSimulator.weeklyReport = {
             week,
             tradesExecuted: trades.length,
-            totalVolume: trades.reduce((s, t) => s + t.price, 0),
-            avgPrice: trades.length > 0 ? Math.round(trades.reduce((s, t) => s + t.price, 0) / trades.length) : 0,
+            totalVolume: weekVolume,
+            avgPrice: trades.length > 0 ? Math.round(weekVolume / trades.length) : 0,
             sellOrderCount: sellOrders.length,
             buyOrderCount: buyOrders.length,
             matchCount: matches.length,
@@ -300,6 +368,52 @@ export class MarketSimulator {
                 artistId: t.artwork?.artistId || '',
             })),
         };
+
+        // ── Simulation Log Entry (structured data for debugging) ──
+        let compositeIndex = 1000;
+        let totalMarketCap = 0;
+        let sectorIndices = {};
+        let artistTickers = [];
+        try {
+            compositeIndex = MarketManager.getCompositeIndex();
+            sectorIndices = MarketManager.getSectorIndices();
+            const snap = MarketManager.getTickSnapshot();
+            totalMarketCap = snap.artists.reduce((s, a) => s + (a.avgPrice * a.worksCount), 0);
+            artistTickers = snap.artists.map(a => ({
+                id: a.id, name: a.name, heat: a.heat,
+                index: a.index, delta: a.delta, avgPrice: a.avgPrice,
+                onMarket: a.onMarket, worksCount: a.worksCount,
+            }));
+        } catch { /* ok */ }
+
+        // Aggregate NPC summary
+        const npcSummary = {
+            totalCash: npcs.reduce((s, n) => s + (n.cash || 0), 0),
+            avgStress: Math.round(npcs.reduce((s, n) => s + (n.financialStress || 0), 0) / npcs.length),
+            activeTraders: npcs.filter(n => (n.totalBought + n.totalSold) > 0).length,
+            totalBudgetRemaining: npcs.reduce((s, n) => s + (n.economics?.budgetRemaining || 0), 0),
+        };
+
+        MarketSimulator.simulationLog.push({
+            week,
+            cycle: marketCycle,
+            sellOrders: sellOrders.length,
+            buyOrders: buyOrders.length,
+            matchAttempts: matches.length,
+            tradesExecuted: trades.length,
+            volume: weekVolume,
+            avgPrice: MarketSimulator.weeklyReport.avgPrice,
+            compositeIndex,
+            totalMarketCap,
+            sectorIndices,
+            artistTickers,
+            npcSummary,
+            topMover: trades.length > 0 ? trades[0].artwork?.title || '' : '',
+        });
+        // Cap log at 500 entries
+        if (MarketSimulator.simulationLog.length > 500) {
+            MarketSimulator.simulationLog = MarketSimulator.simulationLog.slice(-500);
+        }
 
         // Trim trade log
         MarketSimulator.tradeLog.push(...MarketSimulator.weeklyReport.trades);
@@ -357,6 +471,13 @@ export class MarketSimulator {
                 if (npc.forSale.includes(work.id)) sellProbability += 0.20;
             }
 
+            // ── Event-driven sell modifier (per-artwork) ──
+            // Forgery discoveries cause panic selling, artist deaths reduce selling
+            const workArtistId = work.artistId || null;
+            const workTier = work.tier || 'mid_career';
+            const eventSellMod = MarketEventBus.getNpcSellModifier(workArtistId, workTier);
+            sellProbability += eventSellMod;
+
             if (Math.random() < sellProbability) {
                 // Ask price via formula or fallback
                 let flex;
@@ -380,27 +501,50 @@ export class MarketSimulator {
 
     /** Decide what an NPC wants to buy this week */
     static _decideBuys(npc, week, marketCycle) {
-        if (npc.cash < 2000) return []; // Too broke
+        if (npc.cash < 500) return []; // Too broke (lowered from $2000)
         if (npc.owned.length >= npc.maxCapacity) return []; // Collection full
 
-        let buyProbability = 0.15; // Base 15% chance to be buying
+        let buyProbability = 0.35; // Base 35% chance to be buying (was 15%)
+
+        // ── Budget gating: if budget nearly exhausted, reduce buying sharply ──
+        const econ = npc.economics;
+        if (econ) {
+            const budgetRatio = econ.budgetRemaining / (npc.annualBudget || 200000);
+            if (budgetRatio < 0.1) return []; // Budget depleted — stop buying for the year
+            if (budgetRatio < 0.3) buyProbability -= 0.15;
+            if (econ.monthlyNetIncome <= 0) buyProbability -= 0.10; // Losing money monthly
+        }
 
         // Bull market → more buying
-        if (marketCycle === 'bull') buyProbability += 0.15;
+        if (marketCycle === 'bull') buyProbability += 0.20;
 
         // Cash-rich → more buying
-        if (npc.cash > npc.spendingCeiling * 2) buyProbability += 0.10;
+        if (npc.cash > npc.spendingCeiling * 2) buyProbability += 0.15;
+        else if (npc.cash > npc.spendingCeiling) buyProbability += 0.08;
 
         // Risk appetite
-        if (npc.riskAppetite === 'aggressive') buyProbability += 0.10;
+        if (npc.riskAppetite === 'aggressive') buyProbability += 0.15;
         if (npc.riskAppetite === 'conservative') buyProbability -= 0.05;
+
+        // Role-based modifiers
+        if (npc.dealerType === 'flipper') buyProbability += 0.10;
+        if (npc.role === 'collector') buyProbability += 0.05;
+
+        // Bear market dampening (but still possible)
+        if (marketCycle === 'bear') buyProbability -= 0.10;
+
+        // ── Event-driven NPC behavioral modifier ──
+        // Aggregate buy mod from all active events for this NPC's preferred tiers
+        const preferredTier = npc.preferredTiers?.[0] || 'mid-career';
+        const eventBuyMod = MarketEventBus.getNpcBuyModifier(null, preferredTier);
+        buyProbability += eventBuyMod;
 
         if (Math.random() > buyProbability) return [];
 
-        // Budget: min of spending ceiling and 40% of liquid cash
-        const budget = Math.min(npc.spendingCeiling, npc.cash * 0.4);
+        // Budget: min of spending ceiling and 50% of liquid cash (was 40%)
+        const budget = Math.min(npc.spendingCeiling, npc.cash * 0.5);
 
-        return [{
+        const orders = [{
             type: 'buy',
             npcId: npc.id,
             budget,
@@ -409,6 +553,22 @@ export class MarketSimulator {
             avoidedGenres: npc.avoidedGenres,
             riskTolerance: npc.riskTolerance,
         }];
+
+        // Cash-rich NPCs may submit a 2nd buy order (~30% chance)
+        if (npc.cash > npc.spendingCeiling * 1.5 && npc.owned.length < npc.maxCapacity - 1 && Math.random() < 0.30) {
+            orders.push({
+                type: 'buy',
+                npcId: npc.id,
+                budget: Math.min(npc.spendingCeiling * 0.7, npc.cash * 0.25),
+                preferredGenres: npc.preferredGenres,
+                preferredTiers: npc.preferredTiers,
+                avoidedGenres: npc.avoidedGenres,
+                riskTolerance: npc.riskTolerance,
+                _secondOrder: true,
+            });
+        }
+
+        return orders;
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -419,13 +579,16 @@ export class MarketSimulator {
     static _matchOrders(buyOrders, sellOrders, npcState) {
         const matches = [];
         const usedSells = new Set();
-        const usedBuys = new Set();
+        // Track buys per NPC: allow up to 2 per week
+        const buyCountPerNPC = {};
+        const MAX_BUYS_PER_NPC = 2;
 
         // Shuffle for fairness
         const shuffledBuys = [...buyOrders].sort(() => Math.random() - 0.5);
 
         for (const buy of shuffledBuys) {
-            if (usedBuys.has(buy.npcId)) continue; // 1 buy per NPC per week
+            const npcBuys = buyCountPerNPC[buy.npcId] || 0;
+            if (npcBuys >= MAX_BUYS_PER_NPC) continue;
 
             // Score each available sell order for this buyer
             const scored = sellOrders
@@ -446,7 +609,7 @@ export class MarketSimulator {
                 const best = scored[0].sell;
                 matches.push({ buy, sell: best });
                 usedSells.add(best.artworkId);
-                usedBuys.add(buy.npcId);
+                buyCountPerNPC[buy.npcId] = npcBuys + 1;
             }
         }
 
@@ -528,8 +691,8 @@ export class MarketSimulator {
         const finalPrice = Math.round((bid + ask) / 2);
         const gap = Math.abs(ask - bid) / ask;
 
-        // Walk-away check
-        if (gap > (1 - seller.walkawayThreshold)) return null; // Too far apart
+        // Walk-away check (relaxed: multiply threshold by 0.7 for more deals)
+        if (gap > (1 - seller.walkawayThreshold * 0.7)) return null; // Too far apart
         if (finalPrice > maxBid) return null; // Buyer can't afford
         if (finalPrice > buyer.cash) return null; // Liquidity check
 
@@ -591,6 +754,15 @@ export class MarketSimulator {
         seller.totalSold++;
         seller.totalEarned += trade.price;
 
+        // Update economics P&L tracking
+        if (buyer.economics) {
+            buyer.economics.budgetRemaining = Math.max(0, buyer.economics.budgetRemaining - trade.price);
+        }
+        if (seller.economics) {
+            seller.economics.ytdRevenue += trade.price;
+            seller.economics.ytdProfit = seller.economics.ytdRevenue - seller.economics.ytdExpenses;
+        }
+
         // Log to ActivityLogger
         ActivityLogger.logMarket('npc_trade', {
             buyer: buyer.name, buyerId: trade.buyerId,
@@ -623,7 +795,7 @@ export class MarketSimulator {
             const buyerName = buyer.name || buyer.id;
             const sellerName = seller.name || seller.id;
             const title = trade.artwork?.title || trade.artworkId;
-            const priceStr = `$${trade.price.toLocaleString()}`;
+            const priceStr = fmtMoney(trade.price);
             GameState.addNews(`[Market] ${buyerName} acquired "${title}" from ${sellerName} for ${priceStr}`);
         } catch { /* non-critical */ }
 
@@ -845,79 +1017,203 @@ export class MarketSimulator {
     // ── Market Events System ──
 
     static _generateMarketEvent(week, cycle) {
-        if (Math.random() > 0.18) return null; // ~18% chance per week
+        if (Math.random() > 0.22) return null; // ~22% chance per week (was 18%)
 
         const artists = MarketManager.artists || [];
         if (artists.length === 0) return null;
         const randArtist = artists[Math.floor(Math.random() * artists.length)];
+        const emergingArtists = artists.filter(a => a.tier === 'emerging');
+        const blueChips = artists.filter(a => a.tier === 'blue-chip');
+        const hotArtist = artists.reduce((best, a) => (a.heat || 0) > (best.heat || 0) ? a : best, artists[0]);
 
-        const events = [
+        // ── Event pool — weighted by cycle ──
+        const bearExtra = (cycle === 'bear' || cycle === 'crash') ? 2 : 0;
+        const bullExtra = (cycle === 'bull' || cycle === 'bubble') ? 2 : 0;
+
+        const pool = [
+            // ── Artist-specific (always available) ──
             {
-                type: 'auction_record', severity: 'positive',
-                title: `Auction Record: ${randArtist.name}`,
-                description: `${randArtist.name}'s work sells for record price at Christie's.`,
-                effect: { artistId: randArtist.id, heatDelta: 12 },
+                weight: 3, type: 'auction_record', severity: 'positive',
+                title: `Auction Record: ${hotArtist.name}`,
+                description: `${hotArtist.name}'s work sells for record price at Christie's.`,
+                effect: { artistId: hotArtist.id },
             },
             {
-                type: 'scandal', severity: 'negative',
-                title: `Authenticity Dispute: ${randArtist.name}`,
+                weight: 2, type: 'museum_acquisition', severity: 'positive',
+                title: `Museum Acquisition: ${randArtist.name}`,
+                description: `Major museum acquires ${randArtist.name} work for permanent collection.`,
+                effect: { artistId: randArtist.id },
+            },
+            {
+                weight: 2 + bearExtra, type: 'scandal', severity: 'negative',
+                title: `Scandal: ${randArtist.name}`,
                 description: `Questions raised about provenance of recent ${randArtist.name} work.`,
-                effect: { artistId: randArtist.id, heatDelta: -8 },
+                effect: { artistId: randArtist.id, severity: 0.5 + Math.random() * 0.5 },
             },
             {
-                type: 'museum_acquisition', severity: 'positive',
-                title: `Museum Show: ${randArtist.name}`,
-                description: `Major museum announces retrospective of ${randArtist.name}.`,
-                effect: { artistId: randArtist.id, heatDelta: 8 },
+                weight: 1, type: 'artist_death', severity: 'critical',
+                title: `Artist Passes: ${randArtist.name}`,
+                description: `Renowned artist ${randArtist.name} has passed away. Estate revaluation begins.`,
+                effect: { artistId: randArtist.id },
             },
             {
-                type: 'fair_boost', severity: 'positive',
-                title: 'Art Fair Season',
-                description: 'Frieze / Art Basel period drives collector activity.',
-                effect: { allHeatDelta: 3 },
+                weight: 1, type: 'artist_estate_dispute', severity: 'negative',
+                title: `Estate Dispute: ${randArtist.name}`,
+                description: `Legal battle over ${randArtist.name}'s estate freezes authentication.`,
+                effect: { artistId: randArtist.id },
             },
             {
-                type: 'economic_downturn', severity: 'negative',
-                title: 'Economic Headwinds',
-                description: 'Rising interest rates cool luxury spending.',
-                effect: { allHeatDelta: -4 },
+                weight: 1, type: 'forgery_discovery', severity: 'negative',
+                title: `Forgery Alert: ${randArtist.name}`,
+                description: `Multiple ${randArtist.name} works suspected as forgeries. Market in shock.`,
+                effect: { artistId: randArtist.id },
             },
             {
-                type: 'gallery_closure', severity: 'negative',
+                weight: 2, type: 'social_media_viral', severity: 'positive',
+                title: `Viral Moment: ${(emergingArtists[0] || randArtist).name}`,
+                description: `${(emergingArtists[0] || randArtist).name}'s work goes viral on social media.`,
+                effect: { artistId: (emergingArtists[0] || randArtist).id },
+            },
+            {
+                weight: 1, type: 'biennial_selection', severity: 'positive',
+                title: `Biennale Selection: ${randArtist.name}`,
+                description: `${randArtist.name} selected for Venice Biennale. International spotlight.`,
+                effect: { artistId: randArtist.id },
+            },
+            {
+                weight: 1, type: 'emerging_artist_discovery', severity: 'positive',
+                title: `Discovery: ${(emergingArtists[0] || randArtist).name}`,
+                description: `Critics hail ${(emergingArtists[0] || randArtist).name} as the next big thing.`,
+                effect: { artistId: (emergingArtists[0] || randArtist).id },
+            },
+
+            // ── Gallery/Dealer events ──
+            {
+                weight: 2 + bearExtra, type: 'gallery_closure', severity: 'negative',
                 title: 'Gallery Closure',
                 description: `Gallery representing ${randArtist.name} announces closure.`,
-                effect: { artistId: randArtist.id, heatDelta: -10 },
+                effect: { artistId: randArtist.id },
             },
             {
-                type: 'social_media_viral', severity: 'positive',
-                title: `Viral Moment: ${randArtist.name}`,
-                description: `${randArtist.name}'s work goes viral on social media.`,
-                effect: { artistId: randArtist.id, heatDelta: 6 },
+                weight: 1 + bullExtra, type: 'gallery_mega_merger', severity: 'positive',
+                title: 'Gallery Mega-Merger',
+                description: 'Two major galleries merge, reshaping market landscape.',
+                effect: {},
             },
             {
-                type: 'collector_exit', severity: 'neutral',
-                title: 'Major Collection Liquidation',
-                description: 'Prominent collector selling entire collection at auction.',
-                effect: { allHeatDelta: -2 },
+                weight: 1 + bullExtra, type: 'new_gallery_opening', severity: 'positive',
+                title: 'New Gallery Launch',
+                description: 'Exciting new gallery opens with ambitious program.',
+                effect: {},
+            },
+
+            // ── Economy/macro events ──
+            {
+                weight: 2 + bullExtra, type: 'fair_success', severity: 'positive',
+                title: 'Art Fair Season',
+                description: 'Frieze / Art Basel period drives collector activity.',
+                effect: {},
+            },
+            {
+                weight: 1, type: 'tax_regulation_change', severity: 'negative',
+                title: 'Tax Regulation Change',
+                description: 'New tax regulations on art transactions. Market adjusts.',
+                effect: {},
+            },
+            {
+                weight: 1, type: 'crypto_art_crash', severity: 'negative',
+                title: 'Crypto Art Crash',
+                description: 'Digital art market collapses. Skepticism spreads.',
+                effect: {},
+            },
+            {
+                weight: 1, type: 'trade_war_sanctions', severity: 'negative',
+                title: 'Trade War Sanctions',
+                description: 'International sanctions disrupt cross-border art trade.',
+                effect: {},
+            },
+            {
+                weight: 1, type: 'political_censorship', severity: 'positive',
+                title: 'Political Controversy',
+                description: 'Government censorship drives collector solidarity buying.',
+                effect: { artistId: randArtist.id },
+            },
+
+            // ── Collector events ──
+            {
+                weight: 1, type: 'collector_death', severity: 'neutral',
+                title: 'Collector Estate Sale',
+                description: 'Prominent collector passes. Major estate sale anticipated.',
+                effect: {},
+            },
+            {
+                weight: 1, type: 'collection_donation', severity: 'positive',
+                title: 'Collection Donated to Museum',
+                description: `Major collection featuring ${randArtist.name} donated to museum.`,
+                effect: { artistId: randArtist.id },
+            },
+            {
+                weight: 1 + bullExtra, type: 'tech_billionaire_entry', severity: 'positive',
+                title: 'Tech Money Floods Art Market',
+                description: 'Tech billionaire begins aggressive art collecting. Prices inflating.',
+                effect: {},
+            },
+            {
+                weight: 1 + bearExtra, type: 'blue_chip_deaccession', severity: 'negative',
+                title: 'Blue-Chip Deaccession',
+                description: `Major ${(blueChips[0] || randArtist).name} collector liquidating holdings.`,
+                effect: { artistId: (blueChips[0] || randArtist).id },
+            },
+            {
+                weight: 1, type: 'insurance_fraud_bust', severity: 'negative',
+                title: 'Insurance Fraud Bust',
+                description: 'Art insurance fraud scheme exposed. Market trust shaken.',
+                effect: { artistId: randArtist.id },
             },
         ];
 
-        const evt = events[Math.floor(Math.random() * events.length)];
-        return { ...evt, week, cycle };
+        // Weighted random selection
+        const totalWeight = pool.reduce((s, e) => s + e.weight, 0);
+        let roll = Math.random() * totalWeight;
+        let selected = pool[pool.length - 1];
+        for (const evt of pool) {
+            roll -= evt.weight;
+            if (roll <= 0) { selected = evt; break; }
+        }
+
+        return { ...selected, week, cycle };
     }
 
+    /**
+     * Apply a market event — emits through MarketEventBus for proper
+     * decay tracking, price mods, and logging.
+     */
     static _applyMarketEvent(evt) {
         if (!evt?.effect) return;
         try {
-            if (evt.effect.artistId && evt.effect.heatDelta) {
-                const artist = (MarketManager.artists || []).find(a => a.id === evt.effect.artistId);
-                if (artist) {
-                    artist.heat = clamp(artist.heat + evt.effect.heatDelta, 0, 100);
-                }
-            }
-            if (evt.effect.allHeatDelta) {
-                for (const artist of (MarketManager.artists || [])) {
-                    artist.heat = clamp(artist.heat + evt.effect.allHeatDelta, 0, 100);
+            // Emit through MarketEventBus (handles price modifiers, decay, logging)
+            MarketEventBus.emit(evt.type, {
+                artistId: evt.effect.artistId || null,
+                severity: evt.effect.severity || null,
+                title: evt.title,
+                description: evt.description,
+                week: evt.week,
+            }, evt.week);
+
+            // Also apply immediate heat delta for responsiveness
+            const impact = EVENT_IMPACTS[evt.type];
+            if (impact && impact.heatDelta) {
+                if (evt.effect.artistId) {
+                    const artist = (MarketManager.artists || []).find(a => a.id === evt.effect.artistId);
+                    if (artist) {
+                        artist.heat = clamp(artist.heat + impact.heatDelta, 0, 100);
+                    }
+                } else {
+                    // Economy-wide: apply fraction of heat to all artists
+                    const fraction = impact.heatDelta / 3; // diluted for all-artist events
+                    for (const artist of (MarketManager.artists || [])) {
+                        artist.heat = clamp(artist.heat + fraction, 0, 100);
+                    }
                 }
             }
         } catch { /* non-critical */ }
@@ -1174,7 +1470,6 @@ export class MarketSimulator {
             MarketSimulator.tradeLog = MarketSimulator.tradeLog.slice(-MAX_LOG_SIZE);
         }
 
-        console.log(`[MarketSimulator] Loaded ${formatted.length} historical trades (${MarketSimulator.tradeLog.length} total in log)`);
     }
 
     /** Reset all simulation state */

@@ -1034,7 +1034,6 @@ function StorylineGraphWrapper({ storyline, onNodeClick, editingStepIdx, onUpdat
             animated: true,
         }, eds));
 
-        console.log(`[StorylineEditor] Connected step ${sourceIdx} → step ${targetIdx}`);
     }, [setEdges]);
 
     return (
